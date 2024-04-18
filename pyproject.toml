@@ -1,0 +1,27 @@
+[project]
+name = "brdr"
+version = "0.1.0"
+description = "Automatische correcties van geografische afbakeningen op verschuivende onderlagen"
+readme = { file = "README.md", content-type = "text/markdown" }
+license = { file = "LICENSE" }
+dependencies = [
+    "geojson==3.1.0",
+    "geopandas==0.14.3",
+    "matplotlib==3.8.4",
+    "requests==2.31.0",
+    "shapely==2.0.4",
+]
+
+[project.optional-dependencies]
+dev = [
+    "black==24.4.0",
+    "pip-tools==7.4.1",
+    "pytest-cov==5.0.0",
+    "pytest==8.1.1",
+    "mypy==1.9.0",
+    "toml==0.10.2",
+    "types-requests==2.31.0.20240406",
+]
+
+[tool.setuptools]
+packages = ["brdr"]

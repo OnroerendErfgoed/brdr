@@ -1,0 +1,9 @@
+[flake8]
+inline-quotes = double
+exclude =
+    build,
+    .venv,
+    ./venv,
+    __pycache__,
+import-order-style = pycharm
+max-line-length = 90

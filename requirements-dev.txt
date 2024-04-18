@@ -1,0 +1,125 @@
+attrs==23.2.0
+    # via fiona
+black==24.4.0
+    # via brdr (pyproject.toml)
+build==1.2.1
+    # via pip-tools
+certifi==2024.2.2
+    # via
+    #   fiona
+    #   pyproj
+    #   requests
+charset-normalizer==3.3.2
+    # via requests
+click==8.1.7
+    # via
+    #   black
+    #   click-plugins
+    #   cligj
+    #   fiona
+    #   pip-tools
+click-plugins==1.1.1
+    # via fiona
+cligj==0.7.2
+    # via fiona
+contourpy==1.2.1
+    # via matplotlib
+coverage==7.4.4
+    # via pytest-cov
+cycler==0.12.1
+    # via matplotlib
+fiona==1.9.6
+    # via geopandas
+fonttools==4.51.0
+    # via matplotlib
+geojson==3.1.0
+    # via brdr (pyproject.toml)
+geopandas==0.14.3
+    # via brdr (pyproject.toml)
+idna==3.7
+    # via requests
+iniconfig==2.0.0
+    # via pytest
+kiwisolver==1.4.5
+    # via matplotlib
+matplotlib==3.8.4
+    # via brdr (pyproject.toml)
+mypy==1.9.0
+    # via brdr (pyproject.toml)
+mypy-extensions==1.0.0
+    # via
+    #   black
+    #   mypy
+numpy==1.26.4
+    # via
+    #   contourpy
+    #   matplotlib
+    #   pandas
+    #   shapely
+packaging==24.0
+    # via
+    #   black
+    #   build
+    #   geopandas
+    #   matplotlib
+    #   pytest
+pandas==2.2.2
+    # via geopandas
+pathspec==0.12.1
+    # via black
+pillow==10.3.0
+    # via matplotlib
+pip-tools==7.4.1
+    # via brdr (pyproject.toml)
+platformdirs==4.2.0
+    # via black
+pluggy==1.4.0
+    # via pytest
+pyparsing==3.1.2
+    # via matplotlib
+pyproj==3.6.1
+    # via geopandas
+pyproject-hooks==1.0.0
+    # via
+    #   build
+    #   pip-tools
+pytest==8.1.1
+    # via
+    #   brdr (pyproject.toml)
+    #   pytest-cov
+pytest-cov==5.0.0
+    # via brdr (pyproject.toml)
+python-dateutil==2.9.0.post0
+    # via
+    #   matplotlib
+    #   pandas
+pytz==2024.1
+    # via pandas
+requests==2.31.0
+    # via brdr (pyproject.toml)
+shapely==2.0.4
+    # via
+    #   brdr (pyproject.toml)
+    #   geopandas
+six==1.16.0
+    # via
+    #   fiona
+    #   python-dateutil
+toml==0.10.2
+    # via brdr (pyproject.toml)
+types-requests==2.31.0.20240406
+    # via brdr (pyproject.toml)
+typing-extensions==4.11.0
+    # via mypy
+tzdata==2024.1
+    # via pandas
+urllib3==2.2.1
+    # via
+    #   requests
+    #   types-requests
+wheel==0.43.0
+    # via pip-tools
+
+# The following packages are considered to be unsafe in a requirements file:
+# pip
+# setuptools
