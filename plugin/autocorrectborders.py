@@ -2,7 +2,7 @@
 
 """
 ***************************************************************************
-*   version: v0.9.1 (proof of concept - working version)
+*   version: v0.9.3 (proof of concept - working version)
 *   author: Karel Dieussaert
 *   history:
 *            -initial version based on pyQGIS
@@ -19,7 +19,8 @@
 *            -rewriting to use AutoReferencer (shapely-python)
 *            -cleanup and added docs to AutoReferencer
 *            -resulting output made available for further QGIS-modelling
-*            -added parameter to download actual GRB (adp-gbg-knw)
+*            -added enum - parameter to download actual GRB (adp-gbg-knw)
+*            -added enum - parameter for od-strategy
 *
 MIT LICENSE:
 Copyright (c) 2023-2024 Flanders Heritage Agency
@@ -102,13 +103,21 @@ class AutocorrectBordersProcessingAlgorithm(QgsProcessingAlgorithm):
     INPUT_REFERENCE = "INPUT_REFERENCE"
     ENUM_REFERENCE = "ENUM_REFERENCE"
     ENUM_REFERENCE_OPTIONS = [
-        "REFERENCE LAYER (hieronder te kiezen)",
+        "LOCAL REFERENCE LAYER (choose LAYER and ID below)",
         "download GRB - actuele percelen (adp)",
         "download GRB - actuele gebouwen (gbg)",
         "download GRB - actuele kunstwerken (knw)",
     ]
-    SELECTED_REFERENCE = "Geen"
-
+    SELECTED_REFERENCE = "None"
+    ENUM_OD_STRATEGY = 'ENUM_OD_STRATEGY'
+    ENUM_OD_STRATEGY_OPTIONS = [
+        'EXCLUDE',
+        'AS IS',
+        'SNAP - ONE SIDE',
+        'SNAP - ALL SIDE',
+        'SNAP - BIG AREA'
+    ]
+    SELECTED_OD_STRATEGY = 'SNAP - ONE SIDE'
     RESULT = "RESULT"
     RESULT_DIFF = "RESULT_DIFF"
     RESULT_DIFF_PLUS = "RESULT_DIFF_PLUS"
@@ -375,7 +384,7 @@ class AutocorrectBordersProcessingAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(parameter)
         parameter = QgsProcessingParameterEnum(
             self.ENUM_REFERENCE,
-            "Selecteer een referentielaag:",
+            "Select Reference Layer:",
             options=self.ENUM_REFERENCE_OPTIONS,
             defaultValue=0,  # Index of the default option (e.g., 'Option A')
         )
@@ -405,11 +414,11 @@ class AutocorrectBordersProcessingAlgorithm(QgsProcessingAlgorithm):
         )
         parameter.setFlags(parameter.flags())
         self.addParameter(parameter)
-        parameter = QgsProcessingParameterNumber(
-            "OD_STRATEGY",
-            "OD_STRATEGY (-1,0,1,2,3)",
-            type=QgsProcessingParameterNumber.Integer,
-            defaultValue=1,
+        parameter = QgsProcessingParameterEnum(
+            self.ENUM_OD_STRATEGY,
+            'Select OD-STRATEGY:',
+            options=self.ENUM_OD_STRATEGY_OPTIONS,
+            defaultValue=2  # Index of the default option (e.g., 'Snap - one side')
         )
         parameter.setFlags(parameter.flags())
         self.addParameter(parameter)
@@ -905,7 +914,8 @@ class AutocorrectBordersProcessingAlgorithm(QgsProcessingAlgorithm):
         self.RELEVANT_DISTANCE = parameters["RELEVANT_DISTANCE"]
         self.BUFFER_DISTANCE = self.RELEVANT_DISTANCE / 2
         self.THRESHOLD_OVERLAP_PERCENTAGE = parameters["THRESHOLD_OVERLAP_PERCENTAGE"]
-        self.OD_STRATEGY = parameters["OD_STRATEGY"]
+        self.SELECTED_OD_STRATEGY = parameters[self.ENUM_OD_STRATEGY]
+        self.OD_STRATEGY = self.SELECTED_OD_STRATEGY - 1
         self.SHOW_INTERMEDIATE_LAYERS = parameters["SHOW_INTERMEDIATE_LAYERS"]
         self.PROCESS_MULTI_AS_SINGLE_POLYGONS = parameters[
             "PROCESS_MULTI_AS_SINGLE_POLYGONS"
