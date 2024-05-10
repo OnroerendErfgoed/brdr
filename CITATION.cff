@@ -1,0 +1,40 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: BRDR
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Karel
+    family-names: Dieussaert
+  - given-names: Emrys
+    family-names: Roef
+    affiliation: Geo Solutions
+  - given-names: Maarten
+    family-names: Vermeyen
+    email: maarten.vermeyen@vlaanderen.be
+    affiliation: Agentschap Onroerend Erfgoed
+    orcid: 'https://orcid.org/0000-0003-1197-6562'
+  - given-names: Koen
+    name-particle: Van
+    family-names: Daele
+    email: koen.vandaele@vlaanderen.be
+    affiliation: Agentschap Onroerend Erfgoed
+    orcid: 'https://orcid.org/0000-0002-8153-2978'
+identifiers:
+  - type: doi
+    value: 10.1234/zenodo.4321 #to be changed when doi is reserved.
+    description: Concept DOI of the software package
+repository-code: 'https://github.com/OnroerendErfgoed/brdr'
+url: 'https://github.com/OnroerendErfgoed/brdr'
+abstract: >-
+  a Python library to assist in realigning (multi-)polygons
+  (OGC Simple Features) to reference borders 
+keywords:
+  - GIS
+  - Geodata
+  - Geodata management
+license: MIT
