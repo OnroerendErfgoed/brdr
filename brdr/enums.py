@@ -1,5 +1,5 @@
 from enum import IntEnum
-from enum import StrEnum
+from enum import Enum
 
 
 class OpenbaarDomeinStrategy(IntEnum):
@@ -31,7 +31,7 @@ class OpenbaarDomeinStrategy(IntEnum):
     SNAP_FULL_AREA_BOTH_SIDED = 4
 
 
-class GRBType(StrEnum):
+class GRBType(str, Enum):
     """
     Determines which GRB feature collection is used. Different types are available:
 
