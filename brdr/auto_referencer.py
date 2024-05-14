@@ -59,39 +59,7 @@ class AutoReferencer:
     The class can be used to compare the thematic data with the reference data.
     """
 
-    # PROCESSING DEFAULTS
-    # thematic
-    thematic_input = None  # to save the initially loaded geojson
-    # name of the identifier-field of the thematic data (id has to be unique)
-    name_thematic_id = "theme_identifier"
-    # dictionary to store all thematic geometries to handle
-    dict_thematic = {}
 
-    # reference
-    reference_input = None  # to save the initially loaded geojson
-    # name of the identifier-field of the reference data (id has to be unique,
-    # f.e CAPAKEY for GRB-parcels)
-    name_reference_id = "ref_identifier"
-    dict_reference = {}  # dictionary to store all reference geometries
-    # to save a unioned geometry of all reference polygons; needed for calculation in
-    # most OD-strategies
-    reference_union = None
-
-    # output-dictionaries (when processing dict_thematic)
-    dict_result = None  # dictionary to save resulting geometries
-    dict_result_diff = None  # dictionary to save global resulting differences
-    dict_result_diff_plus = None  # dictionary to save positive resulting differences
-    dict_result_diff_min = None  # dictionary to save negative resulting differences
-    dict_relevant_intersection = None  # dictionary to save relevant_intersections
-    dict_relevant_difference = None  # dictionary to save relevant_differences
-
-    # Coordinate reference system
-
-    # thematic geometries and reference geometries are assumed to be in the same CRS
-    # before loading into the AutoReferencer. No CRS-transformation will be performed
-    # when loading data CRS is expected to be a projected CRS with unit in meters By
-    # default EPSG:31370 (Lambert72), alternative: EPSG:3812 (Lambert2008)
-    CRS = "EPSG:31370"
 
     def __init__(
         self,
@@ -122,6 +90,42 @@ class AutoReferencer:
         self.relevant_distance = relevant_distance
         self.od_strategy = od_strategy
         self.threshold_overlap_percentage = threshold_overlap_percentage
+
+        # PROCESSING DEFAULTS
+        # thematic
+        thematic_input = None  # to save the initially loaded geojson
+        # name of the identifier-field of the thematic data (id has to be unique)
+        name_thematic_id = "theme_identifier"
+        # dictionary to store all thematic geometries to handle
+        self.dict_thematic = {}
+
+        # reference
+        self.reference_input = None  # to save the initially loaded geojson
+        # name of the identifier-field of the reference data (id has to be unique,
+        # f.e CAPAKEY for GRB-parcels)
+        self.name_reference_id = "ref_identifier"
+        self.dict_reference = {}  # dictionary to store all reference geometries
+        # to save a unioned geometry of all reference polygons; needed for calculation in
+        # most OD-strategies
+        self.reference_union = None
+
+        # output-dictionaries (when processing dict_thematic)
+        self.dict_result = None  # dictionary to save resulting geometries
+        self.dict_result_diff = None  # dictionary to save global resulting differences
+        self.dict_result_diff_plus = None  # dictionary to save positive resulting differences
+        self.dict_result_diff_min = None  # dictionary to save negative resulting differences
+        self.dict_relevant_intersection = None  # dictionary to save relevant_intersections
+        self.dict_relevant_difference = None  # dictionary to save relevant_differences
+
+        # Coordinate reference system
+
+        # thematic geometries and reference geometries are assumed to be in the same CRS
+        # before loading into the AutoReferencer. No CRS-transformation will be performed
+        # when loading data CRS is expected to be a projected CRS with unit in meters By
+        # default EPSG:31370 (Lambert72), alternative: EPSG:3812 (Lambert2008)
+        self.CRS = "EPSG:31370"
+
+
 
         self.feedback_info("AutoReferencer initialized")
 
@@ -535,7 +539,7 @@ class AutoReferencer:
                 continue
             if equals(geom_intersection, geom_reference):
                 full = True
-                area = round(geom_reference.area)
+                area = round(geom_reference.area, 2)
                 perc = 100
                 geom = to_geojson(geom_reference)
             else:
@@ -544,12 +548,12 @@ class AutoReferencer:
                     continue
                 elif perc > 99.99:
                     full = True
-                    area = round(geom_reference.area)
+                    area = round(geom_reference.area, 2)
                     perc = 100
                     geom = to_geojson(geom_reference)
                 else:
                     full = False
-                    area = round(geom_intersection.area)
+                    area = round(geom_intersection.area, 2)
                     geom = to_geojson(geom_intersection)
             if not with_geom:
                 geom = None
