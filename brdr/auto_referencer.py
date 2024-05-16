@@ -5,7 +5,7 @@ from math import pi
 
 import numpy as np
 import requests as requests
-from shapely import GeometryCollection
+from shapely import GeometryCollection, remove_repeated_points
 from shapely import Polygon
 from shapely import STRtree
 from shapely import buffer
@@ -1071,6 +1071,7 @@ class AutoReferencer:
             ),
             CORR_DISTANCE,
         )
+        geom_thematic_result = make_valid(remove_repeated_points(geom_thematic_result))
         # Correction for circles
 
         # calculate ratio to see if it is a circle, and keep the original geometry if a
