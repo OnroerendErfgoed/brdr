@@ -1,5 +1,5 @@
 from brdr.auto_referencer import AutoReferencer
-from tests import plot_diffs
+from examples import plot_diffs
 from examples import show_results
 
 if __name__ == "__main__":

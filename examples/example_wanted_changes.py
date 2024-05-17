@@ -1,7 +1,7 @@
 import numpy as np
 
 from brdr.auto_referencer import AutoReferencer
-from tests import plot_diffs
+from examples import plot_diffs
 from examples import show_results
 
 # example to test if we can separate wanted deviations from unwanted deviations.

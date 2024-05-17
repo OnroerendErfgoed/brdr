@@ -99,7 +99,7 @@ class AutoReferencer:
         feedback=None,
         relevant_distance=1,
         threshold_overlap_percentage=50,
-        od_strategy=OpenbaarDomeinStrategy.SNAP_ONE_SIDED,
+        od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
     ):
         """
         Initializes the AutoReferencer object
@@ -279,7 +279,7 @@ class AutoReferencer:
         self,
         geometry: BaseGeometry,
         relevant_distance=1,
-        od_strategy=OpenbaarDomeinStrategy.SNAP_ONE_SIDED,
+        od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
         full_overlap_percentage=50,
     ) -> tuple[BaseGeometry, ...]:
         """
@@ -370,7 +370,7 @@ class AutoReferencer:
     def process_dict_thematic(
         self,
         relevant_distance=1,
-        od_strategy=OpenbaarDomeinStrategy.SNAP_ONE_SIDED,
+        od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
         full_overlap_percentage=50,
     ):
         """
@@ -442,7 +442,7 @@ class AutoReferencer:
     def process_series(
         self,
         relevant_distances,
-        od_strategy=OpenbaarDomeinStrategy.SNAP_ONE_SIDED,
+        od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
         full_overlap_percentage=50,
     ):
         """
@@ -676,25 +676,27 @@ class AutoReferencer:
         geom_thematic_od = Polygon()
 
         if self.od_strategy == OpenbaarDomeinStrategy.EXCLUDE:
-            # volledig uitsluiten van alles wat op Openbaar domein ligt
+            # Completely exclude everything that is not on the reference layer
             self.feedback_debug("OD-strategy EXCLUDE")
-            # thematische inputlaag wordt aangepast zodat alle OD-stukken er uitgeknipt
-            # zijn
+            # Remove from the thematic layer all parts that are not on the reference layer
+            # !!this strategy adapts the input-geometry!!
             geometry = safe_intersection(geometry, self._get_reference_union())
         elif self.od_strategy == OpenbaarDomeinStrategy.AS_IS:
-            # Alles wat op openbaar domein ligt gewoon AS IS overnemen
+            # All parts that are not covered by the reference layer are added to the
+            #         resulting geometry AS IS
             self.feedback_debug("OD-strategy AS IS")
-            # alle OD-stukken worden AS IS toegevoegd
+            # all OD-parts wil be added AS IS
             geom_thematic_od = safe_difference(geometry, self._get_reference_union())
-        elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_ONE_SIDED:
-            # Alles wat binnen relevant distance over de perceelsgrens valt wordt
-            # gesnapt naar perceel. Buitengrens wordt niet gebruikt
-            self.feedback_debug("OD-strategy SNAP_ONE_SIDED")
+        elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE:
+            # Everything that falls within the relevant distance over the
+            #  plot boundary is snapped to the plot.
+            #  Only the inner-reference-boundaries are used.
+            #  The outer-reference-boundaries are not used.
+            self.feedback_debug("OD-strategy SNAP_SINGLE_SIDE")
             # geom of OD
             geom_od = safe_difference(geometry, self._get_reference_union())
             # only the relevant parts of OD
             geom_od_neg_pos = buffer_neg_pos(geom_od, self.buffer_distance())
-
             # geom_thematic_od = safe_intersection(geom_od_neg_pos,geom_od)# resulting
             # thematic OD
             geom_od_neg_pos_buffered = buffer_pos(
@@ -703,62 +705,72 @@ class AutoReferencer:
             geom_thematic_od = safe_intersection(
                 geom_od_neg_pos_buffered, geom_od
             )  # resulting thematic OD
-        elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_BOTH_SIDED:
-            # Alles wat binnen relevant distance bij perceelsgrens valt, wordt gesnapt
-            # naar perceelsgrens. Buitengrens wordt gebruikt
+        elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_ALL_SIDE:
+            # Everything that falls within the relevant distance over
+            # the plot boundary is snapped to the plot.
+            #  Inner-reference-boundaries and outer-reference-boundaries are used.
             self.feedback_debug("OD-strategy SNAP BOTH SIDED")
             (
                 geom_thematic_od,
                 relevant_difference_array,
                 relevant_intersection_array,
-            ) = self._od_snap_both_sides(
+            ) = self._od_snap_all_side(
                 geometry,
                 relevant_difference_array,
                 relevant_intersection_array,
             )
-        elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_FULL_AREA_ONE_SIDED:
-            # handig bij Big -area's: - Het OD binnenin de afbakening wordt behouden.
-            # strategy integrates all OD within buffered original geometry
-            self.feedback_debug("OD-strategy Full-area-variant of OD - SNAP_ONE_SIDED")
+        elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_FULL_AREA_SINGLE_SIDE:
+            # Strategy useful for bigger areas.
+            # integrates the entire inner area of the input geometry,
+            # so Openbaar Domein of the inner area is included in the result
+            # Combines SNAP_SINGLE_SIDE with the inner area
+            self.feedback_debug("OD-strategy Full-area-variant of OD-SNAP_SINGLE_SIDE")
             geom_thematic_od = self._od_full_area(geometry)
-        elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_FULL_AREA_BOTH_SIDED:
-            # Full Area variant van OD - Snap All Side
-            # strategy integrates all OD within inside-buffered original geometry
-            self.feedback_debug("OD-strategy Full -area - variant of OD- Snap All Side")
+        elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_FULL_AREA_ALL_SIDE:
+            # Strategy useful for bigger areas.
+            # integrates the entire inner area of the input geometry,
+            # so Openbaar Domein of the inner area is included in the result
+            # Combines SNAP_ALL_SIDE with the inner area
+            self.feedback_debug("OD-strategy Full-area-variant of OD-SNAP_ALL_SIDE")
             # first part is a copy of OD_ALL_SIDE
             (
                 geom_thematic_od,
                 relevant_difference_array,
                 relevant_intersection_array,
-            ) = self._od_snap_both_sides(
+            ) = self._od_snap_all_side(
                 geometry,
                 relevant_difference_array,
                 relevant_intersection_array,
             )
-            # This part is a copy of OD_FULL_AREA
+            # This part is a copy of SNAP_FULL_AREA_SINGLE_SIDE
             geom_theme_od_min_clipped_plus_buffered_clipped = self._od_full_area(
                 geometry
             )
-            # UNION de berekening van OD2 met de BIG_AREA van OD3
+            # UNION the calculation of  OD-SNAP_ALL_SIDE with FULL AREA of OD-SNAP_FULL_AREA_SINGLE_SIDE
             geom_thematic_od = safe_union(
                 geom_theme_od_min_clipped_plus_buffered_clipped, geom_thematic_od
             )
 
-        elif self.od_strategy == 5:
-            # Alles wat binnen relevant distance over de perceelsgrens valt wordt
-            # gesnapt naar perceel. Buitengrens wordt niet gebruikt
-
+        elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE_VARIANT_1:
+            # OD-strategy SNAP_SINGLE_SIDE - variant 1:
+            # Everything that falls within the relevant distance over the
+            #  plot boundary is snapped to the plot.
+            #  Only the inner-reference-boundaries are used.
+            #  The outer-reference-boundaries are not used.
+            self.feedback_debug("OD-strategy SNAP_SINGLE_SIDE - variant 1")
             # geom of OD
             geom_od = safe_difference(geometry, self._get_reference_union())
             # only the relevant parts of OD
             geom_od_neg_pos = buffer_neg_pos(geom_od, self.buffer_distance())
             # resulting thematic OD
             geom_thematic_od = safe_intersection(geom_od_neg_pos, geom_od)
-
-        elif self.od_strategy == 6:
-            # Alles wat binnen relevant distance over de perceelsgrens valt wordt
-            # gesnapt naar perceel. Buitengrens wordt niet gebruikt
-            self.feedback_debug("OD-strategy SNAP INSIDE - variant2")
+        elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE_VARIANT_2:
+            # OD-strategy SNAP_SINGLE_SIDE - variant 2:
+            # Everything that falls within the relevant distance over the
+            #  plot boundary is snapped to the plot.
+            #  Only the inner-reference-boundaries are used.
+            #  The outer-reference-boundaries are not used.
+            self.feedback_debug("OD-strategy SNAP_SINGLE_SIDE - variant 2")
             # TODO: Drop?
             pass
 
@@ -794,7 +806,7 @@ class AutoReferencer:
         geom_thematic_od = geom_theme_od_min_clipped_plus_buffered_clipped
         return geom_thematic_od
 
-    def _od_snap_both_sides(
+    def _od_snap_all_side(
         self,
         geometry,
         relevant_difference_array,
