@@ -1,13 +1,13 @@
 import numpy as np
 from matplotlib import pyplot as plt
 
-from brdr.auto_referencer import AutoReferencer
+from brdr.aligner import Aligner
 
 # example to check if we can notice if it is better to align to a building instead of a
 # parcel
 if __name__ == "__main__":
     # Initiate brdr
-    x = AutoReferencer()
+    x = Aligner()
     # Load thematic data & reference data (parcels)
     x.load_thematic_data_file(
         "../tests/testdata/test_parcel_vs_building.geojson", "theme_id"
@@ -16,7 +16,7 @@ if __name__ == "__main__":
         grb_type="adp", partition=1000
     )  # gebruik de actuele adp-percelen adp= administratieve percelen
 
-    y = AutoReferencer()
+    y = Aligner()
     # Load thematic data & reference data (buildings)
     y.load_thematic_data_file(
         "../tests/testdata/test_parcel_vs_building.geojson", "theme_id"

@@ -4,7 +4,7 @@ import time
 
 import numpy as np
 
-from brdr.auto_referencer import AutoReferencer
+from brdr.aligner import Aligner
 
 # Code to create stats.csv
 
@@ -15,7 +15,7 @@ array_od = [1]
 array_relevant_distance = np.arange(0.1, 10.05, 0.1, dtype=float)
 print(array_relevant_distance)
 
-x = AutoReferencer()
+x = Aligner()
 x.load_thematic_data_file("../tests/testdata/theme_leuven.geojson", "aanduid_id")
 x.load_reference_data_file("../tests/testdata/reference_leuven.geojson", "capakey")
 with open("../tests/output/stats" + time + ".csv", "w", newline="") as csvfile:

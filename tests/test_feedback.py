@@ -1,10 +1,10 @@
 from unittest.mock import Mock
 
-from brdr.auto_referencer import AutoReferencer
+from brdr.aligner import Aligner
 
 
 def test_feedback():
     feedback_mock = Mock()
-    AutoReferencer(feedback=feedback_mock)
-    # assert pushinfo called with parameter "AutoReferencer initialized"
-    feedback_mock.pushInfo.assert_called_with("AutoReferencer initialized")
+    Aligner(feedback=feedback_mock)
+    # assert pushinfo called with parameter "Aligner initialized"
+    feedback_mock.pushInfo.assert_called_with("Aligner initialized")

@@ -51,7 +51,7 @@ logging.basicConfig(
 ###################
 
 
-class AutoReferencer:
+class Aligner:
     """
     This class is used to compare the thematic data with the reference data.
     The reference data can be loaded in different ways, for example by using the GRB data.
@@ -88,7 +88,7 @@ class AutoReferencer:
     # Coordinate reference system
 
     # thematic geometries and reference geometries are assumed to be in the same CRS
-    # before loading into the AutoReferencer. No CRS-transformation will be performed
+    # before loading into the Aligner. No CRS-transformation will be performed
     # when loading data CRS is expected to be a projected CRS with unit in meters By
     # default EPSG:31370 (Lambert72), alternative: EPSG:3812 (Lambert2008)
     CRS = "EPSG:31370"
@@ -102,7 +102,7 @@ class AutoReferencer:
         od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
     ):
         """
-        Initializes the AutoReferencer object
+        Initializes the Aligner object
 
         Args:
             feedback (object, optional): Feedback object that can be added to show
@@ -123,7 +123,7 @@ class AutoReferencer:
         self.od_strategy = od_strategy
         self.threshold_overlap_percentage = threshold_overlap_percentage
 
-        self.feedback_info("AutoReferencer initialized")
+        self.feedback_info("Aligner initialized")
 
     def feedback_debug(self, text):
         if self.feedback is not None:

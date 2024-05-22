@@ -3,15 +3,15 @@ import unittest
 from shapely import from_wkt
 from shapely.geometry import Polygon
 
-from brdr.auto_referencer import AutoReferencer
+from brdr.aligner import Aligner
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import grid_bounds
 
 
-class TestAutoReferencer(unittest.TestCase):
+class TestAligner(unittest.TestCase):
     def setUp(self):
         # Create a sample geometry for testing
-        self.sample_auto_referencer = AutoReferencer()
+        self.sample_auto_referencer = Aligner()
         self.sample_geom = Polygon([(0, 0), (0, 10), (10, 10), (10, 0)])
 
     def test_buffer_neg_pos(self):

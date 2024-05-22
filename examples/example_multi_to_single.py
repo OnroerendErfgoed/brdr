@@ -1,4 +1,4 @@
-from brdr.auto_referencer import AutoReferencer
+from brdr.aligner import Aligner
 from brdr.utils import get_oe_geojson_by_ids
 from brdr.utils import multipolygons_to_singles
 from examples import show_results
@@ -13,7 +13,7 @@ if __name__ == "__main__":
 
     # WITHOUT MULTI_TO_SINGLE
     # Initiate brdr
-    x = AutoReferencer()
+    x = Aligner()
     # Load thematic data & reference data
     # Get a specific feature of OE that exists out of a Multipolygon
 
@@ -30,7 +30,7 @@ if __name__ == "__main__":
 
     # WITH MULTI_TO_SINGLE
     # Initiate brdr
-    x = AutoReferencer()
+    x = Aligner()
     # Load thematic data & reference data
     # Get a specific feature of OE that exists out of a Multipolygon
     dict_theme = multipolygons_to_singles(dict_theme)
