@@ -4,18 +4,18 @@ from examples import show_results
 
 if __name__ == "__main__":
     # Initiate brdr
-    auto_referencer = Aligner()
+    aligner = Aligner()
     # Load thematic data
     # x.load_thematic_data_file("../tests/testdata/theme_leuven.geojson", 'aanduid_id')
     # x.load_thematic_data_file("../tests/testdata/theme.geojson", 'theme_identifier')
-    auto_referencer.load_thematic_data_file(
+    aligner.load_thematic_data_file(
         "../tests/testdata/themelayer_referenced.geojson", "id_theme"
     )
     # x.load_thematic_data_file("../tests/testdata/zwin.geojson", 'id')
     # x.load_thematic_data_file("theme_vmm.geojson", 'unique_id')
 
     # gebruik de actuele adp-percelen adp= administratieve percelen
-    auto_referencer.load_reference_data_grb_actual(grb_type="adp", partition=1000)
+    aligner.load_reference_data_grb_actual(grb_type="adp", partition=1000)
 
     # # gebruik de GRB-gebouwen, gbg= gebouw aan de grond
     # x.load_reference_data_grb_actual('gbg')
@@ -24,12 +24,12 @@ if __name__ == "__main__":
     # x.load_reference_data_file("reference_vmm.geojson", 'ref_identifier')
 
     # Example how to use the Aligner
-    r, rd, *_ = auto_referencer.process_dict_thematic(10, 3)
-    auto_referencer.export_results("output/")
+    r, rd, *_ = aligner.process_dict_thematic(10, 3)
+    aligner.export_results("output/")
     show_results(r, rd)
 
-    r, rd, *_ = auto_referencer.process_dict_thematic(6, 2)
-    auto_referencer.export_results("output/")
+    r, rd, *_ = aligner.process_dict_thematic(6, 2)
+    aligner.export_results("output/")
     show_results(r, rd)
     # for key in r:
     #     x.get_formula(r[key])
@@ -37,13 +37,13 @@ if __name__ == "__main__":
     # Example how to use a series (for histogram)
     # series = [0.2, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 6, 8, 10]
     series = [0.1, 0.2, 0.3, 0.4, 0.5, 1, 2]
-    resulting_areas = auto_referencer.process_series(series, 2, 50)
+    resulting_areas = aligner.process_series(series, 2, 50)
     plot_diffs(series, resulting_areas)
 
     # Example how to use the Aligner with full_overlap_percentage=-1 (original
     # border will be used)
-    r, rd, rd_plus, rd_min, sd, si = auto_referencer.process_dict_thematic(30, 1, -1)
-    auto_referencer.export_results("output/")
+    r, rd, rd_plus, rd_min, sd, si = aligner.process_dict_thematic(30, 1, -1)
+    aligner.export_results("output/")
     show_results(r, rd)
     # for key in r:
     #     x.get_formula(r[key])
@@ -68,6 +68,6 @@ if __name__ == "__main__":
     #     "174523.92973850725684315 170552.32748373309732415)))"
     # )
     # tf = ThemeFeature(p, "id1")
-    # tf.set_auto_referencer(x)
+    # tf.set_aligner(x)
     # tf.align(2, -1, 50)
     # print(tf.geometry_result)

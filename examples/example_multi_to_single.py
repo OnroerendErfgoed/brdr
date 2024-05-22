@@ -4,7 +4,7 @@ from brdr.utils import multipolygons_to_singles
 from examples import show_results
 
 # example to Change a dictionary form multipolygon to single before executing the
-# auto_referencer. Can be used on the thematic dictionary as the reference dictionary
+# aligner. Can be used on the thematic dictionary as the reference dictionary
 
 
 if __name__ == "__main__":

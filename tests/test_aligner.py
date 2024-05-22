@@ -11,7 +11,7 @@ from brdr.geometry_utils import grid_bounds
 class TestAligner(unittest.TestCase):
     def setUp(self):
         # Create a sample geometry for testing
-        self.sample_auto_referencer = Aligner()
+        self.sample_aligner = Aligner()
         self.sample_geom = Polygon([(0, 0), (0, 10), (10, 10), (10, 0)])
 
     def test_buffer_neg_pos(self):
@@ -45,12 +45,12 @@ class TestAligner(unittest.TestCase):
         # Check if the result of the _buffer_neg_pos gives an equal geometry
         Polygon([(0, 0), (0, 10), (10, 10), (10, 0)])
         geom = Polygon([(0, 0), (0, 10), (10, 10), (10, 0)])
-        out = self.sample_auto_referencer.get_last_version_date(geom)
+        out = self.sample_aligner.get_last_version_date(geom)
         self.assertIsNone(out)
         geom = Polygon(
             [(170000, 170000), (170000, 170100), (170100, 170100), (170100, 170000)]
         )
-        out = self.sample_auto_referencer.get_last_version_date(geom)
+        out = self.sample_aligner.get_last_version_date(geom)
         self.assertRegex(
             out, "^(?:19|20)\\d\\d-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])$"
         )
@@ -58,7 +58,7 @@ class TestAligner(unittest.TestCase):
     def test_partition(self):
         # Test partition function
         delta = 2.0
-        filtered_partitions = self.sample_auto_referencer.partition(
+        filtered_partitions = self.sample_aligner.partition(
             self.sample_geom, delta
         )
 
@@ -73,8 +73,8 @@ class TestAligner(unittest.TestCase):
         # Test when intersection equals reference geometry
         key = "a"
         ref_dict = {key: self.sample_geom}
-        self.sample_auto_referencer.load_reference_data_dict(ref_dict)
-        res = self.sample_auto_referencer.get_formula(self.sample_geom, with_geom=True)
+        self.sample_aligner.load_reference_data_dict(ref_dict)
+        res = self.sample_aligner.get_formula(self.sample_geom, with_geom=True)
         result = res[key]
         self.assertTrue(result["full"])
         self.assertEqual(result["percentage"], 100)
@@ -83,8 +83,8 @@ class TestAligner(unittest.TestCase):
         # Test when intersection is partial
         key = "a"
         ref_dict = {key: self.sample_geom.buffer(0.5)}
-        self.sample_auto_referencer.load_reference_data_dict(ref_dict)
-        res = self.sample_auto_referencer.get_formula(self.sample_geom, with_geom=True)
+        self.sample_aligner.load_reference_data_dict(ref_dict)
+        res = self.sample_aligner.get_formula(self.sample_geom, with_geom=True)
         result = res[key]
         self.assertFalse(result["full"])
         self.assertGreater(result["percentage"], 0)
@@ -94,8 +94,8 @@ class TestAligner(unittest.TestCase):
         # Test if processed geometry is equal to reference geometry
         key_ref = "a"
         ref_dict = {key_ref: self.sample_geom}
-        self.sample_auto_referencer.load_reference_data_dict(ref_dict)
-        r, rd, rdp, rdm, si, sd = self.sample_auto_referencer.process_geometry(
+        self.sample_aligner.load_reference_data_dict(ref_dict)
+        r, rd, rdp, rdm, si, sd = self.sample_aligner.process_geometry(
             self.sample_geom.buffer(0.5)
         )
         self.assertTrue(from_wkt(r.wkt).equals(from_wkt(self.sample_geom.wkt)))
