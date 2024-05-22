@@ -1,9 +1,9 @@
-from brdr.auto_referencer import AutoReferencer
+from brdr.aligner import Aligner
 from examples import show_results
 
 if __name__ == "__main__":
     # Initiate brdr
-    x = AutoReferencer()
+    x = Aligner()
 
     # Load thematic data
     thematic_json = {
@@ -44,7 +44,7 @@ if __name__ == "__main__":
     # gebruik de actuele adp-percelen adp= administratieve percelen
     x.load_reference_data_grb_actual(grb_type="adp", partition=1000)
 
-    # Example how to use the AutoReferencer
+    # Example how to use the Aligner
     r, rd, rd_plus, rd_min, sd, si = x.process_dict_thematic(6, 4)
     out = x.get_last_version_date(x.dict_thematic["1100"])
     print(out)

@@ -5,10 +5,10 @@ import requests
 from shapely import STRtree
 from shapely.geometry import shape
 
-from brdr.auto_referencer import AutoReferencer
+from brdr.aligner import Aligner
 from brdr.utils import get_oe_geojson_by_bbox
 
-# This code shows an example how the auto_referencer can be used inside a flow of
+# This code shows an example how the aligner can be used inside a flow of
 # parcel change detection:
 # * it can be used to do a first alignment of the original features
 #       (in this case, based on parcel version adpF2023 (1st January 2023)
@@ -68,21 +68,21 @@ base_correction = 0 # relevant distance that is used to align the original geome
 excluded_area = 10000 #geometries bigger than this, will be excluded
 series = [0, 0.5, 1, 1.5, 2] #series of relevant distance that is used to check if we can auto-align the geometries to the actual reference-polygons to get an 'equal' formula
 
-
 #BASE
 #=====
-# Initiate a AutoReferencer to create a themeset that is base-referenced on a specific base_year
-base_auto_referencer = AutoReferencer()
+# Initiate a Aligner to create a themeset that is base-referenced on a specific
+# base_year
+base_aligner = Aligner()
 # Load the thematic data to evaluate
-# base_auto_referencer.load_thematic_data_file("testdata/theme_changetest.geojson",
-# 'theme_identifier') base_auto_referencer.load_thematic_data_file(
+# base_aligner.load_thematic_data_file("testdata/theme_changetest.geojson",
+# 'theme_identifier') base_aligner.load_thematic_data_file(
 # "testdata/theme_leuven.geojson", 'aanduid_id')
-base_auto_referencer.load_thematic_data_geojson(
+base_aligner.load_thematic_data_geojson(
     get_oe_geojson_by_bbox(bbox), "aanduid_id"
 )
 logging.info(
     "Number of OE-thematic features loaded into base-autoreferencer: "
-    + str(len(base_auto_referencer.dict_thematic))
+    + str(len(base_aligner.dict_thematic))
 )
 # Load the Base reference data
 ref_url = (
@@ -93,7 +93,7 @@ ref_url = (
 )
 collection = get_collection(ref_url,limit)
 
-base_auto_referencer.load_reference_data_geojson(collection, "CAPAKEY")
+base_aligner.load_reference_data_geojson(collection, "CAPAKEY")
 
 # SEARCH FOR CHANGED Parcels in specific timespan
 #=================================================
@@ -112,28 +112,30 @@ if len(array_features) == 0:
     logging.info("No detected changes")
     exit()
 logging.info("Changed parcels in timespan: " + str(len(array_features)))
-thematic_tree = STRtree(list(base_auto_referencer.dict_thematic.values()))
-thematic_items = np.array(list(base_auto_referencer.dict_thematic.keys()))
+thematic_tree = STRtree(list(base_aligner.dict_thematic.values()))
+thematic_items = np.array(list(base_aligner.dict_thematic.keys()))
 arr_indices = thematic_tree.query(array_features, predicate="intersects")
 thematic_intersections = thematic_items.take(arr_indices[1])
 thematic_intersections = list(set(thematic_intersections))
 logging.info("Number of affected features: " + str(len(thematic_intersections)))
 
 for key in thematic_intersections:
-    geometry_base_original = base_auto_referencer.dict_thematic[key]
+    geometry_base_original = base_aligner.dict_thematic[key]
     print(key)
     print (geometry_base_original)
 
 #ACTUAL
 # Initiate a AutoReferencer to reference thematic features to the actual borders
 #================================================================================
-actual_auto_referencer = AutoReferencer()
+
+# Initiate a Aligner to reference thematic features to the actual borders
+actual_aligner = Aligner()
 actual_url = (
     "https://geo.api.vlaanderen.be/GRB/ogc/features/collections/ADP/items?"
     "limit=" + str(limit) + "&crs=" + crs + "&bbox-crs=EPSG:31370&bbox=" + bbox
 )
 collection = get_collection(actual_url, limit)
-actual_auto_referencer.load_reference_data_geojson(collection, "CAPAKEY")
+actual_aligner.load_reference_data_geojson(collection, "CAPAKEY")
 
 
 #LOOP AND PROCESS ALL POSSIBLE AFFECTED FEATURES
@@ -143,29 +145,29 @@ counter_difference = 0
 counter_excluded = 0
 
 for key in thematic_intersections:
-    geometry_base_original = base_auto_referencer.dict_thematic[key]
+    geometry_base_original = base_aligner.dict_thematic[key]
     if geometry_base_original.area > excluded_area:
         counter_excluded = counter_excluded + 1
         logging.info(
             "geometrie excluded; bigger than " + str(excluded_area) + ": " + key
         )
         continue
-    geometry_base_result, *_ = base_auto_referencer.process_geometry(
+    geometry_base_result, *_ = base_aligner.process_geometry(
         geometry_base_original, base_correction
     )
-    last_version_date = base_auto_referencer.get_last_version_date(geometry_base_result)
+    last_version_date = base_aligner.get_last_version_date(geometry_base_result)
     logging.info('key:' + key + '-->last_version_date: ' + last_version_date)
     logging.info("Original formula: " + key)
-    base_formula = base_auto_referencer.get_formula(geometry_base_result)
+    base_formula = base_aligner.get_formula(geometry_base_result)
 
     for i in series:
-        geometry_actual_result, b, c, d, e, f = actual_auto_referencer.process_geometry(
+        geometry_actual_result, b, c, d, e, f = actual_aligner.process_geometry(
             geometry_base_result, i
         )
         logging.info(
             "New formula: " + key + " with relevant distance(m) : " + str(i)
         )
-        actual_formula = actual_auto_referencer.get_formula(geometry_actual_result)
+        actual_formula = actual_aligner.get_formula(geometry_actual_result)
         diff = True
         if check_business_equality(base_formula, actual_formula):  # Logic to be determined by business
             counter_equality = counter_equality + 1

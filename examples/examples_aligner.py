@@ -1,10 +1,10 @@
-from brdr.auto_referencer import AutoReferencer
-from tests import plot_diffs
+from brdr.aligner import Aligner
+from examples import plot_diffs
 from examples import show_results
 
 if __name__ == "__main__":
     # Initiate brdr
-    auto_referencer = AutoReferencer()
+    auto_referencer = Aligner()
     # Load thematic data
     # x.load_thematic_data_file("../tests/testdata/theme_leuven.geojson", 'aanduid_id')
     # x.load_thematic_data_file("../tests/testdata/theme.geojson", 'theme_identifier')
@@ -23,7 +23,7 @@ if __name__ == "__main__":
     # x.load_reference_data_file("../tests/testdata/reference_leuven.geojson", 'capakey')
     # x.load_reference_data_file("reference_vmm.geojson", 'ref_identifier')
 
-    # Example how to use the AutoReferencer
+    # Example how to use the Aligner
     r, rd, *_ = auto_referencer.process_dict_thematic(10, 3)
     auto_referencer.export_results("output/")
     show_results(r, rd)
@@ -40,7 +40,7 @@ if __name__ == "__main__":
     resulting_areas = auto_referencer.process_series(series, 2, 50)
     plot_diffs(series, resulting_areas)
 
-    # Example how to use the AutoReferencer with full_overlap_percentage=-1 (original
+    # Example how to use the Aligner with full_overlap_percentage=-1 (original
     # border will be used)
     r, rd, rd_plus, rd_min, sd, si = auto_referencer.process_dict_thematic(30, 1, -1)
     auto_referencer.export_results("output/")

@@ -1,4 +1,4 @@
-from brdr.auto_referencer import AutoReferencer
+from brdr.aligner import Aligner
 from examples import show_results
 
 # example to test what happens if we combine borders
@@ -13,7 +13,7 @@ from examples import show_results
 
 if __name__ == "__main__":
     # Initiate brdr
-    x = AutoReferencer()
+    x = Aligner()
 
     # Load thematic data & reference data
     x.load_thematic_data_file(
