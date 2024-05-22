@@ -5,7 +5,7 @@ import requests
 from shapely import STRtree
 from shapely.geometry import shape
 
-from brdr.auto_referencer import AutoReferencer
+from brdr.aligner import Aligner
 from brdr.utils import get_oe_geojson_by_bbox
 
 # This code shows an example how the auto_referencer can be used inside a flow of
@@ -28,9 +28,9 @@ limit = 10000
 bbox = "170000,170000,175000,174900"
 base_year = "2023"
 excluded_area = 20000
-# Initiate a AutoReferencer to create a themeset that is base-referenced on a specific
+# Initiate a Aligner to create a themeset that is base-referenced on a specific
 # base_year
-base_auto_referencer = AutoReferencer()
+base_auto_referencer = Aligner()
 # Load the thematic data to evaluate
 # base_auto_referencer.load_thematic_data_file("testdata/theme_changetest.geojson",
 # 'theme_identifier') base_auto_referencer.load_thematic_data_file(
@@ -104,8 +104,8 @@ thematic_intersections = thematic_items.take(arr_indices[1])
 thematic_intersections = list(set(thematic_intersections))
 logging.info("Number of affected features: " + str(len(thematic_intersections)))
 
-# Initiate a AutoReferencer to reference thematic features to the actual borders
-actual_auto_referencer = AutoReferencer()
+# Initiate a Aligner to reference thematic features to the actual borders
+actual_auto_referencer = Aligner()
 actual_url = (
     "https://geo.api.vlaanderen.be/GRB/ogc/features/collections/ADP/items?"
     "limit=" + str(limit) + "&crs=" + crs + "&bbox-crs=EPSG:31370&bbox=" + bbox
