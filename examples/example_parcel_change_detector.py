@@ -81,7 +81,7 @@ base_aligner.load_thematic_data_geojson(
     get_oe_geojson_by_bbox(bbox), "aanduid_id"
 )
 logging.info(
-    "Number of OE-thematic features loaded into base-autoreferencer: "
+    "Number of OE-thematic features loaded into base-aligner: "
     + str(len(base_aligner.dict_thematic))
 )
 # Load the Base reference data
@@ -125,7 +125,7 @@ for key in thematic_intersections:
     print (geometry_base_original)
 
 #ACTUAL
-# Initiate a AutoReferencer to reference thematic features to the actual borders
+# Initiate a Aligner to reference thematic features to the actual borders
 #================================================================================
 
 # Initiate a Aligner to reference thematic features to the actual borders

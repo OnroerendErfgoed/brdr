@@ -77,7 +77,7 @@ class Aligner:
                 processing. Defaults to 1.
             od_strategy (int, optional): The strategy to determine how to handle
                 information outside the reference polygons (Openbaar Domein)
-                (default 1: SNAP -ONE SIDED)
+                (default 1: SNAP_SINGLE_SIDE)
             threshold_overlap_percentage (int, optional): Threshold (%) to determine
                 from which overlapping-percentage a reference-polygon has to be included
                 when there aren't relevant intersections or relevant differences
@@ -118,7 +118,7 @@ class Aligner:
         # Coordinate reference system
 
         # thematic geometries and reference geometries are assumed to be in the same CRS
-        # before loading into the AutoReferencer. No CRS-transformation will be performed
+        # before loading into the Aligner. No CRS-transformation will be performed
         # when loading data CRS is expected to be a projected CRS with unit in meters By
         # default EPSG:31370 (Lambert72), alternative: EPSG:3812 (Lambert2008)
         self.CRS = "EPSG:31370"
