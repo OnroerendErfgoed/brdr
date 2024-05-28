@@ -21,8 +21,9 @@ if __name__ == "__main__":
     x.load_reference_data_grb_actual(grb_type="gbg", partition=1000)
 
     r, rd, rd_plus, rd_min, sd, si = x.process_dict_thematic(2, 4)
+    x.name_thematic_id = "name"
     x.export_results("output/")
-    show_results(r, rd)
+    show_results(r, rd_plus,rd_min)
 
     for key in r:
         print(key)
@@ -38,8 +39,9 @@ if __name__ == "__main__":
     x.load_reference_data_grb_actual(grb_type="gbg", partition=1000)
 
     r, rd, rd_plus, rd_min, sd, si = x.process_dict_thematic(5, 4)
+    x.name_thematic_id = "name"
     x.export_results("output/")
-    show_results(r, rd)
+    show_results(r, rd_plus,rd_min)
 
     for key in r:
         print(key)

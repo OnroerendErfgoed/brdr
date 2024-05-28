@@ -2,14 +2,17 @@ import geopandas as gpd
 import matplotlib.pyplot as plt
 
 
-def show_results(results, results_diff):
+def show_results(results, results_diff_pos,results_diff_neg):
     results_array = list(results.values())
-    results_diff_array = list(results_diff.values())
+    results_diff_pos_array = list(results_diff_pos.values())
+    results_diff_neg_array = list(results_diff_neg.values())
 
     results_geoseries = gpd.GeoSeries(results_array)
-    results_diff_geoseries = gpd.GeoSeries(results_diff_array)
-    ax = results_diff_geoseries.plot(color="k", zorder=2)
-    results_geoseries.plot(ax=ax, zorder=1)
+    results_diff_pos_geoseries = gpd.GeoSeries(results_diff_pos_array)
+    ax1 = results_diff_pos_geoseries.plot(color='none', edgecolor='green', hatch="/", zorder=3)
+    results_diff_neg_geoseries = gpd.GeoSeries(results_diff_neg_array)
+    ax2 = results_diff_neg_geoseries.plot(ax =ax1,color='none', edgecolor='red', hatch="/", zorder=2)
+    results_geoseries.plot(ax=ax2, zorder=1)
     plt.show()
     return
 

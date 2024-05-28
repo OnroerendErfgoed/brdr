@@ -33,7 +33,7 @@ if __name__ == "__main__":
 
     r, rd, rd_plus, rd_min, sd, si = x.process_dict_thematic(2, 4)
     x.export_results("output/")
-    show_results(r, rd)
+    show_results(r, rd_plus,rd_min)
 
     for key in r:
         x.get_formula(r[key])
