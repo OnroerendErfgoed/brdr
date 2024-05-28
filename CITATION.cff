@@ -24,10 +24,6 @@ authors:
     email: koen.vandaele@vlaanderen.be
     affiliation: Agentschap Onroerend Erfgoed
     orcid: 'https://orcid.org/0000-0002-8153-2978'
-identifiers:
-  - type: doi
-    value: 10.1234/zenodo.4321 #to be changed when doi is reserved.
-    description: Concept DOI of the software package
 repository-code: 'https://github.com/OnroerendErfgoed/brdr'
 url: 'https://github.com/OnroerendErfgoed/brdr'
 abstract: >-
