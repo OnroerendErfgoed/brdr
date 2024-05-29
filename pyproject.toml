@@ -4,6 +4,25 @@ version = "0.1.0"
 description = "Automatische correcties van geografische afbakeningen op verschuivende onderlagen"
 readme = { file = "README.md", content-type = "text/markdown" }
 license = { file = "LICENSE" }
+authors = [
+    { name = "Karel Dieussaert", email = "karel.dieussaert@vlaanderen.be" },
+    { name = "Emrys Roef", email = "emrys.roef@vlaanderen.be" },
+]
+maintainers = [
+    { name = "Emrys Roef", email = "emrys.roef@vlaanderen.be" },
+    { name = "Koen Van Daele", email = "koen.vandaele@vlaanderen.be" },
+    { name = "Vermeyen Maerten", email = "maarten.vermeyen@vlaanderen.be" }
+]
+requires-python = ">=3.9"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: MIT License"
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.9",
+    "Topic :: Scientific/Engineering :: GIS",
+]
 dependencies = [
     "geojson==3.1.0",
     "geopandas==0.14.3",
@@ -11,6 +30,10 @@ dependencies = [
     "requests==2.31.0",
     "shapely==2.0.4",
 ]
+[project.urls]
+Documentation = "https://github.com/OnroerendErfgoed/brdr/blob/main/README.md"
+Repository = "https://github.com/OnroerendErfgoed/brdr"
+Issues = "https://github.com/OnroerendErfgoed/brdr/issues"
 
 [project.optional-dependencies]
 dev = [
