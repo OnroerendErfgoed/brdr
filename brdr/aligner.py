@@ -94,7 +94,7 @@ class Aligner:
         # thematic
         thematic_input = None  # to save the initially loaded geojson
         # name of the identifier-field of the thematic data (id has to be unique)
-        name_thematic_id = "theme_identifier"
+        self.name_thematic_id = "theme_identifier"
         # dictionary to store all thematic geometries to handle
         self.dict_thematic = {}
 

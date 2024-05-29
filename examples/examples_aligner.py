@@ -26,11 +26,11 @@ if __name__ == "__main__":
     # Example how to use the Aligner
     r, rd, rd_plus, rd_min, sd, si = aligner.process_dict_thematic(10, 3)
     aligner.export_results("output/")
-    show_results(r, rd_plus,rd_min)
+    show_results(r, rd_plus,rd_min,aligner.dict_thematic, aligner.dict_reference)
 
     r, rd, rd_plus, rd_min, sd, si = aligner.process_dict_thematic(6, 2)
     aligner.export_results("output/")
-    show_results(r, rd_plus,rd_min)
+    show_results(r, rd_plus,rd_min,aligner.dict_thematic, aligner.dict_reference)
     # for key in r:
     #     x.get_formula(r[key])
 
@@ -44,6 +44,6 @@ if __name__ == "__main__":
     # border will be used)
     r, rd, rd_plus, rd_min, sd, si = aligner.process_dict_thematic(30, 1, -1)
     aligner.export_results("output/")
-    show_results(r, rd_plus,rd_min)
+    show_results(r, rd_plus,rd_min,aligner.dict_thematic, aligner.dict_reference)
     # for key in r:
     #     x.get_formula(r[key])

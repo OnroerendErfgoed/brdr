@@ -17,5 +17,5 @@ aligner.load_reference_data_dict(reference_dict)
 #EXECUTE THE ALIGNMENT
 r, rd, rd_plus, rd_min, sd, si = aligner.process_dict_thematic(relevant_distance=1)
 #SHOW RESULTING GEOMETRY AND CHANGES
-show_results(r, rd_plus,rd_min)
+show_results(r, rd_plus,rd_min,thematic_dict,reference_dict)
 

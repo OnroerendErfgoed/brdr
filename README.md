@@ -42,9 +42,9 @@ The figure below shows:
 * Update-detection: Investigate the descriptive formulation before and after alignment to check for (automatic) alignment of geodata 
 * ...
 
-### qgis-script
-An implementation of `brdr` within a QGIS-script can be found at [GitHub-brdrQ](https://github.com/OnroerendErfgoed/brdrQ/).
-This script provides a User Interface to align thematic data to a reference layer, showing the results in the QGIS Table of Contents. 
+### QGIS-script
+An implementation of `brdr` for QGIS can be found at [GitHub-brdrQ](https://github.com/OnroerendErfgoed/brdrQ/).
+This QGIS- script provides a User Interface to align thematic data to a reference layer, showing the results in the QGIS Table of Contents. 
 
 ## Installation
 
@@ -83,12 +83,14 @@ aligner.load_reference_data_dict(reference_dict)
 #EXECUTE THE ALIGNMENT
 r, rd, rd_plus, rd_min, sd, si = aligner.process_dict_thematic(relevant_distance=1)
 #SHOW RESULTING GEOMETRY AND CHANGES
-show_results(r, rd_plus,rd_min)
+show_results(r, rd_plus,rd_min,thematic_dict,reference_dict)
 ```
 The resulting figure shows:
-* the resulting geometry (blue) 
-* the added zone (green)
-* the removed zone (red)
+* the reference polygon (yellow-black)
+* the original geometry (blue)
+* the resulting geometry (green line) 
+* the added zone (green squares)
+* the removed zone (red squares)
 <img src="docs/figures/basic_example.png" width="100%" />
 
 More examples can be found in [Examples](https://github.com/OnroerendErfgoed/brdr/tree/main/examples)
@@ -114,7 +116,7 @@ To use `brdr`, follow these steps:
   * Relevant intersections: relevant intersecting parts of the reference geometries
   * Relevant differences: relevant differences of the reference geometries
 
-## The  `brdr`-algorithm 
+## The `brdr`-algorithm 
 
 The algorithm for alignment is based on 2 main principles:
 

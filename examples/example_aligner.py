@@ -49,4 +49,4 @@ if __name__ == "__main__":
     out = x.get_last_version_date(x.dict_thematic["1100"])
     print(out)
     x.export_results("output/")
-    show_results(r, rd_plus,rd_min)
+    show_results(r, rd_plus,rd_min,x.dict_thematic, x.dict_reference)
