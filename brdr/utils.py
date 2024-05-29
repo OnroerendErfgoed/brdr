@@ -1,5 +1,6 @@
 import os.path
 
+import numpy as np
 import requests
 from geojson import Feature
 from geojson import FeatureCollection
@@ -139,3 +140,69 @@ def get_oe_geojson_by_bbox(bbox, limit=1000):
         start_index = start_index + limit
         collection = collection | feature_collection
     return collection
+
+def get_breakpoints(x, y):
+  """
+  Determine the extremes of a graph.
+
+  Parameters:
+    x (numpy.ndarray): The x values of the graph.
+    y (numpy.ndarray): The y values of the graph.
+
+  Returns:
+    list: A list of the extremes of the graph.
+  """
+
+  y = numerical_derivative(x, y)
+  extremen = []
+  zero_streak = []
+  start_streak = None
+  streak = 0
+  write_zero_streak = False
+  last_extreme = 0
+  for i in range(1, len(x)-1):
+    if round(y[i],2) == 0:
+        streak = streak + 1
+        if start_streak == None:
+            start_streak = x[i]
+    elif (streak !=0):
+        write_zero_streak = True
+    if write_zero_streak or len(x) - 2 == i:
+        end_streak = x[i]
+        center_streak = start_streak + (end_streak - start_streak)/2
+        zero_streak.append((start_streak,end_streak,center_streak, streak,last_extreme))
+        streak = 0
+        start_streak = None
+        write_zero_streak = False
+        print('end_streak')
+    if round(y[i],2) > 0 and y[i - 1] <= y[i] and y[i]>= y[i + 1]:
+        last_extreme = y[i]
+        extremen.append((x[i], y[i], "maximum"))
+
+  for extremum in extremen:
+      print(f"{extremum[0]:.2f}, {extremum[1]:.2f} ({extremum[2]})")
+  for st in zero_streak:
+      print(f"{st[0]:.2f} - {st[1]:.2f} -{st[2]:.2f} - {st[3]:.2f} - startextreme {st[4]:.2f} ")
+  print('breakpoint' + str(st))
+  #plt.plot(series, afgeleide, label='afgeleide-' + str(key))
+  return extremen,zero_streak
+
+def numerical_derivative(x, y):
+  """
+  Calculate the numerical derivative of a graph.
+
+  Parameters:
+    x (numpy.ndarray): The x values of the graph.
+    y (numpy.ndarray): The y values of the graph.
+
+  Returns:
+    numpy.ndarray: The derivative of y with respect to x.
+  """
+
+  dx = x[1] - x[0]
+  dy = np.diff(y)
+  derivative = dy / dx
+  derivative = np.insert(derivative, 0, 0)
+  #derivative = np.append(derivative, 0)
+
+  return derivative

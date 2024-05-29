@@ -16,14 +16,23 @@ def show_results(results, results_diff_pos,results_diff_neg,thematic_dict, refer
         logging.error("show_results: Error while showing results")
     return
 
+
+def show_individual_results(results, results_diff_pos,results_diff_neg,thematic_dict, reference_dict,key):
+    results = {key:results[key]}
+    results_diff_pos = {key: results_diff_pos[key]}
+    results_diff_neg = {key: results_diff_neg[key]}
+    thematic_dict = {key: thematic_dict[key]}
+    show_results(results, results_diff_pos,results_diff_neg,thematic_dict, reference_dict)
+    return
+
 def plot_diffs(series, results_diff):
     for key in results_diff:
         if len(results_diff[key]) == len(series):
             lst_diffs = list(results_diff[key].values())
             plt.plot(series, lst_diffs, label=str(key))
-    plt.xlabel("relevante afstand")
-    plt.ylabel("diff")
-    plt.title("relevante afstand vs diff")
+    plt.xlabel("relevant distance")
+    plt.ylabel("difference")
+    plt.title("Relevant distance vs difference")
     plt.legend()
     plt.show()
     return
