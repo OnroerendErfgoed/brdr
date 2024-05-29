@@ -66,6 +66,7 @@ class Aligner:
         relevant_distance=1,
         threshold_overlap_percentage=50,
         od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
+        crs='EPSG:31370'
     ):
         """
         Initializes the Aligner object
@@ -121,7 +122,7 @@ class Aligner:
         # before loading into the Aligner. No CRS-transformation will be performed
         # when loading data CRS is expected to be a projected CRS with unit in meters By
         # default EPSG:31370 (Lambert72), alternative: EPSG:3812 (Lambert2008)
-        self.CRS = "EPSG:31370"
+        self.CRS = crs
 
         self.feedback_info("Aligner initialized")
 
