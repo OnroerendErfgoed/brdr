@@ -36,6 +36,8 @@ geojson==3.1.0
     # via brdr (pyproject.toml)
 geopandas==0.14.3
     # via brdr (pyproject.toml)
+hatchling==1.24.2
+    # via brdr (pyproject.toml)
 idna==3.7
     # via requests
 iniconfig==2.0.0
@@ -61,12 +63,15 @@ packaging==24.0
     #   black
     #   build
     #   geopandas
+    #   hatchling
     #   matplotlib
     #   pytest
 pandas==2.2.2
     # via geopandas
 pathspec==0.12.1
-    # via black
+    # via
+    #   black
+    #   hatchling
 pillow==10.3.0
     # via matplotlib
 pip-tools==7.4.1
@@ -74,7 +79,9 @@ pip-tools==7.4.1
 platformdirs==4.2.0
     # via black
 pluggy==1.4.0
-    # via pytest
+    # via
+    #   hatchling
+    #   pytest
 pyparsing==3.1.2
     # via matplotlib
 pyproj==3.6.1
@@ -107,6 +114,8 @@ six==1.16.0
     #   python-dateutil
 toml==0.10.2
     # via brdr (pyproject.toml)
+trove-classifiers==2024.5.22
+    # via hatchling
 types-requests==2.31.0.20240406
     # via brdr (pyproject.toml)
 typing-extensions==4.11.0
