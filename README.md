@@ -67,7 +67,6 @@ pip-compile $PIP_COMPILE_ARGS -o requirements-dev.txt --all-extras
 from brdr.aligner import Aligner
 from shapely import from_wkt
 from brdr.enums import OpenbaarDomeinStrategy
-from examples import show_results
 
 #CREATE AN ALIGNER
 aligner = Aligner(relevant_distance=1, od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
@@ -82,8 +81,13 @@ aligner.load_thematic_data_dict(thematic_dict)
 aligner.load_reference_data_dict(reference_dict)
 #EXECUTE THE ALIGNMENT
 r, rd, rd_plus, rd_min, sd, si = aligner.process_dict_thematic(relevant_distance=1)
+#PRINT RESULTS IN WKT
+print ('result: ' + r['theme_id_1'].wkt)
+print ('added area: ' + rd_plus['theme_id_1'].wkt)
+print ('removed area: ' + rd_min['theme_id_1'].wkt)
 #SHOW RESULTING GEOMETRY AND CHANGES
-show_results(r, rd_plus,rd_min,thematic_dict,reference_dict)
+#from examples import show_results
+#show_results(r, rd_plus, rd_min, thematic_dict, reference_dict)
 ```
 The resulting figure shows:
 * the reference polygon (yellow-black)
