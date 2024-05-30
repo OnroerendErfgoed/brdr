@@ -6,6 +6,8 @@ a Python library to assist in realigning (multi-)polygons (OGC Simple Features) 
 
 ![PyPI - Version](https://img.shields.io/pypi/v/brdr)
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.11385644.svg)](https://doi.org/10.5281/zenodo.11385644)
+
 <!-- badges: end -->
 ## Description
 
