@@ -1,7 +1,7 @@
 import numpy as np
 from brdr.aligner import Aligner
 from brdr.utils import get_breakpoints
-from examples import show_results, plot_diffs, show_individual_results
+from examples import show_results, plot_series, show_individual_results
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
@@ -36,7 +36,7 @@ if __name__ == '__main__':
     #series = [0.1,0.2,0.3,0.4, 0.5,1,2,3,4]
     series = np.arange(0.1, 10.05, 0.1, dtype=float)
     resulting_areas = aligner.process_series(series,4,50)
-    plot_diffs(series,resulting_areas)
+    plot_series(series, resulting_areas)
     for key in resulting_areas:
         if len(resulting_areas[key]) == len(series):
             lst_diffs = list(resulting_areas[key].values())

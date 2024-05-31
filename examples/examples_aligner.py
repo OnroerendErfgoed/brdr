@@ -1,5 +1,5 @@
 from brdr.aligner import Aligner
-from examples import plot_diffs
+from examples import plot_series
 from examples import show_results
 
 if __name__ == "__main__":
@@ -38,7 +38,7 @@ if __name__ == "__main__":
     # series = [0.2, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 6, 8, 10]
     series = [0.1, 0.2, 0.3, 0.4, 0.5, 1, 2]
     resulting_areas = aligner.process_series(series, 2, 50)
-    plot_diffs(series, resulting_areas)
+    plot_series(series, resulting_areas)
 
     # Example how to use the Aligner with full_overlap_percentage=-1 (original
     # border will be used)

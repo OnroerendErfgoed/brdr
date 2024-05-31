@@ -1,5 +1,4 @@
 import logging
-
 import geopandas as gpd
 import matplotlib.pyplot as plt
 
@@ -25,14 +24,14 @@ def show_individual_results(results, results_diff_pos,results_diff_neg,thematic_
     show_results(results, results_diff_pos,results_diff_neg,thematic_dict, reference_dict)
     return
 
-def plot_diffs(series, results_diff):
-    for key in results_diff:
-        if len(results_diff[key]) == len(series):
-            lst_diffs = list(results_diff[key].values())
+def plot_series(series, dictionary,xlabel="relevant distance",ylabel="difference",title="Relevant distance vs difference"):
+    for key in dictionary:
+        if len(dictionary[key]) == len(series):
+            lst_diffs = list(dictionary[key].values())
             plt.plot(series, lst_diffs, label=str(key))
-    plt.xlabel("relevant distance")
-    plt.ylabel("difference")
-    plt.title("Relevant distance vs difference")
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.title(title)
     plt.legend()
     plt.show()
     return

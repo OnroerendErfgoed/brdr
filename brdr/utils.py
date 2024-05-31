@@ -103,7 +103,7 @@ def polygonize_reference_data(dict_ref):
     return dict_ref
 
 
-def get_oe_geojson_by_ids(aanduidingsobjecten):
+def get_oe_dict_by_ids(aanduidingsobjecten):
     """
     Get a thematic dictionary from a list of aanduid_id's
     """

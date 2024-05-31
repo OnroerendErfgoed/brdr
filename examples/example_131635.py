@@ -1,5 +1,5 @@
 from brdr.aligner import Aligner
-from brdr.utils import get_oe_geojson_by_ids
+from brdr.utils import get_oe_dict_by_ids
 from examples import show_results
 
 if __name__ == "__main__":
@@ -8,7 +8,7 @@ if __name__ == "__main__":
     # Initiate brdr
     x = Aligner()
     # Load thematic data & reference data
-    dict_theme = get_oe_geojson_by_ids([131635])
+    dict_theme = get_oe_dict_by_ids([131635])
     x.load_thematic_data_dict(dict_theme)
     x.load_reference_data_grb_actual(grb_type="adp", partition=1000)
 

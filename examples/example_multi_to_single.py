@@ -1,5 +1,5 @@
 from brdr.aligner import Aligner
-from brdr.utils import get_oe_geojson_by_ids
+from brdr.utils import get_oe_dict_by_ids
 from brdr.utils import multipolygons_to_singles
 from examples import show_results
 
@@ -9,7 +9,7 @@ from examples import show_results
 
 if __name__ == "__main__":
     # EXAMPLE for a thematic MultiPolygon
-    dict_theme = get_oe_geojson_by_ids([110082])
+    dict_theme = get_oe_dict_by_ids([110082])
 
     # WITHOUT MULTI_TO_SINGLE
     # Initiate brdr

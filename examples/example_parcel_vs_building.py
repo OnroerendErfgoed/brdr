@@ -1,7 +1,6 @@
 import numpy as np
-from matplotlib import pyplot as plt
-
 from brdr.aligner import Aligner
+from examples import plot_series
 
 # example to check if we can notice if it is better to align to a building instead of a
 # parcel
@@ -35,14 +34,5 @@ if __name__ == "__main__":
     # Make a 1-by-1 comparison for each thematic feature compared to the 2 references (
     # parcels and buildings)
     for key in x_resulting_areas:
-        if len(x_resulting_areas[key]) == len(series):
-            lst_diffs = list(x_resulting_areas[key].values())
-            plt.plot(series, lst_diffs, label="x" + str(key))
-        if len(y_resulting_areas[key]) == len(series):
-            lst_diffs = list(y_resulting_areas[key].values())
-            plt.plot(series, lst_diffs, label="y" + str(key))
-        plt.xlabel("relevante afstand")
-        plt.ylabel("diff")
-        plt.title("relevante afstand vs diff")
-        plt.legend()
-        plt.show()
+        dict_diff = {"x" + str(key): x_resulting_areas[key], "y" + str(key): y_resulting_areas[key]}
+        plot_series(series, dict_diff)
