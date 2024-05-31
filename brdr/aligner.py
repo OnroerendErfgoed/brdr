@@ -41,7 +41,7 @@ from brdr.geometry_utils import safe_difference
 from brdr.geometry_utils import safe_intersection
 from brdr.geometry_utils import safe_symmetric_difference
 from brdr.geometry_utils import safe_union
-from brdr.utils import export_geojson
+from brdr.utils import export_geojson, diffs_from_dict_series, get_breakpoints_zerostreak
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(message)s", datefmt="%d-%b-%y %H:%M:%S"
@@ -440,6 +440,27 @@ class Aligner:
             dict_relevant_diff,
         )
 
+    def predictor(
+            self,
+            relevant_distances=np.arange(0.1, 5.05, 0.1, dtype=float),
+            od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
+            full_overlap_percentage=50,
+    ):
+        dict_predicted = {}
+        for key in self.dict_thematic.keys():
+            dict_predicted[key]={}
+        dict_series = self.process_series(relevant_distances=relevant_distances,od_strategy=od_strategy,full_overlap_percentage=full_overlap_percentage)
+        diffs = diffs_from_dict_series(dict_series, self.dict_thematic)
+        for key in diffs:
+            if len(diffs[key]) == len(relevant_distances):
+                lst_diffs = list(diffs[key].values())
+                breakpoints, zero_streaks = get_breakpoints_zerostreak(relevant_distances, lst_diffs)
+                logging.debug(str(key))
+                for zs in zero_streaks:
+                    dict_predicted[key][zs[0]]= (dict_series[zs[0]][0][key],dict_series[zs[0]][1][key],dict_series[zs[0]][2][key],
+                                                 dict_series[zs[0]][3][key],dict_series[zs[0]][4][key],dict_series[zs[0]][5][key])
+        return dict_predicted
+
     def process_series(
         self,
         relevant_distances,
@@ -447,7 +468,7 @@ class Aligner:
         full_overlap_percentage=50,
     ):
         """
-        Calculates percentage differences for thematic data based on a series of relevant
+        Calculates the resulting dictionaries for thematic data based on a series of relevant
             distances.
 
         Args:
@@ -459,7 +480,7 @@ class Aligner:
                 considering full overlap. Defaults to 50.
 
         Returns:
-            dict: A dictionary containing percentage differences for each thematic key:
+            dict: A dictionary containing the resulting dictionaries for a series of relevant distances:
 
                 {
                     'thematic_key1': {
@@ -478,32 +499,18 @@ class Aligner:
         self.feedback_debug("Process series" + str(relevant_distances))
         self.od_strategy = od_strategy
         self.threshold_overlap_percentage = full_overlap_percentage
-        self._prepare_thematic_data()
-        diff_percentages = {}
-        for key in self.dict_thematic:
-            diff_percentages[key] = {}
+        #self._prepare_thematic_data() #not necessary? Assumed that dict_thematic is already loaded
+        dict_series = {}
         for s in relevant_distances:
             self.feedback_info(
-                "Processing relevant_distance (m):"
+                "Processing series - relevant_distance (m):"
                 + str(s)
                 + " with ODStrategy "
                 + str(self.od_strategy)
             )
-            (
-                results,
-                results_diff,
-                results_diff_plus,
-                results_diff_min,
-                rd,
-                ri,
-            ) = self.process_dict_thematic(s, od_strategy)
-            for key in results_diff:
-                prc = results_diff[key].area * 100 / results[key].area
-                # if prc >1:
-                #    prc = 1
-                diff_percentages[key][s] = prc
+            dict_series[s] = self.process_dict_thematic(s, od_strategy)
         self.feedback_info("End of processing series: " + str(relevant_distances))
-        return diff_percentages
+        return dict_series
 
     def get_formula(self, geometry, with_geom=False):
         """

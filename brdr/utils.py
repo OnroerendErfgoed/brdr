@@ -141,51 +141,62 @@ def get_oe_geojson_by_bbox(bbox, limit=1000):
         collection = collection | feature_collection
     return collection
 
-def get_breakpoints(x, y):
-  """
-  Determine the extremes of a graph.
+def get_breakpoints_zerostreak(x, y):
+    """
+    Determine the extremes of a graph based on the derivative, and return:
+    * the breakpoints: x-values of extremes
+    * the zerostreaks: ranges where the derivative is zero, ranges of no-change
 
-  Parameters:
+    Parameters:
     x (numpy.ndarray): The x values of the graph.
-    y (numpy.ndarray): The y values of the graph.
+    derivative (numpy.ndarray): The y values of the graph.
 
-  Returns:
+    Returns:
     list: A list of the extremes of the graph.
-  """
+    """
 
-  y = numerical_derivative(x, y)
-  extremen = []
-  zero_streak = []
-  start_streak = None
-  streak = 0
-  write_zero_streak = False
-  last_extreme = 0
-  for i in range(1, len(x)-1):
-    if round(y[i],2) == 0:
-        streak = streak + 1
-        if start_streak == None:
-            start_streak = x[i]
-    elif (streak !=0):
-        write_zero_streak = True
-    if write_zero_streak or len(x) - 2 == i:
-        end_streak = x[i]
-        center_streak = start_streak + (end_streak - start_streak)/2
-        zero_streak.append((start_streak,end_streak,center_streak, streak,last_extreme))
-        streak = 0
-        start_streak = None
-        write_zero_streak = False
-        print('end_streak')
-    if round(y[i],2) > 0 and y[i - 1] <= y[i] and y[i]>= y[i + 1]:
-        last_extreme = y[i]
-        extremen.append((x[i], y[i], "maximum"))
+    derivative = numerical_derivative(x, y)
+    # plt.plot(x, y, label="y")
+    # plt.plot( x, derivative, label="derivative")
+    # plt.legend()
+    # plt.show()
+    extremes = []
+    zero_streak = []
+    start_streak = None
+    streak = 0
+    write_zero_streak = False
+    last_extreme = 0
+    for i in range(1, len(x)):
+        if round(derivative[i],2) == 0:
+            streak = streak + 1
+            if start_streak == None:
+                start_streak = x[i-1]
+        elif (streak !=0):
+            write_zero_streak = True
+        if start_streak != None and (write_zero_streak or len(x)-1 == i):
+            end_streak = x[i-1]
+            if derivative[i] == 0:
+                end_streak = x[i]
+            center_streak = start_streak + (end_streak - start_streak)/2
+            zero_streak.append((start_streak,end_streak,center_streak, streak,last_extreme))
+            streak = 0
+            start_streak = None
+            write_zero_streak = False
+            print('end_streak')
+        if i < len(x)-1 and round(derivative[i],2) > 0 and derivative[i - 1] <= derivative[i] and derivative[i]>= derivative[i + 1]:
+            last_extreme = derivative[i]
+            extremes.append((x[i], derivative[i], "maximum"))
+        if i < len(x)-1 and round(derivative[i],2) < 0 and derivative[i - 1] >= derivative[i] and derivative[i]<= derivative[i + 1]:
+            last_extreme = derivative[i]
+            extremes.append((x[i], derivative[i], "minimum"))
 
-  for extremum in extremen:
-      print(f"{extremum[0]:.2f}, {extremum[1]:.2f} ({extremum[2]})")
-  for st in zero_streak:
-      print(f"{st[0]:.2f} - {st[1]:.2f} -{st[2]:.2f} - {st[3]:.2f} - startextreme {st[4]:.2f} ")
-  print('breakpoint' + str(st))
-  #plt.plot(series, afgeleide, label='afgeleide-' + str(key))
-  return extremen,zero_streak
+    for extremum in extremes:
+        print(f"{extremum[0]:.2f}, {extremum[1]:.2f} ({extremum[2]})")
+    for st in zero_streak:
+        print(f"{st[0]:.2f} - {st[1]:.2f} - {st[2]:.2f} - {st[3]:.2f} - startextreme {st[4]:.2f} ")
+        #print('breakpoint: ' + str(st))
+    #plt.plot(series, afgeleide, label='afgeleide-' + str(key))
+    return extremes,zero_streak
 
 def numerical_derivative(x, y):
   """
@@ -199,10 +210,48 @@ def numerical_derivative(x, y):
     numpy.ndarray: The derivative of y with respect to x.
   """
 
-  dx = x[1] - x[0]
+  dx = np.diff(x)
   dy = np.diff(y)
   derivative = dy / dx
   derivative = np.insert(derivative, 0, 0)
   #derivative = np.append(derivative, 0)
 
-  return derivative
+  return list(derivative)
+
+def diffs_from_dict_series(dict_series, dict_thematic):
+    """
+    Returns:
+                dict: A dictionary containing differences for each thematic key:
+                    {
+                        'thematic_key1': {
+                            distance1: percentage1,
+                            distance2: percentage2,
+                            ...
+                        },
+                        'thematic_key2': {
+                            distance1: percentage1,
+                            distance2: percentage2,
+                            ...
+                        },
+                        ...
+                    }
+    """
+    keys = dict_thematic.keys()
+    diffs = {}
+    for key in keys:
+        diffs[key]={}
+    for rel_dist in dict_series: #all the relevant distances used to calculate the series
+        results = dict_series[rel_dist][0]
+        results_diff =dict_series[rel_dist][1]
+        for key in keys:
+            if key not in results.keys() or key not in results_diff.keys():
+                raise KeyError("No results calculated for theme_id " + str(key))
+
+            #calculate the diffs you want to have
+            #diff = results_diff[key].area * 100 / results[key].area #percentage of change
+            diff = results[key].area - dict_thematic[key].area #difference (m²) between area of resulting geometry and original geometry
+            #diff = abs(results[key].area - dict_thematic[key].area) #absolute difference (m²) between area of resulting geometry and original geometry
+            #diff = abs(results[key].area - dict_thematic[key].area)*100/dict_thematic[key].area #absolute difference (%) between area of resulting geometry and original geometry
+            #TODO: determine a good diff-value for determination
+            diffs[key][rel_dist] = diff
+    return diffs

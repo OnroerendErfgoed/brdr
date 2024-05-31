@@ -16,11 +16,12 @@ def show_results(results, results_diff_pos,results_diff_neg,thematic_dict, refer
     return
 
 
-def show_individual_results(results, results_diff_pos,results_diff_neg,thematic_dict, reference_dict,key):
-    results = {key:results[key]}
-    results_diff_pos = {key: results_diff_pos[key]}
-    results_diff_neg = {key: results_diff_neg[key]}
-    thematic_dict = {key: thematic_dict[key]}
+def show_individual_results(result, result_diff_pos,result_diff_neg,thematic_dict_key, reference_dict):
+    # TODO probeer de verschillende voorstellen samen te plotten?
+    results = {'key':result}
+    results_diff_pos = {'key': result_diff_pos}
+    results_diff_neg = {'key': result_diff_neg}
+    thematic_dict = {'key': thematic_dict_key}
     show_results(results, results_diff_pos,results_diff_neg,thematic_dict, reference_dict)
     return
 

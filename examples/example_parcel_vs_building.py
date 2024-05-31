@@ -1,5 +1,6 @@
 import numpy as np
 from brdr.aligner import Aligner
+from brdr.utils import diffs_from_dict_series
 from examples import plot_series
 
 # example to check if we can notice if it is better to align to a building instead of a
@@ -26,8 +27,10 @@ if __name__ == "__main__":
 
     # Example how to use a series (for histogram)
     series = np.arange(0.1, 5.05, 0.1, dtype=float)
-    x_resulting_areas = x.process_series(series, 4, 50)
-    y_resulting_areas = y.process_series(series, 4, 50)
+    x_dict_series = x.process_series(series, 4, 50)
+    x_resulting_areas = diffs_from_dict_series(x_dict_series, x.dict_thematic)
+    y_dict_series = y.process_series(series, 4, 50)
+    y_resulting_areas = diffs_from_dict_series(y_dict_series, y.dict_thematic)
     # plot_diffs(series,x_resulting_areas)
     # plot_diffs(series,y_resulting_areas)
 

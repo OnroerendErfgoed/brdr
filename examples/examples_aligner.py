@@ -1,4 +1,5 @@
 from brdr.aligner import Aligner
+from brdr.utils import diffs_from_dict_series
 from examples import plot_series
 from examples import show_results
 
@@ -37,7 +38,8 @@ if __name__ == "__main__":
     # Example how to use a series (for histogram)
     # series = [0.2, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 6, 8, 10]
     series = [0.1, 0.2, 0.3, 0.4, 0.5, 1, 2]
-    resulting_areas = aligner.process_series(series, 2, 50)
+    dict_series = aligner.process_series(series, 2, 50)
+    resulting_areas = diffs_from_dict_series(dict_series, aligner.dict_thematic)
     plot_series(series, resulting_areas)
 
     # Example how to use the Aligner with full_overlap_percentage=-1 (original
