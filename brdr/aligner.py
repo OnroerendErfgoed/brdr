@@ -41,7 +41,8 @@ from brdr.geometry_utils import safe_difference
 from brdr.geometry_utils import safe_intersection
 from brdr.geometry_utils import safe_symmetric_difference
 from brdr.geometry_utils import safe_union
-from brdr.utils import export_geojson, diffs_from_dict_series, get_breakpoints_zerostreak
+from brdr.utils import export_geojson, diffs_from_dict_series, get_breakpoints_zerostreak, \
+    filter_resulting_series_by_key
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(message)s", datefmt="%d-%b-%y %H:%M:%S"
@@ -446,6 +447,9 @@ class Aligner:
             od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
             full_overlap_percentage=50,
     ):
+        """
+        returns a dictionary with, for every key, all 'predicted' relevant distances that are interesting, with its tuple of results
+        """
         dict_predicted = {}
         for key in self.dict_thematic.keys():
             dict_predicted[key]={}
@@ -457,8 +461,8 @@ class Aligner:
                 breakpoints, zero_streaks = get_breakpoints_zerostreak(relevant_distances, lst_diffs)
                 logging.debug(str(key))
                 for zs in zero_streaks:
-                    dict_predicted[key][zs[0]]= (dict_series[zs[0]][0][key],dict_series[zs[0]][1][key],dict_series[zs[0]][2][key],
-                                                 dict_series[zs[0]][3][key],dict_series[zs[0]][4][key],dict_series[zs[0]][5][key])
+                    dict_predicted[key][zs[0]] = dict_series[zs[0]]
+                dict_predicted[key] = filter_resulting_series_by_key(dict_predicted[key],key)
         return dict_predicted
 
     def process_series(
@@ -483,16 +487,8 @@ class Aligner:
             dict: A dictionary containing the resulting dictionaries for a series of relevant distances:
 
                 {
-                    'thematic_key1': {
-                        distance1: percentage1,
-                        distance2: percentage2,
-                        ...
-                    },
-                    'thematic_key2': {
-                        distance1: percentage1,
-                        distance2: percentage2,
-                        ...
-                    },
+                    'relevant_distance_1': (tuple of resulting dictionaries),
+                    'relevant_distance_2': (tuple of resulting dictionaries),
                     ...
                 }
         """

@@ -1,7 +1,7 @@
 from brdr.aligner import Aligner
 from brdr.utils import get_oe_dict_by_ids
 from brdr.utils import multipolygons_to_singles
-from examples import show_results
+from examples import show_map
 
 # example to Change a dictionary form multipolygon to single before executing the
 # aligner. Can be used on the thematic dictionary as the reference dictionary
@@ -13,34 +13,42 @@ if __name__ == "__main__":
 
     # WITHOUT MULTI_TO_SINGLE
     # Initiate brdr
-    x = Aligner()
+    aligner = Aligner()
     # Load thematic data & reference data
     # Get a specific feature of OE that exists out of a Multipolygon
 
-    x.load_thematic_data_dict(dict_theme)
-    x.load_reference_data_grb_actual(grb_type="gbg", partition=1000)
+    aligner.load_thematic_data_dict(dict_theme)
+    aligner.load_reference_data_grb_actual(grb_type="gbg", partition=1000)
 
-    r, rd, rd_plus, rd_min, sd, si = x.process_dict_thematic(2, 4)
-    x.export_results("output/")
-    show_results(r, rd_plus,rd_min,x.dict_thematic, x.dict_reference)
+    rel_dist = 2
+    dict_results_by_distance = {}
+    dict_results_by_distance[rel_dist] = aligner.process_dict_thematic(rel_dist,4)
+    aligner.export_results("output/")
+    show_map(dict_results_by_distance, aligner.dict_thematic, aligner.dict_reference)
 
-    for key in r:
+    results = dict_results_by_distance[rel_dist][0]
+
+    for key in results:
         print(key)
-        print(x.get_formula(r[key]))
+        print(aligner.get_formula(results[key]))
 
     # WITH MULTI_TO_SINGLE
     # Initiate brdr
-    x = Aligner()
+    aligner = Aligner()
     # Load thematic data & reference data
     # Get a specific feature of OE that exists out of a Multipolygon
     dict_theme = multipolygons_to_singles(dict_theme)
-    x.load_thematic_data_dict(dict_theme)
-    x.load_reference_data_grb_actual(grb_type="gbg", partition=1000)
+    aligner.load_thematic_data_dict(dict_theme)
+    aligner.load_reference_data_grb_actual(grb_type="gbg", partition=1000)
 
-    r, rd, rd_plus, rd_min, sd, si = x.process_dict_thematic(5, 4)
-    x.export_results("output/")
-    show_results(r, rd_plus, rd_min, x.dict_thematic, x.dict_reference)
+    rel_dist = 5
+    dict_results_by_distance = {}
+    dict_results_by_distance[rel_dist] = aligner.process_dict_thematic(rel_dist,4)
+    aligner.export_results("output/")
+    show_map(dict_results_by_distance, aligner.dict_thematic, aligner.dict_reference)
 
-    for key in r:
+    results = dict_results_by_distance[rel_dist][0]
+
+    for key in results:
         print(key)
-        print(x.get_formula(r[key]))
+        print(aligner.get_formula(results[key]))

@@ -1,7 +1,7 @@
 import numpy as np
 from brdr.aligner import Aligner
-from brdr.utils import get_breakpoints_zerostreak, diffs_from_dict_series
-from examples import show_results, plot_series, show_individual_results
+from brdr.utils import get_breakpoints_zerostreak, diffs_from_dict_series, filter_resulting_series_by_key
+from examples import plot_series, show_map
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
@@ -23,17 +23,18 @@ if __name__ == '__main__':
 
 
     #Example how to use the Aligner
-    r,rd, rd_plus,rd_min,sd,si = aligner.process_dict_thematic(2, 4)
+    rel_dist = 2
+    dict_results_by_distance = {}
+    dict_results_by_distance[rel_dist] = aligner.process_dict_thematic(rel_dist,4)
     aligner.export_results("output/")
-    show_results(r,rd_plus,rd_min, aligner.dict_thematic, aligner.dict_reference)
-
+    show_map(dict_results_by_distance, aligner.dict_thematic, aligner.dict_reference)
     #Possibility to get the descriptive formula of a thematic feature
-    for key in r:
-        aligner.get_formula(r[key])
+    results = dict_results_by_distance[rel_dist][0]
+    for key in results:
+        print(key)
+        print(aligner.get_formula(results[key]))
 
     #Example how to use a series (for histogram)
-    #series = [0.2, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 6, 8, 10]
-    #series = [0.1,0.2,0.3,0.4, 0.5,1,2,3,4]
     series = np.arange(0.1, 10.05, 0.1, dtype=float)
     dict_series = aligner.process_series(series,4,50)
     resulting_areas = diffs_from_dict_series(dict_series, aligner.dict_thematic)
@@ -47,8 +48,10 @@ if __name__ == '__main__':
                 print(f"{extremum[0]:.2f}, {extremum[1]:.2f} ({extremum[2]})")
             for st in zero_streak:
                 print(f"{st[0]:.2f} - {st[1]:.2f} -{st[2]:.2f} - {st[3]:.2f} - startextreme {st[4]:.2f} ")
-                r, rd, rd_plus, rd_min, sd, si = aligner.process_dict_thematic(st[0], 4)
-                show_individual_results(r[key],rd_plus[key], rd_min[key],aligner.dict_thematic[key],aligner.dict_reference)
+                dict_results_by_distance = {}
+                dict_results_by_distance[st[0]] = aligner.process_dict_thematic(st[0], 4)
+                dict_results_by_distance = filter_resulting_series_by_key(dict_results_by_distance,key)
+                show_map(dict_results_by_distance, {key:aligner.dict_thematic[key]}, aligner.dict_reference)
 
 
 

@@ -1,16 +1,16 @@
 import os.path
-
 import numpy as np
 import requests
+import logging
 from geojson import Feature
 from geojson import FeatureCollection
 from geojson import dump
+#from matplotlib import pyplot as plt
 from shapely import GeometryCollection
 from shapely import make_valid
 from shapely import node
 from shapely import polygonize
 from shapely.geometry import shape
-
 
 def export_geojson(path_to_file, dictionary, crs, name_id, multi_to_single=False):
     features = []
@@ -143,25 +143,33 @@ def get_oe_geojson_by_bbox(bbox, limit=1000):
 
 def get_breakpoints_zerostreak(x, y):
     """
-    Determine the extremes of a graph based on the derivative, and return:
-    * the breakpoints: x-values of extremes
-    * the zerostreaks: ranges where the derivative is zero, ranges of no-change
+    Determine the extremes and zero_streaks of a graph based on the derivative, and return:
+    * the breakpoints: extremes (breakpoints) of graph where 'change' occurs
+    * the zero_streaks: ranges where the derivative is zero, ranges of relevant_distance where 'no-change' occurs
 
     Parameters:
     x (numpy.ndarray): The x values of the graph.
     derivative (numpy.ndarray): The y values of the graph.
 
     Returns:
-    list: A list of the extremes of the graph.
+    extremes: A list of tuples for breakpoints:
+        *   relevant distance where extreme occurs
+        *   extreme value
+        *   minimum or maximum
+    zero_streaks: A list of tuples for zero_streaks:
+        * relevant distance where zero_streak starts
+        * relevant distance where zero_streak ends
+        * center of start- and end- zero_streak
+        * counter of #relevant_distances where zero-streak holds on
+        * extreme value for zero_streak
     """
-
     derivative = numerical_derivative(x, y)
     # plt.plot(x, y, label="y")
     # plt.plot( x, derivative, label="derivative")
     # plt.legend()
     # plt.show()
     extremes = []
-    zero_streak = []
+    zero_streaks = []
     start_streak = None
     streak = 0
     write_zero_streak = False
@@ -178,25 +186,23 @@ def get_breakpoints_zerostreak(x, y):
             if derivative[i] == 0:
                 end_streak = x[i]
             center_streak = start_streak + (end_streak - start_streak)/2
-            zero_streak.append((start_streak,end_streak,center_streak, streak,last_extreme))
+            zero_streaks.append((start_streak,end_streak,center_streak, streak,last_extreme))
             streak = 0
             start_streak = None
             write_zero_streak = False
-            print('end_streak')
+            logging.debug('end_streak')
         if i < len(x)-1 and round(derivative[i],2) > 0 and derivative[i - 1] <= derivative[i] and derivative[i]>= derivative[i + 1]:
             last_extreme = derivative[i]
             extremes.append((x[i], derivative[i], "maximum"))
         if i < len(x)-1 and round(derivative[i],2) < 0 and derivative[i - 1] >= derivative[i] and derivative[i]<= derivative[i + 1]:
             last_extreme = derivative[i]
             extremes.append((x[i], derivative[i], "minimum"))
-
     for extremum in extremes:
-        print(f"{extremum[0]:.2f}, {extremum[1]:.2f} ({extremum[2]})")
-    for st in zero_streak:
-        print(f"{st[0]:.2f} - {st[1]:.2f} - {st[2]:.2f} - {st[3]:.2f} - startextreme {st[4]:.2f} ")
-        #print('breakpoint: ' + str(st))
+        logging.info(f"breakpoints: relevant_distance:{extremum[0]:.2f}, extreme:{extremum[1]:.2f} ({extremum[2]})")
+    for st in zero_streaks:
+        logging.info(f"zero_streaks: [{st[0]:.2f} - {st[1]:.2f}] - center:{st[2]:.2f} - counter:{st[3]:.2f} - min/max-extreme:{st[4]:.2f} ")
     #plt.plot(series, afgeleide, label='afgeleide-' + str(key))
-    return extremes,zero_streak
+    return extremes,zero_streaks
 
 def numerical_derivative(x, y):
   """
@@ -216,7 +222,26 @@ def numerical_derivative(x, y):
   derivative = np.insert(derivative, 0, 0)
   #derivative = np.append(derivative, 0)
 
-  return list(derivative)
+  return derivative
+
+def _filter_dict_by_key(dictionary, filter_key):
+    return {key: dictionary[key] for key in dictionary.keys() if key == filter_key}
+def filter_resulting_series_by_key(resulting_series,filter_key):
+    filtered_resulting_series ={}
+    for dist in resulting_series:
+        result_tuple = resulting_series[dist]
+        filtered_tuple = (
+            _filter_dict_by_key(result_tuple[0], filter_key),
+            _filter_dict_by_key(result_tuple[1], filter_key),
+            _filter_dict_by_key(result_tuple[2], filter_key),
+            _filter_dict_by_key(result_tuple[3], filter_key),
+            _filter_dict_by_key(result_tuple[4], filter_key),
+            _filter_dict_by_key(result_tuple[5], filter_key)
+        )
+        filtered_resulting_series[dist] = filtered_tuple
+
+    return filtered_resulting_series
+
 
 def diffs_from_dict_series(dict_series, dict_thematic):
     """

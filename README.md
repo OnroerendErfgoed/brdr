@@ -88,8 +88,8 @@ print ('result: ' + r['theme_id_1'].wkt)
 print ('added area: ' + rd_plus['theme_id_1'].wkt)
 print ('removed area: ' + rd_min['theme_id_1'].wkt)
 #SHOW RESULTING GEOMETRY AND CHANGES
-#from examples import show_results
-#show_results(r, rd_plus, rd_min, thematic_dict, reference_dict)
+#from examples import show_map
+#show_map({aligner.relevant_distance:(r, rd, rd_plus, rd_min, sd, si)}, thematic_dict, reference_dict)
 ```
 The resulting figure shows:
 * the reference polygon (yellow-black)

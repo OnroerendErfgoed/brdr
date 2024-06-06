@@ -1,5 +1,6 @@
 from brdr.aligner import Aligner
-from examples import show_results
+from brdr.enums import OpenbaarDomeinStrategy
+from examples import show_results, show_map
 
 if __name__ == "__main__":
     # Initiate brdr
@@ -45,8 +46,8 @@ if __name__ == "__main__":
     x.load_reference_data_grb_actual(grb_type="adp", partition=1000)
 
     # Example how to use the Aligner
-    r, rd, rd_plus, rd_min, sd, si = x.process_dict_thematic(6, 4)
-    out = x.get_last_version_date(x.dict_thematic["1100"])
-    print(out)
+    rel_dist = 6
+    dict_results_by_distance = {}
+    dict_results_by_distance[x.relevant_distance] = x.process_dict_thematic(relevant_distance=rel_dist, od_strategy=OpenbaarDomeinStrategy.SNAP_FULL_AREA_ALL_SIDE)
     x.export_results("output/")
-    show_results(r, rd_plus,rd_min,x.dict_thematic, x.dict_reference)
+    show_map(dict_results_by_distance, x.dict_thematic, x.dict_reference)
