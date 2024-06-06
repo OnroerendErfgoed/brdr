@@ -1,6 +1,6 @@
 from brdr.aligner import Aligner
 from brdr.enums import OpenbaarDomeinStrategy
-from examples import show_results, show_map
+from examples import show_map
 
 if __name__ == "__main__":
     # Initiate brdr

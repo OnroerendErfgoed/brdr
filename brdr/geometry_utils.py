@@ -8,6 +8,7 @@ from shapely import difference
 from shapely import intersection
 from shapely import symmetric_difference
 from shapely import union
+from shapely import is_empty
 from shapely.geometry.base import BaseGeometry
 
 from brdr.constants import MITRE_LIMIT
@@ -240,6 +241,8 @@ def grid_bounds(geom: BaseGeometry, delta: float):
     Returns:
         list: A list of Polygon objects representing the divided partitions.
     """
+    if geom is None or is_empty(geom):
+        return geom
     bounds = geom.bounds
     min_x, min_y, max_x, max_y = bounds
     nx = int((max_x - min_x) / delta)
@@ -250,7 +253,7 @@ def grid_bounds(geom: BaseGeometry, delta: float):
         nx = 2
     if ny < 2:
         ny = 2
-    gx, gy = np.linspace(min_x, max_x, nx), np.linspace(min_y, max_y, ny)
+    gx, gy = np.linspace(min_x, max_x, nx+1), np.linspace(min_y, max_y, ny+1)
     grid = []
     for i in range(len(gx) - 1):
         for j in range(len(gy) - 1):

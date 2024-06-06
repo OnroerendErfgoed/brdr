@@ -245,6 +245,8 @@ def filter_resulting_series_by_key(resulting_series,filter_key):
 
 def diffs_from_dict_series(dict_series, dict_thematic):
     """
+    calculates a dictionary with, for every key, a difference-indicator (difference in area, difference in percentage,..),
+     so it can be used further to search at which distance the most 'change' occurs.
     Returns:
                 dict: A dictionary containing differences for each thematic key:
                     {
