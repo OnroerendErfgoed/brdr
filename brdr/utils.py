@@ -112,9 +112,12 @@ def get_oe_dict_by_ids(aanduidingsobjecten):
     for a in aanduidingsobjecten:
         url = "https://inventaris.onroerenderfgoed.be/aanduidingsobjecten/" + str(a)
         response = requests.get(url, headers=headers).json()
-        key = str(response["id"])
-        geom = shape(response["locatie"]["contour"])
-        dict_thematic[key] = geom
+        if 'id' in response.keys():
+            key = str(response["id"])
+            geom = shape(response["locatie"]["contour"])
+            dict_thematic[key] = geom
+        else:
+            logging.warning('aanduidingsobject met id ' + str(a) +' werd niet gevonden' )
     return dict_thematic
 
 
