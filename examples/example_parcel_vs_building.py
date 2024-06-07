@@ -7,30 +7,30 @@ from examples import plot_series
 # parcel
 if __name__ == "__main__":
     # Initiate brdr
-    x = Aligner()
+    aligner_x = Aligner()
     # Load thematic data & reference data (parcels)
-    x.load_thematic_data_file(
+    aligner_x.load_thematic_data_file(
         "../tests/testdata/test_parcel_vs_building.geojson", "theme_id"
     )
-    x.load_reference_data_grb_actual(
+    aligner_x.load_reference_data_grb_actual(
         grb_type="adp", partition=1000
     )  # gebruik de actuele adp-percelen adp= administratieve percelen
 
-    y = Aligner()
+    aligner_y = Aligner()
     # Load thematic data & reference data (buildings)
-    y.load_thematic_data_file(
+    aligner_y.load_thematic_data_file(
         "../tests/testdata/test_parcel_vs_building.geojson", "theme_id"
     )
-    y.load_reference_data_grb_actual(
+    aligner_y.load_reference_data_grb_actual(
         grb_type="gbg", partition=1000
     )  # gebruik de actuele adp-percelen adp= administratieve percelen
 
     # Example how to use a series (for histogram)
     series = np.arange(0.1, 5.05, 0.1, dtype=float)
-    x_dict_series = x.process_series(series, 4, 50)
-    x_resulting_areas = diffs_from_dict_series(x_dict_series, x.dict_thematic)
-    y_dict_series = y.process_series(series, 4, 50)
-    y_resulting_areas = diffs_from_dict_series(y_dict_series, y.dict_thematic)
+    x_dict_series = aligner_x.process_series(series, 4, 50)
+    x_resulting_areas = diffs_from_dict_series(x_dict_series, aligner_x.dict_thematic)
+    y_dict_series = aligner_y.process_series(series, 4, 50)
+    y_resulting_areas = diffs_from_dict_series(y_dict_series, aligner_y.dict_thematic)
     # plot_diffs(series,x_resulting_areas)
     # plot_diffs(series,y_resulting_areas)
 

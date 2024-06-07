@@ -1,12 +1,13 @@
 import logging
 
 import numpy as np
-import requests
 from shapely import STRtree
 from shapely.geometry import shape
 
 from brdr.aligner import Aligner
 from brdr.utils import get_oe_geojson_by_bbox
+from brdr.utils import get_collection
+
 
 # This code shows an example how the aligner can be used inside a flow of
 # parcel change detection:
@@ -30,27 +31,6 @@ def check_business_equality(base_formula, actual_formula):
         # if abs(base_formula[key]['area'] - actual_formula[key]['area'])/base_formula[key]['area'] > 0.01: #area changed by 1%
         #     return False
     return True
-
-
-def get_collection(ref_url, limit):
-    """
-    function to get a collection of features from a url
-    """
-    start_index = 0
-    collection = {}
-    while True:
-        url = ref_url + "&startIndex=" + str(start_index)
-        logging.debug(url)
-        json = requests.get(url).json()
-        feature_collection = json
-        if "features" not in feature_collection or len(feature_collection["features"]) == 0:
-            break
-        start_index = start_index + limit
-        if collection == {}:
-            collection = feature_collection
-        else:
-            collection["features"].extend(feature_collection["features"])
-    return collection
 
 
 #PARAMS
@@ -91,7 +71,7 @@ ref_url = (
     + "/items?"
     "limit=" + str(limit) + "&crs=" + crs + "&bbox-crs=EPSG:31370&bbox=" + bbox
 )
-collection = get_collection(ref_url,limit)
+collection = get_collection(ref_url, limit)
 
 base_aligner.load_reference_data_geojson(collection, "CAPAKEY")
 

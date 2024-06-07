@@ -285,3 +285,23 @@ def diffs_from_dict_series(dict_series, dict_thematic):
             #TODO: determine a good diff-value for determination
             diffs[key][rel_dist] = diff
     return diffs
+
+def get_collection(ref_url, limit):
+    """
+    function to get a collection of features from a url
+    """
+    start_index = 0
+    collection = {}
+    while True:
+        url = ref_url + "&startIndex=" + str(start_index)
+        logging.debug(url)
+        json = requests.get(url).json()
+        feature_collection = json
+        if "features" not in feature_collection or len(feature_collection["features"]) == 0:
+            break
+        start_index = start_index + limit
+        if collection == {}:
+            collection = feature_collection
+        else:
+            collection["features"].extend(feature_collection["features"])
+    return collection
