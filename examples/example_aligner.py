@@ -4,7 +4,7 @@ from examples import show_map
 
 if __name__ == "__main__":
     # Initiate brdr
-    x = Aligner()
+    aligner = Aligner()
 
     # Load thematic data
     thematic_json = {
@@ -41,13 +41,13 @@ if __name__ == "__main__":
         ],
     }
 
-    x.load_thematic_data_geojson(thematic_json, "theme_identifier")
+    aligner.load_thematic_data_geojson(thematic_json, "theme_identifier")
     # gebruik de actuele adp-percelen adp= administratieve percelen
-    x.load_reference_data_grb_actual(grb_type="adp", partition=1000)
+    aligner.load_reference_data_grb_actual(grb_type="adp", partition=1000)
 
     # Example how to use the Aligner
     rel_dist = 6
     dict_results_by_distance = {}
-    dict_results_by_distance[x.relevant_distance] = x.process_dict_thematic(relevant_distance=rel_dist, od_strategy=OpenbaarDomeinStrategy.SNAP_FULL_AREA_ALL_SIDE)
-    x.export_results("output/")
-    show_map(dict_results_by_distance, x.dict_thematic, x.dict_reference)
+    dict_results_by_distance[aligner.relevant_distance] = aligner.process_dict_thematic(relevant_distance=rel_dist, od_strategy=OpenbaarDomeinStrategy.SNAP_FULL_AREA_ALL_SIDE)
+    aligner.export_results("output/")
+    show_map(dict_results_by_distance, aligner.dict_thematic, aligner.dict_reference)
