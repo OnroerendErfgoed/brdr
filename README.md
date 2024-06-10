@@ -129,6 +129,9 @@ The algorithm for alignment is based on 2 main principles:
 * Principle of intentionality: Thematic boundaries can consciously or unconsciously deviate from the reference borders. The algorithm should keep notice of that.
 * Selective spatial conservation of shape: The resulting geometry should re-use the shape of the reference borders where aligned is of relevance.
 
+The figure below shows a schematic overview of the algorithm:
+![](docs/figures/algorithm.png)
+
 The algorithm can be split into 3 main phases:
 * Initialisation: 
   * Deciding which reference polygons are candidate-polygons to re-use its shape. 
@@ -143,19 +146,19 @@ The algorithm can be split into 3 main phases:
 ![](docs/figures/evaluate_candidates.png)
   * Union all kept parts to recompose a resulting geometry
 * Post-processing: 
-  * Technical validation on inner holes and multipolygons
+  * Validation/correction of differences between the original input geometry and the composed intermediate resulting geometry after processing the algorithm
+  * Technical validation of inner holes and multipolygons that are created by processing the algorithm
   * Clean-up slivers
   * Make the resulting geometry valid
 
-The figure below shows a schematic overview of the algorithm (in dutch):
-![](docs/figures/algorithm.png)
+RESULT: 
 
-A more in-depth description of the algorithm can be found  in the following article (in dutch):
+A new resulting output geometry, aligned to the reference-polygons
 
-ADD LINK to report
 
 ## Motivation & citation
-
+A more in-depth description of the algorithm can be found  in the following article (in dutch):
+ADD LINK to report
 ## Comments and contributions
 
 - Please report any issues or bugs here:

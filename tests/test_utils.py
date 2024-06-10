@@ -3,11 +3,11 @@ import shapely
 import os
 
 from shapely import is_empty
-from shapely.geometry import Polygon, MultiPolygon
+from shapely.geometry import Polygon
 from brdr.utils import (
     export_geojson, multipolygons_to_singles, polygonize_reference_data,
     get_oe_dict_by_ids, get_oe_geojson_by_bbox, get_breakpoints_zerostreak,
-    numerical_derivative, _filter_dict_by_key, filter_resulting_series_by_key,
+    _filter_dict_by_key, filter_resulting_series_by_key,
     diffs_from_dict_series, get_collection
 )
 
