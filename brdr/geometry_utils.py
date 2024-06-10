@@ -168,7 +168,7 @@ def safe_union(geom_a: BaseGeometry, geom_b: BaseGeometry) -> BaseGeometry:
         geom = union(geom_a, geom_b)
     except GEOSException:
         try:
-            logging.warning("union_error")
+            logging.warning("union_error for geoms:" + geom_a.wkt + " and " + geom_b.wkt)
             geom = union(buffer(geom_a, 0.0000001), buffer(geom_b, 0.0000001))
         except Exception:
             logging.error("error: empty geometry returned")
@@ -185,7 +185,7 @@ def safe_intersection(geom_a: BaseGeometry, geom_b: BaseGeometry) -> BaseGeometr
         geom = intersection(geom_a, geom_b)
     except GEOSException:
         try:
-            logging.warning("intersection_error")
+            logging.warning("intersection_error for geoms:" + geom_a.wkt + " and " + geom_b.wkt)
             geom = intersection(buffer(geom_a, 0.0000001), buffer(geom_b, 0.0000001))
         except Exception:
             logging.error("error: lege geometrie teruggegeven")
@@ -202,7 +202,7 @@ def safe_difference(geom_a, geom_b):
         geom = difference(geom_a, geom_b)
     except GEOSException:
         try:
-            logging.warning("difference_error")
+            logging.warning("difference_error for geoms:" + geom_a.wkt + " and " + geom_b.wkt)
             geom = difference(buffer(geom_a, 0.0000001), buffer(geom_b, 0.0000001))
         except Exception:
             logging.error("error: lege geometrie teruggegeven")
@@ -219,7 +219,7 @@ def safe_symmetric_difference(geom_a, geom_b):
         geom = symmetric_difference(geom_a, geom_b)
     except GEOSException:
         try:
-            logging.warning("symmetric_difference_error")
+            logging.warning("symmetric_difference_error for geoms:" + geom_a.wkt + " and " + geom_b.wkt)
             geom = symmetric_difference(
                 buffer(geom_a, 0.0000001), buffer(geom_b, 0.0000001)
             )

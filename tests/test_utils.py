@@ -8,7 +8,7 @@ from brdr.utils import (
     export_geojson, multipolygons_to_singles, polygonize_reference_data,
     get_oe_dict_by_ids, get_oe_geojson_by_bbox, get_breakpoints_zerostreak,
     numerical_derivative, _filter_dict_by_key, filter_resulting_series_by_key,
-    diffs_from_dict_series
+    diffs_from_dict_series, get_collection
 )
 
 
@@ -32,7 +32,7 @@ class TestUtils(unittest.TestCase):
         assert len(zerostreaks) == 0
 
     def test_export_geojson_empty_dict(self):
-        path = "./testdata/x.geojson"
+        path = "./x.geojson"
         export_geojson(path, {}, "EPSG:4326", "id")
         with open(path, "r") as f:
             content = f.read()
@@ -41,7 +41,7 @@ class TestUtils(unittest.TestCase):
         os.remove(path)
 
     def test_export_geojson_single_polygon(self):
-        path = "./testdata/y.geojson"
+        path = "./y.geojson"
         geometry = shapely.geometry.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
         data = {"test_id": geometry}
         export_geojson(path, data, "EPSG:4326", "id")
@@ -55,7 +55,7 @@ class TestUtils(unittest.TestCase):
         os.remove(path)
 
     def test_export_geojson_multipolygon(self):
-        path = "./testdata/z.geojson"
+        path = "./z.geojson"
         geometry1 = shapely.geometry.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
         geometry2 = shapely.geometry.Polygon([(2, 2), (3, 2), (3, 3), (2, 3)])
         data = {"test_id1": geometry1, "test_id2": shapely.geometry.MultiPolygon([geometry2])}
@@ -68,7 +68,7 @@ class TestUtils(unittest.TestCase):
         os.remove(path)
 
     def test_export_geojson_multipolygon_multi_to_single_true(self):
-        path = "./testdata/test_export_geojson_multipolygon_multi_to_single_true.geojson"
+        path = "./test_export_geojson_multipolygon_multi_to_single_true.geojson"
         geometry1 = shapely.geometry.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
         geometry2 = shapely.geometry.Polygon([(2, 2), (3, 2), (3, 3), (2, 3)])
         data = {"test_id1": shapely.geometry.MultiPolygon([geometry1, geometry2]),
@@ -147,7 +147,6 @@ class TestUtils(unittest.TestCase):
         dict_thematic = get_oe_dict_by_ids([aanduid_id])
         self.assertEqual(dict_thematic, {})
 
-
     def test_get_oe_geojson_by_bbox(self):
         bbox = "172000,172000,174000,174000"
         collection = get_oe_geojson_by_bbox(bbox)
@@ -175,31 +174,40 @@ class TestUtils(unittest.TestCase):
 
     def test_filter_resulting_series_by_key_single_key(self):
         # Mock resulting_series with a single distance and dictionaries with a single key
-        data = {1: ({"key1": "value1"}, {"key2": "value2"}, {"key3": "value3"}, {"key4": "value4"}, {"key5": "value5"}, {"key6": "value6"})}
+        data = {1: ({"key1": "value1"}, {"key2": "value2"}, {"key3": "value3"}, {"key4": "value4"}, {"key5": "value5"},
+                    {"key6": "value6"})}
         result = filter_resulting_series_by_key(data, "key1")
         self.assertEqual(result, {1: ({"key1": "value1"}, {}, {}, {}, {}, {})})
 
     def test_filter_resulting_series_by_key_multiple_keys(self):
         # Mock resulting_series with a single distance and dictionaries with multiple keys
-        data = {1: ({"key1": "value1", "keyA": "valueA"}, {"key2": "value2", "keyB": "valueB"}, {"key3": "value3"}, {"key4": "value4"}, {"key5": "value5"}, {"key6": "value6"})}
+        data = {1: ({"key1": "value1", "keyA": "valueA"}, {"key2": "value2", "keyB": "valueB"}, {"key3": "value3"},
+                    {"key4": "value4"}, {"key5": "value5"}, {"key6": "value6"})}
         result = filter_resulting_series_by_key(data, "key1")
         self.assertEqual(result, {1: ({"key1": "value1"}, {}, {}, {}, {}, {})})
 
     def test_filter_resulting_series_by_key_multiple_distances(self):
         # Mock resulting_series with multiple distances and dictionaries with a single key
-        data = {1: ({"key1": "value1"}, {"key2": "value2"}, {"key3": "value3"}, {"key4": "value4"}, {"key5": "value5"}, {"key6": "value6"}),
-                2: ({"key1": "value7"}, {"key2": "value8"}, {"key3": "value9"}, {"key4": "value10"}, {"key5": "value11"}, {"key6": "value12"})}
+        data = {1: ({"key1": "value1"}, {"key2": "value2"}, {"key3": "value3"}, {"key4": "value4"}, {"key5": "value5"},
+                    {"key6": "value6"}),
+                2: (
+                {"key1": "value7"}, {"key2": "value8"}, {"key3": "value9"}, {"key4": "value10"}, {"key5": "value11"},
+                {"key6": "value12"})}
         result = filter_resulting_series_by_key(data, "key1")
-        self.assertEqual(result, {1: ({"key1": "value1"}, {}, {}, {}, {}, {}), 2: ({"key1": "value7"}, {}, {}, {}, {}, {})})
+        self.assertEqual(result,
+                         {1: ({"key1": "value1"}, {}, {}, {}, {}, {}), 2: ({"key1": "value7"}, {}, {}, {}, {}, {})})
 
     def test_diffs_from_dict_series_complete(self):
         """Tests diffs_from_dict_series with complete data."""
         # Mock data
-        dict_thematic = {"theme_id1": Polygon([(0, 0), (10, 0), (10, 10), (0, 10)]), "theme_id2": Polygon([(5, 5), (15, 5), (15, 15), (5, 15)])}
+        dict_thematic = {"theme_id1": Polygon([(0, 0), (10, 0), (10, 10), (0, 10)]),
+                         "theme_id2": Polygon([(5, 5), (15, 5), (15, 15), (5, 15)])}
         dict_series = {
             10: (
-                {"theme_id1": Polygon([(0, 0), (8, 0), (8, 8), (0, 8)]), "theme_id2": Polygon([(7, 7), (13, 7), (13, 13), (7, 13)])},
-                {"theme_id1": Polygon([(2, 2), (6, 2), (6, 6), (2, 6)]), "theme_id2": Polygon([(9, 9), (11, 9), (11, 11), (9, 11)])},
+                {"theme_id1": Polygon([(0, 0), (8, 0), (8, 8), (0, 8)]),
+                 "theme_id2": Polygon([(7, 7), (13, 7), (13, 13), (7, 13)])},
+                {"theme_id1": Polygon([(2, 2), (6, 2), (6, 6), (2, 6)]),
+                 "theme_id2": Polygon([(9, 9), (11, 9), (11, 11), (9, 11)])},
             )
         }
         expected_diffs = {'theme_id1': {10: -36.0}, 'theme_id2': {10: -64.0}}
@@ -208,3 +216,16 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(result, expected_diffs)
 
 
+    def test_get_collection(self):
+        base_year= 2023
+        limit = 100
+        crs='EPSG:31370'
+        bbox = "173500,173500,174000,174000"
+        ref_url = (
+                "https://geo.api.vlaanderen.be/Adpf/ogc/features/collections/Adpf"
+                + str(base_year)
+                + "/items?"
+                  "limit=" + str(limit) + "&crs=" + crs + "&bbox-crs=EPSG:31370&bbox=" + bbox
+        )
+        collection = get_collection(ref_url, limit)
+        self.assertTrue('features' in collection.keys())

@@ -119,35 +119,36 @@ class TestAligner(unittest.TestCase):
                                                        full_overlap_percentage=50)
         self.assertEqual(len(dict_predicted), len(thematic_dict))
 
-
     def test_load_reference_data_grb_actual_adp(self):
-        thematic_dict = {"theme_id_1": from_wkt('MultiPolygon (((174184.09476602054201066 171899.68933439542888664, 174400.56834639035514556 171832.959863749332726, 174388.65236948925303295 171770.99678386366576888, 174182.10876987033407204 171836.13745758961886168, 174184.88916448061354458 171873.07698598300339654, 174184.09476602054201066 171899.68933439542888664)))')}
+        thematic_dict = {"theme_id_1": from_wkt(
+            'MultiPolygon (((174184.09476602054201066 171899.68933439542888664, 174400.56834639035514556 171832.959863749332726, 174388.65236948925303295 171770.99678386366576888, 174182.10876987033407204 171836.13745758961886168, 174184.88916448061354458 171873.07698598300339654, 174184.09476602054201066 171899.68933439542888664)))')}
         self.sample_aligner.load_thematic_data_dict(thematic_dict)
         # LOAD REFERENCE DICTIONARY
         self.sample_aligner.load_reference_data_grb_actual(grb_type="adp", partition=1000)
-        self.assertGreater(len(self.sample_aligner.dict_reference),0)
+        self.assertGreater(len(self.sample_aligner.dict_reference), 0)
 
     def test_load_reference_data_grb_actual_gbg(self):
-        thematic_dict = {"theme_id_1": from_wkt('MultiPolygon (((174184.09476602054201066 171899.68933439542888664, 174400.56834639035514556 171832.959863749332726, 174388.65236948925303295 171770.99678386366576888, 174182.10876987033407204 171836.13745758961886168, 174184.88916448061354458 171873.07698598300339654, 174184.09476602054201066 171899.68933439542888664)))')}
+        thematic_dict = {"theme_id_1": from_wkt(
+            'MultiPolygon (((174184.09476602054201066 171899.68933439542888664, 174400.56834639035514556 171832.959863749332726, 174388.65236948925303295 171770.99678386366576888, 174182.10876987033407204 171836.13745758961886168, 174184.88916448061354458 171873.07698598300339654, 174184.09476602054201066 171899.68933439542888664)))')}
         self.sample_aligner.load_thematic_data_dict(thematic_dict)
         # LOAD REFERENCE DICTIONARY
         self.sample_aligner.load_reference_data_grb_actual(grb_type="gbg", partition=1000)
-        self.assertGreater(len(self.sample_aligner.dict_reference),0)
+        self.assertGreater(len(self.sample_aligner.dict_reference), 0)
 
     def test_load_reference_data_grb_actual_knw(self):
-        thematic_dict = {"theme_id_1": from_wkt('MultiPolygon (((174184.09476602054201066 171899.68933439542888664, 174400.56834639035514556 171832.959863749332726, 174388.65236948925303295 171770.99678386366576888, 174182.10876987033407204 171836.13745758961886168, 174184.88916448061354458 171873.07698598300339654, 174184.09476602054201066 171899.68933439542888664)))')}
+        thematic_dict = {"theme_id_1": from_wkt(
+            'MultiPolygon (((174184.09476602054201066 171899.68933439542888664, 174400.56834639035514556 171832.959863749332726, 174388.65236948925303295 171770.99678386366576888, 174182.10876987033407204 171836.13745758961886168, 174184.88916448061354458 171873.07698598300339654, 174184.09476602054201066 171899.68933439542888664)))')}
         self.sample_aligner.load_thematic_data_dict(thematic_dict)
         # LOAD REFERENCE DICTIONARY
         self.sample_aligner.load_reference_data_grb_actual(grb_type="knw", partition=0)
         self.sample_aligner.process_dict_thematic()
-        path ='./'
+        path = './'
         self.sample_aligner.export_results(path)
-        self.assertGreaterEqual(len(self.sample_aligner.dict_reference),0)
+        self.assertGreaterEqual(len(self.sample_aligner.dict_reference), 0)
         os.remove(os.path.join(path, "result.geojson"))
         os.remove(os.path.join(path, "result_diff.geojson"))
         os.remove(os.path.join(path, "result_diff_plus.geojson"))
         os.remove(os.path.join(path, "result_diff_min.geojson"))
-
 
     def test_all_od_strategies(self):
         ##Load thematic data & reference data
@@ -159,23 +160,40 @@ class TestAligner(unittest.TestCase):
         # LOAD REFERENCE DICTIONARY
         self.sample_aligner.load_reference_data_dict(reference_dict)
         for od_strategy in OpenbaarDomeinStrategy:
-            tuple = self.sample_aligner.process_dict_thematic(relevant_distance=1, od_strategy=od_strategy,full_overlap_percentage=50)
+            tuple = self.sample_aligner.process_dict_thematic(relevant_distance=1, od_strategy=od_strategy,
+                                                              full_overlap_percentage=50)
             self.assertEqual(len(tuple), 6)
 
     def test_process_interior_ring(self):
-        thematic_dict = {"theme_id_1": from_wkt('MultiPolygon (((174370.67910432978533208 171012.2469546866195742, 174461.24052877808571793 171002.71417316573206335, 174429.46459037516615354 170869.25523187351063825, 174373.85669817010057159 170894.6759825958579313, 174369.09030740967136808 170896.6619787460367661, 174370.67910432978533208 171012.2469546866195742),(174400.07184735251939856 170963.78864862219779752, 174401.26344504262669943 170926.4519209987774957, 174419.53460962430108339 170922.47992869839072227, 174429.06739114515949041 170958.62505863170372322, 174400.07184735251939856 170963.78864862219779752)))')}
+        thematic_dict = {"theme_id_1": from_wkt(
+            'MultiPolygon (((174370.67910432978533208 171012.2469546866195742, 174461.24052877808571793 171002.71417316573206335, 174429.46459037516615354 170869.25523187351063825, 174373.85669817010057159 170894.6759825958579313, 174369.09030740967136808 170896.6619787460367661, 174370.67910432978533208 171012.2469546866195742),(174400.07184735251939856 170963.78864862219779752, 174401.26344504262669943 170926.4519209987774957, 174419.53460962430108339 170922.47992869839072227, 174429.06739114515949041 170958.62505863170372322, 174400.07184735251939856 170963.78864862219779752)))')}
         self.sample_aligner.load_thematic_data_dict(thematic_dict)
         # LOAD REFERENCE DICTIONARY
         self.sample_aligner.load_reference_data_grb_actual(grb_type="adp", partition=1000)
         tuple = self.sample_aligner.process_dict_thematic()
         results = tuple[0]
-        self.assertEqual(len(results),len(thematic_dict))
+        self.assertEqual(len(results), len(thematic_dict))
 
     def test_process_circle(self):
-        geometry = Point(0,0).buffer(3)
-        thematic_dict = {"key":geometry}
+        geometry = Point(0, 0).buffer(3)
+        thematic_dict = {"key": geometry}
         self.sample_aligner.load_thematic_data_dict(thematic_dict)
         # LOAD REFERENCE DICTIONARY
         self.sample_aligner.load_reference_data_grb_actual(grb_type="adp", partition=1000)
         tuple = self.sample_aligner.process_dict_thematic()
-        self.assertEqual(geometry,tuple[0]['key'])
+        self.assertEqual(geometry, tuple[0]['key'])
+
+
+    def test__prepare_thematic_data(self):
+        aligner = Aligner()
+        geojson = {
+"type": "FeatureCollection",
+"name": "theme",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::31370" } },
+"features": [
+{ "type": "Feature", "properties": { "fid": 4, "id": 4, "theme_identifier": "4" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 174647.924166895216331, 170964.980246312363306 ], [ 174693.204879119351972, 170943.531487890402786 ], [ 174696.382472959638108, 170930.82111252922914 ], [ 174678.905706838035258, 170901.428369506524177 ], [ 174660.634542256389977, 170861.708446502889274 ], [ 174641.56897921464406, 170820.399726579111302 ], [ 174593.905071610264713, 170839.46528962085722 ], [ 174614.559431572153699, 170881.568408004706725 ], [ 174628.064205393398879, 170926.054721768799936 ], [ 174647.924166895216331, 170964.980246312363306 ] ] ] ] } }
+]
+}
+        aligner.thematic_input = geojson
+        aligner._prepare_thematic_data()
+        self.assertGreater(len(aligner.dict_thematic),0)
