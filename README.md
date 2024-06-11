@@ -73,13 +73,11 @@ from brdr.enums import OpenbaarDomeinStrategy
 #CREATE AN ALIGNER
 aligner = Aligner(relevant_distance=1, od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
                   threshold_overlap_percentage=50, crs='EPSG:31370')
-#ADD A THEMATIC POLYGON TO THEMATIC DICTIONARY
+#ADD A THEMATIC POLYGON TO THEMATIC DICTIONARY and LOAD into Aligner
 thematic_dict= {"theme_id_1": from_wkt('POLYGON ((0 0, 0 9, 5 10, 10 0, 0 0))')}
-#ADD A REFERENCE POLYGON TO REFERENCE DICTIONARY
-reference_dict = {"ref_id_1": from_wkt('POLYGON ((0 1, 0 10,8 10,10 1,0 1))')}
-#LOAD THEMATIC DICTIONARY
 aligner.load_thematic_data_dict(thematic_dict)
-#LOAD REFERENCE DICTIONARY
+#ADD A REFERENCE POLYGON TO REFERENCE DICTIONARY and LOAD into Aligner
+reference_dict = {"ref_id_1": from_wkt('POLYGON ((0 1, 0 10,8 10,10 1,0 1))')}
 aligner.load_reference_data_dict(reference_dict)
 #EXECUTE THE ALIGNMENT
 result, result_diff, result_diff_plus, result_diff_min, relevant_intersection, relevant_diff = (
