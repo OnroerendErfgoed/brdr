@@ -14,12 +14,16 @@ aligner.load_thematic_data_dict(thematic_dict)
 #LOAD REFERENCE DICTIONARY
 aligner.load_reference_data_dict(reference_dict)
 #EXECUTE THE ALIGNMENT
-r, rd, rd_plus, rd_min, sd, si = aligner.process_dict_thematic(relevant_distance=1)
+result, result_diff, result_diff_plus, result_diff_min, relevant_intersection, relevant_diff = (
+    aligner.process_dict_thematic(relevant_distance=1))
 #PRINT RESULTS IN WKT
-print ('result: ' + r['theme_id_1'].wkt)
-print ('added area: ' + rd_plus['theme_id_1'].wkt)
-print ('removed area: ' + rd_min['theme_id_1'].wkt)
+print ('result: ' + result['theme_id_1'].wkt)
+print ('added area: ' + result_diff_plus['theme_id_1'].wkt)
+print ('removed area: ' + result_diff_min['theme_id_1'].wkt)
 #SHOW RESULTING GEOMETRY AND CHANGES
-#from examples import show_map
-#show_map({aligner.relevant_distance:(r, rd, rd_plus, rd_min, sd, si)}, thematic_dict, reference_dict)
+# from examples import show_map
+# show_map(
+#     {aligner.relevant_distance:(result, result_diff, result_diff_plus, result_diff_min, relevant_intersection, relevant_diff)},
+#     thematic_dict,
+#     reference_dict)
 

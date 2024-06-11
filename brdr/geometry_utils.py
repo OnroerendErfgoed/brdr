@@ -178,6 +178,27 @@ def safe_union(geom_a: BaseGeometry, geom_b: BaseGeometry) -> BaseGeometry:
 
 
 def safe_intersection(geom_a: BaseGeometry, geom_b: BaseGeometry) -> BaseGeometry:
+    """
+    Calculates the intersection of two geometries with error handling.
+
+    This function attempts to compute the intersection between two Shapely geometry objects (`geom_a` and `geom_b`).
+    It incorporates error handling to address potential exceptions that might arise due to topological inconsistencies
+    in the geometries, such as non-noded intersections between linestrings.
+
+    Args:
+        geom_a (BaseGeometry): The first Shapely geometry object.
+        geom_b (BaseGeometry): The second Shapely geometry object.
+
+    Returns:
+        BaseGeometry: The intersection geometry as a Shapely object. It might be an empty Polygon if an error occurs during processing.
+
+    Logs:
+        - If a `GEOSException` occurs:
+            - A warning message is logged with the WKT representations of both geometries.
+            - The function attempts to buffer both geometries by a small value (0.0000001) and then perform the intersection.
+        - If any other exception occurs:
+            - An error message is logged indicating that an empty geometry is returned.
+    """
     # function to solve exceptional error: shapely.errors.GEOSException:
     # TopologyException: found non-noded intersection between LINESTRING
     # see: https://gis.stackexchange.com/questions/50399
@@ -188,13 +209,34 @@ def safe_intersection(geom_a: BaseGeometry, geom_b: BaseGeometry) -> BaseGeometr
             logging.warning("intersection_error for geoms:" + geom_a.wkt + " and " + geom_b.wkt)
             geom = intersection(buffer(geom_a, 0.0000001), buffer(geom_b, 0.0000001))
         except Exception:
-            logging.error("error: lege geometrie teruggegeven")
+            logging.error("error: empty geometry returned")
             geom = Polygon()
 
     return geom
 
 
 def safe_difference(geom_a, geom_b):
+    """
+    Calculates the difference between two geometries with error handling.
+
+    This function computes the difference between two Shapely geometry objects (`geom_a` and `geom_b`).
+    It incorporates error handling to address potential exceptions that might arise due to topological inconsistencies
+    in the geometries, similar to non-noded intersections between linestrings.
+
+    Args:
+        geom_a (BaseGeometry): The first Shapely geometry object.
+        geom_b (BaseGeometry): The second Shapely geometry object to be subtracted from the first.
+
+    Returns:
+        BaseGeometry: The difference geometry as a Shapely object. It might be an empty Polygon if an error occurs during processing.
+
+    Logs:
+        - If a `GEOSException` occurs:
+            - A warning message is logged with the WKT representations of both geometries.
+            - The function attempts to buffer both geometries by a small value (0.0000001) and then perform the difference operation.
+        - If any other exception occurs:
+            - An error message is logged indicating that an empty geometry is returned.
+    """
     # function to solve exceptional error: shapely.errors.GEOSException:
     # TopologyException: found non-noded intersection between LINESTRING
     # see: https://gis.stackexchange.com/questions/50399
@@ -205,13 +247,34 @@ def safe_difference(geom_a, geom_b):
             logging.warning("difference_error for geoms:" + geom_a.wkt + " and " + geom_b.wkt)
             geom = difference(buffer(geom_a, 0.0000001), buffer(geom_b, 0.0000001))
         except Exception:
-            logging.error("error: lege geometrie teruggegeven")
+            logging.error("error: empty geometry returned")
             geom = Polygon()
 
     return geom
 
 
 def safe_symmetric_difference(geom_a, geom_b):
+    """
+    Calculates the symmetrical difference between two geometries with error handling.
+
+    This function computes the symmetrical difference between two Shapely geometry objects (`geom_a` and `geom_b`).
+    It incorporates error handling to address potential exceptions that might arise due to topological inconsistencies
+    in the geometries, similar to non-noded intersections between linestrings.
+
+    Args:
+        geom_a (BaseGeometry): The first Shapely geometry object.
+        geom_b (BaseGeometry): The second Shapely geometry object to be subtracted from the first.
+
+    Returns:
+        BaseGeometry: The symmetrical difference geometry as a Shapely object. It might be an empty Polygon if an error occurs during processing.
+
+    Logs:
+        - If a `GEOSException` occurs:
+            - A warning message is logged with the WKT representations of both geometries.
+            - The function attempts to buffer both geometries by a small value (0.0000001) and then perform the difference operation.
+        - If any other exception occurs:
+            - An error message is logged indicating that an empty geometry is returned.
+    """
     # function to solve exceptional error: shapely.errors.GEOSException:
     # TopologyException: found non-noded intersection between LINESTRING
     # see: https://gis.stackexchange.com/questions/50399
@@ -224,7 +287,7 @@ def safe_symmetric_difference(geom_a, geom_b):
                 buffer(geom_a, 0.0000001), buffer(geom_b, 0.0000001)
             )
         except Exception:
-            logging.error("error: lege geometrie teruggegeven")
+            logging.error("error: empty geometry returned")
             geom = Polygon()
 
     return geom

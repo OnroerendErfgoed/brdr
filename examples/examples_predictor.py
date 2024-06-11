@@ -18,7 +18,7 @@ if __name__ == '__main__':
 
     series = np.arange(0.1, 5.00, 0.2, dtype=float)
     #predict which relevant distances are interesting to propose as resulting geometry
-    dict_predicted = aligner.predictor(relevant_distances=series, od_strategy=4,full_overlap_percentage=50)
+    dict_predicted = aligner.predictor(relevant_distances=series, od_strategy=4,treshold_overlap_percentage=50)
     for key in dict_predicted.keys():
         show_map(dict_predicted[key], {key:aligner.dict_thematic[key]}, aligner.dict_reference)
 

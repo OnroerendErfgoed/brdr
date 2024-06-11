@@ -25,6 +25,7 @@ from shapely.prepared import prep
 from brdr.constants import BUFFER_MULTIPLICATION_FACTOR
 from brdr.constants import CORR_DISTANCE
 from brdr.constants import DOWNLOAD_LIMIT
+from brdr.constants import DEFAULT_CRS
 from brdr.constants import MAX_REFERENCE_BUFFER
 from brdr.constants import MITRE_LIMIT
 from brdr.constants import QUAD_SEGMENTS
@@ -42,7 +43,7 @@ from brdr.geometry_utils import safe_intersection
 from brdr.geometry_utils import safe_symmetric_difference
 from brdr.geometry_utils import safe_union
 from brdr.utils import export_geojson, diffs_from_dict_series, get_breakpoints_zerostreak, \
-    filter_resulting_series_by_key
+    filter_resulting_series_by_key, get_collection
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(message)s", datefmt="%d-%b-%y %H:%M:%S"
@@ -67,7 +68,7 @@ class Aligner:
         relevant_distance=1,
         threshold_overlap_percentage=50,
         od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
-        crs='EPSG:31370'
+        crs=DEFAULT_CRS
     ):
         """
         Initializes the Aligner object
@@ -101,13 +102,10 @@ class Aligner:
 
         # reference
         self.reference_input = None  # to save the initially loaded geojson
-        # name of the identifier-field of the reference data (id has to be unique,
-        # f.e CAPAKEY for GRB-parcels)
-        self.name_reference_id = "ref_identifier"
+
+        self.name_reference_id = "ref_identifier" # name of the identifier-field of the reference data (id has to be unique,f.e CAPAKEY for GRB-parcels)
         self.dict_reference = {}  # dictionary to store all reference geometries
-        # to save a unioned geometry of all reference polygons; needed for calculation in
-        # most OD-strategies
-        self.reference_union = None
+        self.reference_union = None # to save a unioned geometry of all reference polygons; needed for calculation in most OD-strategies
 
         # output-dictionaries (when processing dict_thematic)
         self.dict_result = None  # dictionary to save resulting geometries
@@ -118,11 +116,10 @@ class Aligner:
         self.dict_relevant_difference = None  # dictionary to save relevant_differences
 
         # Coordinate reference system
-
         # thematic geometries and reference geometries are assumed to be in the same CRS
-        # before loading into the Aligner. No CRS-transformation will be performed
-        # when loading data CRS is expected to be a projected CRS with unit in meters By
-        # default EPSG:31370 (Lambert72), alternative: EPSG:3812 (Lambert2008)
+        # before loading into the Aligner. No CRS-transformation will be performed.
+        # When loading data, CRS is expected to be a projected CRS with units in 'meter (m)'.
+        # By default EPSG:31370 (Lambert72), alternative: EPSG:3812 (Lambert2008)
         self.CRS = crs
 
         self.feedback_info("Aligner initialized")
@@ -195,9 +192,26 @@ class Aligner:
 
     def get_reference_data_dict_grb_actual(self, grb_type=GRBType.ADP, partition=0):
         """
-        Gets a dict of the reference data:
-        administrative plots (adp), buildings (gbg) or artwork (knw) from GRB,
-        geographically based around the previously loaded thematic dictionary.
+        Fetches reference data (administrative plots, buildings, or artwork) from the GRB API based on thematic data.
+
+        This function retrieves reference data from the Grootschalig Referentie Bestand (GRB)
+        depending on the specified `grb_type` (e.g., administrative plots (ADP), buildings (GBG), or artwork (KNW)).
+        It uses the bounding boxes of the geometries in the loaded thematic data (`self.dict_thematic`)
+        to filter the relevant reference data geographically.
+
+        Args:
+            grb_type (GRBType, optional): The type of reference data to retrieve. Defaults to GRBType.ADP (administrative plots).
+            partition (int, optional): If greater than zero, partitions the bounding box of the thematic data
+                                       into a grid before fetching reference data by partition. Defaults to 0 (no partitioning).
+
+        Returns:
+            tuple: A tuple containing two elements:
+                - dict: A dictionary where keys are reference data identifiers (as defined by `name_reference_id`)
+                        and values are GeoJSON geometry objects representing the reference data.
+                - str: The name of the reference data identifier property (e.g., "CAPAKEY" for ADP).
+
+        Raises:
+            ValueError: If an unsupported `grb_type` is provided.
         """
         if grb_type == GRBType.ADP:
             url_grb = (
@@ -282,7 +296,7 @@ class Aligner:
         geometry: BaseGeometry,
         relevant_distance=1,
         od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
-        full_overlap_percentage=50,
+        treshold_overlap_percentage=50,
     ) -> tuple[BaseGeometry, ...]:
         """
         method to align a geometry to the reference layer
@@ -291,7 +305,7 @@ class Aligner:
             geometry (BaseGeometry): The input geometric object.
             relevant_distance
             od_strategy
-            full_overlap_percentage (float): The buffer distance (positive or negative).
+            treshold_overlap_percentage (float): The buffer distance (positive or negative).
 
         Returns:
             tuple[BaseGeometry...] : A tuple containing the resulting geometries:
@@ -311,7 +325,7 @@ class Aligner:
         self.feedback_debug("process geometry")
         self.relevant_distance = relevant_distance
         self.od_strategy = od_strategy
-        self.threshold_overlap_percentage = full_overlap_percentage
+        self.threshold_overlap_percentage = treshold_overlap_percentage
         # array with all relevant parts of a thematic geometry; initial empty Polygon
         preresult = [Polygon()]
         (
@@ -373,7 +387,7 @@ class Aligner:
         self,
         relevant_distance=1,
         od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
-        full_overlap_percentage=50,
+        treshold_overlap_percentage=50,
     ):
         """
         Aligns a thematic dictionary of geometries to the reference layer based on
@@ -385,17 +399,18 @@ class Aligner:
                 processing. Defaults to 1.
             od_strategy (int, optional): The strategy for overlap detection.
                 Defaults to 1.
-            full_overlap_percentage (float, optional): The threshold percentage for
+            treshold_overlap_percentage (float, optional): The threshold percentage for
                 considering full overlap. Defaults to 50.
 
         Returns:
             tuple: A tuple containing dictionaries with processed data:
-                - dict_r: Aligned thematic data for each thematic key.
-                - dict_rd: global differences between thematic data and reference data.
-                - dict_rdp: Positive differences.
-                - dict_rdm: Negative differences.
-                - dict_si: relevant intersections.
-                - dict_sd: relevant differences.
+                - dict_result: Aligned thematic data for each thematic key.
+                - dict_result_diff: global differences between thematic data and reference data.
+                - dict_result_diff_plus: Positive differences.
+                - dict_result_diff_min: Negative differences.
+                - dict_relevant_intersection: relevant intersections.
+                - dict_relevant_diff: relevant differences.
+
         """
 
         dict_result = {}
@@ -417,7 +432,7 @@ class Aligner:
                 self.dict_thematic[key],
                 relevant_distance,
                 od_strategy,
-                full_overlap_percentage,
+                treshold_overlap_percentage,
             )
             dict_result[key] = result
             dict_result_diff[key] = result_diff
@@ -445,15 +460,53 @@ class Aligner:
             self,
             relevant_distances=np.arange(0.1, 5.05, 0.1, dtype=float),
             od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
-            full_overlap_percentage=50,
+            treshold_overlap_percentage=50,
     ):
         """
-        returns a dictionary with, for every key, all 'predicted' relevant distances that are interesting, with its tuple of results
+        Predicts the 'most interesting' relevant distances for changes in thematic elements based on a distance series.
+
+        This function analyzes a set of thematic geometries (`self.dict_thematic`) to identify potentially 
+        interesting distances where changes occur. It performs the following steps:
+
+        1. **Process Distance Series:**
+            - Calculates a series of results for different distances specified by `relevant_distances`.
+            - This calculation might involve functions like `self.process_series` (implementation details likely depend on your specific code).
+
+        2. **Calculate Difference Metrics:**
+            - Analyzes the results from the distance series to compute difference metrics 
+              between thematic elements at each distance (using `diffs_from_dict_series`).
+
+        3. **Identify Breakpoints and Zero-Streaks:**
+            - For each thematic geometry, it identifies potential "breakpoints" where the difference metric changes sign (from positive to negative or vice versa).
+            - It also identifies "zero-streaks" which are consecutive distances with a difference metric close to zero (potentially indicating minimal change).
+
+        4. **Predict Interesting Distances:**
+            - The function considers distances corresponding to breakpoints and zero-streaks as potentially interesting for further analysis.
+            - These distances are stored in a dictionary (`dict_predicted`) with the thematic element key as the outer key.
+            - Additionally, the corresponding results (tuples) from the distance series for those distances are included.
+
+        5. **Filter Results:**
+            - The function might further filter the predicted results for each thematic element based on the element key (using `filter_resulting_series_by_key`).
+
+        Args:
+            relevant_distances (np.ndarray, optional): A NumPy array of distances to be analyzed. Defaults to np.arange(0.1, 5.05, 0.1).
+            od_strategy (OpenbaarDomeinStrategy, optional): A strategy for handling open data in the processing (implementation specific). Defaults to OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE.
+            treshold_overlap_percentage (int, optional): A percentage threshold for considering full overlap in the processing (implementation specific). Defaults to 50.
+
+        Returns:
+            dict: A dictionary containing predicted interesting distances for each thematic element.
+                - Keys: Thematic element identifiers from `self.dict_thematic`.
+                - Values: Dictionaries with the following structure for each thematic element:
+                    - Keys: Distances identified as interesting (breakpoints or zero-streaks).
+                    - Values: Tuples containing results (likely specific to your implementation) from the distance series for the corresponding distance.
+
+        Logs:
+            - Debug logs the thematic element key being processed.
         """
         dict_predicted = {}
         for key in self.dict_thematic.keys():
             dict_predicted[key]={}
-        dict_series = self.process_series(relevant_distances=relevant_distances,od_strategy=od_strategy,full_overlap_percentage=full_overlap_percentage)
+        dict_series = self.process_series(relevant_distances=relevant_distances,od_strategy=od_strategy,treshold_overlap_percentage=treshold_overlap_percentage)
         diffs = diffs_from_dict_series(dict_series, self.dict_thematic)
         for key in diffs:
             if len(diffs[key]) == len(relevant_distances):
@@ -469,7 +522,7 @@ class Aligner:
         self,
         relevant_distances,
         od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
-        full_overlap_percentage=50,
+        treshold_overlap_percentage=50,
     ):
         """
         Calculates the resulting dictionaries for thematic data based on a series of relevant
@@ -480,7 +533,7 @@ class Aligner:
                 process.
             od_strategy (int, optional): The strategy for overlap detection.
                 Defaults to 1.
-            full_overlap_percentage (float, optional): The threshold percentage for
+            treshold_overlap_percentage (float, optional): The threshold percentage for
                 considering full overlap. Defaults to 50.
 
         Returns:
@@ -494,7 +547,7 @@ class Aligner:
         """
         self.feedback_debug("Process series" + str(relevant_distances))
         self.od_strategy = od_strategy
-        self.threshold_overlap_percentage = full_overlap_percentage
+        self.threshold_overlap_percentage = treshold_overlap_percentage
         #self._prepare_thematic_data() #not necessary? Assumed that dict_thematic is already loaded
         dict_series = {}
         for s in relevant_distances:
@@ -569,6 +622,22 @@ class Aligner:
         return dict_formula
 
     def get_last_version_date(self, geometry, grb_type=GRBType.ADP):
+        """
+        Retrieves the date of the last version for a specific geographic area within  GRB (parcels, buildings,...)).
+
+        This function queries the GRB-API to find the most recent version-date (=last update of object)
+        for reference data of the specified `grb_type` (e.g., ADP, GBG, KNW) within the boundary of the provided `geometry`.
+
+        Args:
+            geometry (BaseGeometry): A Shapely geometry representing the area of interest.
+            grb_type (GRBType, optional): The type of GRB data to consider. Defaults to GRBType.ADP (administrative plots).
+
+        Returns:
+            str: The date of the last version for the specified GRB data type within the area,
+                 formatted as a string according to the GRB API response (usually YYYY-MM-DD).
+
+            None: If no data is found for the given geometry and GRB type combination.
+        """
         limit = DOWNLOAD_LIMIT
         crs = self.CRS
         bbox = str(geometry.bounds).strip("()")
@@ -579,26 +648,10 @@ class Aligner:
             "https://geo.api.vlaanderen.be/GRB/ogc/features/collections/"
             + grb_type
             + "/items?"
-            "limit=" + str(limit) + "&crs=" + crs + "&bbox-crs=EPSG:31370&bbox=" + bbox
+            "limit=" + str(limit) + "&crs=" + crs + "&bbox-crs=" + crs +"&bbox=" + bbox
         )
-        start_index = 0
-        collection = {}
         update_dates = []
-        while True:
-            url = actual_url + "&startIndex=" + str(start_index)
-            feature_collection = requests.get(url).json()
-            if (
-                "features" not in feature_collection
-                or len(feature_collection["features"]) == 0
-            ):
-                break
-            start_index = start_index + limit
-            if collection == {}:
-                collection = feature_collection
-            else:
-                collection["features"].extend(feature_collection["features"])
-            if len(feature_collection["features"]) < limit:
-                break
+        collection = get_collection(actual_url, limit)
         if "features" not in collection:
             return None
         for c in collection["features"]:
@@ -606,36 +659,92 @@ class Aligner:
         update_dates = sorted(update_dates, reverse=True)
         return update_dates[0]
 
-    def export_results(self, path):
+    def export_results(self, path, multi_to_single=True):
+        """
+            Exports analysis results as GeoJSON files.
+
+            This function exports 6 GeoJSON files containing the analysis results to the specified `path`.
+
+            Args:
+                path (str): The path to the directory where the GeoJSON files will be saved.
+                multi_to_single (bool, optional): If True (default), converts MultiPolygon geometries to single Polygons
+                                                    in the exported GeoJSON files. This can be useful for visualization purposes.
+
+            Details of exported files:
+                - result.geojson: Contains the original thematic data from `self.dict_result`.
+                - result_diff.geojson: Contains the difference between the original and predicted data from `self.dict_result_diff`.
+                - result_diff_plus.geojson: Contains results for areas that are added (increased area).
+                - result_diff_min.geojson: Contains results for areas that are removed (decreased area).
+            """
         export_geojson(
             os.path.join(path, "result.geojson"),
             self.dict_result,
             self.CRS,
             self.name_thematic_id,
+            multi_to_single=multi_to_single
         )
         export_geojson(
             os.path.join(path, "result_diff.geojson"),
             self.dict_result_diff,
             self.CRS,
             self.name_thematic_id,
-            multi_to_single=True,
+            multi_to_single=multi_to_single,
         )
         export_geojson(
             os.path.join(path, "result_diff_plus.geojson"),
             self.dict_result_diff_plus,
             self.CRS,
             self.name_thematic_id,
-            multi_to_single=True,
+            multi_to_single=multi_to_single,
+
         )
         export_geojson(
             os.path.join(path, "result_diff_min.geojson"),
             self.dict_result_diff_min,
             self.CRS,
             self.name_thematic_id,
-            multi_to_single=True,
+            multi_to_single=multi_to_single,
+        )
+        export_geojson(
+            os.path.join(path, "relevant_intersection.geojson"),
+            self.dict_relevant_intersection,
+            self.CRS,
+            self.name_thematic_id,
+            multi_to_single=multi_to_single,
+        )
+        export_geojson(
+            os.path.join(path, "relevant_difference.geojson"),
+            self.dict_relevant_difference,
+            self.CRS,
+            self.name_thematic_id,
+            multi_to_single=multi_to_single,
         )
 
     def _prepare_reference_data(self):
+        """
+        Prepares reference data for spatial queries and analysis.
+
+        This function processes the reference data provided in `self.reference_input` (assumed to be a GeoJSON feature collection).
+        It performs the following tasks:
+
+        1. **Iterates through features:**
+            - Extracts the reference data identifier (`key`) from each feature's properties using `self.name_reference_id`.
+            - Converts the feature's geometry to a Shapely geometry object using `shape`.
+            - Validates the geometry using `make_valid` to ensure it's a well-formed GeoJSON object.
+            - Stores the processed data in `self.dict_reference` with the identifier as the key and the validated geometry as the value.
+            - Provides debug feedback for each processed feature (key and geometry).
+
+        2. **Optimizes spatial queries:**
+            - Creates a Spatial Relationship Tree (STRtree) using `STRtree` for efficient spatial queries against the reference data in `self.dict_reference`.
+            - Converts the dictionary keys (reference identifiers) to a NumPy array for potential performance benefits in future operations.
+
+        3. **Clears reference union:**
+            - Sets `self.reference_union` to `None`. This variable stores the combined geometry of all reference data,
+              and it's cleared here to indicate that it needs to be recalculated if requested later.
+
+        Returns:
+            None
+        """
         if self.reference_input is not None:
             for f in self.reference_input["features"]:
                 key = f["properties"][self.name_reference_id]
@@ -652,26 +761,17 @@ class Aligner:
         return
 
     def _get_dict_from_url(self, input_url, name_reference_id, limit):
-        start_index = 0
-        collection = {}
-        while True:
-            url = input_url + "&startIndex=" + str(start_index)
-            self.feedback_info(url)
-            feature_collection = requests.get(url).json()
-            if (
-                "features" not in feature_collection
-                or len(feature_collection["features"]) == 0
-            ):
-                break
-            start_index = start_index + limit
-
-            for f in feature_collection["features"]:
-                key = str(f["properties"][name_reference_id])
-                geom = shape(f["geometry"])
-                if key not in collection:
-                    collection[key] = make_valid(geom)
-                self.feedback_debug(key + "-->" + str(geom))
-        return collection
+        collection = get_collection(input_url, limit)
+        dictionary = {}
+        if "features" not in collection or len(collection["features"]) == 0:
+            return dictionary
+        for f in collection["features"]:
+            key = str(f["properties"][name_reference_id])
+            geom = shape(f["geometry"])
+            if key not in collection:
+                dictionary[key] = make_valid(geom)
+            self.feedback_debug(key + "-->" + str(geom))
+        return dictionary
 
     def _calculate_intersection_between_geometry_and_od(self, geometry, preresult):
         # Calculate the intersection between thematic and Openbaar Domein
@@ -927,7 +1027,7 @@ class Aligner:
             and not geom_relevant_difference.is_empty
         ):
             # TODO: check needed
-            # if overlap > FULL_OVERLAP_PERCENTAGE and openbaar domein:
+            # if overlap > treshold_overlap_percentage and openbaar domein:
             #     geom = snap_geom_to_reference(
             #       geom_intersection, geom_reference, relevant_distance
             #   )

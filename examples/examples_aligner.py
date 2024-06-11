@@ -41,10 +41,10 @@ if __name__ == "__main__":
     resulting_areas = diffs_from_dict_series(dict_series, aligner.dict_thematic)
     plot_series(series, resulting_areas)
 
-    # Example how to use the Aligner with full_overlap_percentage=-1 (original
+    # Example how to use the Aligner with treshold_overlap_percentage=-1 (original
     # border will be used for cases where relevant zones cannot be used for determination)
     rel_dist = 6
     dict_results_by_distance = {}
-    dict_results_by_distance[rel_dist] = aligner.process_dict_thematic(relevant_distance=rel_dist, od_strategy=OpenbaarDomeinStrategy.SNAP_FULL_AREA_ALL_SIDE,full_overlap_percentage=-1)
+    dict_results_by_distance[rel_dist] = aligner.process_dict_thematic(relevant_distance=rel_dist, od_strategy=OpenbaarDomeinStrategy.SNAP_FULL_AREA_ALL_SIDE,treshold_overlap_percentage=-1)
     aligner.export_results("output/")
     show_map(dict_results_by_distance, aligner.dict_thematic, aligner.dict_reference)

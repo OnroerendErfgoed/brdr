@@ -58,6 +58,18 @@ class TestAligner(unittest.TestCase):
             out, "^(?:19|20)\\d\\d-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])$"
         )
 
+    def test_export_results(self):
+        aligner = Aligner()
+        aligner.load_thematic_data_dict({"theme_id_1": from_wkt('POLYGON ((0 0, 0 9, 5 10, 10 0, 0 0))')})
+        aligner.load_reference_data_dict({"ref_id_1": from_wkt('POLYGON ((0 1, 0 10,8 10,10 1,0 1))')})
+        result, result_diff, result_diff_plus, result_diff_min, relevant_intersection, relevant_diff = (
+            aligner.process_dict_thematic())
+        path = "./tmp/"
+        aligner.export_results(path=path)
+        for file_name in os.listdir(path):
+            os.remove(path + file_name)
+        os.rmdir(path)
+
     def test_partition(self):
         # Test partition function
         delta = 2.0
@@ -98,11 +110,11 @@ class TestAligner(unittest.TestCase):
         key_ref = "a"
         ref_dict = {key_ref: self.sample_geom}
         self.sample_aligner.load_reference_data_dict(ref_dict)
-        r, rd, rdp, rdm, si, sd = self.sample_aligner.process_geometry(
+        result, result_diff, result_diff_plus, result_diff_min, relevant_intersection, relevant_diff  = self.sample_aligner.process_geometry(
             self.sample_geom.buffer(0.5)
         )
-        self.assertTrue(from_wkt(r.wkt).equals(from_wkt(self.sample_geom.wkt)))
-        self.assertFalse(rd.is_empty)
+        self.assertTrue(from_wkt(result.wkt).equals(from_wkt(self.sample_geom.wkt)))
+        self.assertFalse(result_diff.is_empty)
 
     def test_predictor(self):
         ##Load thematic data & reference data
@@ -116,7 +128,7 @@ class TestAligner(unittest.TestCase):
         series = np.arange(0.1, 5.00, 0.2, dtype=float)
         # predict which relevant distances are interesting to propose as resulting geometry
         dict_predicted = self.sample_aligner.predictor(relevant_distances=series, od_strategy=4,
-                                                       full_overlap_percentage=50)
+                                                       treshold_overlap_percentage=50)
         self.assertEqual(len(dict_predicted), len(thematic_dict))
 
     def test_load_reference_data_grb_actual_adp(self):
@@ -142,13 +154,7 @@ class TestAligner(unittest.TestCase):
         # LOAD REFERENCE DICTIONARY
         self.sample_aligner.load_reference_data_grb_actual(grb_type="knw", partition=0)
         self.sample_aligner.process_dict_thematic()
-        path = './'
-        self.sample_aligner.export_results(path)
         self.assertGreaterEqual(len(self.sample_aligner.dict_reference), 0)
-        os.remove(os.path.join(path, "result.geojson"))
-        os.remove(os.path.join(path, "result_diff.geojson"))
-        os.remove(os.path.join(path, "result_diff_plus.geojson"))
-        os.remove(os.path.join(path, "result_diff_min.geojson"))
 
     def test_all_od_strategies(self):
         ##Load thematic data & reference data
@@ -161,7 +167,7 @@ class TestAligner(unittest.TestCase):
         self.sample_aligner.load_reference_data_dict(reference_dict)
         for od_strategy in OpenbaarDomeinStrategy:
             tuple = self.sample_aligner.process_dict_thematic(relevant_distance=1, od_strategy=od_strategy,
-                                                              full_overlap_percentage=50)
+                                                              treshold_overlap_percentage=50)
             self.assertEqual(len(tuple), 6)
 
     def test_process_interior_ring(self):

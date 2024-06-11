@@ -31,3 +31,6 @@ CORR_DISTANCE = 0.01
 MAX_REFERENCE_BUFFER = 10
 # Limit used when extracting features by URL, using the feature API (fe from GRB)
 DOWNLOAD_LIMIT = 10000
+
+#default CRS:
+DEFAULT_CRS= "EPSG:31370"
