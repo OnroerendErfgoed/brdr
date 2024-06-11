@@ -5,7 +5,6 @@ import logging
 from geojson import Feature
 from geojson import FeatureCollection
 from geojson import dump
-#from matplotlib import pyplot as plt
 from shapely import GeometryCollection
 from shapely import make_valid
 from shapely import node
@@ -13,6 +12,21 @@ from shapely import polygonize
 from shapely.geometry import shape
 
 def export_geojson(path_to_file, dictionary, crs, name_id, multi_to_single=False):
+    """Exports a dictionary of GeoJSON geometries to a GeoJSON file.
+
+    Args:
+        path_to_file (str): The path to the output GeoJSON file.
+        dictionary (dict): A dictionary where keys are feature identifiers
+            and values are GeoJSON geometry objects.
+        crs (str): The Coordinate Reference System (CRS) of the geometries.
+        name_id (str): The name of the property to use for the feature identifier
+            in the output GeoJSON.
+        multi_to_single (bool, optional): If True, multipolygon geometries
+            will be converted to single polygons before export. Defaults to False.
+
+    Raises:
+        OSError: If there is an error creating the directory containing the output file.
+    """
     features = []
     if multi_to_single:
         dictionary = multipolygons_to_singles(dictionary)
@@ -46,14 +60,25 @@ def export_geojson(path_to_file, dictionary, crs, name_id, multi_to_single=False
 
 def multipolygons_to_singles(dict_geoms):
     """
-    Util function that checks a dictionary of (multi-)polygons and creates a new
-        dictionary with only single Polygons.
+    Converts a dictionary of shapely-geometries to a dictionary containing only single polygons.
 
-    The keys of the original dictionary are partially kept:
+    This function iterates through a dictionary where values are Shapely-geometries and performs the following:
 
-    * Polygons keep their key
-    * MultiPolygons with only one Polygon keep their key
-    * MultiPolygons get a suffix-key (added '_index') for every Polygon
+    * **Polygons:** Preserves the key and geometry from the original dictionary.
+    * **MultiPolygons with one polygon:** Preserves the key and extracts the single polygon.
+    * **MultiPolygons with multiple polygons:**
+        * Creates new keys for each polygon by appending a suffix (_index) to the original key.
+        * Assigns the individual polygons from the MultiPolygon to the newly created keys.
+
+    Args:
+        dict_geoms (dict): A dictionary where keys are identifiers and values are GeoJSON geometries.
+
+    Returns:
+        dict: A new dictionary containing only single polygons (as Polygon geometries).
+              Keys are created based on the logic described above.
+
+    Notes:
+        * Geometries that are not Polygons or MultiPolygons are excluded with a warning message printed.
     """
     resulting_dict_geoms = {}
     for key in dict_geoms:
@@ -77,14 +102,24 @@ def multipolygons_to_singles(dict_geoms):
 
 def polygonize_reference_data(dict_ref):
     """
-    Util function that creates a new version of the reference_dictionary based on the
-    existing reference-dictionary. This function is useful:
+    Creates a new dictionary with non-overlapping polygons based on a reference data dictionary.
 
-    *   when there are overlapping polygons in the reference-dictionary:
-        It creates non-overlapping polygons based on all reference-borders.
-    *   when multiple overlapping references will be combined, f.e parcels and buildings
-    As this action makes new polygons, the original reference_id is lost and new
-    reference_id is added.
+    This function is designed to handle situations where the original reference data dictionary might contain:
+
+    * Overlapping polygons: It creates new, non-overlapping polygons by combining all reference borders.
+    * Multiple overlapping references: This function is useful when combining references like parcels and buildings that might overlap.
+
+    **Important:** The original reference IDs are lost in the process of creating new non-overlapping polygons. New unique keys are assigned instead.
+
+    Args:
+        dict_ref (dict): A dictionary where keys are identifiers and values are GeoJSON geometries (assumed to be Polygons or MultiPolygons).
+
+    Returns:
+        dict: A new dictionary containing non-overlapping polygons derived from the original reference data.
+              Keys are unique strings (reference IDs are lost).
+
+    Notes:
+        * Geometries that are not Polygons or MultiPolygons are excluded with a warning message printed.
     """
     arr_ref = []
     for key in dict_ref:
@@ -99,13 +134,27 @@ def polygonize_reference_data(dict_ref):
             key = str(i)  # unique keys will be added (reference_id is lost)
             dict_ref[key] = make_valid(g)
         else:
-            print("geom excluded: " + str(g))
+            logging.warning("geom excluded: " + str(g))
     return dict_ref
 
 
 def get_oe_dict_by_ids(aanduidingsobjecten):
     """
-    Get a thematic dictionary from a list of aanduid_id's
+    Fetches thematic data for a list of aanduidingsobject IDs from the Inventaris Onroerend Erfgoed API.
+
+    This function retrieves information about designated heritage objects (aanduidingsobjecten)
+    from the Flemish Agency for Heritage (Inventaris Onroerend Erfgoed) based on a list of their IDs.
+
+    Args:
+        aanduidingsobjecten (list): A list of aanduidingsobject (designation object) IDs.
+
+    Returns:
+        dict: A dictionary where keys are aanduidingsobject IDs (as strings) and values are GeoJSON geometry objects.
+              If an aanduidingsobject is not found, a corresponding warning message will be logged
+              but it won't be included in the returned dictionary.
+
+    Raises:
+        requests.exceptions.RequestException: If there is an error fetching data from the API.
     """
     dict_thematic = {}
     headers = {"Accept": "application/json"}
@@ -122,6 +171,24 @@ def get_oe_dict_by_ids(aanduidingsobjecten):
 
 
 def get_oe_geojson_by_bbox(bbox, limit=1000):
+    """
+    Fetches GeoJSON data for designated heritage objects (aanduidingsobjecten) within a bounding box.
+
+    This function retrieves information about aanduidingsobjecten from the Flemish
+    Mercator public WFS service using a bounding box (bbox) as a filter. The bbox should
+    be provided in the format "xmin,ymin,xmax,ymax" (EPSG:31370 projection).
+
+    Args:
+        bbox (str): A comma-separated string representing the bounding box in EPSG:31370
+                   projection (e.g., "100000,500000,200000,600000").
+        limit (int, optional): The maximum number of features to retrieve per request.
+                              Defaults to 1000.
+
+    Returns:
+        dict: A dictionary containing the retrieved GeoJSON feature collection. This
+              collection might be truncated if the total number of features exceeds
+              the specified limit.
+    """
     theme_url = (
         "https://www.mercator.vlaanderen.be/raadpleegdienstenmercatorpubliek/wfs?"
         "SERVICE=WFS&REQUEST=GetFeature&VERSION=2.0.0&"
@@ -228,8 +295,40 @@ def numerical_derivative(x, y):
   return derivative
 
 def _filter_dict_by_key(dictionary, filter_key):
+    """
+    Filters a dictionary to only include keys matching a specific value.
+
+    This function creates a new dictionary containing entries from the original dictionary
+    where the key matches the provided `filter_key`.
+
+    Args:
+        dictionary (dict): The dictionary to filter.
+        filter_key (str): The key value to filter by.
+
+    Returns:
+        dict: A new dictionary containing only entries where the key matches the `filter_key`.
+    """
     return {key: dictionary[key] for key in dictionary.keys() if key == filter_key}
 def filter_resulting_series_by_key(resulting_series,filter_key):
+    """
+    Filters a dictionary of result tuples based on a specific key.
+
+    This function iterates through a dictionary `resulting_series` where values are tuples containing six dictionaries.
+    The function creates a new dictionary `filtered_resulting_series` with the same structure. It iterates through each distance key (`dist`) in the original dictionary and performs the following:
+
+    1. **Filters each inner dictionary:** It uses the helper function `_filter_dict_by_key` to filter each of the six dictionaries within the result tuple at the current distance key. The filtering is based on the provided `filter_key`.
+    2. **Creates a new filtered tuple:** A new tuple is created with the filtered dictionaries.
+    3. **Adds the filtered tuple to the new dictionary:** The new filtered tuple is added to the `filtered_resulting_series` dictionary using the original distance key (`dist`).
+
+    **Important:** This function assumes the structure of the `resulting_series` dictionary and the existence of the helper function `_filter_dict_by_key`.
+
+    Args:
+        resulting_series (dict): A dictionary where keys are distances and values are tuples containing six dictionaries.
+        filter_key (str): The key value to filter the inner dictionaries by.
+
+    Returns:
+        dict: A new dictionary (`filtered_resulting_series`) with the same structure as the original one, but containing filtered inner dictionaries based on the `filter_key`.
+    """
     filtered_resulting_series ={}
     for dist in resulting_series:
         result_tuple = resulting_series[dist]
@@ -248,23 +347,41 @@ def filter_resulting_series_by_key(resulting_series,filter_key):
 
 def diffs_from_dict_series(dict_series, dict_thematic):
     """
-    calculates a dictionary with, for every key, a difference-indicator (difference in area, difference in percentage,..),
-     so it can be used further to search at which distance the most 'change' occurs.
+    Calculates a dictionary containing difference metrics for thematic elements based on a distance series.
+
+    This function analyzes the changes in thematic elements (represented by keys in `dict_thematic`)
+    across different distances provided in the `dict_series`. It calculates a difference metric
+    for each thematic element at each distance and returns a dictionary summarizing these differences.
+
+    Args:
+        dict_series (dict): A dictionary where keys are distances and values are tuples of two dictionaries.
+                             - The first dictionary in the tuple represents thematic element areas for a specific distance.
+                             - The second dictionary represents the difference in areas from the original thematic data for a specific distance.
+        dict_thematic (dict): A dictionary where keys are thematic element identifiers and values are GeoJSON geometry objects
+                               representing the original thematic data.
+
     Returns:
-                dict: A dictionary containing differences for each thematic key:
-                    {
-                        'thematic_key1': {
-                            distance1: percentage1,
-                            distance2: percentage2,
-                            ...
-                        },
-                        'thematic_key2': {
-                            distance1: percentage1,
-                            distance2: percentage2,
-                            ...
-                        },
-                        ...
-                    }
+        dict: A dictionary containing difference metrics for each thematic element (`key`) across different distances.
+             The structure is as follows:
+             {
+                'thematic_key1': {
+                    distance1: difference_metric1,
+                    distance2: difference_metric2,
+                    ...
+                },
+                'thematic_key2': {
+                    distance1: difference_metric1,
+                    distance2: difference_metric2,
+                    ...
+                },
+                ...
+             }
+
+             - `difference_metric`: This value depends on the chosen calculation for thematic element change.
+               The docstring provides examples like area difference, percentage change, and absolute difference.
+
+    Raises:
+        KeyError: If a thematic element key is missing from the results in `dict_series`.
     """
     keys = dict_thematic.keys()
     diffs = {}
@@ -288,7 +405,21 @@ def diffs_from_dict_series(dict_series, dict_thematic):
 
 def get_collection(ref_url, limit):
     """
-    function to get a collection of features from a url
+    Fetches a collection of features from a paginated API endpoint.
+
+    This function retrieves a collection of features from a URL that supports pagination using a `startIndex` parameter.
+    It iteratively retrieves features in chunks of the specified `limit` until no more features are available.
+
+    Args:
+        ref_url (str): The base URL of the API endpoint.
+        limit (int): The maximum number of features to retrieve per request.
+
+    Returns:
+        dict: A dictionary representing the complete GeoJSON feature collection. This might be truncated
+              if the total number of features exceeds the limitations of the API or server.
+
+    Logs:
+        - Debug logs the URL being used for each request during pagination.
     """
     start_index = 0
     collection = {}
