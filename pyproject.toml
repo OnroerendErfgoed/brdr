@@ -25,9 +25,7 @@ classifiers = [
 ]
 dependencies = [
     "geojson==3.1.0",
-    "geopandas==0.14.3",
-    "matplotlib==3.8.4",
-    "requests==2.31.0",
+    "requests==2.32.2",
     "shapely==2.0.4",
 ]
 [project.urls]
@@ -38,6 +36,8 @@ Issues = "https://github.com/OnroerendErfgoed/brdr/issues"
 [project.optional-dependencies]
 dev = [
     "black==24.4.0",
+    "geopandas==0.14.3",
+    "matplotlib==3.8.4",
     "hatchling==1.24.2",
     "pip-tools==7.4.1",
     "pytest-cov==5.0.0",
