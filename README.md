@@ -171,4 +171,4 @@ ADD LINK to report
 This software was created by Athumi, the Flemish data utility company, and Flanders Heritage Agency.
 
 ![https://athumi.be/en/](docs/figures/athumi_logo-250x84.png)
-![https://www.onroerenderfgoed.be/flanders-heritage-agency](docs/figures/Vlaanderen_is_erfgoed_vol_0.png)
+![https://www.onroerenderfgoed.be/flanders-heritage-agency](docs/figures/Vlaanderen_is_erfgoed_vol_0.png =250x)
