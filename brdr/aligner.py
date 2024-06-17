@@ -1017,6 +1017,14 @@ class Aligner:
                     self.buffer_distance(),
                 ),
             )
+            #TODO BEGIN: experimental fix - check if it is ok in all cases?
+            #when calculating for OD, we create a 'virtual parcel'. When calculating this virtual parcel, it is buffered to take outer boundaries into account.
+            #This results in a side-effect that there are extra non-logical parts included in the result. The function below tries to exclude these non-logica parts.
+            # see eo_id 206363 with relevant distance=0.2m and SNAP_ALL_SIDE
+            if is_openbaar_domein:
+                #geom = buffer_neg_pos(geom, self.buffer_distance())
+                geom = self.get_relevant_polygons_from_geom (geom)
+            #TODO END
         elif (
             not geom_relevant_intersection.is_empty
             and geom_relevant_difference.is_empty
@@ -1046,6 +1054,29 @@ class Aligner:
             else:
                 geom = geom_relevant_intersection  # (=empty geometry)
         return geom, geom_relevant_intersection, geom_relevant_difference
+
+
+    def get_relevant_polygons_from_geom(self, geom):
+        """
+        Get only the relevant parts (polygon) from a geometry.
+        Points, Lines and Polygons smaller than relevant distance are excluded from the result
+        """
+        if geom.is_empty or geom is None:
+            # If the input geometry is empty or None, do nothing.
+            return geom
+        else:
+            geom = make_valid(unary_union(geom))
+            # Create a GeometryCollection from the input geometry.
+            geometry_collection = GeometryCollection(geom)
+            array=[]
+            for g in geometry_collection.geoms:
+                # Ensure each sub-geometry is valid.
+                g = make_valid(g)
+                if str(g.geom_type) in ["Polygon", "MultiPolygon"]:
+                    relevant_geom = buffer_neg(g,self.buffer_distance())
+                    if relevant_geom != None and not relevant_geom.is_empty:
+                        array.append(g)
+        return make_valid(unary_union(array))
 
     @staticmethod
     def _add_geom_to_dict(dictionary, geom, id_theme):
