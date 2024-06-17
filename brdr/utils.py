@@ -138,35 +138,37 @@ def polygonize_reference_data(dict_ref):
     return dict_ref
 
 
-def get_oe_dict_by_ids(aanduidingsobjecten):
+def get_oe_dict_by_ids(objectids, oetype='aanduidingsobjecten'):
     """
-    Fetches thematic data for a list of aanduidingsobject IDs from the Inventaris Onroerend Erfgoed API.
+    Fetches thematic data for a list of objectIDs from the Inventaris Onroerend Erfgoed API.
 
-    This function retrieves information about designated heritage objects (aanduidingsobjecten)
+    This function retrieves information about designated heritage objects (erfgoedobjecten or aanduidingsobjecten)
     from the Flemish Agency for Heritage (Inventaris Onroerend Erfgoed) based on a list of their IDs.
 
     Args:
-        aanduidingsobjecten (list): A list of aanduidingsobject (designation object) IDs.
+        objectids (list): A list of objectIDs of 'erfgoedobjecten' or 'aanduidingsobjecten'.
+        oetype (string): A string: 'aanduidingsobjecten' (default) or 'erfgoedobjecten'
 
     Returns:
-        dict: A dictionary where keys are aanduidingsobject IDs (as strings) and values are GeoJSON geometry objects.
-              If an aanduidingsobject is not found, a corresponding warning message will be logged
+        dict: A dictionary where keys are objectIDs (as strings) and values are GeoJSON geometry objects.
+              If an erfgoedobject/aanduidingsobject is not found, a corresponding warning message will be logged
               but it won't be included in the returned dictionary.
 
     Raises:
         requests.exceptions.RequestException: If there is an error fetching data from the API.
     """
     dict_thematic = {}
+    base_url = "https://inventaris.onroerenderfgoed.be/" + oetype + "/"
     headers = {"Accept": "application/json"}
-    for a in aanduidingsobjecten:
-        url = "https://inventaris.onroerenderfgoed.be/aanduidingsobjecten/" + str(a)
+    for a in objectids:
+        url = base_url + str(a)
         response = requests.get(url, headers=headers).json()
         if 'id' in response.keys():
             key = str(response["id"])
             geom = shape(response["locatie"]["contour"])
             dict_thematic[key] = geom
         else:
-            logging.warning('aanduidingsobject met id ' + str(a) +' werd niet gevonden' )
+            logging.warning('object met id ' + str(a) +' werd niet gevonden in ' + oetype)
     return dict_thematic
 
 

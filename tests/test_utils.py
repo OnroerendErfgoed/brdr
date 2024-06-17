@@ -138,6 +138,10 @@ class TestUtils(unittest.TestCase):
         dict_thematic = get_oe_dict_by_ids([aanduid_id])
         self.assertFalse(is_empty(dict_thematic[str(aanduid_id)]))
 
+    def test_get_oe_dict_by_ids_erfgoedobject(self):
+        eo_id = 206363
+        dict_thematic = get_oe_dict_by_ids([eo_id],oetype='erfgoedobjecten')
+        self.assertFalse(is_empty(dict_thematic[str(eo_id)]))
     def test_get_oe_dict_by_ids_empty(self):
         dict_thematic = get_oe_dict_by_ids([])
         self.assertEqual(dict_thematic, {})
