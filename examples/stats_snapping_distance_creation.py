@@ -12,7 +12,7 @@ time = str(time.time())
 array_treshold_overlap_percentage = [50]
 array_od = [1]
 # array_relevant_distance = [0.2, 0.5, 1, 1.5, 2, 3, 4, 5, 6, 8, 10]
-array_relevant_distance = np.arange(0.1, 10.05, 0.1, dtype=float)
+array_relevant_distance = np.arange(0, 500, 10, dtype=int)/100
 print(array_relevant_distance)
 
 x = Aligner()

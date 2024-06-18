@@ -35,7 +35,7 @@ if __name__ == '__main__':
         print(aligner.get_formula(results[key]))
 
     #Example how to use a series (for histogram)
-    series = np.arange(0.1, 10.05, 0.1, dtype=float)
+    series = np.arange(0, 500, 10, dtype=int)/100
     dict_series = aligner.process_series(series,4,50)
     resulting_areas = diffs_from_dict_series(dict_series, aligner.dict_thematic)
     plot_series(series, resulting_areas)

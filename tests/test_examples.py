@@ -81,7 +81,7 @@ class TestExamples(unittest.TestCase):
     #     )  # gebruik de actuele adp-percelen adp= administratieve percelen
     #
     #     # Example how to use a series (for histogram)
-    #     series = np.arange(0.1, 5.05, 0.1, dtype=float)
+    #     series = np.arange(0, 300, 10, dtype=int)/100
     #     x_dict_series = aligner_x.process_series(series, 4, 50)
     #     x_resulting_areas = diffs_from_dict_series(x_dict_series, aligner_x.dict_thematic)
     #     y_dict_series = aligner_y.process_series(series, 4, 50)
@@ -106,7 +106,7 @@ class TestExamples(unittest.TestCase):
         dict_results_by_distance[rel_dist] = aligner.process_dict_thematic(rel_dist, 4)
 
         # Example how to use a series (for histogram)
-        series = np.arange(0.1, 10.05, 0.1, dtype=float)
+        series = np.arange(0, 300, 10, dtype=int)/100
         dict_series = aligner.process_series(series, 4, 50)
         resulting_areas = diffs_from_dict_series(dict_series, aligner.dict_thematic)
         for key in resulting_areas:
@@ -130,8 +130,8 @@ class TestExamples(unittest.TestCase):
         aligner.load_reference_data_grb_actual(grb_type='adp',
                                                partition=1000)  # gebruik de actuele adp-percelen adp= administratieve percelen
 
-        series = np.arange(0.1, 5.00, 0.2, dtype=float)
+        series = np.arange(0, 300, 10, dtype=int)/100
         # predict which relevant distances are interesting to propose as resulting geometry
-        dict_predicted = aligner.predictor(relevant_distances=series, od_strategy=4, treshold_overlap_percentage=50)
+        dict_predicted,diffs = aligner.predictor(relevant_distances=series, od_strategy=4, treshold_overlap_percentage=50)
         for key in dict_predicted.keys():
             continue

@@ -458,7 +458,7 @@ class Aligner:
 
     def predictor(
             self,
-            relevant_distances=np.arange(0.1, 5.05, 0.1, dtype=float),
+            relevant_distances=np.arange(0, 300, 10, dtype=int)/100,
             od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
             treshold_overlap_percentage=50,
     ):
@@ -516,7 +516,7 @@ class Aligner:
                 for zs in zero_streaks:
                     dict_predicted[key][zs[0]] = dict_series[zs[0]]
                 dict_predicted[key] = filter_resulting_series_by_key(dict_predicted[key],key)
-        return dict_predicted
+        return dict_predicted, diffs
 
     def process_series(
         self,
