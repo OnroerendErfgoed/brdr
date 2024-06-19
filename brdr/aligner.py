@@ -618,7 +618,7 @@ class Aligner:
                 "geometry": geom,
             }
 
-        self.feedback_info(dict_formula)
+        self.feedback_debug(str(dict_formula))
         return dict_formula
 
     def get_last_version_date(self, geometry, grb_type=GRBType.ADP):

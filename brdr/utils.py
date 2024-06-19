@@ -168,7 +168,7 @@ def get_oe_dict_by_ids(objectids, oetype='aanduidingsobjecten'):
             geom = shape(response["locatie"]["contour"])
             dict_thematic[key] = geom
         else:
-            logging.warning('object met id ' + str(a) +' werd niet gevonden in ' + oetype)
+            logging.warning('object id ' + str(a) +' not available in ' + oetype)
     return dict_thematic
 
 
@@ -398,7 +398,8 @@ def diffs_from_dict_series(dict_series, dict_thematic):
 
             #calculate the diffs you want to have
             #diff = results_diff[key].area * 100 / results[key].area #percentage of change
-            diff = results[key].area - dict_thematic[key].area #difference (m²) between area of resulting geometry and original geometry
+            diff = results[key].area - dict_thematic[key].area#difference (m²) between area of resulting geometry and original geometry
+            diff = round(diff, 1)#round, so the detected changes are within 10cm²
             #diff = abs(results[key].area - dict_thematic[key].area) #absolute difference (m²) between area of resulting geometry and original geometry
             #diff = abs(results[key].area - dict_thematic[key].area)*100/dict_thematic[key].area #absolute difference (%) between area of resulting geometry and original geometry
             #TODO: determine a good diff-value for determination

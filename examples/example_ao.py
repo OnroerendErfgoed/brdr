@@ -11,18 +11,8 @@ if __name__ == "__main__":
     aligner = Aligner()
     # Load thematic data & reference data
     #dict_theme = get_oe_dict_by_ids([206363], oetype='erfgoedobjecten')
-
-    erfgoedobjecten =[206407,
-206403,
-206372,
-206369,
-206377,
-206371,
-206370,
-206368,
-206786
-]
-    dict_theme = get_oe_dict_by_ids(erfgoedobjecten, oetype='erfgoedobjecten')
+    aanduidingsobjecten = range(1,10)
+    dict_theme = get_oe_dict_by_ids(aanduidingsobjecten, oetype='aanduidingsobjecten')
     aligner.load_thematic_data_dict(dict_theme)
     aligner.load_reference_data_grb_actual(grb_type="adp", partition=1000)
 
@@ -34,7 +24,7 @@ if __name__ == "__main__":
     # aligner.export_results("output/")
     # show_map(dict_results_by_distance, aligner.dict_thematic, aligner.dict_reference)
 
-    series = np.arange(0, 200, 20, dtype=int)/100
+    series = np.arange(0, 500, 20, dtype=int)/100
     #predict which relevant distances are interesting to propose as resulting geometry
     dict_predicted, diffs = aligner.predictor(relevant_distances=series, od_strategy=2,treshold_overlap_percentage=50)
     for key in dict_predicted.keys():
