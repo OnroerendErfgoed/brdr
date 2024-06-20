@@ -1,7 +1,7 @@
 import numpy as np
 
 from brdr.aligner import Aligner
-from brdr.utils import get_oe_dict_by_ids
+from brdr.utils import get_oe_dict_by_ids, geojson_from_predictor, write_geojson
 from examples import show_map, plot_series
 
 if __name__ == "__main__":
@@ -12,14 +12,15 @@ if __name__ == "__main__":
     # Load thematic data & reference data
     #dict_theme = get_oe_dict_by_ids([206363], oetype='erfgoedobjecten')
 
-    erfgoedobjecten =[206407,
-206403,
-206372,
-206369,
-206377,
-206371,
-206370,
-206368,
+    erfgoedobjecten =[
+# 206407,
+# 206403,
+# 206372,
+# 206369,
+# 206377,
+# 206371,
+# 206370,
+# 206368,
 206786
 ]
     dict_theme = get_oe_dict_by_ids(erfgoedobjecten, oetype='erfgoedobjecten')
@@ -37,6 +38,8 @@ if __name__ == "__main__":
     series = np.arange(0, 200, 20, dtype=int)/100
     #predict which relevant distances are interesting to propose as resulting geometry
     dict_predicted, diffs = aligner.predictor(relevant_distances=series, od_strategy=2,treshold_overlap_percentage=50)
+    geojson = geojson_from_predictor(dict_predicted, crs= aligner.CRS, name_id= aligner.name_thematic_id)
+    write_geojson('output/predicted.geojson',geojson)
     for key in dict_predicted.keys():
         diff ={}
         diff[key]= diffs[key]

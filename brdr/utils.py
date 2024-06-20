@@ -5,12 +5,56 @@ import logging
 from geojson import Feature
 from geojson import FeatureCollection
 from geojson import dump
-from shapely import GeometryCollection
+from shapely import GeometryCollection, Polygon, unary_union
 from shapely import make_valid
 from shapely import node
 from shapely import polygonize
 from shapely.geometry import shape
 
+
+def geojson_from_predictor(dict_predicted, crs, name_id, prop_dict=None, geom_attributes=True):
+    features =[]
+    for key in dict_predicted.keys():
+        rel_dist_dict =dict_predicted[key]
+        for rel_dist in rel_dist_dict.keys():
+            my_tuple = rel_dist_dict [rel_dist]
+            fc =geojson_from_dict(my_tuple[0], crs, name_id, prop_dict={key: {'relevant_distance': rel_dist}})
+            features.extend(fc.features)
+    crs_geojson = {"type": "name", "properties": {"name": crs}}
+    feature_collection = FeatureCollection(features, crs=crs_geojson)
+    return feature_collection
+def geojson_from_dict(dictionary, crs, name_id, prop_dict=None, geom_attributes=True):
+    features = []
+    for key in dictionary:
+        geom = dictionary[key]
+        properties = {name_id: key}
+        if prop_dict is not None and key in prop_dict:
+            properties = properties | prop_dict[key]
+        if geom_attributes:
+            area = geom.area
+            perimeter = geom.length
+            if geom.area != 0:
+                shape_index = perimeter / area
+            else:
+                shape_index = -1
+            properties['area'] = area
+            properties['perimeter'] = perimeter
+            properties['shape_index'] = shape_index
+        features.append(
+            Feature(
+                geometry=geom,
+                properties=properties,
+            )
+        )
+    crs_geojson = {"type": "name", "properties": {"name": crs}}
+    geojson = FeatureCollection(features, crs=crs_geojson)
+    return geojson
+
+def write_geojson(path_to_file,geojson):
+    parent = os.path.dirname(path_to_file)
+    os.makedirs(parent, exist_ok=True)
+    with open(path_to_file, "w") as f:
+        dump(geojson, f)
 def export_geojson(path_to_file, dictionary, crs, name_id, multi_to_single=False):
     """Exports a dictionary of GeoJSON geometries to a GeoJSON file.
 
@@ -27,36 +71,10 @@ def export_geojson(path_to_file, dictionary, crs, name_id, multi_to_single=False
     Raises:
         OSError: If there is an error creating the directory containing the output file.
     """
-    features = []
     if multi_to_single:
         dictionary = multipolygons_to_singles(dictionary)
-    for key in dictionary:
-        geom = dictionary[key]
-        area = geom.area
-        perimeter = geom.length
-        if area != 0:
-            shape_index = perimeter / area
-        else:
-            shape_index = -1
-
-        features.append(
-            Feature(
-                geometry=geom,
-                properties={
-                    name_id: key,
-                    "area": area,
-                    "perimeter": perimeter,
-                    "shape_index": shape_index,
-                },
-            )
-        )
-    crs_geojson = {"type": "name", "properties": {"name": crs}}
-    feature_collection = FeatureCollection(features, crs=crs_geojson)
-    parent = os.path.dirname(path_to_file)
-    os.makedirs(parent, exist_ok=True)
-    with open(path_to_file, "w") as f:
-        dump(feature_collection, f)
-
+    feature_collection = geojson_from_dict(dictionary, crs, name_id)
+    write_geojson(path_to_file, feature_collection)
 
 def multipolygons_to_singles(dict_geoms):
     """
@@ -112,7 +130,7 @@ def polygonize_reference_data(dict_ref):
     **Important:** The original reference IDs are lost in the process of creating new non-overlapping polygons. New unique keys are assigned instead.
 
     Args:
-        dict_ref (dict): A dictionary where keys are identifiers and values are GeoJSON geometries (assumed to be Polygons or MultiPolygons).
+        dict_ref (dict): A dictionary where keys are identifiers and values are Shapely geometries (assumed to be Polygons or MultiPolygons).
 
     Returns:
         dict: A new dictionary containing non-overlapping polygons derived from the original reference data.
@@ -439,3 +457,41 @@ def get_collection(ref_url, limit):
         else:
             collection["features"].extend(feature_collection["features"])
     return collection
+
+def merge_geometries_by_theme_id(dictionary):
+    """
+    Merges geometries in a dictionary from multiple themes into a single theme.
+
+    Args: dictionary (dict): A dictionary where keys are theme IDs and values are
+        geometries (e.g., shapely Polygon objects).
+
+    Returns: dict: A new dictionary with merged geometries, where keys are global
+        theme IDs and values are merged geometries.
+
+    """
+    dict_out = {}
+    for id_theme in dictionary:
+        id_theme_global = id_theme.split("_")[0]
+        geom = dictionary[id_theme]
+        if geom.is_empty or geom is None:
+            continue
+        arr = [geom]
+        if id_theme_global not in dict_out:
+            dict_out[id_theme_global] = [Polygon()]
+        lst = dict_out[id_theme_global]
+        lst.extend(arr)
+        dict_out[id_theme_global] = lst
+    for id_theme_global in dict_out:
+        dict_out[id_theme_global] = unary_union(dict_out[id_theme_global])
+    return dict_out
+
+def geom_from_dict(dict, key):
+    """
+    Get the geometry from a dictionary with geometries. If key not present,
+    an empty Polygon is returned
+    """
+    if key in dict:
+        geom = dict[key]
+    else:
+        geom = Polygon()
+    return geom
