@@ -1,6 +1,7 @@
 import numpy as np
 from brdr.aligner import Aligner
-from brdr.utils import get_breakpoints_zerostreak, diffs_from_dict_series, filter_resulting_series_by_key
+from brdr.utils import get_breakpoints_zerostreak, diffs_from_dict_series, filter_resulting_series_by_key, \
+    write_geojson, geojson_tuple_from_series
 from examples import plot_series, show_map
 
 # Press the green button in the gutter to run the script.
@@ -38,6 +39,10 @@ if __name__ == '__main__':
     series = np.arange(0, 500, 10, dtype=int)/100
     dict_series = aligner.process_series(series,4,50)
     resulting_areas = diffs_from_dict_series(dict_series, aligner.dict_thematic)
+    fc = geojson_tuple_from_series(dict_series, aligner.CRS, aligner.name_thematic_id)
+    write_geojson('output/series.geojson',fc[0])
+    write_geojson('output/series_diff.geojson', fc[1])
+    write_geojson('output/series_relevant_difference.geojson', fc[5])
     plot_series(series, resulting_areas)
     for key in resulting_areas:
         if len(resulting_areas[key]) == len(series):

@@ -4,12 +4,11 @@ import os
 
 from shapely import is_empty
 from shapely.geometry import Polygon
-from brdr.utils import (
-    export_geojson, multipolygons_to_singles, polygonize_reference_data,
-    get_oe_dict_by_ids, get_oe_geojson_by_bbox, get_breakpoints_zerostreak,
-    _filter_dict_by_key, filter_resulting_series_by_key,
-    diffs_from_dict_series, get_collection
-)
+from brdr.utils import (multipolygons_to_singles, polygonize_reference_data,
+                        get_oe_dict_by_ids, get_oe_geojson_by_bbox, get_breakpoints_zerostreak,
+                        _filter_dict_by_key, filter_resulting_series_by_key,
+                        diffs_from_dict_series, get_collection
+                        )
 
 
 class TestUtils(unittest.TestCase):
@@ -31,57 +30,6 @@ class TestUtils(unittest.TestCase):
         assert len(breakpoints) != 0
         assert len(zerostreaks) == 0
 
-    def test_export_geojson_empty_dict(self):
-        path = "./x.geojson"
-        export_geojson(path, {}, "EPSG:4326", "id")
-        with open(path, "r") as f:
-            content = f.read()
-        self.assertEqual(content,
-                         '{"type": "FeatureCollection", "crs": {"type": "name", "properties": {"name": "EPSG:4326"}}, "features": []}')
-        os.remove(path)
-
-    def test_export_geojson_single_polygon(self):
-        path = "./y.geojson"
-        geometry = shapely.geometry.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
-        data = {"test_id": geometry}
-        export_geojson(path, data, "EPSG:4326", "id")
-        with open(path, "r") as f:
-            content = f.read()
-        # Assert expected GeoJSON structure with properties
-        self.assertIn(
-            '"geometry": {"type": "Polygon", "coordinates": [[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0], [0.0, 0.0]]]}',
-            content)
-        self.assertIn('"properties": {"id": "test_id", "area": ', content)
-        os.remove(path)
-
-    def test_export_geojson_multipolygon(self):
-        path = "./z.geojson"
-        geometry1 = shapely.geometry.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
-        geometry2 = shapely.geometry.Polygon([(2, 2), (3, 2), (3, 3), (2, 3)])
-        data = {"test_id1": geometry1, "test_id2": shapely.geometry.MultiPolygon([geometry2])}
-        export_geojson(path, data, "EPSG:4326", "id")
-        with open(path, "r") as f:
-            content = f.read()
-        # Assert presence of both geometries (one polygon, one multipolygon)
-        self.assertIn('"geometry": {"type": "Polygon"', content)
-        self.assertIn('"geometry": {"type": "MultiPolygon"', content)
-        os.remove(path)
-
-    def test_export_geojson_multipolygon_multi_to_single_true(self):
-        path = "./test_export_geojson_multipolygon_multi_to_single_true.geojson"
-        geometry1 = shapely.geometry.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
-        geometry2 = shapely.geometry.Polygon([(2, 2), (3, 2), (3, 3), (2, 3)])
-        data = {"test_id1": shapely.geometry.MultiPolygon([geometry1, geometry2]),
-                "test_id2": shapely.geometry.MultiPolygon([geometry2])}
-        export_geojson(path, data, "EPSG:4326", "id", multi_to_single=True)
-        with open(path, "r") as f:
-            content = f.read()
-        # Assert presence of both geometries as single polygons with unique keys
-        self.assertNotIn('"geometry": {"type": "MultiPolygon"', content)
-        self.assertIn('"test_id1_0"', content)
-        self.assertIn('"test_id1_1"', content)
-        self.assertIn('"test_id2"', content)
-        os.remove(path)
 
     def test_multipolygons_to_singles_empty_dict(self):
         data = {}
@@ -140,8 +88,9 @@ class TestUtils(unittest.TestCase):
 
     def test_get_oe_dict_by_ids_erfgoedobject(self):
         eo_id = 206363
-        dict_thematic = get_oe_dict_by_ids([eo_id],oetype='erfgoedobjecten')
+        dict_thematic = get_oe_dict_by_ids([eo_id], oetype='erfgoedobjecten')
         self.assertFalse(is_empty(dict_thematic[str(eo_id)]))
+
     def test_get_oe_dict_by_ids_empty(self):
         dict_thematic = get_oe_dict_by_ids([])
         self.assertEqual(dict_thematic, {})
@@ -195,8 +144,9 @@ class TestUtils(unittest.TestCase):
         data = {1: ({"key1": "value1"}, {"key2": "value2"}, {"key3": "value3"}, {"key4": "value4"}, {"key5": "value5"},
                     {"key6": "value6"}),
                 2: (
-                {"key1": "value7"}, {"key2": "value8"}, {"key3": "value9"}, {"key4": "value10"}, {"key5": "value11"},
-                {"key6": "value12"})}
+                    {"key1": "value7"}, {"key2": "value8"}, {"key3": "value9"}, {"key4": "value10"},
+                    {"key5": "value11"},
+                    {"key6": "value12"})}
         result = filter_resulting_series_by_key(data, "key1")
         self.assertEqual(result,
                          {1: ({"key1": "value1"}, {}, {}, {}, {}, {}), 2: ({"key1": "value7"}, {}, {}, {}, {}, {})})
@@ -219,11 +169,10 @@ class TestUtils(unittest.TestCase):
         # Assert expected diffs
         self.assertEqual(result, expected_diffs)
 
-
     def test_get_collection(self):
-        base_year= 2023
+        base_year = 2023
         limit = 100
-        crs='EPSG:31370'
+        crs = 'EPSG:31370'
         bbox = "173500,173500,174000,174000"
         ref_url = (
                 "https://geo.api.vlaanderen.be/Adpf/ogc/features/collections/Adpf"

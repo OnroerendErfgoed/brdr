@@ -57,12 +57,7 @@ You can install the latest release of `brdr` from
 ``` python
 pip install brdr
 ```
-### pip-compile
-```sh
-PIP_COMPILE_ARGS="-v --strip-extras --no-header --resolver=backtracking --no-emit-options --no-emit-find-links"
-pip-compile $PIP_COMPILE_ARGS
-pip-compile $PIP_COMPILE_ARGS -o requirements-dev.txt --all-extras
-```
+
 ## Basic example
 
 ``` python
@@ -157,6 +152,18 @@ RESULT:
 
 A new resulting output geometry, aligned to the reference-polygons
 
+## Development
+
+### pip-compile
+```sh
+PIP_COMPILE_ARGS="-v --strip-extras --no-header --resolver=backtracking --no-emit-options --no-emit-find-links"
+pip-compile $PIP_COMPILE_ARGS
+pip-compile $PIP_COMPILE_ARGS -o requirements-dev.txt --all-extras
+```
+### tests
+```python
+python -m pytest --cov=brdr tests/ --cov-report term-missing
+```
 
 ## Motivation & citation
 A more in-depth description of the algorithm can be found  in the following article (in dutch):

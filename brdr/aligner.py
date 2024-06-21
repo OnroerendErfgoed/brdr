@@ -42,8 +42,8 @@ from brdr.geometry_utils import safe_difference
 from brdr.geometry_utils import safe_intersection
 from brdr.geometry_utils import safe_symmetric_difference
 from brdr.geometry_utils import safe_union
-from brdr.utils import export_geojson, diffs_from_dict_series, get_breakpoints_zerostreak, \
-    filter_resulting_series_by_key, get_collection
+from brdr.utils import diffs_from_dict_series, get_breakpoints_zerostreak, \
+    filter_resulting_series_by_key, get_collection, geojson_tuple_from_series, write_geojson
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(message)s", datefmt="%d-%b-%y %H:%M:%S"
@@ -676,49 +676,17 @@ class Aligner:
                 - result_diff_plus.geojson: Contains results for areas that are added (increased area).
                 - result_diff_min.geojson: Contains results for areas that are removed (decreased area).
             """
-        export_geojson(
-            os.path.join(path, "result.geojson"),
-            self.dict_result,
-            self.CRS,
-            self.name_thematic_id,
-            multi_to_single=multi_to_single
-        )
-        export_geojson(
-            os.path.join(path, "result_diff.geojson"),
-            self.dict_result_diff,
-            self.CRS,
-            self.name_thematic_id,
-            multi_to_single=multi_to_single,
-        )
-        export_geojson(
-            os.path.join(path, "result_diff_plus.geojson"),
-            self.dict_result_diff_plus,
-            self.CRS,
-            self.name_thematic_id,
-            multi_to_single=multi_to_single,
-
-        )
-        export_geojson(
-            os.path.join(path, "result_diff_min.geojson"),
-            self.dict_result_diff_min,
-            self.CRS,
-            self.name_thematic_id,
-            multi_to_single=multi_to_single,
-        )
-        export_geojson(
-            os.path.join(path, "relevant_intersection.geojson"),
-            self.dict_relevant_intersection,
-            self.CRS,
-            self.name_thematic_id,
-            multi_to_single=multi_to_single,
-        )
-        export_geojson(
-            os.path.join(path, "relevant_difference.geojson"),
-            self.dict_relevant_difference,
-            self.CRS,
-            self.name_thematic_id,
-            multi_to_single=multi_to_single,
-        )
+        fcs = geojson_tuple_from_series({self.relevant_distance: (self.dict_result,self.dict_result_diff,self.dict_result_diff_plus,self.dict_result_diff_min,self.dict_relevant_intersection,self.dict_relevant_difference)}, self.CRS, self.name_thematic_id)
+        resultnames = [
+            "result.geojson",
+            "result_diff.geojson",
+            "result_diff_plus.geojson",
+            "result_diff_min.geojson",
+            "result_relevant_intersection.geojson",
+            "result_relevant_difference.geojson"
+        ]
+        for count, fc in enumerate(fcs):
+            write_geojson(os.path.join(path, resultnames[count]), fcs[count])
 
     def _prepare_reference_data(self):
         """

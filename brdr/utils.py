@@ -11,19 +11,54 @@ from shapely import node
 from shapely import polygonize
 from shapely.geometry import shape
 
-
-def geojson_from_predictor(dict_predicted, crs, name_id, prop_dict=None, geom_attributes=True):
-    features =[]
-    for key in dict_predicted.keys():
-        rel_dist_dict =dict_predicted[key]
-        for rel_dist in rel_dist_dict.keys():
-            my_tuple = rel_dist_dict [rel_dist]
-            fc =geojson_from_dict(my_tuple[0], crs, name_id, prop_dict={key: {'relevant_distance': rel_dist}})
-            features.extend(fc.features)
+def geojson_tuple_from_tuple(my_tuple, crs, name_id, prop_dict=None, geom_attributes=True):
+    """
+    get a geojson-tuple (6 geojsons) for a tuple of results (results, result_diff, ...)
+    """
+    feature_collections = []
+    for count, tup in enumerate(my_tuple):
+        feature_collections.append(geojson_from_dict(tup, crs, name_id, prop_dict=prop_dict))
+    return tuple(feature_collections)
+def geojson_tuple_from_series(dict_series, crs, name_id, prop_dict=None, geom_attributes=True):
+    """
+    get a geojson-tuple (6 geojsons) for a dictionary of relevant distances() keys and resulting tuples (values)
+    """
+    features = [[], [], [], [], [], []]
+    for rel_dist in dict_series.keys():
+        my_tuple = dict_series [rel_dist]
+        prop_rel_dist = {'relevant_distance': rel_dist}
+        if prop_dict is not None and rel_dist in prop_dict:
+            prop_rel_dist = prop_rel_dist | prop_dict[rel_dist]
+        prop_dictionary = dict.fromkeys(my_tuple[0].keys(), prop_rel_dist)
+        fcs = geojson_tuple_from_tuple(my_tuple, crs, name_id, prop_dict=prop_dictionary)
+        for count, ft in enumerate(features):
+            ft.extend(fcs[count].features)
     crs_geojson = {"type": "name", "properties": {"name": crs}}
-    feature_collection = FeatureCollection(features, crs=crs_geojson)
-    return feature_collection
+    feature_collections =[]
+    for ft in features:
+        feature_collections.append (FeatureCollection(ft, crs=crs_geojson))
+    return tuple(feature_collections)
+def geojson_tuple_from_dict_theme(dict_theme, crs, name_id, prop_dict=None, geom_attributes=True):
+    """
+    get a geojson-tuple (6 geojsons) for a dictionary of theme_ids (keys) and dictionary of relevant distance-results (values)
+    """
+    features = [[], [], [], [], [], []]
+    for key in dict_theme.keys():
+        if prop_dict is not None and key in prop_dict:
+            prop_dictionary = prop_dict[key]
+        fcs = geojson_tuple_from_series(dict_theme[key], crs, name_id, prop_dict=prop_dictionary)
+        for count, ft in enumerate(features):
+            ft.extend(fcs[count].features)
+    crs_geojson = {"type": "name", "properties": {"name": crs}}
+    feature_collections = []
+    for ft in features:
+        feature_collections.append(FeatureCollection(ft, crs=crs_geojson))
+    return tuple(feature_collections)
+
 def geojson_from_dict(dictionary, crs, name_id, prop_dict=None, geom_attributes=True):
+    """
+    get a geojson (featurecollection) from a dictionary of ids(keys) and geometries (values)
+    """
     features = []
     for key in dictionary:
         geom = dictionary[key]
@@ -55,26 +90,6 @@ def write_geojson(path_to_file,geojson):
     os.makedirs(parent, exist_ok=True)
     with open(path_to_file, "w") as f:
         dump(geojson, f)
-def export_geojson(path_to_file, dictionary, crs, name_id, multi_to_single=False):
-    """Exports a dictionary of GeoJSON geometries to a GeoJSON file.
-
-    Args:
-        path_to_file (str): The path to the output GeoJSON file.
-        dictionary (dict): A dictionary where keys are feature identifiers
-            and values are GeoJSON geometry objects.
-        crs (str): The Coordinate Reference System (CRS) of the geometries.
-        name_id (str): The name of the property to use for the feature identifier
-            in the output GeoJSON.
-        multi_to_single (bool, optional): If True, multipolygon geometries
-            will be converted to single polygons before export. Defaults to False.
-
-    Raises:
-        OSError: If there is an error creating the directory containing the output file.
-    """
-    if multi_to_single:
-        dictionary = multipolygons_to_singles(dictionary)
-    feature_collection = geojson_from_dict(dictionary, crs, name_id)
-    write_geojson(path_to_file, feature_collection)
 
 def multipolygons_to_singles(dict_geoms):
     """

@@ -1,7 +1,7 @@
 import numpy as np
 
 from brdr.aligner import Aligner
-from brdr.utils import get_oe_dict_by_ids, geojson_from_predictor, write_geojson
+from brdr.utils import get_oe_dict_by_ids, write_geojson, geojson_tuple_from_dict_theme
 from examples import show_map, plot_series
 
 if __name__ == "__main__":
@@ -38,10 +38,18 @@ if __name__ == "__main__":
     series = np.arange(0, 200, 20, dtype=int)/100
     #predict which relevant distances are interesting to propose as resulting geometry
     dict_predicted, diffs = aligner.predictor(relevant_distances=series, od_strategy=2,treshold_overlap_percentage=50)
-    geojson = geojson_from_predictor(dict_predicted, crs= aligner.CRS, name_id= aligner.name_thematic_id)
-    write_geojson('output/predicted.geojson',geojson)
+    prop_dictionary = dict(dict_predicted)
+    for key in prop_dictionary.keys():
+        d = {}
+        for rel_dist in dict_predicted[key].keys():
+            formula = aligner.get_formula(dict_predicted[key][rel_dist][0][key])
+            d[rel_dist] = {'formula': formula}
+        prop_dictionary[key] = dict.fromkeys(dict_predicted[key].keys(), {'formula': formula})
+    fcs = geojson_tuple_from_dict_theme(dict_predicted, crs=aligner.CRS, name_id=aligner.name_thematic_id, prop_dict=prop_dictionary)
+    write_geojson('output/predicted.geojson',fcs[0])
+    write_geojson('output/predicted_diff.geojson', fcs[1])
     for key in dict_predicted.keys():
-        diff ={}
-        diff[key]= diffs[key]
-        plot_series(series,diff)
+        diff = {}
+        diff[key] = diffs[key]
+        plot_series(series, diff)
         show_map(dict_predicted[key], {key:aligner.dict_thematic[key]}, aligner.dict_reference)
