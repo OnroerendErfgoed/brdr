@@ -43,7 +43,8 @@ from brdr.geometry_utils import safe_intersection
 from brdr.geometry_utils import safe_symmetric_difference
 from brdr.geometry_utils import safe_union
 from brdr.utils import diffs_from_dict_series, get_breakpoints_zerostreak, \
-    filter_resulting_series_by_key, get_collection, geojson_tuple_from_series, write_geojson
+    filter_resulting_series_by_key, get_collection, geojson_tuple_from_series, write_geojson, \
+    merge_geometries_by_theme_id, geojson_from_dict
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(message)s", datefmt="%d-%b-%y %H:%M:%S"
@@ -440,20 +441,20 @@ class Aligner:
             dict_result_diff_min[key] = result_diff_min
             dict_relevant_intersection[key] = relevant_intersection
             dict_relevant_diff[key] = relevant_diff
-        self.dict_result = dict_result
-        self.dict_result_diff = dict_result_diff
-        self.dict_result_diff_plus = dict_result_diff_plus
-        self.dict_result_diff_min = dict_result_diff_min
-        self.dict_relevant_intersection = dict_relevant_intersection
-        self.dict_relevant_difference = dict_relevant_diff
+        self.dict_result = merge_geometries_by_theme_id(dict_result)
+        self.dict_result_diff = merge_geometries_by_theme_id(dict_result_diff)
+        self.dict_result_diff_plus = merge_geometries_by_theme_id(dict_result_diff_plus)
+        self.dict_result_diff_min = merge_geometries_by_theme_id(dict_result_diff_min)
+        self.dict_relevant_intersection = merge_geometries_by_theme_id(dict_relevant_intersection)
+        self.dict_relevant_difference = merge_geometries_by_theme_id(dict_relevant_diff)
         self.feedback_info("thematic dictionary processed")
         return (
-            dict_result,
-            dict_result_diff,
-            dict_result_diff_plus,
-            dict_result_diff_min,
-            dict_relevant_intersection,
-            dict_relevant_diff,
+            self.dict_result,
+            self.dict_result_diff,
+            self.dict_result_diff_plus,
+            self.dict_result_diff_min,
+            self.dict_relevant_intersection,
+            self.dict_relevant_difference,
         )
 
     def predictor(
@@ -659,6 +660,25 @@ class Aligner:
         update_dates = sorted(update_dates, reverse=True)
         return update_dates[0]
 
+    def get_results_as_dict(self):
+        """
+        get a dict-tuple of the results
+        """
+        return (self.dict_result, self.dict_result_diff, self.dict_result_diff_plus, self.dict_result_diff_min,
+                self.dict_relevant_intersection, self.dict_relevant_difference)
+
+    def get_results_as_geojson(self):
+        """
+        get a geojson-tuple of the results
+        """
+        return geojson_tuple_from_series({self.relevant_distance: self.get_results_as_dict()}, self.CRS,
+                                         self.name_thematic_id)
+
+    def get_reference_as_geojson(self):
+        """
+        get a geojson of the reference polygons
+        """
+        return geojson_from_dict(self.dict_reference, self.CRS, self.name_reference_id,geom_attributes=False)
     def export_results(self, path, multi_to_single=True):
         """
             Exports analysis results as GeoJSON files.
@@ -675,8 +695,10 @@ class Aligner:
                 - result_diff.geojson: Contains the difference between the original and predicted data from `self.dict_result_diff`.
                 - result_diff_plus.geojson: Contains results for areas that are added (increased area).
                 - result_diff_min.geojson: Contains results for areas that are removed (decreased area).
+                - result_relevant_intersection.geojson: Contains the areas with relevant intersection that has to be included in the result.
+                - result_relevant_difference.geojson: Contains the areas with relevant difference that has to be excluded from the result.
             """
-        fcs = geojson_tuple_from_series({self.relevant_distance: (self.dict_result,self.dict_result_diff,self.dict_result_diff_plus,self.dict_result_diff_min,self.dict_relevant_intersection,self.dict_relevant_difference)}, self.CRS, self.name_thematic_id)
+        fcs = self.get_results_as_geojson()
         resultnames = [
             "result.geojson",
             "result_diff.geojson",

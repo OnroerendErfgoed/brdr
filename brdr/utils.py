@@ -10,6 +10,10 @@ from shapely import make_valid
 from shapely import node
 from shapely import polygonize
 from shapely.geometry import shape
+from brdr.constants import MULTI_SINGLE_ID_SEPARATOR
+
+import brdr.constants
+
 
 def geojson_tuple_from_tuple(my_tuple, crs, name_id, prop_dict=None, geom_attributes=True):
     """
@@ -125,7 +129,7 @@ def multipolygons_to_singles(dict_geoms):
                 continue
             i = 0
             for p in polygons:
-                new_key = str(key) + "_" + str(i)
+                new_key = str(key) + MULTI_SINGLE_ID_SEPARATOR + str(i)
                 resulting_dict_geoms[new_key] = p
                 i = i + 1
         else:
@@ -421,12 +425,12 @@ def diffs_from_dict_series(dict_series, dict_thematic):
     keys = dict_thematic.keys()
     diffs = {}
     for key in keys:
-        diffs[key]={}
+        diffs[key] = {}
     for rel_dist in dict_series: #all the relevant distances used to calculate the series
         results = dict_series[rel_dist][0]
         results_diff =dict_series[rel_dist][1]
         for key in keys:
-            if key not in results.keys() or key not in results_diff.keys():
+            if key not in results.keys() and key not in results_diff.keys():
                 raise KeyError("No results calculated for theme_id " + str(key))
 
             #calculate the diffs you want to have
@@ -486,7 +490,7 @@ def merge_geometries_by_theme_id(dictionary):
     """
     dict_out = {}
     for id_theme in dictionary:
-        id_theme_global = id_theme.split("_")[0]
+        id_theme_global = id_theme.split(MULTI_SINGLE_ID_SEPARATOR)[0]
         geom = dictionary[id_theme]
         if geom.is_empty or geom is None:
             continue

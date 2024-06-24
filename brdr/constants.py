@@ -34,3 +34,6 @@ DOWNLOAD_LIMIT = 10000
 
 #default CRS:
 DEFAULT_CRS= "EPSG:31370"
+
+#MULTI_SINGLE_ID_SEPARATOR #separator to split multipolygon_ids to single polygons
+MULTI_SINGLE_ID_SEPARATOR = '*$*'

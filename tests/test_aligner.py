@@ -118,9 +118,9 @@ class TestAligner(unittest.TestCase):
 
     def test_predictor(self):
         ##Load thematic data & reference data
-        thematic_dict = {"theme_id_1": from_wkt('POLYGON ((0 0, 0 9, 5 10, 10 0, 0 0))')}
+        thematic_dict = {"theme_id": from_wkt('POLYGON ((0 0, 0 9, 5 10, 10 0, 0 0))')}
         # ADD A REFERENCE POLYGON TO REFERENCE DICTIONARY
-        reference_dict = {"ref_id_1": from_wkt('POLYGON ((0 1, 0 10,8 10,10 1,0 1))')}
+        reference_dict = {"ref_id": from_wkt('POLYGON ((0 1, 0 10,8 10,10 1,0 1))')}
         # LOAD THEMATIC DICTIONARY
         self.sample_aligner.load_thematic_data_dict(thematic_dict)
         # LOAD REFERENCE DICTIONARY
