@@ -42,8 +42,13 @@ def geojson_tuple_from_series(
         my_tuple = dict_series[rel_dist]
         prop_rel_dist = {"relevant_distance": rel_dist}
         prop_dictionary = dict.fromkeys(my_tuple[0].keys(), prop_rel_dist)
-        if prop_dict is not None and rel_dist in prop_dict:
-            prop_dictionary = prop_dictionary | prop_dict[rel_dist]
+        if (
+            prop_dict is not None
+            and rel_dist in prop_dict
+            and prop_dict[rel_dist] is not None
+        ):
+            for key in prop_dictionary.keys():
+                prop_dictionary[key] = prop_dictionary[key] | prop_dict[rel_dist][key]
         fcs = geojson_tuple_from_tuple(
             my_tuple,
             crs,
@@ -505,17 +510,20 @@ def diffs_from_dict_series(dict_series, dict_thematic):
         results_diff = dict_series[rel_dist][1]
         for key in keys:
             if key not in results.keys() and key not in results_diff.keys():
-                raise KeyError("No results calculated for theme_id " + str(key))
-
-            # calculate the diffs you want to have
-            # diff = results_diff[key].area * 100 / results[key].area #percentage of change
-            diff = (
-                results[key].area - dict_thematic[key].area
-            )  # difference (m²) between area of resulting geometry and original geometry
-            diff = round(diff, 1)  # round, so the detected changes are within 10cm²
-            # diff = abs(results[key].area - dict_thematic[key].area) #absolute difference (m²) between area of resulting geometry and original geometry
-            # diff = abs(results[key].area - dict_thematic[key].area)*100/dict_thematic[key].area #absolute difference (%) between area of resulting geometry and original geometry
-            # TODO: determine a good diff-value for determination
+                logging.info(
+                    "No diff calculated for theme_id " + str(key) + ": diff set to zero"
+                )
+                diff = 0
+            else:
+                # calculate the diffs you want to have
+                # diff = results_diff[key].area * 100 / results[key].area #percentage of change
+                diff = (
+                    results[key].area - dict_thematic[key].area
+                )  # difference (m²) between area of resulting geometry and original geometry
+                diff = round(diff, 1)  # round, so the detected changes are within 10cm²
+                # diff = abs(results[key].area - dict_thematic[key].area) #absolute difference (m²) between area of resulting geometry and original geometry
+                # diff = abs(results[key].area - dict_thematic[key].area)*100/dict_thematic[key].area #absolute difference (%) between area of resulting geometry and original geometry
+                # TODO: determine a good diff-value for determination
             diffs[key][rel_dist] = diff
     return diffs
 

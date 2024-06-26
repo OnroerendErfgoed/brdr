@@ -456,23 +456,14 @@ class Aligner:
             dict_result_diff_min[key] = result_diff_min
             dict_relevant_intersection[key] = relevant_intersection
             dict_relevant_diff[key] = relevant_diff
-        self.dict_result = merge_geometries_by_theme_id(dict_result)
-        self.dict_result_diff = merge_geometries_by_theme_id(dict_result_diff)
-        self.dict_result_diff_plus = merge_geometries_by_theme_id(dict_result_diff_plus)
-        self.dict_result_diff_min = merge_geometries_by_theme_id(dict_result_diff_min)
-        self.dict_relevant_intersection = merge_geometries_by_theme_id(
-            dict_relevant_intersection
-        )
-        self.dict_relevant_difference = merge_geometries_by_theme_id(dict_relevant_diff)
+        self.dict_result = dict_result
+        self.dict_result_diff = dict_result_diff
+        self.dict_result_diff_plus = dict_result_diff_plus
+        self.dict_result_diff_min = dict_result_diff_min
+        self.dict_relevant_intersection = dict_relevant_intersection
+        self.dict_relevant_difference = dict_relevant_diff
         self.feedback_info("thematic dictionary processed")
-        return (
-            self.dict_result,
-            self.dict_result_diff,
-            self.dict_result_diff_plus,
-            self.dict_result_diff_min,
-            self.dict_relevant_intersection,
-            self.dict_relevant_difference,
-        )
+        return self.get_results_as_dict(merged=False)
 
     def predictor(
         self,
@@ -687,31 +678,44 @@ class Aligner:
         update_dates = sorted(update_dates, reverse=True)
         return update_dates[0]
 
-    def get_results_as_dict(self):
+    def get_results_as_dict(self, merged=True):
         """
         get a dict-tuple of the results
         """
-        return (
-            self.dict_result,
-            self.dict_result_diff,
-            self.dict_result_diff_plus,
-            self.dict_result_diff_min,
-            self.dict_relevant_intersection,
-            self.dict_relevant_difference,
-        )
+        if merged:
+            return (
+                merge_geometries_by_theme_id(self.dict_result),
+                merge_geometries_by_theme_id(self.dict_result_diff),
+                merge_geometries_by_theme_id(self.dict_result_diff_plus),
+                merge_geometries_by_theme_id(self.dict_result_diff_min),
+                merge_geometries_by_theme_id(self.dict_relevant_intersection),
+                merge_geometries_by_theme_id(self.dict_relevant_difference),
+                merge_geometries_by_theme_id(self.dict_result),
+            )
+        else:
+            return (
+                self.dict_result,
+                self.dict_result_diff,
+                self.dict_result_diff_plus,
+                self.dict_result_diff_min,
+                self.dict_relevant_intersection,
+                self.dict_relevant_difference,
+            )
 
-    def get_results_as_geojson(self, formula=False):
+    def get_results_as_geojson(self, formula=False, merged=True):
         """
         get a geojson-tuple of the results
         """
         prop_dictionary = {}
         p = {}
-        for key in self.dict_result.keys():
-            formula = self.get_formula(self.dict_result[key])
-            p[key] = {"formula": formula}
+        tuple_results = self.get_results_as_dict(merged=merged)
+        dict_results = tuple_results[0]
+        for key in dict_results.keys():
+            formula = self.get_formula(dict_results[key])
+            p[key] = {"formula": json.dumps(formula)}
         prop_dictionary[self.relevant_distance] = p
         return geojson_tuple_from_series(
-            {self.relevant_distance: self.get_results_as_dict()},
+            {self.relevant_distance: tuple_results},
             self.CRS,
             self.name_thematic_id,
             prop_dict=prop_dictionary,
@@ -733,7 +737,7 @@ class Aligner:
                 formula = self.get_formula(self.dict_predicted[key][rel_dist][0][key])
             p = None
             if formula:
-                p = {key: {"formula": formula}}
+                p = {key: {"formula": json.dumps(formula)}}
             prop_dictionary[key] = dict.fromkeys(self.dict_predicted[key].keys(), p)
         return geojson_tuple_from_dict_theme(
             self.dict_predicted,
