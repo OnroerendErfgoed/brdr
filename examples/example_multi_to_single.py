@@ -22,7 +22,7 @@ if __name__ == "__main__":
 
     rel_dist = 2
     dict_results_by_distance = {}
-    dict_results_by_distance[rel_dist] = aligner.process_dict_thematic(rel_dist,4)
+    dict_results_by_distance[rel_dist] = aligner.process_dict_thematic(rel_dist, 4)
     aligner.export_results("output/")
     show_map(dict_results_by_distance, aligner.dict_thematic, aligner.dict_reference)
 
@@ -43,7 +43,7 @@ if __name__ == "__main__":
 
     rel_dist = 5
     dict_results_by_distance = {}
-    dict_results_by_distance[rel_dist] = aligner.process_dict_thematic(rel_dist,4)
+    dict_results_by_distance[rel_dist] = aligner.process_dict_thematic(rel_dist, 4)
     aligner.export_results("output/")
     show_map(dict_results_by_distance, aligner.dict_thematic, aligner.dict_reference)
 
