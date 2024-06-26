@@ -28,10 +28,10 @@ coverage==7.4.4
     # via pytest-cov
 cycler==0.12.1
     # via matplotlib
-exceptiongroup==1.2.1
-    # via pytest
 fiona==1.9.6
     # via geopandas
+flake8==7.0.0
+    # via brdr (pyproject.toml)
 fonttools==4.51.0
     # via matplotlib
 geojson==3.1.0
@@ -48,6 +48,8 @@ kiwisolver==1.4.5
     # via matplotlib
 matplotlib==3.8.4
     # via brdr (pyproject.toml)
+mccabe==0.7.0
+    # via flake8
 mypy==1.9.0
     # via brdr (pyproject.toml)
 mypy-extensions==1.0.0
@@ -84,6 +86,10 @@ pluggy==1.4.0
     # via
     #   hatchling
     #   pytest
+pycodestyle==2.11.1
+    # via flake8
+pyflakes==3.2.0
+    # via flake8
 pyparsing==3.1.2
     # via matplotlib
 pyproj==3.6.1
@@ -116,24 +122,12 @@ six==1.16.0
     #   python-dateutil
 toml==0.10.2
     # via brdr (pyproject.toml)
-tomli==2.0.1
-    # via
-    #   black
-    #   build
-    #   coverage
-    #   hatchling
-    #   mypy
-    #   pip-tools
-    #   pyproject-hooks
-    #   pytest
 trove-classifiers==2024.5.22
     # via hatchling
 types-requests==2.31.0.20240406
     # via brdr (pyproject.toml)
 typing-extensions==4.11.0
-    # via
-    #   black
-    #   mypy
+    # via mypy
 tzdata==2024.1
     # via pandas
 urllib3==2.2.1
