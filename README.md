@@ -30,7 +30,9 @@ The figure below shows:
 * Loading thematic data ((Multi-)Polygons): as a dict, geojson or Web Feature Service (WFS-url)
 * Loading reference data ((Multi-)Polygons): as a dict, geojson or Web Feature Service (WFS-url)
 * (Flanders-specific) Download reference data from GRB-Flanders 
-* Align thematic boundaries to reference boundaries
+* Align thematic boundaries to reference boundaries with a specific relevant distance (process_dict_thematic)
+* Align thematic boundaries to reference boundaries with a series of specified relevant distances (process_series)
+* Make use of a 'predictor'-function that aligns thematic boundaries to reference boundaries for 'predicted' interesting relevant distances (predictor)
 * Calculating a descriptive formulation of a thematic boundary based on a reference layer
 
 ### Possible application fields

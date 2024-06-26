@@ -1,7 +1,8 @@
+import logging
 import os.path
+
 import numpy as np
 import requests
-import logging
 from geojson import Feature
 from geojson import FeatureCollection
 from geojson import dump
@@ -10,39 +11,58 @@ from shapely import make_valid
 from shapely import node
 from shapely import polygonize
 from shapely.geometry import shape
+
 from brdr.constants import MULTI_SINGLE_ID_SEPARATOR
 
-import brdr.constants
 
-
-def geojson_tuple_from_tuple(my_tuple, crs, name_id, prop_dict=None, geom_attributes=True):
+def geojson_tuple_from_tuple(
+    my_tuple, crs, name_id, prop_dict=None, geom_attributes=True
+):
     """
     get a geojson-tuple (6 geojsons) for a tuple of results (results, result_diff, ...)
     """
     feature_collections = []
     for count, tup in enumerate(my_tuple):
-        feature_collections.append(geojson_from_dict(tup, crs, name_id, prop_dict=prop_dict,geom_attributes=geom_attributes))
+        feature_collections.append(
+            geojson_from_dict(
+                tup, crs, name_id, prop_dict=prop_dict, geom_attributes=geom_attributes
+            )
+        )
     return tuple(feature_collections)
-def geojson_tuple_from_series(dict_series, crs, name_id, prop_dict=None, geom_attributes=True):
+
+
+def geojson_tuple_from_series(
+    dict_series, crs, name_id, prop_dict=None, geom_attributes=True
+):
     """
     get a geojson-tuple (6 geojsons) for a dictionary of relevant distances() keys and resulting tuples (values)
     """
     features = [[], [], [], [], [], []]
     for rel_dist in dict_series.keys():
-        my_tuple = dict_series [rel_dist]
-        prop_rel_dist = {'relevant_distance': rel_dist}
+        my_tuple = dict_series[rel_dist]
+        prop_rel_dist = {"relevant_distance": rel_dist}
         prop_dictionary = dict.fromkeys(my_tuple[0].keys(), prop_rel_dist)
         if prop_dict is not None and rel_dist in prop_dict:
             prop_dictionary = prop_dictionary | prop_dict[rel_dist]
-        fcs = geojson_tuple_from_tuple(my_tuple, crs, name_id, prop_dict=prop_dictionary, geom_attributes=geom_attributes)
+        fcs = geojson_tuple_from_tuple(
+            my_tuple,
+            crs,
+            name_id,
+            prop_dict=prop_dictionary,
+            geom_attributes=geom_attributes,
+        )
         for count, ft in enumerate(features):
             ft.extend(fcs[count].features)
     crs_geojson = {"type": "name", "properties": {"name": crs}}
-    feature_collections =[]
+    feature_collections = []
     for ft in features:
-        feature_collections.append (FeatureCollection(ft, crs=crs_geojson))
+        feature_collections.append(FeatureCollection(ft, crs=crs_geojson))
     return tuple(feature_collections)
-def geojson_tuple_from_dict_theme(dict_theme, crs, name_id, prop_dict=None, geom_attributes=True):
+
+
+def geojson_tuple_from_dict_theme(
+    dict_theme, crs, name_id, prop_dict=None, geom_attributes=True
+):
     """
     get a geojson-tuple (6 geojsons) for a dictionary of theme_ids (keys) and dictionary of relevant distance-results (values)
     """
@@ -50,7 +70,13 @@ def geojson_tuple_from_dict_theme(dict_theme, crs, name_id, prop_dict=None, geom
     for key in dict_theme.keys():
         if prop_dict is not None and key in prop_dict:
             prop_dictionary = prop_dict[key]
-        fcs = geojson_tuple_from_series(dict_theme[key], crs, name_id, prop_dict=prop_dictionary, geom_attributes=geom_attributes)
+        fcs = geojson_tuple_from_series(
+            dict_theme[key],
+            crs,
+            name_id,
+            prop_dict=prop_dictionary,
+            geom_attributes=geom_attributes,
+        )
         for count, ft in enumerate(features):
             ft.extend(fcs[count].features)
     crs_geojson = {"type": "name", "properties": {"name": crs}}
@@ -99,9 +125,9 @@ def geojson_from_dict(dictionary, crs, name_id, prop_dict=None, geom_attributes=
                 shape_index = perimeter / area
             else:
                 shape_index = -1
-            properties['area'] = area
-            properties['perimeter'] = perimeter
-            properties['shape_index'] = shape_index
+            properties["area"] = area
+            properties["perimeter"] = perimeter
+            properties["shape_index"] = shape_index
         features.append(
             Feature(
                 geometry=geom,
@@ -112,11 +138,13 @@ def geojson_from_dict(dictionary, crs, name_id, prop_dict=None, geom_attributes=
     geojson = FeatureCollection(features, crs=crs_geojson)
     return geojson
 
-def write_geojson(path_to_file,geojson):
+
+def write_geojson(path_to_file, geojson):
     parent = os.path.dirname(path_to_file)
     os.makedirs(parent, exist_ok=True)
     with open(path_to_file, "w") as f:
         dump(geojson, f)
+
 
 def multipolygons_to_singles(dict_geoms):
     """
@@ -198,7 +226,7 @@ def polygonize_reference_data(dict_ref):
     return dict_ref
 
 
-def get_oe_dict_by_ids(objectids, oetype='aanduidingsobjecten'):
+def get_oe_dict_by_ids(objectids, oetype="aanduidingsobjecten"):
     """
     Fetches thematic data for a list of objectIDs from the Inventaris Onroerend Erfgoed API.
 
@@ -223,12 +251,12 @@ def get_oe_dict_by_ids(objectids, oetype='aanduidingsobjecten'):
     for a in objectids:
         url = base_url + str(a)
         response = requests.get(url, headers=headers).json()
-        if 'id' in response.keys():
+        if "id" in response.keys():
             key = str(response["id"])
             geom = shape(response["locatie"]["contour"])
             dict_thematic[key] = geom
         else:
-            logging.warning('object id ' + str(a) +' not available in ' + oetype)
+            logging.warning("object id " + str(a) + " not available in " + oetype)
     return dict_thematic
 
 
@@ -272,6 +300,7 @@ def get_oe_geojson_by_bbox(bbox, limit=1000):
         start_index = start_index + limit
         collection = collection | feature_collection
     return collection
+
 
 def get_breakpoints_zerostreak(x, y):
     """

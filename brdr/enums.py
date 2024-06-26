@@ -1,5 +1,5 @@
-from enum import IntEnum
 from enum import Enum
+from enum import IntEnum
 
 
 class OpenbaarDomeinStrategy(IntEnum):

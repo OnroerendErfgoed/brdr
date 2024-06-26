@@ -6,9 +6,9 @@ from shapely import Polygon
 from shapely import buffer
 from shapely import difference
 from shapely import intersection
+from shapely import is_empty
 from shapely import symmetric_difference
 from shapely import union
-from shapely import is_empty
 from shapely.geometry.base import BaseGeometry
 
 from brdr.constants import MITRE_LIMIT
