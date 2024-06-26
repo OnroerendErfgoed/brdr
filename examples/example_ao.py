@@ -27,7 +27,7 @@ if __name__ == "__main__":
     series = np.arange(0, 500, 20, dtype=int) / 100
     # predict which relevant distances are interesting to propose as resulting geometry
     dict_predicted, diffs = aligner.predictor(
-        relevant_distances=series, od_strategy=2, treshold_overlap_percentage=50
+        relevant_distances=series, od_strategy=2, threshold_overlap_percentage=50
     )
     for key in dict_predicted.keys():
         diff = {}

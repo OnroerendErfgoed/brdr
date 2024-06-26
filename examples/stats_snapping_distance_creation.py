@@ -9,7 +9,7 @@ from brdr.aligner import Aligner
 # Code to create stats.csv
 
 time = str(time.time())
-array_treshold_overlap_percentage = [50]
+array_threshold_overlap_percentage = [50]
 array_od = [1]
 # array_relevant_distance = [0.2, 0.5, 1, 1.5, 2, 3, 4, 5, 6, 8, 10]
 array_relevant_distance = np.arange(0, 500, 10, dtype=int) / 100
@@ -36,7 +36,7 @@ with open("../tests/output/stats" + time + ".csv", "w", newline="") as csvfile:
         ]
     )
 
-    for full_percentage in array_treshold_overlap_percentage:
+    for full_percentage in array_threshold_overlap_percentage:
         logging.info("full overlap percentage: " + str(full_percentage))
         for od in array_od:
             logging.info("od_strategy: " + str(od))

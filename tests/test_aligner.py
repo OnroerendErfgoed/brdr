@@ -2,13 +2,18 @@ import os
 import unittest
 
 import numpy as np
-from shapely import from_wkt, Point
+from shapely import Point
+from shapely import from_wkt
 from shapely.geometry import Polygon
+from shapely.geometry import shape
 
 from brdr.aligner import Aligner
 from brdr.enums import OpenbaarDomeinStrategy
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import grid_bounds
+from brdr.loader import GRBActualLoader
+from brdr.loader import GeoJsonLoader
+from brdr.typings import FeatureCollection
 
 
 class TestAligner(unittest.TestCase):
@@ -80,18 +85,6 @@ class TestAligner(unittest.TestCase):
             os.remove(path + file_name)
         os.rmdir(path)
 
-    def test_partition(self):
-        # Test partition function
-        delta = 2.0
-        filtered_partitions = self.sample_aligner.partition(self.sample_geom, delta)
-
-        # Check if the result is a list of Polygon objects
-        self.assertIsInstance(filtered_partitions, list)
-        for partition in filtered_partitions:
-            self.assertIsInstance(partition, Polygon)
-
-        # Add more specific tests based on your requirements
-
     def test_get_formula_full_intersection(self):
         # Test when intersection equals reference geometry
         key = "a"
@@ -141,7 +134,7 @@ class TestAligner(unittest.TestCase):
         series = np.arange(0, 300, 10, dtype=int) / 100
         # predict which relevant distances are interesting to propose as resulting geometry
         dict_predicted, diffs = self.sample_aligner.predictor(
-            relevant_distances=series, od_strategy=4, treshold_overlap_percentage=50
+            relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
         )
         self.assertEqual(len(dict_predicted), len(thematic_dict))
 
@@ -198,7 +191,7 @@ class TestAligner(unittest.TestCase):
             tuple = self.sample_aligner.process_dict_thematic(
                 relevant_distance=1,
                 od_strategy=od_strategy,
-                treshold_overlap_percentage=50,
+                threshold_overlap_percentage=50,
             )
             self.assertEqual(len(tuple), 6)
 
@@ -230,7 +223,7 @@ class TestAligner(unittest.TestCase):
 
     def test__prepare_thematic_data(self):
         aligner = Aligner()
-        geojson = {
+        geojson: FeatureCollection = {
             "type": "FeatureCollection",
             "name": "theme",
             "crs": {
@@ -264,5 +257,7 @@ class TestAligner(unittest.TestCase):
             ],
         }
         aligner.thematic_input = geojson
-        aligner._prepare_thematic_data()
+        thematic_loader = GeoJsonLoader(_input=geojson, id_property="theme_identifier")
+        aligner.dict_thematic = thematic_loader.load_data()
+        assert aligner.dict_thematic == {"4": shape(geojson["features"][0]["geometry"])}
         self.assertGreater(len(aligner.dict_thematic), 0)

@@ -108,7 +108,7 @@ To use `brdr`, follow these steps:
 * Create a Aligner-class with specific parameters:
   * relevant_distance (m) (default: 1): Distance-parameter used to decide which parts will be aligned, and which parts remain unchanged.
   * od_strategy (enum) (default: SNAP_SINGLE_SIDE): Strategy to align geodata that is not covered by reference-data
-  * treshold_overlap_percentage (%)(0-100) (default 50)
+  * threshold_overlap_percentage (%)(0-100) (default 50)
   * crs: The Coordinate Reference System (CRS) (default: EPSG:31370 - Belgian Lambert72)
 * Load thematic data
 * Load reference data
