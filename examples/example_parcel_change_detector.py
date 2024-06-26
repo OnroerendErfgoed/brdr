@@ -5,8 +5,8 @@ from shapely import STRtree
 from shapely.geometry import shape
 
 from brdr.aligner import Aligner
-from brdr.utils import get_oe_geojson_by_bbox
 from brdr.utils import get_collection
+from brdr.utils import get_oe_geojson_by_bbox
 
 
 # This code shows an example how the aligner can be used inside a flow of

@@ -1,7 +1,7 @@
 import numpy as np
 
 from brdr.aligner import Aligner
-from brdr.utils import get_oe_dict_by_ids, write_geojson, geojson_tuple_from_dict_theme
+from brdr.utils import get_oe_dict_by_ids, write_geojson
 from examples import show_map, plot_series
 
 if __name__ == "__main__":
@@ -35,13 +35,14 @@ if __name__ == "__main__":
     # aligner.export_results("output/")
     # show_map(dict_results_by_distance, aligner.dict_thematic, aligner.dict_reference)
 
-
-    series = np.arange(0, 200, 20, dtype=int)/100
-    #predict which relevant distances are interesting to propose as resulting geometry
-    dict_predicted, diffs = aligner.predictor(relevant_distances=series, od_strategy=2,treshold_overlap_percentage=50)
+    series = np.arange(0, 200, 20, dtype=int) / 100
+    # predict which relevant distances are interesting to propose as resulting geometry
+    dict_predicted, diffs = aligner.predictor(
+        relevant_distances=series, od_strategy=2, treshold_overlap_percentage=50
+    )
     fcs = aligner.get_predictions_as_geojson()
-    write_geojson('output/predicted.geojson',fcs[0])
-    write_geojson('output/predicted_diff.geojson', fcs[1])
+    write_geojson("output/predicted.geojson", fcs[0])
+    write_geojson("output/predicted_diff.geojson", fcs[1])
 
     for key in dict_predicted.keys():
         diff = {}

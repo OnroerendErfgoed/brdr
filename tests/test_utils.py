@@ -1,9 +1,9 @@
 import unittest
-import shapely
-import os
 
+import shapely
 from shapely import is_empty
 from shapely.geometry import Polygon
+
 from brdr.utils import (
     multipolygons_to_singles,
     polygonize_reference_data,

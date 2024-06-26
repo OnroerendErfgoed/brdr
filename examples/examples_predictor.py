@@ -1,6 +1,6 @@
 import numpy as np
+
 from brdr.aligner import Aligner
-from brdr.utils import filter_resulting_series_by_key
 from examples import show_map
 
 # Press the green button in the gutter to run the script.

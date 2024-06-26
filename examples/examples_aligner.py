@@ -1,6 +1,6 @@
 from brdr.aligner import Aligner
 from brdr.enums import OpenbaarDomeinStrategy
-from brdr.utils import diffs_from_dict_series, geojson_tuple_from_series, write_geojson
+from brdr.utils import diffs_from_dict_series
 from examples import plot_series
 from examples import show_map
 

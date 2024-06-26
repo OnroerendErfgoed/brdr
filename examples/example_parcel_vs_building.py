@@ -1,4 +1,5 @@
 import numpy as np
+
 from brdr.aligner import Aligner
 from brdr.utils import diffs_from_dict_series
 from examples import plot_series

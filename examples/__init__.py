@@ -1,9 +1,8 @@
 import logging
-import geopandas as gpd
-import matplotlib.pyplot as plt
 from math import ceil
 
-import numpy as np
+import geopandas as gpd
+import matplotlib.pyplot as plt
 
 
 def _make_map(

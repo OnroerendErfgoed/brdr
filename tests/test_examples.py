@@ -1,17 +1,14 @@
 import unittest
 
 import numpy as np
-from shapely import from_wkt
 
 from brdr.aligner import Aligner
-from brdr.enums import OpenbaarDomeinStrategy
 from brdr.utils import (
     get_oe_dict_by_ids,
     multipolygons_to_singles,
     diffs_from_dict_series,
     filter_resulting_series_by_key,
     get_breakpoints_zerostreak,
-    get_oe_geojson_by_bbox,
 )
 
 

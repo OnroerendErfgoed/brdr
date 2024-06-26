@@ -1,4 +1,5 @@
 import numpy as np
+
 from brdr.aligner import Aligner
 from brdr.utils import (
     get_breakpoints_zerostreak,

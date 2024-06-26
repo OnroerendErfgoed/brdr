@@ -1,5 +1,6 @@
-from brdr.aligner import Aligner
 from shapely import from_wkt
+
+from brdr.aligner import Aligner
 from brdr.enums import OpenbaarDomeinStrategy
 
 # CREATE AN ALIGNER

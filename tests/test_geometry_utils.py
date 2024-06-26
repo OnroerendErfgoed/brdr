@@ -1,6 +1,8 @@
 import unittest
-from shapely.geometry import Point, Polygon
+
 from shapely import from_wkt
+from shapely.geometry import Point, Polygon
+
 from brdr.geometry_utils import (
     buffer_neg_pos,
     buffer_neg,
