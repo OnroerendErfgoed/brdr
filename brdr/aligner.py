@@ -42,9 +42,16 @@ from brdr.geometry_utils import safe_difference
 from brdr.geometry_utils import safe_intersection
 from brdr.geometry_utils import safe_symmetric_difference
 from brdr.geometry_utils import safe_union
-from brdr.utils import diffs_from_dict_series, get_breakpoints_zerostreak, \
-    filter_resulting_series_by_key, get_collection, geojson_tuple_from_series, write_geojson, \
-    merge_geometries_by_theme_id, geojson_from_dict
+from brdr.utils import (
+    diffs_from_dict_series,
+    get_breakpoints_zerostreak,
+    filter_resulting_series_by_key,
+    get_collection,
+    geojson_tuple_from_series,
+    write_geojson,
+    merge_geometries_by_theme_id,
+    geojson_from_dict,
+)
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(message)s", datefmt="%d-%b-%y %H:%M:%S"
@@ -69,7 +76,7 @@ class Aligner:
         relevant_distance=1,
         threshold_overlap_percentage=50,
         od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
-        crs=DEFAULT_CRS
+        crs=DEFAULT_CRS,
     ):
         """
         Initializes the Aligner object
@@ -104,16 +111,22 @@ class Aligner:
         # reference
         self.reference_input = None  # to save the initially loaded geojson
 
-        self.name_reference_id = "ref_identifier" # name of the identifier-field of the reference data (id has to be unique,f.e CAPAKEY for GRB-parcels)
+        self.name_reference_id = "ref_identifier"  # name of the identifier-field of the reference data (id has to be unique,f.e CAPAKEY for GRB-parcels)
         self.dict_reference = {}  # dictionary to store all reference geometries
-        self.reference_union = None # to save a unioned geometry of all reference polygons; needed for calculation in most OD-strategies
+        self.reference_union = None  # to save a unioned geometry of all reference polygons; needed for calculation in most OD-strategies
 
         # output-dictionaries (when processing dict_thematic)
         self.dict_result = None  # dictionary to save resulting geometries
         self.dict_result_diff = None  # dictionary to save global resulting differences
-        self.dict_result_diff_plus = None  # dictionary to save positive resulting differences
-        self.dict_result_diff_min = None  # dictionary to save negative resulting differences
-        self.dict_relevant_intersection = None  # dictionary to save relevant_intersections
+        self.dict_result_diff_plus = (
+            None  # dictionary to save positive resulting differences
+        )
+        self.dict_result_diff_min = (
+            None  # dictionary to save negative resulting differences
+        )
+        self.dict_relevant_intersection = (
+            None  # dictionary to save relevant_intersections
+        )
         self.dict_relevant_difference = None  # dictionary to save relevant_differences
 
         # Coordinate reference system
@@ -445,7 +458,9 @@ class Aligner:
         self.dict_result_diff = merge_geometries_by_theme_id(dict_result_diff)
         self.dict_result_diff_plus = merge_geometries_by_theme_id(dict_result_diff_plus)
         self.dict_result_diff_min = merge_geometries_by_theme_id(dict_result_diff_min)
-        self.dict_relevant_intersection = merge_geometries_by_theme_id(dict_relevant_intersection)
+        self.dict_relevant_intersection = merge_geometries_by_theme_id(
+            dict_relevant_intersection
+        )
         self.dict_relevant_difference = merge_geometries_by_theme_id(dict_relevant_diff)
         self.feedback_info("thematic dictionary processed")
         return (
@@ -458,15 +473,15 @@ class Aligner:
         )
 
     def predictor(
-            self,
-            relevant_distances=np.arange(0, 300, 10, dtype=int)/100,
-            od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
-            treshold_overlap_percentage=50,
+        self,
+        relevant_distances=np.arange(0, 300, 10, dtype=int) / 100,
+        od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
+        treshold_overlap_percentage=50,
     ):
         """
         Predicts the 'most interesting' relevant distances for changes in thematic elements based on a distance series.
 
-        This function analyzes a set of thematic geometries (`self.dict_thematic`) to identify potentially 
+        This function analyzes a set of thematic geometries (`self.dict_thematic`) to identify potentially
         interesting distances where changes occur. It performs the following steps:
 
         1. **Process Distance Series:**
@@ -474,7 +489,7 @@ class Aligner:
             - This calculation might involve functions like `self.process_series` (implementation details likely depend on your specific code).
 
         2. **Calculate Difference Metrics:**
-            - Analyzes the results from the distance series to compute difference metrics 
+            - Analyzes the results from the distance series to compute difference metrics
               between thematic elements at each distance (using `diffs_from_dict_series`).
 
         3. **Identify Breakpoints and Zero-Streaks:**
@@ -506,17 +521,25 @@ class Aligner:
         """
         dict_predicted = {}
         for key in self.dict_thematic.keys():
-            dict_predicted[key]={}
-        dict_series = self.process_series(relevant_distances=relevant_distances,od_strategy=od_strategy,treshold_overlap_percentage=treshold_overlap_percentage)
+            dict_predicted[key] = {}
+        dict_series = self.process_series(
+            relevant_distances=relevant_distances,
+            od_strategy=od_strategy,
+            treshold_overlap_percentage=treshold_overlap_percentage,
+        )
         diffs = diffs_from_dict_series(dict_series, self.dict_thematic)
         for key in diffs:
             if len(diffs[key]) == len(relevant_distances):
                 lst_diffs = list(diffs[key].values())
-                breakpoints, zero_streaks = get_breakpoints_zerostreak(relevant_distances, lst_diffs)
+                breakpoints, zero_streaks = get_breakpoints_zerostreak(
+                    relevant_distances, lst_diffs
+                )
                 logging.debug(str(key))
                 for zs in zero_streaks:
                     dict_predicted[key][zs[0]] = dict_series[zs[0]]
-                dict_predicted[key] = filter_resulting_series_by_key(dict_predicted[key],key)
+                dict_predicted[key] = filter_resulting_series_by_key(
+                    dict_predicted[key], key
+                )
         return dict_predicted, diffs
 
     def process_series(
@@ -549,7 +572,7 @@ class Aligner:
         self.feedback_debug("Process series" + str(relevant_distances))
         self.od_strategy = od_strategy
         self.threshold_overlap_percentage = treshold_overlap_percentage
-        #self._prepare_thematic_data() #not necessary? Assumed that dict_thematic is already loaded
+        # self._prepare_thematic_data() #not necessary? Assumed that dict_thematic is already loaded
         dict_series = {}
         for s in relevant_distances:
             self.feedback_info(
@@ -649,7 +672,7 @@ class Aligner:
             "https://geo.api.vlaanderen.be/GRB/ogc/features/collections/"
             + grb_type
             + "/items?"
-            "limit=" + str(limit) + "&crs=" + crs + "&bbox-crs=" + crs +"&bbox=" + bbox
+            "limit=" + str(limit) + "&crs=" + crs + "&bbox-crs=" + crs + "&bbox=" + bbox
         )
         update_dates = []
         collection = get_collection(actual_url, limit)
@@ -664,40 +687,52 @@ class Aligner:
         """
         get a dict-tuple of the results
         """
-        return (self.dict_result, self.dict_result_diff, self.dict_result_diff_plus, self.dict_result_diff_min,
-                self.dict_relevant_intersection, self.dict_relevant_difference)
+        return (
+            self.dict_result,
+            self.dict_result_diff,
+            self.dict_result_diff_plus,
+            self.dict_result_diff_min,
+            self.dict_relevant_intersection,
+            self.dict_relevant_difference,
+        )
 
     def get_results_as_geojson(self):
         """
         get a geojson-tuple of the results
         """
-        return geojson_tuple_from_series({self.relevant_distance: self.get_results_as_dict()}, self.CRS,
-                                         self.name_thematic_id)
+        return geojson_tuple_from_series(
+            {self.relevant_distance: self.get_results_as_dict()},
+            self.CRS,
+            self.name_thematic_id,
+        )
 
     def get_reference_as_geojson(self):
         """
         get a geojson of the reference polygons
         """
-        return geojson_from_dict(self.dict_reference, self.CRS, self.name_reference_id,geom_attributes=False)
+        return geojson_from_dict(
+            self.dict_reference, self.CRS, self.name_reference_id, geom_attributes=False
+        )
+
     def export_results(self, path, multi_to_single=True):
         """
-            Exports analysis results as GeoJSON files.
+        Exports analysis results as GeoJSON files.
 
-            This function exports 6 GeoJSON files containing the analysis results to the specified `path`.
+        This function exports 6 GeoJSON files containing the analysis results to the specified `path`.
 
-            Args:
-                path (str): The path to the directory where the GeoJSON files will be saved.
-                multi_to_single (bool, optional): If True (default), converts MultiPolygon geometries to single Polygons
-                                                    in the exported GeoJSON files. This can be useful for visualization purposes.
+        Args:
+            path (str): The path to the directory where the GeoJSON files will be saved.
+            multi_to_single (bool, optional): If True (default), converts MultiPolygon geometries to single Polygons
+                                                in the exported GeoJSON files. This can be useful for visualization purposes.
 
-            Details of exported files:
-                - result.geojson: Contains the original thematic data from `self.dict_result`.
-                - result_diff.geojson: Contains the difference between the original and predicted data from `self.dict_result_diff`.
-                - result_diff_plus.geojson: Contains results for areas that are added (increased area).
-                - result_diff_min.geojson: Contains results for areas that are removed (decreased area).
-                - result_relevant_intersection.geojson: Contains the areas with relevant intersection that has to be included in the result.
-                - result_relevant_difference.geojson: Contains the areas with relevant difference that has to be excluded from the result.
-            """
+        Details of exported files:
+            - result.geojson: Contains the original thematic data from `self.dict_result`.
+            - result_diff.geojson: Contains the difference between the original and predicted data from `self.dict_result_diff`.
+            - result_diff_plus.geojson: Contains results for areas that are added (increased area).
+            - result_diff_min.geojson: Contains results for areas that are removed (decreased area).
+            - result_relevant_intersection.geojson: Contains the areas with relevant intersection that has to be included in the result.
+            - result_relevant_difference.geojson: Contains the areas with relevant difference that has to be excluded from the result.
+        """
         fcs = self.get_results_as_geojson()
         resultnames = [
             "result.geojson",
@@ -705,7 +740,7 @@ class Aligner:
             "result_diff_plus.geojson",
             "result_diff_min.geojson",
             "result_relevant_intersection.geojson",
-            "result_relevant_difference.geojson"
+            "result_relevant_difference.geojson",
         ]
         for count, fc in enumerate(fcs):
             write_geojson(os.path.join(path, resultnames[count]), fcs[count])
@@ -1007,14 +1042,14 @@ class Aligner:
                     self.buffer_distance(),
                 ),
             )
-            #TODO BEGIN: experimental fix - check if it is ok in all cases?
-            #when calculating for OD, we create a 'virtual parcel'. When calculating this virtual parcel, it is buffered to take outer boundaries into account.
-            #This results in a side-effect that there are extra non-logical parts included in the result. The function below tries to exclude these non-logica parts.
+            # TODO BEGIN: experimental fix - check if it is ok in all cases?
+            # when calculating for OD, we create a 'virtual parcel'. When calculating this virtual parcel, it is buffered to take outer boundaries into account.
+            # This results in a side-effect that there are extra non-logical parts included in the result. The function below tries to exclude these non-logica parts.
             # see eo_id 206363 with relevant distance=0.2m and SNAP_ALL_SIDE
             if is_openbaar_domein:
-                #geom = buffer_neg_pos(geom, self.buffer_distance())
-                geom = self.get_relevant_polygons_from_geom (geom)
-            #TODO END
+                # geom = buffer_neg_pos(geom, self.buffer_distance())
+                geom = self.get_relevant_polygons_from_geom(geom)
+            # TODO END
         elif (
             not geom_relevant_intersection.is_empty
             and geom_relevant_difference.is_empty
@@ -1045,7 +1080,6 @@ class Aligner:
                 geom = geom_relevant_intersection  # (=empty geometry)
         return geom, geom_relevant_intersection, geom_relevant_difference
 
-
     def get_relevant_polygons_from_geom(self, geom):
         """
         Get only the relevant parts (polygon) from a geometry.
@@ -1058,12 +1092,12 @@ class Aligner:
             geom = make_valid(unary_union(geom))
             # Create a GeometryCollection from the input geometry.
             geometry_collection = GeometryCollection(geom)
-            array=[]
+            array = []
             for g in geometry_collection.geoms:
                 # Ensure each sub-geometry is valid.
                 g = make_valid(g)
                 if str(g.geom_type) in ["Polygon", "MultiPolygon"]:
-                    relevant_geom = buffer_neg(g,self.buffer_distance())
+                    relevant_geom = buffer_neg(g, self.buffer_distance())
                     if relevant_geom != None and not relevant_geom.is_empty:
                         array.append(g)
         return make_valid(unary_union(array))

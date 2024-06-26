@@ -26,7 +26,7 @@ if __name__ == "__main__":
     )  # gebruik de actuele adp-percelen adp= administratieve percelen
 
     # Example how to use a series (for histogram)
-    series = np.arange(0, 300, 10, dtype=int)/100
+    series = np.arange(0, 300, 10, dtype=int) / 100
     x_dict_series = aligner_x.process_series(series, 4, 50)
     x_resulting_areas = diffs_from_dict_series(x_dict_series, aligner_x.dict_thematic)
     y_dict_series = aligner_y.process_series(series, 4, 50)
@@ -37,5 +37,8 @@ if __name__ == "__main__":
     # Make a 1-by-1 comparison for each thematic feature compared to the 2 references (
     # parcels and buildings)
     for key in x_resulting_areas:
-        dict_diff = {"x" + str(key): x_resulting_areas[key], "y" + str(key): y_resulting_areas[key]}
+        dict_diff = {
+            "x" + str(key): x_resulting_areas[key],
+            "y" + str(key): y_resulting_areas[key],
+        }
         plot_series(series, dict_diff)

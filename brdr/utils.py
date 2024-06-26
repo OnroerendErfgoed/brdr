@@ -15,42 +15,36 @@ from brdr.constants import MULTI_SINGLE_ID_SEPARATOR
 import brdr.constants
 
 
-def geojson_tuple_from_tuple(my_tuple, crs, name_id, prop_dict=None, geom_attributes=True):
+def geojson_tuple_from_tuple(
+    my_tuple, crs, name_id, prop_dict=None, geom_attributes=True
+):
     """
     get a geojson-tuple (6 geojsons) for a tuple of results (results, result_diff, ...)
     """
     feature_collections = []
     for count, tup in enumerate(my_tuple):
-        feature_collections.append(geojson_from_dict(tup, crs, name_id, prop_dict=prop_dict))
+        feature_collections.append(
+            geojson_from_dict(tup, crs, name_id, prop_dict=prop_dict)
+        )
     return tuple(feature_collections)
-def geojson_tuple_from_series(dict_series, crs, name_id, prop_dict=None, geom_attributes=True):
+
+
+def geojson_tuple_from_series(
+    dict_series, crs, name_id, prop_dict=None, geom_attributes=True
+):
     """
     get a geojson-tuple (6 geojsons) for a dictionary of relevant distances() keys and resulting tuples (values)
     """
     features = [[], [], [], [], [], []]
     for rel_dist in dict_series.keys():
-        my_tuple = dict_series [rel_dist]
-        prop_rel_dist = {'relevant_distance': rel_dist}
+        my_tuple = dict_series[rel_dist]
+        prop_rel_dist = {"relevant_distance": rel_dist}
         if prop_dict is not None and rel_dist in prop_dict:
             prop_rel_dist = prop_rel_dist | prop_dict[rel_dist]
         prop_dictionary = dict.fromkeys(my_tuple[0].keys(), prop_rel_dist)
-        fcs = geojson_tuple_from_tuple(my_tuple, crs, name_id, prop_dict=prop_dictionary)
-        for count, ft in enumerate(features):
-            ft.extend(fcs[count].features)
-    crs_geojson = {"type": "name", "properties": {"name": crs}}
-    feature_collections =[]
-    for ft in features:
-        feature_collections.append (FeatureCollection(ft, crs=crs_geojson))
-    return tuple(feature_collections)
-def geojson_tuple_from_dict_theme(dict_theme, crs, name_id, prop_dict=None, geom_attributes=True):
-    """
-    get a geojson-tuple (6 geojsons) for a dictionary of theme_ids (keys) and dictionary of relevant distance-results (values)
-    """
-    features = [[], [], [], [], [], []]
-    for key in dict_theme.keys():
-        if prop_dict is not None and key in prop_dict:
-            prop_dictionary = prop_dict[key]
-        fcs = geojson_tuple_from_series(dict_theme[key], crs, name_id, prop_dict=prop_dictionary)
+        fcs = geojson_tuple_from_tuple(
+            my_tuple, crs, name_id, prop_dict=prop_dictionary
+        )
         for count, ft in enumerate(features):
             ft.extend(fcs[count].features)
     crs_geojson = {"type": "name", "properties": {"name": crs}}
@@ -58,6 +52,29 @@ def geojson_tuple_from_dict_theme(dict_theme, crs, name_id, prop_dict=None, geom
     for ft in features:
         feature_collections.append(FeatureCollection(ft, crs=crs_geojson))
     return tuple(feature_collections)
+
+
+def geojson_tuple_from_dict_theme(
+    dict_theme, crs, name_id, prop_dict=None, geom_attributes=True
+):
+    """
+    get a geojson-tuple (6 geojsons) for a dictionary of theme_ids (keys) and dictionary of relevant distance-results (values)
+    """
+    features = [[], [], [], [], [], []]
+    for key in dict_theme.keys():
+        if prop_dict is not None and key in prop_dict:
+            prop_dictionary = prop_dict[key]
+        fcs = geojson_tuple_from_series(
+            dict_theme[key], crs, name_id, prop_dict=prop_dictionary
+        )
+        for count, ft in enumerate(features):
+            ft.extend(fcs[count].features)
+    crs_geojson = {"type": "name", "properties": {"name": crs}}
+    feature_collections = []
+    for ft in features:
+        feature_collections.append(FeatureCollection(ft, crs=crs_geojson))
+    return tuple(feature_collections)
+
 
 def geojson_from_dict(dictionary, crs, name_id, prop_dict=None, geom_attributes=True):
     """
@@ -76,9 +93,9 @@ def geojson_from_dict(dictionary, crs, name_id, prop_dict=None, geom_attributes=
                 shape_index = perimeter / area
             else:
                 shape_index = -1
-            properties['area'] = area
-            properties['perimeter'] = perimeter
-            properties['shape_index'] = shape_index
+            properties["area"] = area
+            properties["perimeter"] = perimeter
+            properties["shape_index"] = shape_index
         features.append(
             Feature(
                 geometry=geom,
@@ -89,11 +106,13 @@ def geojson_from_dict(dictionary, crs, name_id, prop_dict=None, geom_attributes=
     geojson = FeatureCollection(features, crs=crs_geojson)
     return geojson
 
-def write_geojson(path_to_file,geojson):
+
+def write_geojson(path_to_file, geojson):
     parent = os.path.dirname(path_to_file)
     os.makedirs(parent, exist_ok=True)
     with open(path_to_file, "w") as f:
         dump(geojson, f)
+
 
 def multipolygons_to_singles(dict_geoms):
     """
@@ -175,7 +194,7 @@ def polygonize_reference_data(dict_ref):
     return dict_ref
 
 
-def get_oe_dict_by_ids(objectids, oetype='aanduidingsobjecten'):
+def get_oe_dict_by_ids(objectids, oetype="aanduidingsobjecten"):
     """
     Fetches thematic data for a list of objectIDs from the Inventaris Onroerend Erfgoed API.
 
@@ -200,12 +219,12 @@ def get_oe_dict_by_ids(objectids, oetype='aanduidingsobjecten'):
     for a in objectids:
         url = base_url + str(a)
         response = requests.get(url, headers=headers).json()
-        if 'id' in response.keys():
+        if "id" in response.keys():
             key = str(response["id"])
             geom = shape(response["locatie"]["contour"])
             dict_thematic[key] = geom
         else:
-            logging.warning('object id ' + str(a) +' not available in ' + oetype)
+            logging.warning("object id " + str(a) + " not available in " + oetype)
     return dict_thematic
 
 
@@ -250,6 +269,7 @@ def get_oe_geojson_by_bbox(bbox, limit=1000):
         collection = collection | feature_collection
     return collection
 
+
 def get_breakpoints_zerostreak(x, y):
     """
     Determine the extremes and zero_streaks of a graph based on the derivative, and return:
@@ -284,54 +304,72 @@ def get_breakpoints_zerostreak(x, y):
     write_zero_streak = False
     last_extreme = 0
     for i in range(1, len(x)):
-        if round(derivative[i],2) == 0:
+        if round(derivative[i], 2) == 0:
             streak = streak + 1
             if start_streak == None:
-                start_streak = x[i-1]
-        elif (streak !=0):
+                start_streak = x[i - 1]
+        elif streak != 0:
             write_zero_streak = True
-        if start_streak != None and (write_zero_streak or len(x)-1 == i):
-            end_streak = x[i-1]
+        if start_streak != None and (write_zero_streak or len(x) - 1 == i):
+            end_streak = x[i - 1]
             if derivative[i] == 0:
                 end_streak = x[i]
-            center_streak = start_streak + (end_streak - start_streak)/2
-            zero_streaks.append((start_streak,end_streak,center_streak, streak,last_extreme))
+            center_streak = start_streak + (end_streak - start_streak) / 2
+            zero_streaks.append(
+                (start_streak, end_streak, center_streak, streak, last_extreme)
+            )
             streak = 0
             start_streak = None
             write_zero_streak = False
-            logging.debug('end_streak')
-        if i < len(x)-1 and round(derivative[i],2) > 0 and derivative[i - 1] <= derivative[i] and derivative[i]>= derivative[i + 1]:
+            logging.debug("end_streak")
+        if (
+            i < len(x) - 1
+            and round(derivative[i], 2) > 0
+            and derivative[i - 1] <= derivative[i]
+            and derivative[i] >= derivative[i + 1]
+        ):
             last_extreme = derivative[i]
             extremes.append((x[i], derivative[i], "maximum"))
-        if i < len(x)-1 and round(derivative[i],2) < 0 and derivative[i - 1] >= derivative[i] and derivative[i]<= derivative[i + 1]:
+        if (
+            i < len(x) - 1
+            and round(derivative[i], 2) < 0
+            and derivative[i - 1] >= derivative[i]
+            and derivative[i] <= derivative[i + 1]
+        ):
             last_extreme = derivative[i]
             extremes.append((x[i], derivative[i], "minimum"))
     for extremum in extremes:
-        logging.info(f"breakpoints: relevant_distance:{extremum[0]:.2f}, extreme:{extremum[1]:.2f} ({extremum[2]})")
+        logging.info(
+            f"breakpoints: relevant_distance:{extremum[0]:.2f}, extreme:{extremum[1]:.2f} ({extremum[2]})"
+        )
     for st in zero_streaks:
-        logging.info(f"zero_streaks: [{st[0]:.2f} - {st[1]:.2f}] - center:{st[2]:.2f} - counter:{st[3]:.2f} - min/max-extreme:{st[4]:.2f} ")
-    #plt.plot(series, afgeleide, label='afgeleide-' + str(key))
-    return extremes,zero_streaks
+        logging.info(
+            f"zero_streaks: [{st[0]:.2f} - {st[1]:.2f}] - center:{st[2]:.2f} - counter:{st[3]:.2f} - min/max-extreme:{st[4]:.2f} "
+        )
+    # plt.plot(series, afgeleide, label='afgeleide-' + str(key))
+    return extremes, zero_streaks
+
 
 def numerical_derivative(x, y):
-  """
-  Calculate the numerical derivative of a graph.
+    """
+    Calculate the numerical derivative of a graph.
 
-  Parameters:
-    x (numpy.ndarray): The x values of the graph.
-    y (numpy.ndarray): The y values of the graph.
+    Parameters:
+      x (numpy.ndarray): The x values of the graph.
+      y (numpy.ndarray): The y values of the graph.
 
-  Returns:
-    numpy.ndarray: The derivative of y with respect to x.
-  """
+    Returns:
+      numpy.ndarray: The derivative of y with respect to x.
+    """
 
-  dx = np.diff(x)
-  dy = np.diff(y)
-  derivative = dy / dx
-  derivative = np.insert(derivative, 0, 0)
-  #derivative = np.append(derivative, 0)
+    dx = np.diff(x)
+    dy = np.diff(y)
+    derivative = dy / dx
+    derivative = np.insert(derivative, 0, 0)
+    # derivative = np.append(derivative, 0)
 
-  return derivative
+    return derivative
+
 
 def _filter_dict_by_key(dictionary, filter_key):
     """
@@ -348,7 +386,9 @@ def _filter_dict_by_key(dictionary, filter_key):
         dict: A new dictionary containing only entries where the key matches the `filter_key`.
     """
     return {key: dictionary[key] for key in dictionary.keys() if key == filter_key}
-def filter_resulting_series_by_key(resulting_series,filter_key):
+
+
+def filter_resulting_series_by_key(resulting_series, filter_key):
     """
     Filters a dictionary of result tuples based on a specific key.
 
@@ -368,7 +408,7 @@ def filter_resulting_series_by_key(resulting_series,filter_key):
     Returns:
         dict: A new dictionary (`filtered_resulting_series`) with the same structure as the original one, but containing filtered inner dictionaries based on the `filter_key`.
     """
-    filtered_resulting_series ={}
+    filtered_resulting_series = {}
     for dist in resulting_series:
         result_tuple = resulting_series[dist]
         filtered_tuple = (
@@ -377,7 +417,7 @@ def filter_resulting_series_by_key(resulting_series,filter_key):
             _filter_dict_by_key(result_tuple[2], filter_key),
             _filter_dict_by_key(result_tuple[3], filter_key),
             _filter_dict_by_key(result_tuple[4], filter_key),
-            _filter_dict_by_key(result_tuple[5], filter_key)
+            _filter_dict_by_key(result_tuple[5], filter_key),
         )
         filtered_resulting_series[dist] = filtered_tuple
 
@@ -426,22 +466,27 @@ def diffs_from_dict_series(dict_series, dict_thematic):
     diffs = {}
     for key in keys:
         diffs[key] = {}
-    for rel_dist in dict_series: #all the relevant distances used to calculate the series
+    for (
+        rel_dist
+    ) in dict_series:  # all the relevant distances used to calculate the series
         results = dict_series[rel_dist][0]
-        results_diff =dict_series[rel_dist][1]
+        results_diff = dict_series[rel_dist][1]
         for key in keys:
             if key not in results.keys() and key not in results_diff.keys():
                 raise KeyError("No results calculated for theme_id " + str(key))
 
-            #calculate the diffs you want to have
-            #diff = results_diff[key].area * 100 / results[key].area #percentage of change
-            diff = results[key].area - dict_thematic[key].area#difference (m²) between area of resulting geometry and original geometry
-            diff = round(diff, 1)#round, so the detected changes are within 10cm²
-            #diff = abs(results[key].area - dict_thematic[key].area) #absolute difference (m²) between area of resulting geometry and original geometry
-            #diff = abs(results[key].area - dict_thematic[key].area)*100/dict_thematic[key].area #absolute difference (%) between area of resulting geometry and original geometry
-            #TODO: determine a good diff-value for determination
+            # calculate the diffs you want to have
+            # diff = results_diff[key].area * 100 / results[key].area #percentage of change
+            diff = (
+                results[key].area - dict_thematic[key].area
+            )  # difference (m²) between area of resulting geometry and original geometry
+            diff = round(diff, 1)  # round, so the detected changes are within 10cm²
+            # diff = abs(results[key].area - dict_thematic[key].area) #absolute difference (m²) between area of resulting geometry and original geometry
+            # diff = abs(results[key].area - dict_thematic[key].area)*100/dict_thematic[key].area #absolute difference (%) between area of resulting geometry and original geometry
+            # TODO: determine a good diff-value for determination
             diffs[key][rel_dist] = diff
     return diffs
+
 
 def get_collection(ref_url, limit):
     """
@@ -468,7 +513,10 @@ def get_collection(ref_url, limit):
         logging.debug(url)
         json = requests.get(url).json()
         feature_collection = json
-        if "features" not in feature_collection or len(feature_collection["features"]) == 0:
+        if (
+            "features" not in feature_collection
+            or len(feature_collection["features"]) == 0
+        ):
             break
         start_index = start_index + limit
         if collection == {}:
@@ -476,6 +524,7 @@ def get_collection(ref_url, limit):
         else:
             collection["features"].extend(feature_collection["features"])
     return collection
+
 
 def merge_geometries_by_theme_id(dictionary):
     """
@@ -503,6 +552,7 @@ def merge_geometries_by_theme_id(dictionary):
     for id_theme_global in dict_out:
         dict_out[id_theme_global] = unary_union(dict_out[id_theme_global])
     return dict_out
+
 
 def geom_from_dict(dict, key):
     """
