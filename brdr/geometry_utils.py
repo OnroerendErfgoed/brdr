@@ -168,7 +168,9 @@ def safe_union(geom_a: BaseGeometry, geom_b: BaseGeometry) -> BaseGeometry:
         geom = union(geom_a, geom_b)
     except GEOSException:
         try:
-            logging.warning("union_error for geoms:" + geom_a.wkt + " and " + geom_b.wkt)
+            logging.warning(
+                "union_error for geoms:" + geom_a.wkt + " and " + geom_b.wkt
+            )
             geom = union(buffer(geom_a, 0.0000001), buffer(geom_b, 0.0000001))
         except Exception:
             logging.error("error: empty geometry returned")
@@ -206,7 +208,9 @@ def safe_intersection(geom_a: BaseGeometry, geom_b: BaseGeometry) -> BaseGeometr
         geom = intersection(geom_a, geom_b)
     except GEOSException:
         try:
-            logging.warning("intersection_error for geoms:" + geom_a.wkt + " and " + geom_b.wkt)
+            logging.warning(
+                "intersection_error for geoms:" + geom_a.wkt + " and " + geom_b.wkt
+            )
             geom = intersection(buffer(geom_a, 0.0000001), buffer(geom_b, 0.0000001))
         except Exception:
             logging.error("error: empty geometry returned")
@@ -244,7 +248,9 @@ def safe_difference(geom_a, geom_b):
         geom = difference(geom_a, geom_b)
     except GEOSException:
         try:
-            logging.warning("difference_error for geoms:" + geom_a.wkt + " and " + geom_b.wkt)
+            logging.warning(
+                "difference_error for geoms:" + geom_a.wkt + " and " + geom_b.wkt
+            )
             geom = difference(buffer(geom_a, 0.0000001), buffer(geom_b, 0.0000001))
         except Exception:
             logging.error("error: empty geometry returned")
@@ -282,7 +288,12 @@ def safe_symmetric_difference(geom_a, geom_b):
         geom = symmetric_difference(geom_a, geom_b)
     except GEOSException:
         try:
-            logging.warning("symmetric_difference_error for geoms:" + geom_a.wkt + " and " + geom_b.wkt)
+            logging.warning(
+                "symmetric_difference_error for geoms:"
+                + geom_a.wkt
+                + " and "
+                + geom_b.wkt
+            )
             geom = symmetric_difference(
                 buffer(geom_a, 0.0000001), buffer(geom_b, 0.0000001)
             )
@@ -316,7 +327,7 @@ def grid_bounds(geom: BaseGeometry, delta: float):
         nx = 2
     if ny < 2:
         ny = 2
-    gx, gy = np.linspace(min_x, max_x, nx+1), np.linspace(min_y, max_y, ny+1)
+    gx, gy = np.linspace(min_x, max_x, nx + 1), np.linspace(min_y, max_y, ny + 1)
     grid = []
     for i in range(len(gx) - 1):
         for j in range(len(gy) - 1):

@@ -1,4 +1,3 @@
-
 import unittest
 
 import numpy as np
@@ -6,15 +5,20 @@ from shapely import from_wkt
 
 from brdr.aligner import Aligner
 from brdr.enums import OpenbaarDomeinStrategy
-from brdr.utils import get_oe_dict_by_ids, multipolygons_to_singles, diffs_from_dict_series, \
-    filter_resulting_series_by_key, get_breakpoints_zerostreak, get_oe_geojson_by_bbox
+from brdr.utils import (
+    get_oe_dict_by_ids,
+    multipolygons_to_singles,
+    diffs_from_dict_series,
+    filter_resulting_series_by_key,
+    get_breakpoints_zerostreak,
+    get_oe_geojson_by_bbox,
+)
 
 
 class TestExamples(unittest.TestCase):
 
-
     def test_example_131635(self):
-        #EXAMPLE
+        # EXAMPLE
         aligner = Aligner()
         dict_theme = get_oe_dict_by_ids([131635])
         aligner.load_thematic_data_dict(dict_theme)
@@ -98,15 +102,16 @@ class TestExamples(unittest.TestCase):
         ##Load thematic data & reference data
         dict_theme = get_oe_dict_by_ids([131635])
         aligner.load_thematic_data_dict(dict_theme)
-        aligner.load_reference_data_grb_actual(grb_type='adp',
-                                               partition=1000)  # gebruik de actuele adp-percelen adp= administratieve percelen
+        aligner.load_reference_data_grb_actual(
+            grb_type="adp", partition=1000
+        )  # gebruik de actuele adp-percelen adp= administratieve percelen
         # Example how to use the Aligner
         rel_dist = 2
         dict_results_by_distance = {}
         dict_results_by_distance[rel_dist] = aligner.process_dict_thematic(rel_dist, 4)
 
         # Example how to use a series (for histogram)
-        series = np.arange(0, 300, 10, dtype=int)/100
+        series = np.arange(0, 300, 10, dtype=int) / 100
         dict_series = aligner.process_series(series, 4, 50)
         resulting_areas = diffs_from_dict_series(dict_series, aligner.dict_thematic)
         for key in resulting_areas:
@@ -117,21 +122,30 @@ class TestExamples(unittest.TestCase):
                 for extremum in extremes:
                     print(f"{extremum[0]:.2f}, {extremum[1]:.2f} ({extremum[2]})")
                 for st in zero_streak:
-                    print(f"{st[0]:.2f} - {st[1]:.2f} -{st[2]:.2f} - {st[3]:.2f} - startextreme {st[4]:.2f} ")
+                    print(
+                        f"{st[0]:.2f} - {st[1]:.2f} -{st[2]:.2f} - {st[3]:.2f} - startextreme {st[4]:.2f} "
+                    )
                     dict_results_by_distance = {}
-                    dict_results_by_distance[st[0]] = aligner.process_dict_thematic(st[0], 4)
-                    dict_results_by_distance = filter_resulting_series_by_key(dict_results_by_distance, key)
+                    dict_results_by_distance[st[0]] = aligner.process_dict_thematic(
+                        st[0], 4
+                    )
+                    dict_results_by_distance = filter_resulting_series_by_key(
+                        dict_results_by_distance, key
+                    )
 
     def test_example_predictor(self):
         aligner = Aligner()
         ##Load thematic data & reference data
         dict_theme = get_oe_dict_by_ids([131635])
         aligner.load_thematic_data_dict(dict_theme)
-        aligner.load_reference_data_grb_actual(grb_type='adp',
-                                               partition=1000)  # gebruik de actuele adp-percelen adp= administratieve percelen
+        aligner.load_reference_data_grb_actual(
+            grb_type="adp", partition=1000
+        )  # gebruik de actuele adp-percelen adp= administratieve percelen
 
-        series = np.arange(0, 300, 10, dtype=int)/100
+        series = np.arange(0, 300, 10, dtype=int) / 100
         # predict which relevant distances are interesting to propose as resulting geometry
-        dict_predicted, diffs = aligner.predictor(relevant_distances=series, od_strategy=4, treshold_overlap_percentage=50)
+        dict_predicted, diffs = aligner.predictor(
+            relevant_distances=series, od_strategy=4, treshold_overlap_percentage=50
+        )
         for key in dict_predicted.keys():
             continue
