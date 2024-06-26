@@ -44,7 +44,7 @@ from brdr.geometry_utils import safe_symmetric_difference
 from brdr.geometry_utils import safe_union
 from brdr.utils import diffs_from_dict_series, get_breakpoints_zerostreak, \
     filter_resulting_series_by_key, get_collection, geojson_tuple_from_series, write_geojson, \
-    merge_geometries_by_theme_id, geojson_from_dict
+    merge_geometries_by_theme_id, geojson_from_dict, geojson_tuple_from_dict_theme
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(message)s", datefmt="%d-%b-%y %H:%M:%S"
@@ -116,6 +116,7 @@ class Aligner:
         self.dict_relevant_intersection = None  # dictionary to save relevant_intersections
         self.dict_relevant_difference = None  # dictionary to save relevant_differences
 
+        self.dict_predicted = None #dictionary with the 'predicted' results
         # Coordinate reference system
         # thematic geometries and reference geometries are assumed to be in the same CRS
         # before loading into the Aligner. No CRS-transformation will be performed.
@@ -517,6 +518,7 @@ class Aligner:
                 for zs in zero_streaks:
                     dict_predicted[key][zs[0]] = dict_series[zs[0]]
                 dict_predicted[key] = filter_resulting_series_by_key(dict_predicted[key],key)
+        self.dict_predicted = dict_predicted
         return dict_predicted, diffs
 
     def process_series(
@@ -667,19 +669,46 @@ class Aligner:
         return (self.dict_result, self.dict_result_diff, self.dict_result_diff_plus, self.dict_result_diff_min,
                 self.dict_relevant_intersection, self.dict_relevant_difference)
 
-    def get_results_as_geojson(self):
+
+    def get_results_as_geojson(self,formula=False):
         """
         get a geojson-tuple of the results
         """
+        prop_dictionary ={}
+        p = {}
+        for key in self.dict_result.keys():
+            formula = self.get_formula(self.dict_result[key])
+            p[key] = {'formula': formula}
+        prop_dictionary[self.relevant_distance] = p
         return geojson_tuple_from_series({self.relevant_distance: self.get_results_as_dict()}, self.CRS,
-                                         self.name_thematic_id)
+                                         self.name_thematic_id, prop_dict=prop_dictionary)
+
+    def get_predictions_as_dict(self):
+        """
+        get a dict with results for the predicted relevant distances
+        """
+        return self.dict_predicted
+    def get_predictions_as_geojson(self,formula=False):
+        """
+        get a geojson-tuple of the resulting geometries, based on the 'predicted' relevant distances.
+        Optional: The discriptive formula is added as an attribute to the result"""
+        prop_dictionary = dict(self.dict_predicted)
+        for key in prop_dictionary.keys():
+            for rel_dist in self.dict_predicted[key].keys():
+                formula = self.get_formula(self.dict_predicted[key][rel_dist][0][key])
+            p = None
+            if formula:
+                p = {key:{'formula': formula}}
+            prop_dictionary[key] = dict.fromkeys(self.dict_predicted[key].keys(), p)
+        return geojson_tuple_from_dict_theme(self.dict_predicted, crs=self.CRS, name_id=self.name_thematic_id,
+                                            prop_dict=prop_dictionary)
 
     def get_reference_as_geojson(self):
         """
         get a geojson of the reference polygons
         """
         return geojson_from_dict(self.dict_reference, self.CRS, self.name_reference_id,geom_attributes=False)
-    def export_results(self, path, multi_to_single=True):
+    def export_results(self, path, formula=True):
         """
             Exports analysis results as GeoJSON files.
 
@@ -687,8 +716,6 @@ class Aligner:
 
             Args:
                 path (str): The path to the directory where the GeoJSON files will be saved.
-                multi_to_single (bool, optional): If True (default), converts MultiPolygon geometries to single Polygons
-                                                    in the exported GeoJSON files. This can be useful for visualization purposes.
 
             Details of exported files:
                 - result.geojson: Contains the original thematic data from `self.dict_result`.
@@ -698,7 +725,7 @@ class Aligner:
                 - result_relevant_intersection.geojson: Contains the areas with relevant intersection that has to be included in the result.
                 - result_relevant_difference.geojson: Contains the areas with relevant difference that has to be excluded from the result.
             """
-        fcs = self.get_results_as_geojson()
+        fcs = self.get_results_as_geojson(formula=formula)
         resultnames = [
             "result.geojson",
             "result_diff.geojson",

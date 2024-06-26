@@ -17,7 +17,7 @@ if __name__ == "__main__":
     dict_results_by_distance = {}
     #put resulting tuple in a dictionary
     dict_results_by_distance[rel_dist] = aligner.process_dict_thematic(rel_dist,4)
-    aligner.export_results("output/")
+    aligner.export_results("output/",formula=True)
     show_map(dict_results_by_distance, aligner.dict_thematic, aligner.dict_reference)
     for key in dict_results_by_distance[rel_dist][0]:
         print(key)
