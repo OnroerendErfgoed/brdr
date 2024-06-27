@@ -190,7 +190,7 @@ class TestExamples(unittest.TestCase):
         dict_predicted, diffs = aligner.predictor()
         self.assertGreater(len(dict_predicted), 0)
         fcs = aligner.get_predictions_as_geojson(formula=True)
-        self.assertEquals(len(fcs), 6)
+        self.assertEqual(len(fcs), 6)
         # aligner.export_results("output/")
         # write_geojson("output/predicted.geojson", fcs[0])
         # write_geojson("output/predicted_diff.geojson", fcs[1])
