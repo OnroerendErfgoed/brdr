@@ -173,7 +173,7 @@ A more in-depth description of the algorithm can be found  in the following arti
  - Dieussaert, K., Vanvinckenroye, M., Vermeyen, M., & Van Daele, K. (2024). Grenzen verleggen. 
    Automatische correcties van geografische afbakeningen op verschuivende 
    onderlagen *Onderzoeksrapporten Agentschap Onroerend Erfgoed*, 
-   332. <https://doi.org/10.55465/FSXCW6218>.
+   332. <https://doi.org/10.55465/SXCW6218>.
 
 ## Comments and contributions
 
