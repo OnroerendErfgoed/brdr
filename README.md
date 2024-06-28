@@ -175,7 +175,6 @@ A more in-depth description of the algorithm can be found  in the following arti
    onderlagen *Onderzoeksrapporten Agentschap Onroerend Erfgoed*, 
    332. <https://doi.org/10.55465/FSXCW6218>.
 
-ADD LINK to report
 ## Comments and contributions
 
 - Please report any issues or bugs here:
