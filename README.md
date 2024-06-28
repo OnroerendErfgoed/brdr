@@ -169,6 +169,12 @@ python -m pytest --cov=brdr tests/ --cov-report term-missing
 
 ## Motivation & citation
 A more in-depth description of the algorithm can be found  in the following article (in dutch):
+
+ - Dieussaert, K., Vanvinckenroye, M., Vermeyen, M., & Van Daele, K. (2024). Grenzen verleggen. 
+   Automatische correcties van geografische afbakeningen op verschuivende 
+   onderlagen *Onderzoeksrapporten Agentschap Onroerend Erfgoed*, 
+   332. <https://doi.org/10.55465/FSXCW6218>.
+
 ADD LINK to report
 ## Comments and contributions
 
