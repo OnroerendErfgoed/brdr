@@ -1151,46 +1151,46 @@ class Aligner:
 
     # Deprecated loader methods
     def load_thematic_data_geojson(self, thematic_input, name_thematic_id):
-        logging.warning('deprecated method, use load_thematic_data instead')
+        logging.warning("deprecated method, use load_thematic_data instead")
         loader = GeoJsonLoader(thematic_input, name_thematic_id)
         self.load_thematic_data(loader)
 
     def load_thematic_data_file(self, path_to_file, name_thematic_id):
-        logging.warning('deprecated method, use load_thematic_data instead')
+        logging.warning("deprecated method, use load_thematic_data instead")
         loader = GeoJsonFileLoader(path_to_file, name_thematic_id)
         self.load_thematic_data(loader)
 
     def load_thematic_data_dict(self, dict_theme):
-        logging.warning('deprecated method, use load_thematic_data instead')
+        logging.warning("deprecated method, use load_thematic_data instead")
         loader = DictLoader(dict_theme)
         self.load_thematic_data(loader)
 
     def load_thematic_data_url(self, url, name_thematic_id):
-        logging.warning('deprecated method, use load_thematic_data instead')
+        logging.warning("deprecated method, use load_thematic_data instead")
         loader = GeoJsonUrlLoader(url, name_thematic_id)
         self.load_thematic_data(loader)
 
     def load_reference_data_dict(self, dict_ref):
-        logging.warning('deprecated method, use load_reference_data instead')
+        logging.warning("deprecated method, use load_reference_data instead")
         loader = DictLoader(dict_ref)
         self.load_reference_data(loader)
 
     def load_reference_data_geojson(self, reference_input, name_reference_id):
-        logging.warning('deprecated method, use load_reference_data instead')
+        logging.warning("deprecated method, use load_reference_data instead")
         loader = GeoJsonLoader(reference_input, name_reference_id)
         self.load_reference_data(loader)
 
     def load_reference_data_file(self, path_to_file, name_reference_id):
-        logging.warning('deprecated method, use load_reference_data instead')
+        logging.warning("deprecated method, use load_reference_data instead")
         loader = GeoJsonFileLoader(path_to_file, name_reference_id)
         self.load_reference_data(loader)
 
     def load_reference_data_url(self, url, name_reference_id):
-        logging.warning('deprecated method, use load_reference_data instead')
+        logging.warning("deprecated method, use load_reference_data instead")
         loader = GeoJsonUrlLoader(url, name_reference_id)
         self.load_reference_data(loader)
 
     def load_reference_data_grb_actual(self, *, grb_type=GRBType.ADP, partition=0):
-        logging.warning('deprecated method, use load_reference_data instead')
+        logging.warning("deprecated method, use load_reference_data instead")
         loader = GRBActualLoader(grb_type, partition, self)
         self.load_reference_data(loader)

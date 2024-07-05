@@ -346,7 +346,7 @@ def grid_bounds(geom: BaseGeometry, delta: float):
     return grid
 
 
-def get_relevant_polygons_from_geom( geometry: BaseGeometry, buffer_distance: float ):
+def get_relevant_polygons_from_geom(geometry: BaseGeometry, buffer_distance: float):
     """
     Get only the relevant parts (polygon) from a geometry.
     Points, Lines and Polygons smaller than relevant distance are excluded from the result

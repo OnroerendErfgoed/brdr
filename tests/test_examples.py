@@ -31,15 +31,21 @@ class TestExamples(unittest.TestCase):
         aligner = Aligner()
         dict_theme = get_oe_dict_by_ids([131635])
         aligner.load_thematic_data_dict(dict_theme)
-        adp_loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
-        gbg_loader = GRBActualLoader(grb_type=GRBType.GBG, partition=1000, aligner=aligner)
+        adp_loader = GRBActualLoader(
+            grb_type=GRBType.ADP, partition=1000, aligner=aligner
+        )
+        gbg_loader = GRBActualLoader(
+            grb_type=GRBType.GBG, partition=1000, aligner=aligner
+        )
         dict_ref = adp_loader.load_data()
-        dict_ref.update(gbg_loader.load_data()) # combine 2 dictionaries
+        dict_ref.update(gbg_loader.load_data())  # combine 2 dictionaries
         # make a polygonized version of the reference data with non-overlapping polygons
         aligner.load_reference_data_dict(dict_ref)
 
         rel_dist = 2
-        dict_results_by_distance = {rel_dist: aligner.process_dict_thematic(rel_dist, 4)}
+        dict_results_by_distance = {
+            rel_dist: aligner.process_dict_thematic(rel_dist, 4)
+        }
         results = dict_results_by_distance[rel_dist][0]
         for key in results:
             aligner.get_formula(results[key])

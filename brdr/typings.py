@@ -6,7 +6,7 @@ from typing import TypedDict
 
 class GeoJSONGeometry(TypedDict):
     type: str
-    coordinates: List[float] | List[List[float]] | List[List[List[float]]] | List[List[List[List[float]]]]
+    coordinates: List
 
 
 class Crs(TypedDict):
