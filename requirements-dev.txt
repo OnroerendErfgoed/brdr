@@ -25,7 +25,9 @@ cligj==0.7.2
 contourpy==1.2.1
     # via matplotlib
 coverage==7.4.4
-    # via pytest-cov
+    # via
+    #   coverage
+    #   pytest-cov
 cycler==0.12.1
     # via matplotlib
 fiona==1.9.6
