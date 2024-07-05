@@ -296,7 +296,7 @@ class Aligner:
         self.dict_result_diff_min = dict_result_diff_min
         self.dict_relevant_intersection = dict_relevant_intersection
         self.dict_relevant_difference = dict_relevant_diff
-        self.feedback_info("thematic dictionary processed")
+        self.logger.feedback_info("thematic dictionary processed")
         return self.get_results_as_dict(merged=False)
 
     def predictor(
