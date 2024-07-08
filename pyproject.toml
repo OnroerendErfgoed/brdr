@@ -24,9 +24,9 @@ classifiers = [
     "Topic :: Scientific/Engineering :: GIS",
 ]
 dependencies = [
-    "geojson==3.1.0",
-    "requests==2.32.2",
-    "shapely==2.0.4",
+    "geojson~=3.1",
+    "requests~=2.32",
+    "shapely~=2.0",
 ]
 [project.urls]
 Documentation = "https://github.com/OnroerendErfgoed/brdr/blob/main/README.md"

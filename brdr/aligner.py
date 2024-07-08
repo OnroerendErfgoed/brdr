@@ -4,11 +4,9 @@ import os
 from math import pi
 
 import numpy as np
-import requests as requests
-from shapely import GeometryCollection, remove_repeated_points
+from shapely import GeometryCollection
 from shapely import Polygon
 from shapely import STRtree
-from shapely import buffer
 from shapely import equals
 from shapely import get_exterior_ring
 from shapely import get_interior_ring
@@ -16,19 +14,15 @@ from shapely import get_num_interior_rings
 from shapely import get_parts
 from shapely import make_valid
 from shapely import polygons
+from shapely import remove_repeated_points
 from shapely import to_geojson
 from shapely import unary_union
-from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
-from shapely.prepared import prep
 
 from brdr.constants import BUFFER_MULTIPLICATION_FACTOR
 from brdr.constants import CORR_DISTANCE
 from brdr.constants import DEFAULT_CRS
 from brdr.constants import DOWNLOAD_LIMIT
-from brdr.constants import MAX_REFERENCE_BUFFER
-from brdr.constants import MITRE_LIMIT
-from brdr.constants import QUAD_SEGMENTS
 from brdr.constants import THRESHOLD_CIRCLE_RATIO
 from brdr.constants import THRESHOLD_EXCLUSION_AREA
 from brdr.constants import THRESHOLD_EXCLUSION_PERCENTAGE
@@ -37,22 +31,29 @@ from brdr.enums import OpenbaarDomeinStrategy
 from brdr.geometry_utils import buffer_neg
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import buffer_pos
-from brdr.geometry_utils import grid_bounds
+from brdr.geometry_utils import get_relevant_polygons_from_geom
 from brdr.geometry_utils import safe_difference
 from brdr.geometry_utils import safe_intersection
 from brdr.geometry_utils import safe_symmetric_difference
 from brdr.geometry_utils import safe_union
+from brdr.loader import DictLoader
+from brdr.loader import GRBActualLoader
+from brdr.loader import GeoJsonFileLoader
+from brdr.loader import GeoJsonLoader
+from brdr.loader import GeoJsonUrlLoader
+from brdr.loader import Loader
+from brdr.logger import Logger
+from brdr.utils import diffs_from_dict_series
+from brdr.utils import filter_resulting_series_by_key
+from brdr.utils import geojson_from_dict
 from brdr.utils import (
-    diffs_from_dict_series,
-    get_breakpoints_zerostreak,
-    filter_resulting_series_by_key,
-    get_collection,
-    geojson_tuple_from_series,
-    write_geojson,
-    merge_geometries_by_theme_id,
-    geojson_from_dict,
     geojson_tuple_from_dict_theme,
 )
+from brdr.utils import geojson_tuple_from_series
+from brdr.utils import get_breakpoints_zerostreak
+from brdr.utils import get_collection
+from brdr.utils import merge_geometries_by_theme_id
+from brdr.utils import write_geojson
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(message)s", datefmt="%d-%b-%y %H:%M:%S"
@@ -96,22 +97,19 @@ class Aligner:
                 (default 50%)
 
         """
-        self.feedback = feedback
+        self.logger = Logger(feedback)
         self.relevant_distance = relevant_distance
         self.od_strategy = od_strategy
         self.threshold_overlap_percentage = threshold_overlap_percentage
 
         # PROCESSING DEFAULTS
         # thematic
-        thematic_input = None  # to save the initially loaded geojson
         # name of the identifier-field of the thematic data (id has to be unique)
         self.name_thematic_id = "theme_identifier"
         # dictionary to store all thematic geometries to handle
         self.dict_thematic = {}
 
         # reference
-        self.reference_input = None  # to save the initially loaded geojson
-
         self.name_reference_id = "ref_identifier"  # name of the identifier-field of the reference data (id has to be unique,f.e CAPAKEY for GRB-parcels)
         self.dict_reference = {}  # dictionary to store all reference geometries
         self.reference_union = None  # to save a unioned geometry of all reference polygons; needed for calculation in most OD-strategies
@@ -135,184 +133,20 @@ class Aligner:
         # thematic geometries and reference geometries are assumed to be in the same CRS
         # before loading into the Aligner. No CRS-transformation will be performed.
         # When loading data, CRS is expected to be a projected CRS with units in 'meter (m)'.
-        # By default EPSG:31370 (Lambert72), alternative: EPSG:3812 (Lambert2008)
+        # Default EPSG:31370 (Lambert72), alternative: EPSG:3812 (Lambert2008)
         self.CRS = crs
 
-        self.feedback_info("Aligner initialized")
-
-    def feedback_debug(self, text):
-        if self.feedback is not None:
-            # self.feedback.pushInfo(text)
-            return
-        logging.debug(text)
-
-    def feedback_info(self, text):
-        if self.feedback is not None:
-            self.feedback.pushInfo(text)
-            return
-        logging.info(text)
-
-    def feedback_warning(self, text):
-        if self.feedback is not None:
-            self.feedback.pushInfo(text)
-            return
-        logging.warning(text)
+        self.logger.feedback_info("Aligner initialized")
 
     def buffer_distance(self):
         return self.relevant_distance / 2
-
-    def load_thematic_data_geojson(self, thematic_input, name_thematic_id):
-        self.thematic_input = thematic_input
-        self.name_thematic_id = name_thematic_id
-        self._prepare_thematic_data()
-
-    def load_thematic_data_file(self, path_to_file, name_thematic_id):
-        with open(path_to_file, "r") as f:
-            thematic_input = json.load(f)
-        self.load_thematic_data_geojson(thematic_input, name_thematic_id)
-
-    def load_thematic_data_dict(self, dict_theme):
-        self.dict_thematic = dict_theme
-
-    def load_thematic_data_url(self, url, name_thematic_id):
-        thematic_input = requests.get(url).json()
-        self.load_thematic_data_geojson(thematic_input, name_thematic_id)
-
-    def load_reference_data_dict(self, dict_ref):
-        self.dict_reference = dict_ref
-        self._prepare_reference_data()
-
-    def load_reference_data_geojson(self, reference_input, name_reference_id):
-        self.reference_input = reference_input
-        self.name_reference_id = name_reference_id
-        self._prepare_reference_data()
-
-    def load_reference_data_file(self, path_to_file, name_reference_id):
-        with open(path_to_file, "r") as f:
-            reference_input = json.load(f)
-        self.load_reference_data_geojson(reference_input, name_reference_id)
-
-    def load_reference_data_url(self, url, name_reference_id):
-        reference_input = requests.get(url).json()
-        self.load_reference_data_geojson(reference_input, name_reference_id)
-
-    def load_reference_data_grb_actual(self, *, grb_type=GRBType.ADP, partition=0):
-        self.dict_reference = {}
-        self.reference_input = None
-        dict_ref, name_reference_id = self.get_reference_data_dict_grb_actual(
-            grb_type, partition
-        )
-        self.name_reference_id = name_reference_id
-        self.feedback_info(f"GRB downloaded: {grb_type}")
-        self.load_reference_data_dict(dict_ref)
-
-    def get_reference_data_dict_grb_actual(self, grb_type=GRBType.ADP, partition=0):
-        """
-        Fetches reference data (administrative plots, buildings, or artwork) from the GRB API based on thematic data.
-
-        This function retrieves reference data from the Grootschalig Referentie Bestand (GRB)
-        depending on the specified `grb_type` (e.g., administrative plots (ADP), buildings (GBG), or artwork (KNW)).
-        It uses the bounding boxes of the geometries in the loaded thematic data (`self.dict_thematic`)
-        to filter the relevant reference data geographically.
-
-        Args:
-            grb_type (GRBType, optional): The type of reference data to retrieve. Defaults to GRBType.ADP (administrative plots).
-            partition (int, optional): If greater than zero, partitions the bounding box of the thematic data
-                                       into a grid before fetching reference data by partition. Defaults to 0 (no partitioning).
-
-        Returns:
-            tuple: A tuple containing two elements:
-                - dict: A dictionary where keys are reference data identifiers (as defined by `name_reference_id`)
-                        and values are GeoJSON geometry objects representing the reference data.
-                - str: The name of the reference data identifier property (e.g., "CAPAKEY" for ADP).
-
-        Raises:
-            ValueError: If an unsupported `grb_type` is provided.
-        """
-        if grb_type == GRBType.ADP:
-            url_grb = (
-                "https://geo.api.vlaanderen.be/GRB/ogc/features/collections/ADP/items?"
-            )
-            name_reference_id = "CAPAKEY"
-        elif grb_type == "gbg":
-            url_grb = (
-                "https://geo.api.vlaanderen.be/GRB/ogc/features/collections/GBG/items?"
-            )
-            name_reference_id = "OIDN"
-        elif grb_type == GRBType.KNW:
-            url_grb = (
-                "https://geo.api.vlaanderen.be/GRB/ogc/features/collections/KNW/items?"
-            )
-            name_reference_id = "OIDN"
-        else:
-            self.feedback_info(
-                f"type not implemented: {str(grb_type)} -->No reference-data loaded"
-            )
-            return
-
-        crs = self.CRS
-        limit = DOWNLOAD_LIMIT
-        collection = {}
-        bounds_array = []
-
-        # Get the bounds of the thematic_data to get the necessary GRB-data
-        for key in self.dict_thematic:
-            # buffer them geometry with x m (default 10)
-            buffer_value = self.relevant_distance + MAX_REFERENCE_BUFFER
-            geom = buffer(
-                self.dict_thematic[key],
-                buffer_value,
-                quad_segs=QUAD_SEGMENTS,
-                join_style="mitre",
-                mitre_limit=MITRE_LIMIT,
-            )
-            bounds_array.append(geom)
-            if partition < 1:
-                bbox = str(geom.bounds).strip("()")
-                url_grb_bbox = (
-                    url_grb
-                    + "f=application%2Fgeo%2Bjson&limit="
-                    + str(limit)
-                    + "&crs="
-                    + crs
-                    + "&bbox-crs="
-                    + crs
-                    + "&bbox="
-                    + bbox
-                )
-                self.feedback_debug(key + "-->" + str(url_grb_bbox))
-                coll = self._get_dict_from_url(url_grb_bbox, name_reference_id, limit)
-                collection.update(coll)
-            if partition > 0:
-                geom = unary_union(bounds_array)
-                grid = self.partition(geom, partition)
-                for g in grid:
-                    bbox = str(g.bounds).strip("()")
-                    url_grb_bbox = (
-                        url_grb
-                        + "f=application%2Fgeo%2Bjson&limit="
-                        + str(limit)
-                        + "&crs="
-                        + crs
-                        + "&bbox-crs="
-                        + crs
-                        + "&bbox="
-                        + bbox
-                    )
-                    self.feedback_debug(key + "-->" + str(url_grb_bbox))
-                    coll = self._get_dict_from_url(
-                        url_grb_bbox, name_reference_id, limit
-                    )
-                    collection.update(coll)
-
-        return collection, name_reference_id
 
     def process_geometry(
         self,
         geometry: BaseGeometry,
         relevant_distance=1,
         od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
-        treshold_overlap_percentage=50,
+        threshold_overlap_percentage=50,
     ) -> tuple[BaseGeometry, ...]:
         """
         method to align a geometry to the reference layer
@@ -321,7 +155,7 @@ class Aligner:
             geometry (BaseGeometry): The input geometric object.
             relevant_distance
             od_strategy
-            treshold_overlap_percentage (float): The buffer distance (positive or negative).
+            threshold_overlap_percentage (float): The buffer distance (positive or negative).
 
         Returns:
             tuple[BaseGeometry...] : A tuple containing the resulting geometries:
@@ -338,10 +172,10 @@ class Aligner:
             -
         Example:
         """
-        self.feedback_debug("process geometry")
+        self.logger.feedback_debug("process geometry")
         self.relevant_distance = relevant_distance
         self.od_strategy = od_strategy
-        self.threshold_overlap_percentage = treshold_overlap_percentage
+        self.threshold_overlap_percentage = threshold_overlap_percentage
         # array with all relevant parts of a thematic geometry; initial empty Polygon
         preresult = [Polygon()]
         (
@@ -359,7 +193,7 @@ class Aligner:
             geom_intersection = safe_intersection(geometry, geom_reference)
             if geom_intersection.is_empty or geom_intersection is None:
                 continue
-            self.feedback_debug("calculate intersection")
+            self.logger.feedback_debug("calculate intersection")
             (
                 geom,
                 relevant_intersection,
@@ -367,7 +201,7 @@ class Aligner:
             ) = self._calculate_geom_by_intersection_and_reference(
                 geom_intersection, geom_reference, False
             )
-            self.feedback_debug("intersection calculated")
+            self.logger.feedback_debug("intersection calculated")
             preresult = self.add_multi_polygons_from_geom_to_array(geom, preresult)
             relevant_intersection_array = self.add_multi_polygons_from_geom_to_array(
                 relevant_intersection, relevant_intersection_array
@@ -403,7 +237,7 @@ class Aligner:
         self,
         relevant_distance=1,
         od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
-        treshold_overlap_percentage=50,
+        threshold_overlap_percentage=50,
     ):
         """
         Aligns a thematic dictionary of geometries to the reference layer based on
@@ -415,7 +249,7 @@ class Aligner:
                 processing. Defaults to 1.
             od_strategy (int, optional): The strategy for overlap detection.
                 Defaults to 1.
-            treshold_overlap_percentage (float, optional): The threshold percentage for
+            threshold_overlap_percentage (float, optional): The threshold percentage for
                 considering full overlap. Defaults to 50.
 
         Returns:
@@ -436,7 +270,7 @@ class Aligner:
         dict_relevant_intersection = {}
         dict_relevant_diff = {}
         for key in self.dict_thematic:
-            self.feedback_info("thematic id to process: " + str(key))
+            self.logger.feedback_info("thematic id to process: " + str(key))
             (
                 result,
                 result_diff,
@@ -448,7 +282,7 @@ class Aligner:
                 self.dict_thematic[key],
                 relevant_distance,
                 od_strategy,
-                treshold_overlap_percentage,
+                threshold_overlap_percentage,
             )
             dict_result[key] = result
             dict_result_diff[key] = result_diff
@@ -462,14 +296,14 @@ class Aligner:
         self.dict_result_diff_min = dict_result_diff_min
         self.dict_relevant_intersection = dict_relevant_intersection
         self.dict_relevant_difference = dict_relevant_diff
-        self.feedback_info("thematic dictionary processed")
+        self.logger.feedback_info("thematic dictionary processed")
         return self.get_results_as_dict(merged=False)
 
     def predictor(
         self,
         relevant_distances=np.arange(0, 300, 10, dtype=int) / 100,
         od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
-        treshold_overlap_percentage=50,
+        threshold_overlap_percentage=50,
     ):
         """
         Predicts the 'most interesting' relevant distances for changes in thematic elements based on a distance series.
@@ -500,7 +334,7 @@ class Aligner:
         Args:
             relevant_distances (np.ndarray, optional): A NumPy array of distances to be analyzed. Defaults to np.arange(0.1, 5.05, 0.1).
             od_strategy (OpenbaarDomeinStrategy, optional): A strategy for handling open data in the processing (implementation specific). Defaults to OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE.
-            treshold_overlap_percentage (int, optional): A percentage threshold for considering full overlap in the processing (implementation specific). Defaults to 50.
+            threshold_overlap_percentage (int, optional): A percentage threshold for considering full overlap in the processing (implementation specific). Defaults to 50.
 
         Returns:
             dict: A dictionary containing predicted interesting distances for each thematic element.
@@ -518,7 +352,7 @@ class Aligner:
         dict_series = self.process_series(
             relevant_distances=relevant_distances,
             od_strategy=od_strategy,
-            treshold_overlap_percentage=treshold_overlap_percentage,
+            threshold_overlap_percentage=threshold_overlap_percentage,
         )
         diffs = diffs_from_dict_series(dict_series, self.dict_thematic)
         for key in diffs:
@@ -541,7 +375,7 @@ class Aligner:
         self,
         relevant_distances,
         od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
-        treshold_overlap_percentage=50,
+        threshold_overlap_percentage=50,
     ):
         """
         Calculates the resulting dictionaries for thematic data based on a series of relevant
@@ -552,7 +386,7 @@ class Aligner:
                 process.
             od_strategy (int, optional): The strategy for overlap detection.
                 Defaults to 1.
-            treshold_overlap_percentage (float, optional): The threshold percentage for
+            threshold_overlap_percentage (float, optional): The threshold percentage for
                 considering full overlap. Defaults to 50.
 
         Returns:
@@ -564,20 +398,21 @@ class Aligner:
                     ...
                 }
         """
-        self.feedback_debug("Process series" + str(relevant_distances))
+        self.logger.feedback_debug("Process series" + str(relevant_distances))
         self.od_strategy = od_strategy
-        self.threshold_overlap_percentage = treshold_overlap_percentage
-        # self._prepare_thematic_data() #not necessary? Assumed that dict_thematic is already loaded
+        self.threshold_overlap_percentage = threshold_overlap_percentage
         dict_series = {}
         for s in relevant_distances:
-            self.feedback_info(
+            self.logger.feedback_info(
                 "Processing series - relevant_distance (m):"
                 + str(s)
                 + " with ODStrategy "
                 + str(self.od_strategy)
             )
             dict_series[s] = self.process_dict_thematic(s, od_strategy)
-        self.feedback_info("End of processing series: " + str(relevant_distances))
+        self.logger.feedback_info(
+            "End of processing series: " + str(relevant_distances)
+        )
         return dict_series
 
     def get_formula(self, geometry, with_geom=False):
@@ -637,7 +472,7 @@ class Aligner:
                 "geometry": geom,
             }
 
-        self.feedback_debug(str(dict_formula))
+        self.logger.feedback_debug(str(dict_formula))
         return dict_formula
 
     def get_last_version_date(self, geometry, grb_type=GRBType.ADP):
@@ -772,7 +607,7 @@ class Aligner:
             - result_relevant_difference.geojson: Contains the areas with relevant difference that has to be excluded from the result.
         """
         fcs = self.get_results_as_geojson(formula=formula)
-        resultnames = [
+        result_names = [
             "result.geojson",
             "result_diff.geojson",
             "result_diff_plus.geojson",
@@ -781,60 +616,34 @@ class Aligner:
             "result_relevant_difference.geojson",
         ]
         for count, fc in enumerate(fcs):
-            write_geojson(os.path.join(path, resultnames[count]), fcs[count])
+            write_geojson(os.path.join(path, result_names[count]), fcs[count])
 
     def _prepare_reference_data(self):
         """
         Prepares reference data for spatial queries and analysis.
 
-        This function processes the reference data provided in `self.reference_input` (assumed to be a GeoJSON feature collection).
         It performs the following tasks:
 
-        1. **Iterates through features:**
-            - Extracts the reference data identifier (`key`) from each feature's properties using `self.name_reference_id`.
-            - Converts the feature's geometry to a Shapely geometry object using `shape`.
-            - Validates the geometry using `make_valid` to ensure it's a well-formed GeoJSON object.
-            - Stores the processed data in `self.dict_reference` with the identifier as the key and the validated geometry as the value.
-            - Provides debug feedback for each processed feature (key and geometry).
-
-        2. **Optimizes spatial queries:**
+        1. **Optimizes spatial queries:**
             - Creates a Spatial Relationship Tree (STRtree) using `STRtree` for efficient spatial queries against the reference data in `self.dict_reference`.
             - Converts the dictionary keys (reference identifiers) to a NumPy array for potential performance benefits in future operations.
 
-        3. **Clears reference union:**
+        2. **Clears reference union:**
             - Sets `self.reference_union` to `None`. This variable stores the combined geometry of all reference data,
               and it's cleared here to indicate that it needs to be recalculated if requested later.
 
         Returns:
             None
         """
-        if self.reference_input is not None:
-            for f in self.reference_input["features"]:
-                key = f["properties"][self.name_reference_id]
-                key = str(key)
-                geom = shape(f["geometry"])
-                self.dict_reference[key] = make_valid(geom)
-                self.feedback_debug(key + "-->" + str(geom))
         # create an SRTree for performance optimisation
-        self.feedback_info("length of reference_dict: " + str(len(self.dict_reference)))
+        self.logger.feedback_info(
+            "length of reference_dict: " + str(len(self.dict_reference))
+        )
         self.reference_tree = STRtree(list(self.dict_reference.values()))
         self.reference_items = np.array(list(self.dict_reference.keys()))
         # clear the reference_union, so it will be recalculated on request when needed
         self.reference_union = None
         return
-
-    def _get_dict_from_url(self, input_url, name_reference_id, limit):
-        collection = get_collection(input_url, limit)
-        dictionary = {}
-        if "features" not in collection or len(collection["features"]) == 0:
-            return dictionary
-        for f in collection["features"]:
-            key = str(f["properties"][name_reference_id])
-            geom = shape(f["geometry"])
-            if key not in collection:
-                dictionary[key] = make_valid(geom)
-            self.feedback_debug(key + "-->" + str(geom))
-        return dictionary
 
     def _calculate_intersection_between_geometry_and_od(self, geometry, preresult):
         # Calculate the intersection between thematic and Openbaar Domein
@@ -844,14 +653,14 @@ class Aligner:
 
         if self.od_strategy == OpenbaarDomeinStrategy.EXCLUDE:
             # Completely exclude everything that is not on the reference layer
-            self.feedback_debug("OD-strategy EXCLUDE")
+            self.logger.feedback_debug("OD-strategy EXCLUDE")
             # Remove from the thematic layer all parts that are not on the reference layer
             # !!this strategy adapts the input-geometry!!
             geometry = safe_intersection(geometry, self._get_reference_union())
         elif self.od_strategy == OpenbaarDomeinStrategy.AS_IS:
             # All parts that are not covered by the reference layer are added to the
             #         resulting geometry AS IS
-            self.feedback_debug("OD-strategy AS IS")
+            self.logger.feedback_debug("OD-strategy AS IS")
             # all OD-parts wil be added AS IS
             geom_thematic_od = safe_difference(geometry, self._get_reference_union())
         elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE:
@@ -859,7 +668,7 @@ class Aligner:
             #  plot boundary is snapped to the plot.
             #  Only the inner-reference-boundaries are used.
             #  The outer-reference-boundaries are not used.
-            self.feedback_debug("OD-strategy SNAP_SINGLE_SIDE")
+            self.logger.feedback_debug("OD-strategy SNAP_SINGLE_SIDE")
             # geom of OD
             geom_od = safe_difference(geometry, self._get_reference_union())
             # only the relevant parts of OD
@@ -876,7 +685,7 @@ class Aligner:
             # Everything that falls within the relevant distance over
             # the plot boundary is snapped to the plot.
             #  Inner-reference-boundaries and outer-reference-boundaries are used.
-            self.feedback_debug("OD-strategy SNAP BOTH SIDED")
+            self.logger.feedback_debug("OD-strategy SNAP BOTH SIDED")
             (
                 geom_thematic_od,
                 relevant_difference_array,
@@ -891,14 +700,18 @@ class Aligner:
             # integrates the entire inner area of the input geometry,
             # so Openbaar Domein of the inner area is included in the result
             # Combines SNAP_SINGLE_SIDE with the inner area
-            self.feedback_debug("OD-strategy Full-area-variant of OD-SNAP_SINGLE_SIDE")
+            self.logger.feedback_debug(
+                "OD-strategy Full-area-variant of OD-SNAP_SINGLE_SIDE"
+            )
             geom_thematic_od = self._od_full_area(geometry)
         elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_FULL_AREA_ALL_SIDE:
             # Strategy useful for bigger areas.
             # integrates the entire inner area of the input geometry,
             # so Openbaar Domein of the inner area is included in the result
             # Combines SNAP_ALL_SIDE with the inner area
-            self.feedback_debug("OD-strategy Full-area-variant of OD-SNAP_ALL_SIDE")
+            self.logger.feedback_debug(
+                "OD-strategy Full-area-variant of OD-SNAP_ALL_SIDE"
+            )
             # first part is a copy of OD_ALL_SIDE
             (
                 geom_thematic_od,
@@ -924,7 +737,7 @@ class Aligner:
             #  plot boundary is snapped to the plot.
             #  Only the inner-reference-boundaries are used.
             #  The outer-reference-boundaries are not used.
-            self.feedback_debug("OD-strategy SNAP_SINGLE_SIDE - variant 1")
+            self.logger.feedback_debug("OD-strategy SNAP_SINGLE_SIDE - variant 1")
             # geom of OD
             geom_od = safe_difference(geometry, self._get_reference_union())
             # only the relevant parts of OD
@@ -937,7 +750,7 @@ class Aligner:
             #  plot boundary is snapped to the plot.
             #  Only the inner-reference-boundaries are used.
             #  The outer-reference-boundaries are not used.
-            self.feedback_debug("OD-strategy SNAP_SINGLE_SIDE - variant 2")
+            self.logger.feedback_debug("OD-strategy SNAP_SINGLE_SIDE - variant 2")
             # TODO: Drop?
             pass
 
@@ -1086,7 +899,7 @@ class Aligner:
             # see eo_id 206363 with relevant distance=0.2m and SNAP_ALL_SIDE
             if is_openbaar_domein:
                 # geom = buffer_neg_pos(geom, self.buffer_distance())
-                geom = self.get_relevant_polygons_from_geom(geom)
+                geom = get_relevant_polygons_from_geom(geom, self.buffer_distance())
             # TODO END
         elif (
             not geom_relevant_intersection.is_empty
@@ -1098,7 +911,7 @@ class Aligner:
             and not geom_relevant_difference.is_empty
         ):
             # TODO: check needed
-            # if overlap > treshold_overlap_percentage and openbaar domein:
+            # if overlap > threshold_overlap_percentage and openbaar domein:
             #     geom = snap_geom_to_reference(
             #       geom_intersection, geom_reference, relevant_distance
             #   )
@@ -1150,26 +963,6 @@ class Aligner:
     # collapsen als alles bijeen wordt gesnapt, wat we in sommige gevallen
     # effectief willen.
     # return snap(geom_input, geom_reference, relevant_distance)
-
-    def _prepare_thematic_data(self):
-        """
-        Load geometries of a GeoJSON and stores them in a dictionary.
-
-        This method processes the thematic data from the input GeoJSON file. It
-        iterates through each feature, extracts the relevant properties, converts the
-        geometry to a valid shape, and stores it in a dictionary.
-
-        Returns:
-            None.
-        """
-        # THEMATIC PREPARATION
-        for f in self.thematic_input["features"]:
-            key = f["properties"][self.name_thematic_id]
-            key = str(key)
-            geom = shape(f["geometry"])
-            self.dict_thematic[key] = make_valid(geom)
-            self.feedback_debug(key + "-->" + str(geom))
-        return
 
     def _get_reference_union(self):
         if self.reference_union is None:
@@ -1290,13 +1083,13 @@ class Aligner:
                 4 * pi * (geom_thematic.area / (geom_thematic.length**2))
                 > THRESHOLD_CIRCLE_RATIO
             ):
-                self.feedback_warning(
+                self.logger.feedback_warning(
                     "Circle: -->resulting geometry = original geometry"
                 )
                 geom_thematic_result = geom_thematic
         # Correction for empty preresults
         if geom_thematic_result.is_empty or geom_thematic_result is None:
-            self.feedback_warning(
+            self.logger.feedback_warning(
                 "Empty result: -->resulting geometry = original geometry"
             )
             geom_thematic_result = geom_thematic
@@ -1340,7 +1133,7 @@ class Aligner:
             pass
         else:
             # Create a GeometryCollection from the input geometry.
-            geometry_collection = GeometryCollection(geom)
+            geometry_collection = GeometryCollection(geom)  # noqa
             for g in geometry_collection.geoms:
                 # Ensure each sub-geometry is valid.
                 g = make_valid(g)
@@ -1349,23 +1142,55 @@ class Aligner:
                     array.append(g)
         return array
 
-    @staticmethod
-    def partition(geom, delta):
-        """
-        Filters a computed grid of partitions (generated by `_grid_bounds`) based on
-        intersection with a geometric object (`geom`).
+    def load_reference_data(self, loader: Loader):
+        self.dict_reference = loader.load_data()
+        self._prepare_reference_data()
 
-        Args:
-            geom (BaseGeometry): The geometric object to check for intersection
-                with partitions.
-            delta (float): The distance between partitions (same value used in
-                `_grid_bounds`).
+    def load_thematic_data(self, loader: Loader):
+        self.dict_thematic = loader.load_data()
 
-        Returns:
-            list: A filtered list of Polygon objects representing the partitions
-                overlapping the original geometric object.
-        """
-        prepared_geom = prep(geom)
-        partitions = grid_bounds(geom, delta)
-        filtered_grid = list(filter(prepared_geom.intersects, partitions))
-        return filtered_grid
+    # Deprecated loader methods
+    def load_thematic_data_geojson(self, thematic_input, name_thematic_id):
+        logging.warning("deprecated method, use load_thematic_data instead")
+        loader = GeoJsonLoader(thematic_input, name_thematic_id)
+        self.load_thematic_data(loader)
+
+    def load_thematic_data_file(self, path_to_file, name_thematic_id):
+        logging.warning("deprecated method, use load_thematic_data instead")
+        loader = GeoJsonFileLoader(path_to_file, name_thematic_id)
+        self.load_thematic_data(loader)
+
+    def load_thematic_data_dict(self, dict_theme):
+        logging.warning("deprecated method, use load_thematic_data instead")
+        loader = DictLoader(dict_theme)
+        self.load_thematic_data(loader)
+
+    def load_thematic_data_url(self, url, name_thematic_id):
+        logging.warning("deprecated method, use load_thematic_data instead")
+        loader = GeoJsonUrlLoader(url, name_thematic_id)
+        self.load_thematic_data(loader)
+
+    def load_reference_data_dict(self, dict_ref):
+        logging.warning("deprecated method, use load_reference_data instead")
+        loader = DictLoader(dict_ref)
+        self.load_reference_data(loader)
+
+    def load_reference_data_geojson(self, reference_input, name_reference_id):
+        logging.warning("deprecated method, use load_reference_data instead")
+        loader = GeoJsonLoader(reference_input, name_reference_id)
+        self.load_reference_data(loader)
+
+    def load_reference_data_file(self, path_to_file, name_reference_id):
+        logging.warning("deprecated method, use load_reference_data instead")
+        loader = GeoJsonFileLoader(path_to_file, name_reference_id)
+        self.load_reference_data(loader)
+
+    def load_reference_data_url(self, url, name_reference_id):
+        logging.warning("deprecated method, use load_reference_data instead")
+        loader = GeoJsonUrlLoader(url, name_reference_id)
+        self.load_reference_data(loader)
+
+    def load_reference_data_grb_actual(self, *, grb_type=GRBType.ADP, partition=0):
+        logging.warning("deprecated method, use load_reference_data instead")
+        loader = GRBActualLoader(grb_type, partition, self)
+        self.load_reference_data(loader)

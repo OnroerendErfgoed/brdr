@@ -2,12 +2,15 @@ import logging
 
 import numpy as np
 from shapely import GEOSException
+from shapely import GeometryCollection
 from shapely import Polygon
 from shapely import buffer
 from shapely import difference
 from shapely import intersection
 from shapely import is_empty
+from shapely import make_valid
 from shapely import symmetric_difference
+from shapely import unary_union
 from shapely import union
 from shapely.geometry.base import BaseGeometry
 
@@ -341,3 +344,26 @@ def grid_bounds(geom: BaseGeometry, delta: float):
             )
             grid.append(poly_ij)
     return grid
+
+
+def get_relevant_polygons_from_geom(geometry: BaseGeometry, buffer_distance: float):
+    """
+    Get only the relevant parts (polygon) from a geometry.
+    Points, Lines and Polygons smaller than relevant distance are excluded from the result
+    """
+    if not geometry or geometry.is_empty:
+        # If the input geometry is empty or None, do nothing.
+        return geometry
+    else:
+        geometry = make_valid(unary_union(geometry))
+        # Create a GeometryCollection from the input geometry.
+        geometry_collection = GeometryCollection(geometry)
+        array = []
+        for g in geometry_collection.geoms:
+            # Ensure each sub-geometry is valid.
+            g = make_valid(g)
+            if str(g.geom_type) in ["Polygon", "MultiPolygon"]:
+                relevant_geom = buffer_neg(g, buffer_distance)
+                if relevant_geom is not None and not relevant_geom.is_empty:
+                    array.append(g)
+    return make_valid(unary_union(array))

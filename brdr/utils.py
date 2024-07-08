@@ -91,28 +91,6 @@ def geojson_tuple_from_dict_theme(
     return tuple(feature_collections)
 
 
-def geojson_tuple_from_dict_theme(
-    dict_theme, crs, name_id, prop_dict=None, geom_attributes=True
-):
-    """
-    get a geojson-tuple (6 geojsons) for a dictionary of theme_ids (keys) and dictionary of relevant distance-results (values)
-    """
-    features = [[], [], [], [], [], []]
-    for key in dict_theme.keys():
-        if prop_dict is not None and key in prop_dict:
-            prop_dictionary = prop_dict[key]
-        fcs = geojson_tuple_from_series(
-            dict_theme[key], crs, name_id, prop_dict=prop_dictionary
-        )
-        for count, ft in enumerate(features):
-            ft.extend(fcs[count].features)
-    crs_geojson = {"type": "name", "properties": {"name": crs}}
-    feature_collections = []
-    for ft in features:
-        feature_collections.append(FeatureCollection(ft, crs=crs_geojson))
-    return tuple(feature_collections)
-
-
 def geojson_from_dict(dictionary, crs, name_id, prop_dict=None, geom_attributes=True):
     """
     get a geojson (featurecollection) from a dictionary of ids(keys) and geometries (values)

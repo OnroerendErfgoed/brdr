@@ -3,6 +3,8 @@ import unittest
 import numpy as np
 
 from brdr.aligner import Aligner
+from brdr.enums import GRBType
+from brdr.loader import GRBActualLoader
 from brdr.utils import (
     get_oe_dict_by_ids,
     multipolygons_to_singles,
@@ -29,20 +31,21 @@ class TestExamples(unittest.TestCase):
         aligner = Aligner()
         dict_theme = get_oe_dict_by_ids([131635])
         aligner.load_thematic_data_dict(dict_theme)
-        dict_adp, name_reference_id_adp = aligner.get_reference_data_dict_grb_actual(
-            grb_type="adp", partition=1000
+        adp_loader = GRBActualLoader(
+            grb_type=GRBType.ADP, partition=1000, aligner=aligner
         )
-        dict_gbg, name_reference_id_gbg = aligner.get_reference_data_dict_grb_actual(
-            grb_type="gbg", partition=1000
+        gbg_loader = GRBActualLoader(
+            grb_type=GRBType.GBG, partition=1000, aligner=aligner
         )
-        dict_adp_gbg = dict_adp
-        dict_adp_gbg.update(dict_gbg)  # combine 2 dictionaries
+        dict_ref = adp_loader.load_data()
+        dict_ref.update(gbg_loader.load_data())  # combine 2 dictionaries
         # make a polygonized version of the reference data with non-overlapping polygons
-        dict_ref = dict_adp_gbg
         aligner.load_reference_data_dict(dict_ref)
+
         rel_dist = 2
-        dict_results_by_distance = {}
-        dict_results_by_distance[rel_dist] = aligner.process_dict_thematic(rel_dist, 4)
+        dict_results_by_distance = {
+            rel_dist: aligner.process_dict_thematic(rel_dist, 4)
+        }
         results = dict_results_by_distance[rel_dist][0]
         for key in results:
             aligner.get_formula(results[key])
@@ -272,7 +275,7 @@ class TestExamples(unittest.TestCase):
         series = np.arange(0, 300, 10, dtype=int) / 100
         # predict which relevant distances are interesting to propose as resulting geometry
         dict_predicted, diffs = aligner.predictor(
-            relevant_distances=series, od_strategy=4, treshold_overlap_percentage=50
+            relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
         )
         for key in dict_predicted.keys():
             continue
