@@ -5,6 +5,7 @@ from shapely import STRtree
 from shapely.geometry import shape
 
 from brdr.aligner import Aligner
+from brdr.loader import GeoJsonLoader
 from brdr.utils import get_collection
 from brdr.utils import get_oe_geojson_by_bbox
 
@@ -61,10 +62,9 @@ series = [
 # base_year
 base_aligner = Aligner()
 # Load the thematic data to evaluate
-# base_aligner.load_thematic_data_file("testdata/theme_changetest.geojson",
-# 'theme_identifier') base_aligner.load_thematic_data_file(
-# "testdata/theme_leuven.geojson", 'aanduid_id')
-base_aligner.load_thematic_data_geojson(get_oe_geojson_by_bbox(bbox), "aanduid_id")
+loader = GeoJsonLoader(get_oe_geojson_by_bbox(bbox), "aanduid_id")
+base_aligner.load_thematic_data(loader)
+
 logging.info(
     "Number of OE-thematic features loaded into base-aligner: "
     + str(len(base_aligner.dict_thematic))
@@ -78,7 +78,9 @@ ref_url = (
 )
 collection = get_collection(ref_url, limit)
 
-base_aligner.load_reference_data_geojson(collection, "CAPAKEY")
+# base_aligner.load_reference_data_geojson(collection, "CAPAKEY")
+loader = GeoJsonLoader(collection, "CAPAKEY")
+base_aligner.load_reference_data(loader)
 
 # SEARCH FOR CHANGED Parcels in specific timespan
 # =================================================
@@ -98,6 +100,7 @@ adp_url = (
     + "&bbox-crs=EPSG:31370&bbox="
     + bbox
 )
+print(adp_url)
 
 collection = get_collection(adp_url, limit)
 array_features = []
@@ -131,7 +134,8 @@ actual_url = (
     "limit=" + str(limit) + "&crs=" + crs + "&bbox-crs=EPSG:31370&bbox=" + bbox
 )
 collection = get_collection(actual_url, limit)
-actual_aligner.load_reference_data_geojson(collection, "CAPAKEY")
+loader = GeoJsonLoader(collection, "CAPAKEY")
+actual_aligner.load_reference_data(loader)
 
 
 # LOOP AND PROCESS ALL POSSIBLE AFFECTED FEATURES

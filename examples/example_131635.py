@@ -1,4 +1,6 @@
 from brdr.aligner import Aligner
+from brdr.enums import GRBType
+from brdr.loader import DictLoader, GRBActualLoader
 from brdr.utils import get_oe_dict_by_ids
 from examples import show_map
 
@@ -9,8 +11,10 @@ if __name__ == "__main__":
     aligner = Aligner()
     # Load thematic data & reference data
     dict_theme = get_oe_dict_by_ids([131635])
-    aligner.load_thematic_data_dict(dict_theme)
-    aligner.load_reference_data_grb_actual(grb_type="adp", partition=1000)
+    loader = DictLoader(dict_theme)
+    aligner.load_thematic_data(loader)
+    loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
+    aligner.load_reference_data(loader)
 
     # RESULTS
     rel_dist = 2
