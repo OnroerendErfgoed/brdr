@@ -18,6 +18,8 @@ from brdr.utils import get_oe_geojson_by_bbox
 # * it can be used to convert the geometries to a formula, to compare and
 #       evaluate if equality is detected after alignement
 
+# TODO convert this example with GRB-features
+
 
 def check_business_equality(base_formula, actual_formula):
     """
