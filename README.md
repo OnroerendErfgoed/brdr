@@ -9,6 +9,13 @@ a Python library to assist in realigning (multi-)polygons (OGC Simple Features) 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.11385644.svg)](https://doi.org/10.5281/zenodo.11385644)
 
 <!-- badges: end -->
+
+Quick links:
+
+- [Installation](#installation)
+- [Development](#development)
+- [Issues, questions, comments and contributions](#comments-and-contributions)
+
 ## Description
 
 ### Intro
@@ -177,8 +184,21 @@ A more in-depth description of the algorithm can be found  in the following arti
 
 ## Comments and contributions
 
-- Please report any issues or bugs here:
-  <https://github.com/OnroerendErfgoed/brdr/issues>.
+We would love to hear from you and your experiences with
+`brdr` or its sister project [`brdrQ`](https://github.com/OnroerendErfgoed/brdrQ). The [discussions forum](https://github.com/OnroerendErfgoed/brdr/discussions/) is the place to be when:
+
+   - You have any questions on using `brdr` or `brdrQ` or their 
+     applicability to your use cases
+   - Want to share your experiences with the library
+   - Have any  suggestions for improvements or feature requests
+
+If you have discovered a bug in the `brdr` library you can report it here:
+
+  <https://github.com/OnroerendErfgoed/brdr/issues>
+
+We try to keep the list of issues as clean as possible. If 
+you're unsure whether something is a bug, or whether the bug is in `brdr`
+or `brdrQ`, we encourage you to go through the [discussions forum](https://github.com/OnroerendErfgoed/brdr/discussions) first.
 
 ## Acknowledgement
 
