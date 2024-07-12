@@ -9,6 +9,13 @@ a Python library to assist in realigning (multi-)polygons (OGC Simple Features) 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.11385644.svg)](https://doi.org/10.5281/zenodo.11385644)
 
 <!-- badges: end -->
+
+Quick links:
+
+- [Installation](#installation)
+- [Development](#development)
+- [Issues, questions, comments and contributions](#comments-and-contributions)
+
 ## Description
 
 ### Intro
