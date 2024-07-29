@@ -71,14 +71,7 @@ class TestAligner(unittest.TestCase):
         aligner.load_reference_data_dict(
             {"ref_id_1": from_wkt("POLYGON ((0 1, 0 10,8 10,10 1,0 1))")}
         )
-        (
-            result,
-            result_diff,
-            result_diff_plus,
-            result_diff_min,
-            relevant_intersection,
-            relevant_diff,
-        ) = aligner.process_dict_thematic()
+        aligner.process_dict_thematic()
         path = "./tmp/"
         aligner.export_results(path=path)
         for file_name in os.listdir(path):

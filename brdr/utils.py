@@ -11,8 +11,10 @@ from shapely import make_valid
 from shapely import node
 from shapely import polygonize
 from shapely.geometry import shape
+from shapely.geometry.base import BaseGeometry
 
 from brdr.constants import MULTI_SINGLE_ID_SEPARATOR
+from brdr.typings import ProcessResult
 
 
 def geojson_tuple_from_tuple(
@@ -570,6 +572,36 @@ def merge_geometries_by_theme_id(dictionary):
     for id_theme_global in dict_out:
         dict_out[id_theme_global] = unary_union(dict_out[id_theme_global])
     return dict_out
+
+
+def merge_process_results(
+    dictionary: dict[str, ProcessResult]
+) -> dict[str, ProcessResult]:
+    """
+    Merges geometries in a dictionary from multiple themes into a single theme.
+
+    Args: dictionary (dict): A dictionary where keys are theme IDs and values are
+        geometries (e.g., shapely Polygon objects).
+
+    Returns: dict: A new dictionary with merged geometries, where keys are global
+        theme IDs and values are merged geometries.
+
+    """
+    grouped_results: dict[str, ProcessResult] = {}
+    for id_theme in dictionary:
+        id_theme_global = id_theme.split(MULTI_SINGLE_ID_SEPARATOR)[0]
+        process_result = dictionary[id_theme]
+        if id_theme_global not in grouped_results:
+            grouped_results[id_theme_global] = process_result
+        else:
+            for key in process_result:
+                geom: BaseGeometry = process_result[key] # noqa
+                if geom.is_empty or geom is None:
+                    continue
+                existing: BaseGeometry = grouped_results[id_theme_global][key] # noqa
+                grouped_results[id_theme_global][key] = unary_union([existing, geom])  # noqa
+
+    return grouped_results
 
 
 def geom_from_dict(dict, key):

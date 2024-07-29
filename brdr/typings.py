@@ -3,6 +3,8 @@ from typing import Dict
 from typing import List
 from typing import TypedDict
 
+from shapely.geometry.base import BaseGeometry
+
 
 class GeoJSONGeometry(TypedDict):
     type: str
@@ -26,3 +28,12 @@ class FeatureCollection(TypedDict, total=False):
     crs: Crs
     features: List[Feature]
     __extra_items__: Dict[str, str]
+
+
+class ProcessResult(TypedDict, total=False):
+    result: BaseGeometry
+    result_diff: BaseGeometry
+    result_diff_plus: BaseGeometry
+    result_diff_min: BaseGeometry
+    relevant_intersection: BaseGeometry
+    relevant_diff: BaseGeometry

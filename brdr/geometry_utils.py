@@ -10,12 +10,15 @@ from shapely import intersection
 from shapely import is_empty
 from shapely import make_valid
 from shapely import symmetric_difference
+from shapely import to_wkt
 from shapely import unary_union
 from shapely import union
 from shapely.geometry.base import BaseGeometry
 
 from brdr.constants import MITRE_LIMIT
 from brdr.constants import QUAD_SEGMENTS
+from brdr.constants import THRESHOLD_EXCLUSION_AREA
+from brdr.constants import THRESHOLD_EXCLUSION_PERCENTAGE
 
 log = logging.getLogger(__name__)
 
@@ -250,12 +253,14 @@ def safe_difference(geom_a, geom_b):
     try:
         geom = difference(geom_a, geom_b)
     except GEOSException:
+        print("difference_error")
         try:
             logging.warning(
                 "difference_error for geoms:" + geom_a.wkt + " and " + geom_b.wkt
             )
             geom = difference(buffer(geom_a, 0.0000001), buffer(geom_b, 0.0000001))
         except Exception:
+            print("error: empty geometry returned")
             logging.error("error: empty geometry returned")
             geom = Polygon()
 
@@ -367,3 +372,125 @@ def get_relevant_polygons_from_geom(geometry: BaseGeometry, buffer_distance: flo
                 if relevant_geom is not None and not relevant_geom.is_empty:
                     array.append(g)
     return make_valid(unary_union(array))
+
+
+def calculate_geom_by_intersection_and_reference(
+        geom_intersection: BaseGeometry,
+        geom_reference: BaseGeometry,
+        is_openbaar_domein,
+        buffer_distance,
+        threshold_overlap_percentage,
+        threshold_exclusion_percentage=THRESHOLD_EXCLUSION_PERCENTAGE,
+        threshold_exclusion_area=THRESHOLD_EXCLUSION_AREA,
+    ):
+    """
+    Calculates the geometry based on intersection and reference geometries.
+
+    Args:
+        geom_intersection (BaseGeometry): The intersection geometry.
+        geom_reference (BaseGeometry): The reference geometry.
+        is_openbaar_domein (bool): A flag indicating whether it's a public domain
+            (area not covered with reference polygon).
+        threshold_exclusion_percentage (int): The threshold exclusion percentage.
+        threshold_exclusion_area (int): The threshold exclusion area.
+        buffer_distance (float): The buffer distance.
+        threshold_overlap_percentage (int): The threshold overlap percentage.
+
+    Returns:
+        tuple: A tuple containing the resulting geometries:
+
+        *   geom: BaseGeometry or None: The resulting geometry or None if conditions
+            are not met.
+        *   geom_relevant_intersection: BaseGeometry or None: The relevant
+            intersection.
+        *   geom_relevant_difference: BaseGeometry or None: The relevant difference.
+
+    Notes:
+        -   If the reference geometry area is 0, the overlap is set to 100%.
+        -   If the overlap is less than relevant_OVERLAP_PERCENTAGE or the
+            intersection area is less than relevant_OVERLAP_AREA, None is returned.
+        -   Otherwise, the relevant intersection and difference geometries are
+            calculated.
+        -   If both relevant intersection and difference are non-empty, the final
+            geometry is obtained by applying safe intersection and buffering.
+        -   If only relevant intersection is non-empty, the result is the reference
+            geometry.
+        -   If only relevant difference is non-empty, the result is None.
+    """
+
+    if geom_reference.area == 0:
+        overlap = 100
+
+    else:
+        overlap = geom_intersection.area * 100 / geom_reference.area
+
+    if   (
+        overlap < threshold_exclusion_percentage
+        or geom_intersection.area < threshold_exclusion_area
+    ):
+        return Polygon(), Polygon(), Polygon()
+
+    geom_difference = safe_difference(geom_reference, geom_intersection)
+    geom_relevant_intersection = buffer_neg(
+        geom_intersection, buffer_distance
+    )
+    geom_relevant_difference = buffer_neg(geom_difference, buffer_distance)
+    if (
+        not geom_relevant_intersection.is_empty
+        and not geom_relevant_difference.is_empty
+    ):
+        # intersectie en difference relevant
+        geom_x = safe_intersection(
+            geom_reference,
+            safe_difference(
+                geom_reference,
+                safe_intersection(
+                    geom_difference,
+                    buffer_neg_pos(geom_difference, buffer_distance),
+                ),
+            ),
+        )
+        geom = safe_intersection(
+            geom_x,
+            buffer_pos(
+                buffer_neg_pos(geom_x, buffer_distance),
+                buffer_distance,
+            ),
+        )
+        # TODO BEGIN: experimental fix - check if it is ok in all cases?
+        # when calculating for OD, we create a 'virtual parcel'. When calculating this virtual parcel, it is buffered to take outer boundaries into account.
+        # This results in a side-effect that there are extra non-logical parts included in the result. The function below tries to exclude these non-logica parts.
+        # see eo_id 206363 with relevant distance=0.2m and SNAP_ALL_SIDE
+        if is_openbaar_domein:
+            # geom = buffer_neg_pos(geom, buffer_distance)
+            geom = get_relevant_polygons_from_geom(geom, buffer_distance)
+        # TODO END
+    elif (
+        not geom_relevant_intersection.is_empty
+        and geom_relevant_difference.is_empty
+    ):
+        geom = geom_reference
+    elif (
+        geom_relevant_intersection.is_empty
+        and not geom_relevant_difference.is_empty
+    ):
+        # TODO: check needed
+        # if overlap > threshold_overlap_percentage and openbaar domein:
+        #     geom = snap_geom_to_reference(
+        #       geom_intersection, geom_reference, relevant_distance
+        #   )
+        # else:
+        geom = geom_relevant_intersection  # (=empty geometry)
+    else:
+        if is_openbaar_domein:
+            geom = geom_relevant_intersection  # (=empty geometry)
+        # geom = snap_geom_to_reference (geom_intersection, geom_reference,
+        # relevant_distance)
+        elif threshold_overlap_percentage < 0:
+            # if we take a value of -1, the original border will be used
+            geom = geom_intersection
+        elif overlap > threshold_overlap_percentage:
+            geom = geom_reference
+        else:
+            geom = geom_relevant_intersection  # (=empty geometry)
+    return geom, geom_relevant_intersection, geom_relevant_difference
