@@ -9,7 +9,6 @@ from brdr.utils import (
     get_oe_dict_by_ids,
     multipolygons_to_singles,
     diffs_from_dict_series,
-    filter_resulting_series_by_key,
     get_breakpoints_zerostreak,
     write_geojson,
 )
@@ -43,12 +42,9 @@ class TestExamples(unittest.TestCase):
         aligner.load_reference_data_dict(dict_ref)
 
         rel_dist = 2
-        dict_results_by_distance = {
-            rel_dist: aligner.process_dict_thematic(rel_dist, 4)
-        }
-        results = dict_results_by_distance[rel_dist][0]
-        for key in results:
-            aligner.get_formula(results[key])
+        result_dict = aligner.process_dict_thematic(rel_dist, 4)
+        for process_results in result_dict.values():
+            aligner.get_formula(process_results["result"])
 
     def test_example_multi_to_single(self):
         aligner = Aligner()
@@ -60,14 +56,9 @@ class TestExamples(unittest.TestCase):
         aligner.load_reference_data_grb_actual(grb_type="gbg", partition=1000)
 
         rel_dist = 5
-        dict_results_by_distance = {}
-        dict_results_by_distance[rel_dist] = aligner.process_dict_thematic(rel_dist, 4)
-
-        results = dict_results_by_distance[rel_dist][0]
-
-        for key in results:
-            print(key)
-            print(aligner.get_formula(results[key]))
+        result_dict = aligner.process_dict_thematic(rel_dist, 4)
+        for process_results in result_dict.values():
+            aligner.get_formula(process_results["result"])
 
     def test_example_multipolygon(self):
         aligner0 = Aligner()
@@ -259,13 +250,10 @@ class TestExamples(unittest.TestCase):
                     dict_results_by_distance[st[0]] = aligner.process_dict_thematic(
                         st[0], 4
                     )
-                    dict_results_by_distance = filter_resulting_series_by_key(
-                        dict_results_by_distance, key
-                    )
 
     def test_example_predictor(self):
         aligner = Aligner()
-        ##Load thematic data & reference data
+        # Load thematic data & reference data
         dict_theme = get_oe_dict_by_ids([131635])
         aligner.load_thematic_data_dict(dict_theme)
         aligner.load_reference_data_grb_actual(

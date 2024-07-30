@@ -4,17 +4,14 @@ import shapely
 from shapely import is_empty
 from shapely.geometry import Polygon
 
-from brdr.utils import (
-    multipolygons_to_singles,
-    polygonize_reference_data,
-    get_oe_dict_by_ids,
-    get_oe_geojson_by_bbox,
-    get_breakpoints_zerostreak,
-    _filter_dict_by_key,
-    filter_resulting_series_by_key,
-    diffs_from_dict_series,
-    get_collection,
-)
+from brdr.utils import _filter_dict_by_key
+from brdr.utils import diffs_from_dict_series
+from brdr.utils import get_breakpoints_zerostreak
+from brdr.utils import get_collection
+from brdr.utils import get_oe_dict_by_ids
+from brdr.utils import get_oe_geojson_by_bbox
+from brdr.utils import multipolygons_to_singles
+from brdr.utils import polygonize_reference_data
 
 
 class TestUtils(unittest.TestCase):
@@ -129,70 +126,6 @@ class TestUtils(unittest.TestCase):
         result = _filter_dict_by_key(data, "key3")
         self.assertEqual(result, {})
 
-    def test_filter_resulting_series_by_key_empty_dict(self):
-        data = {}
-        result = filter_resulting_series_by_key(data, "key")
-        self.assertEqual(result, {})
-
-    def test_filter_resulting_series_by_key_single_key(self):
-        # Mock resulting_series with a single distance and dictionaries with a single key
-        data = {
-            1: (
-                {"key1": "value1"},
-                {"key2": "value2"},
-                {"key3": "value3"},
-                {"key4": "value4"},
-                {"key5": "value5"},
-                {"key6": "value6"},
-            )
-        }
-        result = filter_resulting_series_by_key(data, "key1")
-        self.assertEqual(result, {1: ({"key1": "value1"}, {}, {}, {}, {}, {})})
-
-    def test_filter_resulting_series_by_key_multiple_keys(self):
-        # Mock resulting_series with a single distance and dictionaries with multiple keys
-        data = {
-            1: (
-                {"key1": "value1", "keyA": "valueA"},
-                {"key2": "value2", "keyB": "valueB"},
-                {"key3": "value3"},
-                {"key4": "value4"},
-                {"key5": "value5"},
-                {"key6": "value6"},
-            )
-        }
-        result = filter_resulting_series_by_key(data, "key1")
-        self.assertEqual(result, {1: ({"key1": "value1"}, {}, {}, {}, {}, {})})
-
-    def test_filter_resulting_series_by_key_multiple_distances(self):
-        # Mock resulting_series with multiple distances and dictionaries with a single key
-        data = {
-            1: (
-                {"key1": "value1"},
-                {"key2": "value2"},
-                {"key3": "value3"},
-                {"key4": "value4"},
-                {"key5": "value5"},
-                {"key6": "value6"},
-            ),
-            2: (
-                {"key1": "value7"},
-                {"key2": "value8"},
-                {"key3": "value9"},
-                {"key4": "value10"},
-                {"key5": "value11"},
-                {"key6": "value12"},
-            ),
-        }
-        result = filter_resulting_series_by_key(data, "key1")
-        self.assertEqual(
-            result,
-            {
-                1: ({"key1": "value1"}, {}, {}, {}, {}, {}),
-                2: ({"key1": "value7"}, {}, {}, {}, {}, {}),
-            },
-        )
-
     def test_diffs_from_dict_series_complete(self):
         """Tests diffs_from_dict_series with complete data."""
         # Mock data
@@ -201,21 +134,22 @@ class TestUtils(unittest.TestCase):
             "theme_id2": Polygon([(5, 5), (15, 5), (15, 15), (5, 15)]),
         }
         dict_series = {
-            10: (
-                {
-                    "theme_id1": Polygon([(0, 0), (8, 0), (8, 8), (0, 8)]),
-                    "theme_id2": Polygon([(7, 7), (13, 7), (13, 13), (7, 13)]),
+            10: {
+                "theme_id1": {
+                    "result": Polygon([(0, 0), (8, 0), (8, 8), (0, 8)]),
+                    "result_diff": Polygon([(2, 2), (6, 2), (6, 6), (2, 6)]),
                 },
-                {
-                    "theme_id1": Polygon([(2, 2), (6, 2), (6, 6), (2, 6)]),
-                    "theme_id2": Polygon([(9, 9), (11, 9), (11, 11), (9, 11)]),
+                "theme_id2": {
+                    "result": Polygon([(7, 7), (13, 7), (13, 13), (7, 13)]),
+                    "result_diff": Polygon([(9, 9), (11, 9), (11, 11), (9, 11)]),
                 },
-            )
+            }
         }
         expected_diffs = {"theme_id1": {10: -36.0}, "theme_id2": {10: -64.0}}
-        result = diffs_from_dict_series(dict_series.copy(), dict_thematic.copy())
-        # Assert expected diffs
-        self.assertEqual(result, expected_diffs)
+
+        assert expected_diffs == diffs_from_dict_series(
+            dict_series.copy(), dict_thematic.copy()
+        )
 
     def test_get_collection(self):
         base_year = 2023

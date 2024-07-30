@@ -1,7 +1,9 @@
 import json
 import logging
 import os
+from collections import defaultdict
 from math import pi
+from typing import Iterable
 
 import numpy as np
 from shapely import GeometryCollection
@@ -43,15 +45,10 @@ from brdr.loader import Loader
 from brdr.logger import Logger
 from brdr.typings import ProcessResult
 from brdr.utils import diffs_from_dict_series
-from brdr.utils import filter_resulting_series_by_key
 from brdr.utils import geojson_from_dict
-from brdr.utils import (
-    geojson_tuple_from_dict_theme,
-)
-from brdr.utils import geojson_tuple_from_series
+from brdr.utils import get_series_geojson_dict
 from brdr.utils import get_breakpoints_zerostreak
 from brdr.utils import get_collection
-from brdr.utils import merge_geometries_by_theme_id
 from brdr.utils import merge_process_results
 from brdr.utils import write_geojson
 
@@ -115,22 +112,9 @@ class Aligner:
         self.reference_union = None  # to save a unioned geometry of all reference polygons; needed for calculation in most OD-strategies
 
         # output-dictionaries (when processing dict_thematic)
-        self.process_result: dict[str, ProcessResult] = {}
+        self.dict_result: dict[str, ProcessResult] = {}
         # dictionary with the 'predicted' results, grouped by relevant distance
-        self.dict_predicted = dict[int, dict[str, ProcessResult]]
-
-        # self.dict_result = None  # dictionary to save resulting geometries TODO REMOVE
-        # self.dict_result_diff = None  # dictionary to save global resulting differences TODO REMOVE
-        # self.dict_result_diff_plus = ( TODO REMOVE
-        #     None  # dictionary to save positive resulting differences TODO REMOVE
-        # ) TODO REMOVE
-        # self.dict_result_diff_min = ( TODO REMOVE
-        #     None  # dictionary to save negative resulting differences TODO REMOVE
-        # ) TODO REMOVE
-        # self.dict_relevant_intersection = ( TODO REMOVE
-        #     None  # dictionary to save relevant_intersections TODO REMOVE
-        # ) TODO REMOVE
-        # self.dict_relevant_difference = None  # dictionary to save relevant_differences TODO REMOVE
+        self.dict_predicted = dict[float, dict[str, ProcessResult]]
 
         # Coordinate reference system
         # thematic geometries and reference geometries are assumed to be in the same CRS
@@ -227,8 +211,8 @@ class Aligner:
         # POSTPROCESSING
         result_dict = self._postprocess_preresult(preresult, geometry)
 
-        result_dict["relevant_intersection"] = relevant_intersection
-        result_dict["relevant_diff"] = relevant_diff
+        result_dict["result_relevant_intersection"] = relevant_intersection
+        result_dict["result_relevant_diff"] = relevant_diff
         return result_dict
 
     def process_dict_thematic(
@@ -260,16 +244,16 @@ class Aligner:
                 - relevant_diff: relevant differences.
 
         """
-        self.process_result = {}
+        self.dict_result = {}
         for key in self.dict_thematic:
             self.logger.feedback_info("thematic id to process: " + str(key))
-            self.process_result[key] = self.process_geometry(
+            self.dict_result[key] = self.process_geometry(
                 self.dict_thematic[key],
                 relevant_distance,
                 od_strategy,
                 threshold_overlap_percentage,
             )
-        return self.process_result
+        return self.dict_result
 
     def predictor(
         self,
@@ -318,44 +302,43 @@ class Aligner:
         Logs:
             - Debug logs the thematic element key being processed.
         """
-        dict_predicted = {}
-        for key in self.dict_thematic.keys():
-            dict_predicted[key] = {}
+        dict_predicted = defaultdict(dict)
         dict_series = self.process_series(
             relevant_distances=relevant_distances,
             od_strategy=od_strategy,
             threshold_overlap_percentage=threshold_overlap_percentage,
         )
-        diffs = diffs_from_dict_series(dict_series, self.dict_thematic)
-        for key in diffs:
-            if len(diffs[key]) == len(relevant_distances):
-                lst_diffs = list(diffs[key].values())
-                breakpoints, zero_streaks = get_breakpoints_zerostreak(
-                    relevant_distances, lst_diffs
-                )
-                logging.debug(str(key))
-                for zs in zero_streaks:
-                    dict_predicted[key][zs[0]] = dict_series[zs[0]]
 
-                dict_predicted[key] = filter_resulting_series_by_key(
-                    dict_predicted[key], key
-                )
+        diffs_dict = diffs_from_dict_series(dict_series, self.dict_thematic)
+
+        for theme_id, diffs in diffs_dict.items():
+            if len(diffs) != len(relevant_distances):
+                logging.warning(f"Number of computed diffs for thematic element {theme_id} does not match the number of relevant distances.")
+                continue
+            diff_values = list(diffs.values())
+            breakpoints, zero_streaks = get_breakpoints_zerostreak(
+                relevant_distances, diff_values
+            )
+            logging.debug(str(theme_id))
+            for zs in zero_streaks:
+                dict_predicted[zs[0]][theme_id] = dict_series[zs[0]][theme_id]
+
         self.dict_predicted = dict_predicted
-        return dict_predicted, diffs
+        return dict_predicted, diffs_dict
 
     def process_series(
         self,
-        relevant_distances,
+        relevant_distances: Iterable[float],
         od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
         threshold_overlap_percentage=50,
-    ):
+    ) -> dict[float, dict[str, ProcessResult]]:
         """
         Calculates the resulting dictionaries for thematic data based on a series of relevant
             distances.
 
         Args:
-            relevant_distances (list): A list of relevant distances (in meters) to
-                process.
+            relevant_distances (Iterable[float]): A series of relevant distances (in meters) to
+                process
             od_strategy (int, optional): The strategy for overlap detection.
                 Defaults to 1.
             threshold_overlap_percentage (float, optional): The threshold percentage for
@@ -387,7 +370,6 @@ class Aligner:
         )
         return dict_series
 
-    # TODO
     def get_formula(self, geometry: BaseGeometry, with_geom=False):
         """
         Calculates formula-related information based on the input geometry.
@@ -494,48 +476,24 @@ class Aligner:
             merged (bool, optional): Whether to merge the results for each thematic element. Defaults to True.
         """
         if merged:
-            return (
-                merge_geometries_by_theme_id(self.dict_result),
-                merge_geometries_by_theme_id(self.dict_result_diff),
-                merge_geometries_by_theme_id(self.dict_result_diff_plus),
-                merge_geometries_by_theme_id(self.dict_result_diff_min),
-                merge_geometries_by_theme_id(self.dict_relevant_intersection),
-                merge_geometries_by_theme_id(self.dict_relevant_difference),
-                merge_geometries_by_theme_id(self.dict_result),
-            )
-        else:
-            return (
-                self.dict_result,
-                self.dict_result_diff,
-                self.dict_result_diff_plus,
-                self.dict_result_diff_min,
-                self.dict_relevant_intersection,
-                self.dict_relevant_difference,
-            )
+            return merge_process_results(self.dict_result)
+        return self.dict_result
 
     def get_results_as_geojson(self, formula=False, merged=True):
         """
-        get a geojson-tuple of the results
+        convert the results to geojson feature collections
 
         Args:
             formula (bool, optional): Whether to include formula-related information in the output. Defaults to False.
             merged (bool, optional): Whether to merge the results for each thematic element. Defaults to True.
         """
-        prop_dictionary = {}
-        p = {}
-        dict_results = self.process_result
+        results_dict = self.dict_result
         if merged:
-            dict_results = merge_process_results(dict_results)
-        if formula:
-            for key in dict_results.keys():
-                formula = self.get_formula(dict_results[key]["result"])
-                p[key] = {"formula": json.dumps(formula)}
-        prop_dictionary[self.relevant_distance] = p
-        return geojson_tuple_from_series(
-            {self.relevant_distance: tuple_results},
-            self.CRS,
-            self.name_thematic_id,
-            prop_dict=prop_dictionary,
+            results_dict = merge_process_results(results_dict)
+
+        return self.get_predictions_as_geojson(
+            formula,
+            {self.relevant_distance: results_dict},
         )
 
     def get_predictions_as_dict(self):
@@ -544,23 +502,27 @@ class Aligner:
         """
         return self.dict_predicted
 
-    def get_predictions_as_geojson(self, formula=False):
+    def get_predictions_as_geojson(self, formula=False, series_dict=None):
         """
         get a geojson-tuple of the resulting geometries, based on the 'predicted' relevant distances.
         Optional: The descriptive formula is added as an attribute to the result"""
-        prop_dictionary = dict(self.dict_predicted)
-        for key in prop_dictionary.keys():
-            for rel_dist in self.dict_predicted[key].keys():
-                formula = self.get_formula(self.dict_predicted[key][rel_dist][0][key])
-            p = None
-            if formula:
-                p = {key: {"formula": json.dumps(formula)}}
-            prop_dictionary[key] = dict.fromkeys(self.dict_predicted[key].keys(), p)
-        return geojson_tuple_from_dict_theme(
-            self.dict_predicted,
+        # prop_dictionary = dict(self.dict_predicted)
+
+        series_dict = series_dict or self.dict_predicted
+        prop_dictionary = defaultdict(dict)
+
+        for relevant_distance, results_dict in series_dict.items():
+            for theme_id, process_results in results_dict.items():
+                result = process_results["result"]
+                if formula:
+                    formula = self.get_formula(result)
+                    prop_dictionary[relevant_distance][theme_id] = {"formula": json.dumps(formula)}
+
+        return get_series_geojson_dict(
+            series_dict,
             crs=self.CRS,
-            name_id=self.name_thematic_id,
-            prop_dict=prop_dictionary,
+            id_field=self.name_thematic_id,
+            series_prop_dict=prop_dictionary,
         )
 
     def get_reference_as_geojson(self):
@@ -590,16 +552,8 @@ class Aligner:
             - result_relevant_difference.geojson: Contains the areas with relevant difference that has to be excluded from the result.
         """
         fcs = self.get_results_as_geojson(formula)
-        result_names = [
-            "result.geojson",
-            "result_diff.geojson",
-            "result_diff_plus.geojson",
-            "result_diff_min.geojson",
-            "result_relevant_intersection.geojson",
-            "result_relevant_difference.geojson",
-        ]
-        for count, fc in enumerate(fcs):
-            write_geojson(os.path.join(path, result_names[count]), fcs[count])
+        for name, fc in fcs.items():
+            write_geojson(os.path.join(path, name+'.geojson'), fc)
 
     def _prepare_reference_data(self):
         """
