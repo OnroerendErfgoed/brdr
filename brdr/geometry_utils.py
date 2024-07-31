@@ -375,14 +375,14 @@ def get_relevant_polygons_from_geom(geometry: BaseGeometry, buffer_distance: flo
 
 
 def calculate_geom_by_intersection_and_reference(
-        geom_intersection: BaseGeometry,
-        geom_reference: BaseGeometry,
-        is_openbaar_domein,
-        buffer_distance,
-        threshold_overlap_percentage,
-        threshold_exclusion_percentage=THRESHOLD_EXCLUSION_PERCENTAGE,
-        threshold_exclusion_area=THRESHOLD_EXCLUSION_AREA,
-    ):
+    geom_intersection: BaseGeometry,
+    geom_reference: BaseGeometry,
+    is_openbaar_domein,
+    buffer_distance,
+    threshold_overlap_percentage,
+    threshold_exclusion_percentage=THRESHOLD_EXCLUSION_PERCENTAGE,
+    threshold_exclusion_area=THRESHOLD_EXCLUSION_AREA,
+):
     """
     Calculates the geometry based on intersection and reference geometries.
 
@@ -424,16 +424,14 @@ def calculate_geom_by_intersection_and_reference(
     else:
         overlap = geom_intersection.area * 100 / geom_reference.area
 
-    if   (
+    if (
         overlap < threshold_exclusion_percentage
         or geom_intersection.area < threshold_exclusion_area
     ):
         return Polygon(), Polygon(), Polygon()
 
     geom_difference = safe_difference(geom_reference, geom_intersection)
-    geom_relevant_intersection = buffer_neg(
-        geom_intersection, buffer_distance
-    )
+    geom_relevant_intersection = buffer_neg(geom_intersection, buffer_distance)
     geom_relevant_difference = buffer_neg(geom_difference, buffer_distance)
     if (
         not geom_relevant_intersection.is_empty
@@ -465,15 +463,9 @@ def calculate_geom_by_intersection_and_reference(
             # geom = buffer_neg_pos(geom, buffer_distance)
             geom = get_relevant_polygons_from_geom(geom, buffer_distance)
         # TODO END
-    elif (
-        not geom_relevant_intersection.is_empty
-        and geom_relevant_difference.is_empty
-    ):
+    elif not geom_relevant_intersection.is_empty and geom_relevant_difference.is_empty:
         geom = geom_reference
-    elif (
-        geom_relevant_intersection.is_empty
-        and not geom_relevant_difference.is_empty
-    ):
+    elif geom_relevant_intersection.is_empty and not geom_relevant_difference.is_empty:
         # TODO: check needed
         # if overlap > threshold_overlap_percentage and openbaar domein:
         #     geom = snap_geom_to_reference(

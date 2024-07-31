@@ -554,7 +554,7 @@ def merge_process_results(
                 if geom.is_empty or geom is None:
                     continue
                 existing: BaseGeometry = grouped_results[id_theme_global][key]  # noqa
-                grouped_results[id_theme_global][key] = unary_union( # noqa
+                grouped_results[id_theme_global][key] = unary_union(  # noqa
                     [existing, geom]
                 )
 

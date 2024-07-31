@@ -313,7 +313,9 @@ class Aligner:
 
         for theme_id, diffs in diffs_dict.items():
             if len(diffs) != len(relevant_distances):
-                logging.warning(f"Number of computed diffs for thematic element {theme_id} does not match the number of relevant distances.")
+                logging.warning(
+                    f"Number of computed diffs for thematic element {theme_id} does not match the number of relevant distances."
+                )
                 continue
             diff_values = list(diffs.values())
             breakpoints, zero_streaks = get_breakpoints_zerostreak(
@@ -516,7 +518,9 @@ class Aligner:
                 result = process_results["result"]
                 if formula:
                     formula = self.get_formula(result)
-                    prop_dictionary[relevant_distance][theme_id] = {"formula": json.dumps(formula)}
+                    prop_dictionary[relevant_distance][theme_id] = {
+                        "formula": json.dumps(formula)
+                    }
 
         return get_series_geojson_dict(
             series_dict,
@@ -553,7 +557,7 @@ class Aligner:
         """
         fcs = self.get_results_as_geojson(formula)
         for name, fc in fcs.items():
-            write_geojson(os.path.join(path, name+'.geojson'), fc)
+            write_geojson(os.path.join(path, name + ".geojson"), fc)
 
     def _prepare_reference_data(self):
         """

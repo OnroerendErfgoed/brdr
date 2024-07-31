@@ -81,7 +81,11 @@ def _make_map(
     return ax
 
 
-def show_map(dict_results_by_distance: dict[float, dict[str, ProcessResult]], dict_thematic, dict_reference):
+def show_map(
+    dict_results_by_distance: dict[float, dict[str, ProcessResult]],
+    dict_thematic,
+    dict_reference,
+):
     """
     Show results on a map
     """
@@ -93,7 +97,7 @@ def show_map(dict_results_by_distance: dict[float, dict[str, ProcessResult]], di
         ax = plt.subplot(len_series_half, 2, i + 1)
         ax = _make_map(
             ax,
-            results, #TODO
+            results,  # TODO
             dict_thematic,
             dict_reference,
         )
