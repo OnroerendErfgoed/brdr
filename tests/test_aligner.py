@@ -116,7 +116,7 @@ class TestAligner(unittest.TestCase):
         self.sample_aligner.load_reference_data_dict(reference_dict)
         series = np.arange(0, 300, 10, dtype=int) / 100
         # predict which relevant distances are interesting to propose as resulting geometry
-        dict_predicted, _ = self.sample_aligner.predictor(
+        _, dict_predicted, _ = self.sample_aligner.predictor(
             relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
         )
         self.assertEqual(len(dict_predicted[0]), len(thematic_dict))

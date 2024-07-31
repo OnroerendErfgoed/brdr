@@ -326,7 +326,8 @@ class Aligner:
                 dict_predicted[zs[0]][theme_id] = dict_series[zs[0]][theme_id]
 
         self.dict_predicted = dict_predicted
-        return dict_predicted, diffs_dict
+
+        return dict_series, dict_predicted, diffs_dict,
 
     def process_series(
         self,
