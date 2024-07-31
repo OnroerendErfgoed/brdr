@@ -5,14 +5,10 @@ import numpy as np
 from brdr.aligner import Aligner
 from brdr.enums import GRBType
 from brdr.loader import GRBActualLoader
-from brdr.utils import (
-    get_oe_dict_by_ids,
-    multipolygons_to_singles,
-    diffs_from_dict_series,
-    filter_resulting_series_by_key,
-    get_breakpoints_zerostreak,
-    write_geojson,
-)
+from brdr.utils import diffs_from_dict_series
+from brdr.utils import get_breakpoints_zerostreak
+from brdr.utils import get_oe_dict_by_ids
+from brdr.utils import multipolygons_to_singles
 
 
 class TestExamples(unittest.TestCase):
@@ -43,12 +39,9 @@ class TestExamples(unittest.TestCase):
         aligner.load_reference_data_dict(dict_ref)
 
         rel_dist = 2
-        dict_results_by_distance = {
-            rel_dist: aligner.process_dict_thematic(rel_dist, 4)
-        }
-        results = dict_results_by_distance[rel_dist][0]
-        for key in results:
-            aligner.get_formula(results[key])
+        result_dict = aligner.process_dict_thematic(rel_dist, 4)
+        for process_results in result_dict.values():
+            aligner.get_formula(process_results["result"])
 
     def test_example_multi_to_single(self):
         aligner = Aligner()
@@ -60,14 +53,9 @@ class TestExamples(unittest.TestCase):
         aligner.load_reference_data_grb_actual(grb_type="gbg", partition=1000)
 
         rel_dist = 5
-        dict_results_by_distance = {}
-        dict_results_by_distance[rel_dist] = aligner.process_dict_thematic(rel_dist, 4)
-
-        results = dict_results_by_distance[rel_dist][0]
-
-        for key in results:
-            print(key)
-            print(aligner.get_formula(results[key]))
+        result_dict = aligner.process_dict_thematic(rel_dist, 4)
+        for process_results in result_dict.values():
+            aligner.get_formula(process_results["result"])
 
     def test_example_multipolygon(self):
         aligner0 = Aligner()
@@ -190,7 +178,7 @@ class TestExamples(unittest.TestCase):
             aligner0.dict_thematic,
         )
         aligner.load_reference_data_grb_actual(grb_type="adp", partition=1000)
-        dict_predicted, diffs = aligner.predictor()
+        dict_predicted, _ = aligner.predictor()
         self.assertGreater(len(dict_predicted), 0)
         fcs = aligner.get_predictions_as_geojson(formula=True)
         self.assertEqual(len(fcs), 6)
@@ -259,13 +247,10 @@ class TestExamples(unittest.TestCase):
                     dict_results_by_distance[st[0]] = aligner.process_dict_thematic(
                         st[0], 4
                     )
-                    dict_results_by_distance = filter_resulting_series_by_key(
-                        dict_results_by_distance, key
-                    )
 
     def test_example_predictor(self):
         aligner = Aligner()
-        ##Load thematic data & reference data
+        # Load thematic data & reference data
         dict_theme = get_oe_dict_by_ids([131635])
         aligner.load_thematic_data_dict(dict_theme)
         aligner.load_reference_data_grb_actual(
@@ -274,7 +259,7 @@ class TestExamples(unittest.TestCase):
 
         series = np.arange(0, 300, 10, dtype=int) / 100
         # predict which relevant distances are interesting to propose as resulting geometry
-        dict_predicted, diffs = aligner.predictor(
+        dict_predicted, _ = aligner.predictor(
             relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
         )
         for key in dict_predicted.keys():
