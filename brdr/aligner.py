@@ -432,44 +432,6 @@ class Aligner:
         self.logger.feedback_debug(str(dict_formula))
         return dict_formula
 
-    def get_last_version_date(self, geometry, grb_type=GRBType.ADP):
-        """
-        Retrieves the date of the last version for a specific geographic area within  GRB (parcels, buildings,...)).
-
-        This function queries the GRB-API to find the most recent version-date (=last update of object)
-        for reference data of the specified `grb_type` (e.g., ADP, GBG, KNW) within the boundary of the provided `geometry`.
-
-        Args:
-            geometry (BaseGeometry): A Shapely geometry representing the area of interest.
-            grb_type (GRBType, optional): The type of GRB data to consider. Defaults to GRBType.ADP (administrative plots).
-
-        Returns:
-            str: The date of the last version for the specified GRB data type within the area,
-                 formatted as a string according to the GRB API response (usually YYYY-MM-DD).
-
-            None: If no data is found for the given geometry and GRB type combination.
-        """
-        limit = DOWNLOAD_LIMIT
-        crs = self.CRS
-        bbox = str(geometry.bounds).strip("()")
-        if grb_type is None:
-            grb_type = "adp"
-        grb_type = grb_type.upper()
-        actual_url = (
-            "https://geo.api.vlaanderen.be/GRB/ogc/features/collections/"
-            + grb_type
-            + "/items?"
-            "limit=" + str(limit) + "&crs=" + crs + "&bbox-crs=" + crs + "&bbox=" + bbox
-        )
-        update_dates = []
-        collection = get_collection(actual_url, limit)
-        if "features" not in collection:
-            return None
-        for c in collection["features"]:
-            update_dates.append(c["properties"]["VERSDATUM"])
-        update_dates = sorted(update_dates, reverse=True)
-        return update_dates[0]
-
     def get_results_as_dict(self, merged=True):
         """
         get a dict-tuple of the results
