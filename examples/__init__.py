@@ -4,11 +4,10 @@ from math import ceil
 import geopandas as gpd
 import matplotlib.pyplot as plt
 from brdr.typings import ProcessResult
+from brdr.utils import processresult_to_dicts
 
 
-def _make_map(
-    ax, results, results_diff_pos, results_diff_neg, thematic_dict, reference_dict
-):
+def _make_map(ax, result_dict, thematic_dict, reference_dict):
     """
     Fills an ax with a map:
      * reference_dict
@@ -19,6 +18,10 @@ def _make_map(
     , so it can be used in matplotlib
     """
     try:
+        dicts = processresult_to_dicts(result_dict)
+        results = dicts[0]
+        results_diff_pos = dicts[1]
+        results_diff_neg = dicts[2]
         if ax is None:
             ax = plt.subplot(1, 1, 1)
         ax_result = gpd.GeoSeries(list(results.values())).plot(
@@ -62,7 +65,7 @@ def _make_map(
             label="diff_min",
             zorder=5,
         )
-        # save the extent of original, resuling and difference - geometries
+        # save the extent of original, resulting and difference - geometries
         axis_extent = list(ax_thematic_dict.viewLim.intervalx) + list(
             ax_thematic_dict.viewLim.intervaly
         )
@@ -97,7 +100,7 @@ def show_map(
         ax = plt.subplot(len_series_half, 2, i + 1)
         ax = _make_map(
             ax,
-            results,  # TODO
+            dict_results_by_distance[dist],
             dict_thematic,
             dict_reference,
         )
@@ -107,6 +110,22 @@ def show_map(
     # plt.tight_layout()
     # Show figure
     plt.show()
+
+
+def print_formula(dict_results_by_distance, aligner):
+    for rel_dist in dict_results_by_distance:
+        for key in dict_results_by_distance[rel_dist]:
+            print(
+                "--------Formula for ID  "
+                + str(key)
+                + " with relevant distance "
+                + str(rel_dist)
+                + "--------------"
+            )
+            print(
+                aligner.get_formula(dict_results_by_distance[rel_dist][key]["result"])
+            )
+    return
 
 
 def plot_series(

@@ -4,7 +4,9 @@ import shapely
 from shapely import is_empty
 from shapely.geometry import Polygon
 
-from brdr.utils import _filter_dict_by_key
+from brdr.constants import MULTI_SINGLE_ID_SEPARATOR
+from brdr.typings import ProcessResult
+from brdr.utils import _filter_dict_by_key, merge_process_results
 from brdr.utils import diffs_from_dict_series
 from brdr.utils import get_breakpoints_zerostreak
 from brdr.utils import get_collection
@@ -163,3 +165,14 @@ class TestUtils(unittest.TestCase):
         )
         collection = get_collection(ref_url, limit)
         self.assertTrue("features" in collection.keys())
+
+    def test_merge_process_results(self):
+        key_1 = "key" + MULTI_SINGLE_ID_SEPARATOR + "1"
+        key_2 = "key" + MULTI_SINGLE_ID_SEPARATOR + "2"
+        process_result_1 = ProcessResult()
+        process_result_1["result"] = Polygon([(0, 0), (10, 0), (10, 10), (0, 10)])
+        process_result_2 = ProcessResult()
+        process_result_2["result"] = Polygon([(0, 0), (8, 0), (8, 8), (0, 8)])
+        testdict = {key_1: process_result_1, key_2: process_result_2}
+        merged_testdict = merge_process_results(testdict)
+        assert len(merged_testdict.keys()) == 1

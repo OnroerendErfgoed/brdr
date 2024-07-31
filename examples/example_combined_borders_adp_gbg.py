@@ -1,5 +1,8 @@
+from brdr.enums import GRBType
+from brdr.loader import GRBActualLoader, GeoJsonFileLoader
 from brdr.aligner import Aligner
-from examples import show_map
+from brdr.utils import polygonize_reference_data
+from examples import show_map, print_formula
 
 # example to test what happens if we combine borders
 # (so thematic data can use both polygons)
@@ -16,19 +19,23 @@ if __name__ == "__main__":
     aligner = Aligner()
 
     # Load thematic data & reference data
-    aligner.load_thematic_data_file(
-        "../tests/testdata/test_parcel_vs_building.geojson", "theme_id"
+    loader = GeoJsonFileLoader(
+        "../tests/testdata/test_parcel_vs_building.geojson", id_property="theme_id"
     )
-    dict_adp, name_reference_id_adp = aligner.get_reference_data_dict_grb_actual(
+    aligner.load_thematic_data(loader)
+
+    adploader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
+    gbgloader = GRBActualLoader(grb_type=GRBType.GBG, partition=1000, aligner=aligner)
+    dict_adp, name_reference_id_adp = adploader.get_reference_data_dict_grb_actual(
         grb_type="adp", partition=1000
     )
-    dict_gbg, name_reference_id_gbg = aligner.get_reference_data_dict_grb_actual(
+    dict_gbg, name_reference_id_gbg = gbgloader.get_reference_data_dict_grb_actual(
         grb_type="gbg", partition=1000
     )
     dict_adp_gbg = dict_adp
     dict_adp_gbg.update(dict_gbg)  # combine 2 dictionaries
     # make a polygonized version of the reference data with non-overlapping polygons
-    dict_ref = dict_adp_gbg
+    dict_ref = polygonize_reference_data(dict_adp_gbg)
     aligner.load_reference_data_dict(dict_ref)
 
     rel_dist = 2
@@ -36,8 +43,4 @@ if __name__ == "__main__":
     dict_results_by_distance[rel_dist] = aligner.process_dict_thematic(rel_dist, 4)
     aligner.export_results("output/")
     show_map(dict_results_by_distance, aligner.dict_thematic, aligner.dict_reference)
-
-    results = dict_results_by_distance[rel_dist][0]
-
-    for key in results:
-        aligner.get_formula(results[key])
+    print_formula(dict_results_by_distance, aligner)

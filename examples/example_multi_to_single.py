@@ -1,7 +1,7 @@
 from brdr.aligner import Aligner
 from brdr.utils import get_oe_dict_by_ids
 from brdr.utils import multipolygons_to_singles
-from examples import show_map
+from examples import show_map, print_formula
 
 # example to Change a dictionary form multipolygon to single before executing the
 # aligner. Can be used on the thematic dictionary as the reference dictionary
@@ -26,11 +26,7 @@ if __name__ == "__main__":
     aligner.export_results("output/")
     show_map(dict_results_by_distance, aligner.dict_thematic, aligner.dict_reference)
 
-    results = dict_results_by_distance[rel_dist][0]
-
-    for key in results:
-        print(key)
-        print(aligner.get_formula(results[key]))
+    print_formula(dict_results_by_distance, aligner)
 
     # WITH MULTI_TO_SINGLE
     # Initiate brdr
@@ -47,8 +43,4 @@ if __name__ == "__main__":
     aligner.export_results("output/")
     show_map(dict_results_by_distance, aligner.dict_thematic, aligner.dict_reference)
 
-    results = dict_results_by_distance[rel_dist][0]
-
-    for key in results:
-        print(key)
-        print(aligner.get_formula(results[key]))
+    print_formula(dict_results_by_distance, aligner)

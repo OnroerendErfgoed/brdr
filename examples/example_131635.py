@@ -2,7 +2,7 @@ from brdr.aligner import Aligner
 from brdr.enums import GRBType
 from brdr.loader import DictLoader, GRBActualLoader
 from brdr.utils import get_oe_dict_by_ids
-from examples import show_map
+from examples import show_map, print_formula
 
 if __name__ == "__main__":
     # EXAMPLE for a thematic Polygon (aanduid_id 131635)
@@ -24,6 +24,4 @@ if __name__ == "__main__":
     aligner.export_results("output/", formula=True)
 
     show_map(dict_results_by_distance, aligner.dict_thematic, aligner.dict_reference)
-    for key in dict_results_by_distance[rel_dist][0]:
-        print(key)
-        print(aligner.get_formula(dict_results_by_distance[rel_dist][0][key]))
+    print_formula(dict_results_by_distance, aligner)

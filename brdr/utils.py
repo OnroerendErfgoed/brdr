@@ -571,3 +571,58 @@ def geom_from_dict(dict, key):
     else:
         geom = Polygon()
     return geom
+
+
+def processresult_to_dicts(dict_processresult):
+    """
+    Transforms a dictionary with all ProcessResults to individual dictionaries of the results
+    Args:
+        dict_processresult:
+
+    Returns:
+
+    """
+    results = {}
+    results_diff = {}
+    results_diff_plus = {}
+    results_diff_min = {}
+    results_relevant_intersection = {}
+    results_relevant_diff = {}
+    for key in dict_processresult:
+        processresult = dict_processresult[key]
+        results[key] = processresult["result"]
+        results_diff[key] = processresult["result_diff"]
+        results_diff_plus[key] = processresult["result_diff_plus"]
+        results_diff_min[key] = processresult["result_diff_min"]
+        results_relevant_intersection[key] = processresult[
+            "result_relevant_intersection"
+        ]
+        results_relevant_diff[key] = processresult["result_relevant_diff"]
+
+    return (
+        results,
+        results_diff,
+        results_diff_plus,
+        results_diff_min,
+        results_relevant_intersection,
+        results_relevant_diff,
+    )
+
+
+def dict_predicted_by_keys(dict_predicted):
+    """
+    Transforms a dict_predicted into a dictionary with theme_id as keys, and a dictionary with all predicted distances and their resulting geometry as a value.
+    Args:
+        dict_predicted: a dictionary result of the 'predictor'
+
+    Returns: dictionary with theme_id as keys, and a dictionary with all predicted distances and their resulting geometry as a value.
+
+    """
+    dict_predicted_by_keys = {}
+    for dist, res in dict_predicted.items():
+        for key in dict_predicted[dist]:
+            result = {key: res[key]}
+            if key not in dict_predicted_by_keys.keys():
+                dict_predicted_by_keys[key] = {}
+            dict_predicted_by_keys[key][dist] = result
+    return dict_predicted_by_keys
