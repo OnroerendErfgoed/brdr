@@ -145,7 +145,7 @@ class Aligner:
             threshold_overlap_percentage (int): The buffer distance (positive or negative).
 
         Returns:
-            tuple[BaseGeometry...] : A tuple containing the resulting geometries:
+            ProcessResult : A dict containing the resulting geometries:
 
             *   result (BaseGeometry): The resulting output geometry
             *   result_diff (BaseGeometry): The resulting difference output geometry
@@ -282,7 +282,7 @@ class Aligner:
         4. **Predict Interesting Distances:**
             - The function considers distances corresponding to breakpoints and zero-streaks as potentially interesting for further analysis.
             - These distances are stored in a dictionary (`dict_predicted`) with the thematic element key as the outer key.
-            - Additionally, the corresponding results (tuples) from the distance series for those distances are included.
+            - Additionally, the corresponding results from the distance series for those distances are included.
 
         5. **Filter Results:**
             - The function might further filter the predicted results for each thematic element based on the element key (using `filter_resulting_series_by_key`).
@@ -297,7 +297,7 @@ class Aligner:
                 - Keys: Thematic element identifiers from `self.dict_thematic`.
                 - Values: Dictionaries with the following structure for each thematic element:
                     - Keys: Distances identified as interesting (breakpoints or zero-streaks).
-                    - Values: Tuples containing results (likely specific to your implementation) from the distance series for the corresponding distance.
+                    - Values: dicts containing results (likely specific to your implementation) from the distance series for the corresponding distance.
 
         Logs:
             - Debug logs the thematic element key being processed.
@@ -350,8 +350,8 @@ class Aligner:
             dict: A dictionary containing the resulting dictionaries for a series of relevant distances:
 
                 {
-                    'relevant_distance_1': (tuple of resulting dictionaries),
-                    'relevant_distance_2': (tuple of resulting dictionaries),
+                    'relevant_distance_1': {theme_id_1: (ProcessResult), theme_id_2: (ProcessResult), ...},
+                    'relevant_distance_2': {theme_id_1: (ProcessResult), theme_id_2: (ProcessResult), ...},
                     ...
                 }
         """
@@ -434,7 +434,7 @@ class Aligner:
 
     def get_results_as_dict(self, merged=True):
         """
-        get a dict-tuple of the results
+        get a dict of the results
 
         Args:
             merged (bool, optional): Whether to merge the results for each thematic element. Defaults to True.
@@ -468,9 +468,8 @@ class Aligner:
 
     def get_predictions_as_geojson(self, formula=False, series_dict=None):
         """
-        get a geojson-tuple of the resulting geometries, based on the 'predicted' relevant distances.
+        get a dictionary containing of the resulting geometries as geojson, based on the 'predicted' relevant distances.
         Optional: The descriptive formula is added as an attribute to the result"""
-        # prop_dictionary = dict(self.dict_predicted)
 
         series_dict = series_dict or self.dict_predicted
         prop_dictionary = defaultdict(dict)
@@ -754,7 +753,7 @@ class Aligner:
             geom_thematic (BaseGeometry): The input geometry
 
         Returns:
-            tuple: A tuple containing the resulting output geometries:
+            ProcessResult: A dictionary containing the resulting output geometries:
 
             *   result (BaseGeometry): The resulting output geometry
             *   result_diff (BaseGeometry): The resulting difference output geometry
