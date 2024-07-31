@@ -5,13 +5,10 @@ import numpy as np
 from brdr.aligner import Aligner
 from brdr.enums import GRBType
 from brdr.loader import GRBActualLoader
-from brdr.utils import (
-    get_oe_dict_by_ids,
-    multipolygons_to_singles,
-    diffs_from_dict_series,
-    get_breakpoints_zerostreak,
-    write_geojson,
-)
+from brdr.utils import diffs_from_dict_series
+from brdr.utils import get_breakpoints_zerostreak
+from brdr.utils import get_oe_dict_by_ids
+from brdr.utils import multipolygons_to_singles
 
 
 class TestExamples(unittest.TestCase):
@@ -181,7 +178,7 @@ class TestExamples(unittest.TestCase):
             aligner0.dict_thematic,
         )
         aligner.load_reference_data_grb_actual(grb_type="adp", partition=1000)
-        dict_predicted, diffs = aligner.predictor()
+        dict_predicted, _ = aligner.predictor()
         self.assertGreater(len(dict_predicted), 0)
         fcs = aligner.get_predictions_as_geojson(formula=True)
         self.assertEqual(len(fcs), 6)
@@ -262,7 +259,7 @@ class TestExamples(unittest.TestCase):
 
         series = np.arange(0, 300, 10, dtype=int) / 100
         # predict which relevant distances are interesting to propose as resulting geometry
-        dict_predicted, diffs = aligner.predictor(
+        dict_predicted, _ = aligner.predictor(
             relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
         )
         for key in dict_predicted.keys():

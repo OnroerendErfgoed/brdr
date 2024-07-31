@@ -21,7 +21,6 @@ class TestExamples:
         )
 
         aligner.dict_thematic = thematic_loader.load_data()
-        old_thematic_data = aligner.dict_thematic
         aligner.dict_reference = reference_loader.load_data()
         assert aligner.dict_reference is not None
 

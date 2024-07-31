@@ -8,13 +8,12 @@ from shapely.geometry import Polygon
 from shapely.geometry import shape
 
 from brdr.aligner import Aligner
-from brdr.typings import ProcessResult
 from brdr.enums import OpenbaarDomeinStrategy
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import grid_bounds
-from brdr.loader import GRBActualLoader
 from brdr.loader import GeoJsonLoader
 from brdr.typings import FeatureCollection
+from brdr.typings import ProcessResult
 
 
 class TestAligner(unittest.TestCase):
@@ -128,7 +127,7 @@ class TestAligner(unittest.TestCase):
         self.sample_aligner.load_reference_data_dict(reference_dict)
         series = np.arange(0, 300, 10, dtype=int) / 100
         # predict which relevant distances are interesting to propose as resulting geometry
-        dict_predicted, diffs = self.sample_aligner.predictor(
+        dict_predicted, _ = self.sample_aligner.predictor(
             relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
         )
         self.assertEqual(len(dict_predicted[0]), len(thematic_dict))
@@ -250,7 +249,6 @@ class TestAligner(unittest.TestCase):
                 }
             ],
         }
-        aligner.thematic_input = geojson
         thematic_loader = GeoJsonLoader(_input=geojson, id_property="theme_identifier")
         aligner.dict_thematic = thematic_loader.load_data()
         assert aligner.dict_thematic == {"4": shape(geojson["features"][0]["geometry"])}

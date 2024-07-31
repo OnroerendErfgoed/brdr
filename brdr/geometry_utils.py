@@ -10,7 +10,6 @@ from shapely import intersection
 from shapely import is_empty
 from shapely import make_valid
 from shapely import symmetric_difference
-from shapely import to_wkt
 from shapely import unary_union
 from shapely import union
 from shapely.geometry.base import BaseGeometry
@@ -19,8 +18,6 @@ from brdr.constants import MITRE_LIMIT
 from brdr.constants import QUAD_SEGMENTS
 from brdr.constants import THRESHOLD_EXCLUSION_AREA
 from brdr.constants import THRESHOLD_EXCLUSION_PERCENTAGE
-
-log = logging.getLogger(__name__)
 
 
 def buffer_neg_pos(geometry, buffer_value):

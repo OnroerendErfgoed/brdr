@@ -79,7 +79,6 @@ class TestUtils(unittest.TestCase):
             "ref1": Polygon([(0, 0), (2, 0), (2, 1), (1, 1), (0, 0.5)]),
             "ref2": Polygon([(1, 0), (3, 0), (3, 2), (1, 2)]),
         }
-        self.original_data = data
         result = polygonize_reference_data(data.copy())
         # Assert expected number of features (might be more than original due to splitting)
         self.assertGreaterEqual(len(result), 2)
