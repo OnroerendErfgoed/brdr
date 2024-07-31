@@ -1,27 +1,27 @@
 import logging
-from datetime import date
-from shapely.geometry.base import BaseGeometry
+from datetime import date, datetime
 from brdr.constants import DOWNLOAD_LIMIT, DEFAULT_CRS
 from brdr.enums import GRBType
 import numpy as np
 from shapely import STRtree
 from shapely.geometry import shape
-from brdr.aligner import Aligner
-from brdr.loader import GeoJsonLoader
 from brdr.utils import get_collection
-from brdr.utils import get_oe_geojson_by_bbox
 
 log = logging.getLogger(__name__)
 
 
 def is_grb_changed(
-    geometry, grb_type=GRBType.ADP, date_start=date.today(), date_end=date.today()
+    geometry,
+    grb_type=GRBType.ADP,
+    date_start=date.today(),
+    date_end=date.today(),
 ):
-    # TODO: handle date-field correct
     """
     checks if a geometry is possibly affected by changes in the reference layer during a specified timespan
     """
     last_version_date = get_last_version_date(geometry, grb_type=grb_type)
+    if last_version_date is None:
+        return None
     if last_version_date > date_start and last_version_date < date_end:
         return True
     return False
@@ -51,7 +51,7 @@ def get_geoms_affected_by_grb_change(
                 affected_dict[key] = geom
         return affected_dict
     else:
-        # TODO: check if temporal filter on VERSDATE is possible, by datetime, or by regex?
+        # TODO: check if temporal filter on VERSDATE is possible, by datetime, or by regex?: https://portal.ogc.org/files/96288
         bbox = []
         version_date = (
             "2023-01-01"  # all changes between this date and NOW will be found
@@ -95,7 +95,6 @@ def get_geoms_affected_by_grb_change(
 def get_last_version_date(
     geometry, grb_type=GRBType.ADP, crs=DEFAULT_CRS, limit=DOWNLOAD_LIMIT
 ):
-    # TODO: handle date-field correct
     """
     Retrieves the date of the last version for a specific geographic area within  GRB (parcels, buildings,...)).
 
@@ -115,9 +114,10 @@ def get_last_version_date(
 
     limit = limit
     crs = crs
+    # TODO: Change implementation by bbox by a real intersection?: https://portal.ogc.org/files/96288
+    # *directly possibly by feature API
+    # *or, by filtering the bbox features on intersection
     bbox = str(geometry.bounds).strip("()")
-    if grb_type is None:
-        grb_type = "adp"
     grb_type = grb_type.upper()
     actual_url = (
         "https://geo.api.vlaanderen.be/GRB/ogc/features/collections/"
@@ -130,7 +130,12 @@ def get_last_version_date(
     if "features" not in collection:
         return None
     for c in collection["features"]:
-        update_dates.append(c["properties"]["VERSDATUM"])
-        update_dates = sorted(update_dates, reverse=True)
+        date_format = "%Y-%m-%d"
+        versiondate = datetime.strptime(
+            c["properties"]["VERSDATUM"], date_format
+        ).date()
+        update_dates.append(versiondate)
+
+    update_dates = sorted(update_dates, reverse=True)
 
     return update_dates[0]

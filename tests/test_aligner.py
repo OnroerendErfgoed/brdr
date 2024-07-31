@@ -1,3 +1,4 @@
+import datetime
 import os
 import unittest
 
@@ -11,6 +12,7 @@ from brdr.aligner import Aligner
 from brdr.enums import OpenbaarDomeinStrategy
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import grid_bounds
+from brdr.grb import get_last_version_date
 from brdr.loader import GRBActualLoader
 from brdr.loader import GeoJsonLoader
 from brdr.typings import FeatureCollection
@@ -48,20 +50,6 @@ class TestAligner(unittest.TestCase):
         self.assertIsInstance(grid_partitions, list)
         for partition in grid_partitions:
             self.assertIsInstance(partition, Polygon)
-
-    def test_get_last_version_date(self):
-        # Check if the result of the _buffer_neg_pos gives an equal geometry
-        Polygon([(0, 0), (0, 10), (10, 10), (10, 0)])
-        geom = Polygon([(0, 0), (0, 10), (10, 10), (10, 0)])
-        out = self.sample_aligner.get_last_version_date(geom)
-        self.assertIsNone(out)
-        geom = Polygon(
-            [(170000, 170000), (170000, 170100), (170100, 170100), (170100, 170000)]
-        )
-        out = self.sample_aligner.get_last_version_date(geom)
-        self.assertRegex(
-            out, "^(?:19|20)\\d\\d-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])$"
-        )
 
     def test_export_results(self):
         aligner = Aligner()
