@@ -180,7 +180,9 @@ class TestExamples(unittest.TestCase):
             aligner0.dict_thematic,
         )
         aligner.load_reference_data_grb_actual(grb_type="adp", partition=1000)
-        dict_series, dict_predicted, dict_diffs = aligner.predictor()
+
+        _, dict_predicted, _ = aligner.predictor()
+
         self.assertGreater(len(dict_predicted), 0)
         fcs = aligner.get_predictions_as_geojson(formula=True)
         self.assertEqual(len(fcs), 6)
@@ -261,7 +263,8 @@ class TestExamples(unittest.TestCase):
 
         series = np.arange(0, 300, 10, dtype=int) / 100
         # predict which relevant distances are interesting to propose as resulting geometry
-        dict_series, dict_predicted, dict_diffs = aligner.predictor(
+
+        _, dict_predicted, _ = aligner.predictor(
             relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
         )
         for key in dict_predicted.keys():
