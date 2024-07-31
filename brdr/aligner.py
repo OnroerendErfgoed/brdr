@@ -1,7 +1,9 @@
 import json
 import logging
 import os
+from collections import defaultdict
 from math import pi
+from typing import Iterable
 
 import numpy as np
 from shapely import GeometryCollection
@@ -24,14 +26,12 @@ from brdr.constants import CORR_DISTANCE
 from brdr.constants import DEFAULT_CRS
 from brdr.constants import DOWNLOAD_LIMIT
 from brdr.constants import THRESHOLD_CIRCLE_RATIO
-from brdr.constants import THRESHOLD_EXCLUSION_AREA
-from brdr.constants import THRESHOLD_EXCLUSION_PERCENTAGE
 from brdr.enums import GRBType
 from brdr.enums import OpenbaarDomeinStrategy
 from brdr.geometry_utils import buffer_neg
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import buffer_pos
-from brdr.geometry_utils import get_relevant_polygons_from_geom
+from brdr.geometry_utils import calculate_geom_by_intersection_and_reference
 from brdr.geometry_utils import safe_difference
 from brdr.geometry_utils import safe_intersection
 from brdr.geometry_utils import safe_symmetric_difference
@@ -43,16 +43,13 @@ from brdr.loader import GeoJsonLoader
 from brdr.loader import GeoJsonUrlLoader
 from brdr.loader import Loader
 from brdr.logger import Logger
+from brdr.typings import ProcessResult
 from brdr.utils import diffs_from_dict_series
-from brdr.utils import filter_resulting_series_by_key
 from brdr.utils import geojson_from_dict
-from brdr.utils import (
-    geojson_tuple_from_dict_theme,
-)
-from brdr.utils import geojson_tuple_from_series
+from brdr.utils import get_series_geojson_dict
 from brdr.utils import get_breakpoints_zerostreak
 from brdr.utils import get_collection
-from brdr.utils import merge_geometries_by_theme_id
+from brdr.utils import merge_process_results
 from brdr.utils import write_geojson
 
 logging.basicConfig(
@@ -107,7 +104,7 @@ class Aligner:
         # name of the identifier-field of the thematic data (id has to be unique)
         self.name_thematic_id = "theme_identifier"
         # dictionary to store all thematic geometries to handle
-        self.dict_thematic = {}
+        self.dict_thematic: dict[str, BaseGeometry] = {}
 
         # reference
         self.name_reference_id = "ref_identifier"  # name of the identifier-field of the reference data (id has to be unique,f.e CAPAKEY for GRB-parcels)
@@ -115,20 +112,10 @@ class Aligner:
         self.reference_union = None  # to save a unioned geometry of all reference polygons; needed for calculation in most OD-strategies
 
         # output-dictionaries (when processing dict_thematic)
-        self.dict_result = None  # dictionary to save resulting geometries
-        self.dict_result_diff = None  # dictionary to save global resulting differences
-        self.dict_result_diff_plus = (
-            None  # dictionary to save positive resulting differences
-        )
-        self.dict_result_diff_min = (
-            None  # dictionary to save negative resulting differences
-        )
-        self.dict_relevant_intersection = (
-            None  # dictionary to save relevant_intersections
-        )
-        self.dict_relevant_difference = None  # dictionary to save relevant_differences
+        self.dict_result: dict[str, ProcessResult] = {}
+        # dictionary with the 'predicted' results, grouped by relevant distance
+        self.dict_predicted = dict[float, dict[str, ProcessResult]]
 
-        self.dict_predicted = None  # dictionary with the 'predicted' results
         # Coordinate reference system
         # thematic geometries and reference geometries are assumed to be in the same CRS
         # before loading into the Aligner. No CRS-transformation will be performed.
@@ -147,7 +134,7 @@ class Aligner:
         relevant_distance=1,
         od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
         threshold_overlap_percentage=50,
-    ) -> tuple[BaseGeometry, ...]:
+    ) -> ProcessResult:
         """
         method to align a geometry to the reference layer
 
@@ -155,7 +142,7 @@ class Aligner:
             geometry (BaseGeometry): The input geometric object.
             relevant_distance
             od_strategy
-            threshold_overlap_percentage (float): The buffer distance (positive or negative).
+            threshold_overlap_percentage (int): The buffer distance (positive or negative).
 
         Returns:
             tuple[BaseGeometry...] : A tuple containing the resulting geometries:
@@ -198,8 +185,12 @@ class Aligner:
                 geom,
                 relevant_intersection,
                 relevant_diff,
-            ) = self._calculate_geom_by_intersection_and_reference(
-                geom_intersection, geom_reference, False
+            ) = calculate_geom_by_intersection_and_reference(
+                geom_intersection,
+                geom_reference,
+                False,
+                self.relevant_distance / 2,
+                self.threshold_overlap_percentage,
             )
             self.logger.feedback_debug("intersection calculated")
             preresult = self.add_multi_polygons_from_geom_to_array(geom, preresult)
@@ -216,29 +207,20 @@ class Aligner:
         relevant_diff = unary_union(relevant_diff_array)
         if relevant_diff is None or relevant_diff.is_empty:
             relevant_diff = Polygon()
-        # POSTPROCESSING
-        (
-            result,
-            result_diff,
-            result_diff_plus,
-            result_diff_min,
-        ) = self._postprocess_preresult(preresult, geometry)
 
-        return (
-            result,
-            result_diff,
-            result_diff_plus,
-            result_diff_min,
-            relevant_intersection,
-            relevant_diff,
-        )
+        # POSTPROCESSING
+        result_dict = self._postprocess_preresult(preresult, geometry)
+
+        result_dict["result_relevant_intersection"] = relevant_intersection
+        result_dict["result_relevant_diff"] = relevant_diff
+        return result_dict
 
     def process_dict_thematic(
         self,
         relevant_distance=1,
         od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
         threshold_overlap_percentage=50,
-    ):
+    ) -> dict[str, ProcessResult]:
         """
         Aligns a thematic dictionary of geometries to the reference layer based on
         specified parameters. - method to align a thematic dictionary to the reference
@@ -253,51 +235,25 @@ class Aligner:
                 considering full overlap. Defaults to 50.
 
         Returns:
-            tuple: A tuple containing dictionaries with processed data:
-                - dict_result: Aligned thematic data for each thematic key.
-                - dict_result_diff: global differences between thematic data and reference data.
-                - dict_result_diff_plus: Positive differences.
-                - dict_result_diff_min: Negative differences.
-                - dict_relevant_intersection: relevant intersections.
-                - dict_relevant_diff: relevant differences.
+            dict: A dict containing processed data for each thematic key:
+                - result: Aligned thematic data.
+                - result_diff: global differences between thematic data and reference data.
+                - result_diff_plus: Positive differences.
+                - result_diff_min: Negative differences.
+                - relevant_intersection: relevant intersections.
+                - relevant_diff: relevant differences.
 
         """
-
-        dict_result = {}
-        dict_result_diff = {}
-        dict_result_diff_plus = {}
-        dict_result_diff_min = {}
-        dict_relevant_intersection = {}
-        dict_relevant_diff = {}
+        self.dict_result = {}
         for key in self.dict_thematic:
             self.logger.feedback_info("thematic id to process: " + str(key))
-            (
-                result,
-                result_diff,
-                result_diff_plus,
-                result_diff_min,
-                relevant_intersection,
-                relevant_diff,
-            ) = self.process_geometry(
+            self.dict_result[key] = self.process_geometry(
                 self.dict_thematic[key],
                 relevant_distance,
                 od_strategy,
                 threshold_overlap_percentage,
             )
-            dict_result[key] = result
-            dict_result_diff[key] = result_diff
-            dict_result_diff_plus[key] = result_diff_plus
-            dict_result_diff_min[key] = result_diff_min
-            dict_relevant_intersection[key] = relevant_intersection
-            dict_relevant_diff[key] = relevant_diff
-        self.dict_result = dict_result
-        self.dict_result_diff = dict_result_diff
-        self.dict_result_diff_plus = dict_result_diff_plus
-        self.dict_result_diff_min = dict_result_diff_min
-        self.dict_relevant_intersection = dict_relevant_intersection
-        self.dict_relevant_difference = dict_relevant_diff
-        self.logger.feedback_info("thematic dictionary processed")
-        return self.get_results_as_dict(merged=False)
+        return self.dict_result
 
     def predictor(
         self,
@@ -346,44 +302,45 @@ class Aligner:
         Logs:
             - Debug logs the thematic element key being processed.
         """
-        dict_predicted = {}
-        for key in self.dict_thematic.keys():
-            dict_predicted[key] = {}
+        dict_predicted = defaultdict(dict)
         dict_series = self.process_series(
             relevant_distances=relevant_distances,
             od_strategy=od_strategy,
             threshold_overlap_percentage=threshold_overlap_percentage,
         )
-        diffs = diffs_from_dict_series(dict_series, self.dict_thematic)
-        for key in diffs:
-            if len(diffs[key]) == len(relevant_distances):
-                lst_diffs = list(diffs[key].values())
-                breakpoints, zero_streaks = get_breakpoints_zerostreak(
-                    relevant_distances, lst_diffs
-                )
-                logging.debug(str(key))
-                for zs in zero_streaks:
-                    dict_predicted[key][zs[0]] = dict_series[zs[0]]
 
-                dict_predicted[key] = filter_resulting_series_by_key(
-                    dict_predicted[key], key
+        diffs_dict = diffs_from_dict_series(dict_series, self.dict_thematic)
+
+        for theme_id, diffs in diffs_dict.items():
+            if len(diffs) != len(relevant_distances):
+                logging.warning(
+                    f"Number of computed diffs for thematic element {theme_id} does not match the number of relevant distances."
                 )
+                continue
+            diff_values = list(diffs.values())
+            breakpoints, zero_streaks = get_breakpoints_zerostreak(
+                relevant_distances, diff_values
+            )
+            logging.debug(str(theme_id))
+            for zs in zero_streaks:
+                dict_predicted[zs[0]][theme_id] = dict_series[zs[0]][theme_id]
+
         self.dict_predicted = dict_predicted
-        return dict_predicted, diffs
+        return dict_predicted, diffs_dict
 
     def process_series(
         self,
-        relevant_distances,
+        relevant_distances: Iterable[float],
         od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
         threshold_overlap_percentage=50,
-    ):
+    ) -> dict[float, dict[str, ProcessResult]]:
         """
         Calculates the resulting dictionaries for thematic data based on a series of relevant
             distances.
 
         Args:
-            relevant_distances (list): A list of relevant distances (in meters) to
-                process.
+            relevant_distances (Iterable[float]): A series of relevant distances (in meters) to
+                process
             od_strategy (int, optional): The strategy for overlap detection.
                 Defaults to 1.
             threshold_overlap_percentage (float, optional): The threshold percentage for
@@ -415,7 +372,7 @@ class Aligner:
         )
         return dict_series
 
-    def get_formula(self, geometry, with_geom=False):
+    def get_formula(self, geometry: BaseGeometry, with_geom=False):
         """
         Calculates formula-related information based on the input geometry.
 
@@ -516,44 +473,29 @@ class Aligner:
     def get_results_as_dict(self, merged=True):
         """
         get a dict-tuple of the results
+
+        Args:
+            merged (bool, optional): Whether to merge the results for each thematic element. Defaults to True.
         """
         if merged:
-            return (
-                merge_geometries_by_theme_id(self.dict_result),
-                merge_geometries_by_theme_id(self.dict_result_diff),
-                merge_geometries_by_theme_id(self.dict_result_diff_plus),
-                merge_geometries_by_theme_id(self.dict_result_diff_min),
-                merge_geometries_by_theme_id(self.dict_relevant_intersection),
-                merge_geometries_by_theme_id(self.dict_relevant_difference),
-                merge_geometries_by_theme_id(self.dict_result),
-            )
-        else:
-            return (
-                self.dict_result,
-                self.dict_result_diff,
-                self.dict_result_diff_plus,
-                self.dict_result_diff_min,
-                self.dict_relevant_intersection,
-                self.dict_relevant_difference,
-            )
+            return merge_process_results(self.dict_result)
+        return self.dict_result
 
     def get_results_as_geojson(self, formula=False, merged=True):
         """
-        get a geojson-tuple of the results
+        convert the results to geojson feature collections
+
+        Args:
+            formula (bool, optional): Whether to include formula-related information in the output. Defaults to False.
+            merged (bool, optional): Whether to merge the results for each thematic element. Defaults to True.
         """
-        prop_dictionary = {}
-        p = {}
-        tuple_results = self.get_results_as_dict(merged=merged)
-        dict_results = tuple_results[0]
-        for key in dict_results.keys():
-            formula = self.get_formula(dict_results[key])
-            p[key] = {"formula": json.dumps(formula)}
-        prop_dictionary[self.relevant_distance] = p
-        return geojson_tuple_from_series(
-            {self.relevant_distance: tuple_results},
-            self.CRS,
-            self.name_thematic_id,
-            prop_dict=prop_dictionary,
+        results_dict = self.dict_result
+        if merged:
+            results_dict = merge_process_results(results_dict)
+
+        return self.get_predictions_as_geojson(
+            formula,
+            {self.relevant_distance: results_dict},
         )
 
     def get_predictions_as_dict(self):
@@ -562,23 +504,29 @@ class Aligner:
         """
         return self.dict_predicted
 
-    def get_predictions_as_geojson(self, formula=False):
+    def get_predictions_as_geojson(self, formula=False, series_dict=None):
         """
         get a geojson-tuple of the resulting geometries, based on the 'predicted' relevant distances.
-        Optional: The discriptive formula is added as an attribute to the result"""
-        prop_dictionary = dict(self.dict_predicted)
-        for key in prop_dictionary.keys():
-            for rel_dist in self.dict_predicted[key].keys():
-                formula = self.get_formula(self.dict_predicted[key][rel_dist][0][key])
-            p = None
-            if formula:
-                p = {key: {"formula": json.dumps(formula)}}
-            prop_dictionary[key] = dict.fromkeys(self.dict_predicted[key].keys(), p)
-        return geojson_tuple_from_dict_theme(
-            self.dict_predicted,
+        Optional: The descriptive formula is added as an attribute to the result"""
+        # prop_dictionary = dict(self.dict_predicted)
+
+        series_dict = series_dict or self.dict_predicted
+        prop_dictionary = defaultdict(dict)
+
+        for relevant_distance, results_dict in series_dict.items():
+            for theme_id, process_results in results_dict.items():
+                result = process_results["result"]
+                if formula:
+                    formula = self.get_formula(result)
+                    prop_dictionary[relevant_distance][theme_id] = {
+                        "formula": json.dumps(formula)
+                    }
+
+        return get_series_geojson_dict(
+            series_dict,
             crs=self.CRS,
-            name_id=self.name_thematic_id,
-            prop_dict=prop_dictionary,
+            id_field=self.name_thematic_id,
+            series_prop_dict=prop_dictionary,
         )
 
     def get_reference_as_geojson(self):
@@ -597,6 +545,7 @@ class Aligner:
 
         Args:
             path (str): The path to the directory where the GeoJSON files will be saved.
+            formula (bool, optional): Whether to include formula-related information in the output. Defaults to True.
 
         Details of exported files:
             - result.geojson: Contains the original thematic data from `self.dict_result`.
@@ -606,17 +555,9 @@ class Aligner:
             - result_relevant_intersection.geojson: Contains the areas with relevant intersection that has to be included in the result.
             - result_relevant_difference.geojson: Contains the areas with relevant difference that has to be excluded from the result.
         """
-        fcs = self.get_results_as_geojson(formula=formula)
-        result_names = [
-            "result.geojson",
-            "result_diff.geojson",
-            "result_diff_plus.geojson",
-            "result_diff_min.geojson",
-            "result_relevant_intersection.geojson",
-            "result_relevant_difference.geojson",
-        ]
-        for count, fc in enumerate(fcs):
-            write_geojson(os.path.join(path, result_names[count]), fcs[count])
+        fcs = self.get_results_as_geojson(formula)
+        for name, fc in fcs.items():
+            write_geojson(os.path.join(path, name + ".geojson"), fc)
 
     def _prepare_reference_data(self):
         """
@@ -810,8 +751,12 @@ class Aligner:
                 geom_thematic_od,
                 geom_relevant_intersection,
                 geom_relevant_diff,
-            ) = self._calculate_geom_by_intersection_and_reference(
-                geom_intersection, geom_reference, True
+            ) = calculate_geom_by_intersection_and_reference(
+                geom_intersection,
+                geom_reference,
+                True,
+                self.relevant_distance / 2,
+                self.threshold_overlap_percentage,
             )
             relevant_intersection_array = self.add_multi_polygons_from_geom_to_array(
                 geom_relevant_intersection, relevant_intersection_array
@@ -820,143 +765,6 @@ class Aligner:
                 geom_relevant_diff, relevant_difference_array
             )
         return geom_thematic_od, relevant_difference_array, relevant_intersection_array
-
-    def _calculate_geom_by_intersection_and_reference(
-        self,
-        geom_intersection: BaseGeometry,
-        geom_reference: BaseGeometry,
-        is_openbaar_domein,
-    ):
-        """
-        Calculates the geometry based on intersection and reference geometries.
-
-        Args:
-            geom_intersection (BaseGeometry): The intersection geometry.
-            geom_reference (BaseGeometry): The reference geometry.
-            is_openbaar_domein (bool): A flag indicating whether it's a public domain
-                (area not covered with reference polygon).
-
-        Returns:
-            tuple: A tuple containing the resulting geometries:
-
-            *   geom: BaseGeometry or None: The resulting geometry or None if conditions
-                are not met.
-            *   geom_relevant_intersection: BaseGeometry or None: The relevant
-                intersection.
-            *   geom_relevant_difference: BaseGeometry or None: The relevant difference.
-
-        Notes:
-            -   If the reference geometry area is 0, the overlap is set to 100%.
-            -   If the overlap is less than relevant_OVERLAP_PERCENTAGE or the
-                intersection area is less than relevant_OVERLAP_AREA, None is returned.
-            -   Otherwise, the relevant intersection and difference geometries are
-                calculated.
-            -   If both relevant intersection and difference are non-empty, the final
-                geometry is obtained by applying safe intersection and buffering.
-            -   If only relevant intersection is non-empty, the result is the reference
-                geometry.
-            -   If only relevant difference is non-empty, the result is None.
-        """
-        if geom_reference.area == 0:
-            overlap = 100
-        else:
-            overlap = geom_intersection.area * 100 / geom_reference.area
-        if (
-            overlap < THRESHOLD_EXCLUSION_PERCENTAGE
-            or geom_intersection.area < THRESHOLD_EXCLUSION_AREA
-        ):
-            return Polygon(), Polygon(), Polygon()
-        geom_difference = safe_difference(geom_reference, geom_intersection)
-        geom_relevant_intersection = buffer_neg(
-            geom_intersection, self.buffer_distance()
-        )
-        geom_relevant_difference = buffer_neg(geom_difference, self.buffer_distance())
-        if (
-            not geom_relevant_intersection.is_empty
-            and not geom_relevant_difference.is_empty
-        ):
-            # intersectie en difference relevant
-            geom_x = safe_intersection(
-                geom_reference,
-                safe_difference(
-                    geom_reference,
-                    safe_intersection(
-                        geom_difference,
-                        buffer_neg_pos(geom_difference, self.buffer_distance()),
-                    ),
-                ),
-            )
-            geom = safe_intersection(
-                geom_x,
-                buffer_pos(
-                    buffer_neg_pos(geom_x, self.buffer_distance()),
-                    self.buffer_distance(),
-                ),
-            )
-            # TODO BEGIN: experimental fix - check if it is ok in all cases?
-            # when calculating for OD, we create a 'virtual parcel'. When calculating this virtual parcel, it is buffered to take outer boundaries into account.
-            # This results in a side-effect that there are extra non-logical parts included in the result. The function below tries to exclude these non-logica parts.
-            # see eo_id 206363 with relevant distance=0.2m and SNAP_ALL_SIDE
-            if is_openbaar_domein:
-                # geom = buffer_neg_pos(geom, self.buffer_distance())
-                geom = get_relevant_polygons_from_geom(geom, self.buffer_distance())
-            # TODO END
-        elif (
-            not geom_relevant_intersection.is_empty
-            and geom_relevant_difference.is_empty
-        ):
-            geom = geom_reference
-        elif (
-            geom_relevant_intersection.is_empty
-            and not geom_relevant_difference.is_empty
-        ):
-            # TODO: check needed
-            # if overlap > threshold_overlap_percentage and openbaar domein:
-            #     geom = snap_geom_to_reference(
-            #       geom_intersection, geom_reference, relevant_distance
-            #   )
-            # else:
-            geom = geom_relevant_intersection  # (=empty geometry)
-        else:
-            if is_openbaar_domein:
-                geom = geom_relevant_intersection  # (=empty geometry)
-            # geom = snap_geom_to_reference (geom_intersection, geom_reference,
-            # relevant_distance)
-            elif self.threshold_overlap_percentage < 0:
-                # if we take a value of -1, the original border will be used
-                geom = geom_intersection
-            elif overlap > self.threshold_overlap_percentage:
-                geom = geom_reference
-            else:
-                geom = geom_relevant_intersection  # (=empty geometry)
-        return geom, geom_relevant_intersection, geom_relevant_difference
-
-    def get_relevant_polygons_from_geom(self, geom):
-        """
-        Get only the relevant parts (polygon) from a geometry.
-        Points, Lines and Polygons smaller than relevant distance are excluded from the result
-        """
-        if geom.is_empty or geom is None:
-            # If the input geometry is empty or None, do nothing.
-            return geom
-        else:
-            geom = make_valid(unary_union(geom))
-            # Create a GeometryCollection from the input geometry.
-            geometry_collection = GeometryCollection(geom)
-            array = []
-            for g in geometry_collection.geoms:
-                # Ensure each sub-geometry is valid.
-                g = make_valid(g)
-                if str(g.geom_type) in ["Polygon", "MultiPolygon"]:
-                    relevant_geom = buffer_neg(g, self.buffer_distance())
-                    if relevant_geom != None and not relevant_geom.is_empty:
-                        array.append(g)
-        return make_valid(unary_union(array))
-
-    @staticmethod
-    def _add_geom_to_dict(dictionary, geom, id_theme):
-        dictionary[id_theme] = geom
-        return
 
     # def _snap_geom_to_reference(self, geom_input, geom_reference, relevant_distance):
     # Deze functie werkt niet correct met Shapely. Deze vermijdt dat polygonen
@@ -969,7 +777,7 @@ class Aligner:
             self.reference_union = unary_union(list(self.dict_reference.values()))
         return self.reference_union
 
-    def _postprocess_preresult(self, preresult, geom_thematic):
+    def _postprocess_preresult(self, preresult, geom_thematic) -> ProcessResult:
         """
         Postprocess the preresult with the following actions to create the final result
         *Corrections for areas that differ more than the relevant distance
@@ -1108,11 +916,13 @@ class Aligner:
         )
         geom_result_diff_plus = safe_difference(geom_thematic_result, geom_thematic)
         geom_result_diff_min = safe_difference(geom_thematic, geom_thematic_result)
-        result_diff_plus = geom_result_diff_plus
-        result_diff_min = geom_result_diff_min
-        result = geom_thematic_result
-        result_diff = geom_result_diff
-        return result, result_diff, result_diff_plus, result_diff_min
+
+        return {
+            "result": geom_thematic_result,
+            "result_diff": geom_result_diff,
+            "result_diff_plus": geom_result_diff_plus,
+            "result_diff_min": geom_result_diff_min,
+        }
 
     @staticmethod
     def add_multi_polygons_from_geom_to_array(geom: BaseGeometry, array):

@@ -25,11 +25,11 @@ cligj==0.7.2
 contourpy==1.2.1
     # via matplotlib
 coverage==7.4.4
-    # via
-    #   coverage
-    #   pytest-cov
+    # via pytest-cov
 cycler==0.12.1
     # via matplotlib
+exceptiongroup==1.2.2
+    # via pytest
 fiona==1.9.6
     # via geopandas
 flake8==7.0.0
@@ -112,7 +112,13 @@ python-dateutil==2.9.0.post0
     #   pandas
 pytz==2024.1
     # via pandas
+pyyaml==6.0.1
+    # via responses
 requests==2.32.2
+    # via
+    #   brdr (pyproject.toml)
+    #   responses
+responses==0.25.3
     # via brdr (pyproject.toml)
 shapely==2.0.4
     # via
@@ -124,17 +130,30 @@ six==1.16.0
     #   python-dateutil
 toml==0.10.2
     # via brdr (pyproject.toml)
+tomli==2.0.1
+    # via
+    #   black
+    #   build
+    #   coverage
+    #   hatchling
+    #   mypy
+    #   pip-tools
+    #   pyproject-hooks
+    #   pytest
 trove-classifiers==2024.5.22
     # via hatchling
 types-requests==2.31.0.20240406
     # via brdr (pyproject.toml)
 typing-extensions==4.11.0
-    # via mypy
+    # via
+    #   black
+    #   mypy
 tzdata==2024.1
     # via pandas
 urllib3==2.2.1
     # via
     #   requests
+    #   responses
     #   types-requests
 wheel==0.43.0
     # via pip-tools
