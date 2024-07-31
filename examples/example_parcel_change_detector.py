@@ -5,6 +5,7 @@ from shapely import STRtree
 from shapely.geometry import shape
 
 from brdr.aligner import Aligner
+from brdr.grb import get_last_version_date
 from brdr.loader import GeoJsonLoader
 from brdr.utils import get_collection
 from brdr.utils import get_oe_geojson_by_bbox
@@ -154,20 +155,20 @@ for key in thematic_intersections:
             "geometrie excluded; bigger than " + str(excluded_area) + ": " + key
         )
         continue
-    geometry_base_result, *_ = base_aligner.process_geometry(
+    base_process_result = base_aligner.process_geometry(
         geometry_base_original, base_correction
     )
-    last_version_date = base_aligner.get_last_version_date(geometry_base_result)
-    logging.info("key:" + key + "-->last_version_date: " + last_version_date)
+    last_version_date = get_last_version_date(base_process_result["result"])
+    logging.info("key:" + key + "-->last_version_date: " + str(last_version_date))
     logging.info("Original formula: " + key)
-    base_formula = base_aligner.get_formula(geometry_base_result)
+    base_formula = base_aligner.get_formula(base_process_result["result"])
 
     for i in series:
-        geometry_actual_result, b, c, d, e, f = actual_aligner.process_geometry(
-            geometry_base_result, i
+        actual_process_result = actual_aligner.process_geometry(
+            base_process_result["result"], i
         )
         logging.info("New formula: " + key + " with relevant distance(m) : " + str(i))
-        actual_formula = actual_aligner.get_formula(geometry_actual_result)
+        actual_formula = actual_aligner.get_formula(actual_process_result["result"])
         diff = True
         if check_business_equality(
             base_formula, actual_formula

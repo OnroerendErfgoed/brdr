@@ -22,7 +22,7 @@ def is_grb_changed(
     last_version_date = get_last_version_date(geometry, grb_type=grb_type)
     if last_version_date is None:
         return None
-    if last_version_date > date_start and last_version_date < date_end:
+    if date_start <= last_version_date <= date_end:
         return True
     return False
 

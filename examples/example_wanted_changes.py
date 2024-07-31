@@ -4,11 +4,10 @@ from brdr.aligner import Aligner
 from brdr.utils import (
     get_breakpoints_zerostreak,
     diffs_from_dict_series,
-    filter_resulting_series_by_key,
     write_geojson,
     get_series_geojson_dict,
 )
-from examples import plot_series, show_map
+from examples import plot_series, show_map, print_formula
 
 # Press the green button in the gutter to run the script.
 if __name__ == "__main__":
@@ -38,40 +37,39 @@ if __name__ == "__main__":
     aligner.export_results("output/")
     show_map(dict_results_by_distance, aligner.dict_thematic, aligner.dict_reference)
     # Possibility to get the descriptive formula of a thematic feature
-    results = dict_results_by_distance[rel_dist][0]
-    for key in results:
-        print(key)
-        print(aligner.get_formula(results[key]))
+    print_formula(dict_results_by_distance, aligner)
 
     # Example how to use a series (for histogram)
     series = np.arange(0, 500, 10, dtype=int) / 100
     dict_series = aligner.process_series(series, 4, 50)
     resulting_areas = diffs_from_dict_series(dict_series, aligner.dict_thematic)
-    fc = get_series_geojson_dict(dict_series, aligner.CRS, aligner.name_thematic_id)
-    write_geojson("output/series.geojson", fc[0])
-    write_geojson("output/series_diff.geojson", fc[1])
-    write_geojson("output/series_relevant_difference.geojson", fc[5])
-    plot_series(series, resulting_areas)
-    for key in resulting_areas:
-        if len(resulting_areas[key]) == len(series):
-            lst_diffs = list(resulting_areas[key].values())
-            extremes, zero_streak = get_breakpoints_zerostreak(series, lst_diffs)
-            print(str(key))
-            for extremum in extremes:
-                print(f"{extremum[0]:.2f}, {extremum[1]:.2f} ({extremum[2]})")
-            for st in zero_streak:
-                print(
-                    f"{st[0]:.2f} - {st[1]:.2f} -{st[2]:.2f} - {st[3]:.2f} - startextreme {st[4]:.2f} "
-                )
-                dict_results_by_distance = {}
-                dict_results_by_distance[st[0]] = aligner.process_dict_thematic(
-                    st[0], 4
-                )
-                dict_results_by_distance = filter_resulting_series_by_key(
-                    dict_results_by_distance, key
-                )
-                show_map(
-                    dict_results_by_distance,
-                    {key: aligner.dict_thematic[key]},
-                    aligner.dict_reference,
-                )
+    # TODO
+    # fc = get_series_geojson_dict(dict_series, aligner.CRS, aligner.name_thematic_id)
+    # write_geojson("output/series.geojson", fc[0])
+    # write_geojson("output/series_diff.geojson", fc[1])
+    # write_geojson("output/series_relevant_difference.geojson", fc[5])
+    # plot_series(series, resulting_areas)
+    # for key in resulting_areas:
+    #     if len(resulting_areas[key]) == len(series):
+    #         lst_diffs = list(resulting_areas[key].values())
+    #         extremes, zero_streak = get_breakpoints_zerostreak(series, lst_diffs)
+    #         print(str(key))
+    #         for extremum in extremes:
+    #             print(f"{extremum[0]:.2f}, {extremum[1]:.2f} ({extremum[2]})")
+    #         for st in zero_streak:
+    #             print(
+    #                 f"{st[0]:.2f} - {st[1]:.2f} -{st[2]:.2f} - {st[3]:.2f} - startextreme {st[4]:.2f} "
+    #             )
+    #             dict_results_by_distance = {}
+    #             dict_results_by_distance[st[0]] = aligner.process_dict_thematic(
+    #                 st[0], 4
+    #             )
+    #
+    #             dict_results_by_distance = filter_resulting_series_by_key(
+    #                 dict_results_by_distance, key
+    #             )
+    #             show_map(
+    #                 dict_results_by_distance,
+    #                 {key: aligner.dict_thematic[key]},
+    #                 aligner.dict_reference,
+    #             )

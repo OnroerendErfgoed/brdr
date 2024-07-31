@@ -4,7 +4,7 @@ import numpy as np
 
 from brdr.aligner import Aligner
 from brdr.enums import GRBType
-from brdr.loader import GRBActualLoader
+from brdr.loader import GRBActualLoader, DictLoader
 from brdr.utils import diffs_from_dict_series
 from brdr.utils import get_breakpoints_zerostreak
 from brdr.utils import get_oe_dict_by_ids
@@ -17,8 +17,10 @@ class TestExamples(unittest.TestCase):
         # EXAMPLE
         aligner = Aligner()
         dict_theme = get_oe_dict_by_ids([131635])
-        aligner.load_thematic_data_dict(dict_theme)
-        aligner.load_reference_data_grb_actual(grb_type="adp", partition=1000)
+        loader = DictLoader(dict_theme)
+        aligner.load_thematic_data(loader)
+        loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
+        aligner.load_reference_data(loader)
         rel_dist = 2
         dict_results_by_distance = {}
         dict_results_by_distance[rel_dist] = aligner.process_dict_thematic(rel_dist, 4)
@@ -178,7 +180,7 @@ class TestExamples(unittest.TestCase):
             aligner0.dict_thematic,
         )
         aligner.load_reference_data_grb_actual(grb_type="adp", partition=1000)
-        dict_predicted, _ = aligner.predictor()
+        dict_series, dict_predicted, dict_diffs = aligner.predictor()
         self.assertGreater(len(dict_predicted), 0)
         fcs = aligner.get_predictions_as_geojson(formula=True)
         self.assertEqual(len(fcs), 6)
@@ -259,7 +261,7 @@ class TestExamples(unittest.TestCase):
 
         series = np.arange(0, 300, 10, dtype=int) / 100
         # predict which relevant distances are interesting to propose as resulting geometry
-        dict_predicted, _ = aligner.predictor(
+        dict_series, dict_predicted, dict_diffs = aligner.predictor(
             relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
         )
         for key in dict_predicted.keys():

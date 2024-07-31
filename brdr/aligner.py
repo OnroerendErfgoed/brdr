@@ -44,7 +44,7 @@ from brdr.loader import GeoJsonUrlLoader
 from brdr.loader import Loader
 from brdr.logger import Logger
 from brdr.typings import ProcessResult
-from brdr.utils import diffs_from_dict_series
+from brdr.utils import diffs_from_dict_series, dict_predicted_by_keys
 from brdr.utils import geojson_from_dict
 from brdr.utils import get_series_geojson_dict
 from brdr.utils import get_breakpoints_zerostreak
@@ -326,7 +326,7 @@ class Aligner:
                 dict_predicted[zs[0]][theme_id] = dict_series[zs[0]][theme_id]
 
         self.dict_predicted = dict_predicted
-        return dict_predicted, diffs_dict
+        return dict_series, dict_predicted, diffs_dict
 
     def process_series(
         self,
