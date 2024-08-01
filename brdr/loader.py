@@ -164,6 +164,7 @@ class GRBActualLoader(Loader):
         for key in self.aligner.dict_thematic:
             # buffer them geometry with x m (default 10)
             buffer_value = self.aligner.relevant_distance + MAX_REFERENCE_BUFFER
+            # TODO extract generic bounds functions
             geom = buffer(
                 self.aligner.dict_thematic[key],
                 buffer_value,

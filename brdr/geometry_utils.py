@@ -1,7 +1,7 @@
 import logging
 
 import numpy as np
-from shapely import GEOSException
+from shapely import GEOSException, from_wkt, to_wkt
 from shapely import GeometryCollection
 from shapely import Polygon
 from shapely import buffer
@@ -483,3 +483,27 @@ def calculate_geom_by_intersection_and_reference(
         else:
             geom = geom_relevant_intersection  # (=empty geometry)
     return geom, geom_relevant_intersection, geom_relevant_difference
+
+
+def geom_from_wkt(wkt_string):
+    """
+    Converts a WellKnownText (WKT) into a shapely-geometry
+    Args:
+        wkt_string:  WellKnownText (WKT)
+
+    Returns: Shapely geometry
+
+    """
+    return from_wkt(wkt_string)
+
+
+def geom_to_wkt(shapely_geometry):
+    """
+    Converts a shapely-geometry into WellKnownText (WKT)
+    Args:
+        shapely_geometry:
+
+    Returns: WellKnownText (WKT) - string
+
+    """
+    return to_wkt(shapely_geometry)

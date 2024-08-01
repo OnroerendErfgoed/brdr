@@ -1,11 +1,15 @@
 import unittest
-from datetime import date
+from datetime import date, datetime, timedelta
 
-from shapely import Polygon
+from shapely import Polygon, from_wkt
 
 from brdr.aligner import Aligner
 from brdr.enums import GRBType
-from brdr.grb import get_last_version_date, is_grb_changed
+from brdr.grb import (
+    get_last_version_date,
+    is_grb_changed,
+    get_geoms_affected_by_grb_change,
+)
 from brdr.loader import DictLoader
 from brdr.loader import GRBActualLoader
 from brdr.utils import (
@@ -39,5 +43,62 @@ class TestGrb(unittest.TestCase):
         self.assertTrue(out)
 
     def test_get_geoms_affected_by_grb_change(self):
-        # TODO test
-        assert True
+        thematic_dict = {
+            "theme_id_1": from_wkt(
+                "MultiPolygon (((174184.09476602054201066 171899.68933439542888664, 174400.56834639035514556 171832.959863749332726, 174388.65236948925303295 171770.99678386366576888, 174182.10876987033407204 171836.13745758961886168, 174184.88916448061354458 171873.07698598300339654, 174184.09476602054201066 171899.68933439542888664)))"
+            )
+        }
+        dict_affected = get_geoms_affected_by_grb_change(
+            thematic_dict,
+            grb_type=GRBType.ADP,
+            date_start=date.today() - timedelta(days=1),
+            date_end=date.today(),
+            one_by_one=True,
+        )
+        assert len(dict_affected.keys()) == 0
+
+        dict_affected = get_geoms_affected_by_grb_change(
+            thematic_dict,
+            grb_type=GRBType.ADP,
+            date_start=date.today() - timedelta(days=1000),
+            date_end=date.today(),
+            one_by_one=True,
+        )
+        assert len(dict_affected.keys()) == 0
+        thematic_dict2 = {
+            "theme_id_2": from_wkt(
+                "MultiPolygon (((174180.20077791667426936 171966.14649116666987538, 174415.60530965600628406 171940.9636807945498731, 174388.65236948925303295 171770.99678386366576888, 174182.10876987033407204 171836.13745758961886168, 174184.88916448061354458 171873.07698598300339654, 174180.20077791667426936 171966.14649116666987538)))"
+            )
+        }
+        dict_affected = get_geoms_affected_by_grb_change(
+            thematic_dict2,
+            grb_type=GRBType.ADP,
+            date_start=date.today() - timedelta(days=1000),
+            date_end=date.today(),
+            one_by_one=True,
+        )
+        assert len(dict_affected.keys()) > 0
+
+    def test_get_geoms_affected_by_grb_change_bulk(self):
+        thematic_dict = {
+            "theme_id_1": from_wkt(
+                "MultiPolygon (((174180.20077791667426936 171966.14649116666987538, 174415.60530965600628406 171940.9636807945498731, 174388.65236948925303295 171770.99678386366576888, 174182.10876987033407204 171836.13745758961886168, 174184.88916448061354458 171873.07698598300339654, 174180.20077791667426936 171966.14649116666987538)))"
+            )
+        }
+        dict_affected = get_geoms_affected_by_grb_change(
+            thematic_dict,
+            grb_type=GRBType.ADP,
+            date_start=date.today() - timedelta(days=1),
+            date_end=date.today(),
+            one_by_one=False,
+        )
+        assert len(dict_affected.keys()) == 0
+
+        dict_affected = get_geoms_affected_by_grb_change(
+            thematic_dict,
+            grb_type=GRBType.ADP,
+            date_start=date.today() - timedelta(days=1000),
+            date_end=date.today(),
+            one_by_one=False,
+        )
+        assert len(dict_affected.keys()) > 0
