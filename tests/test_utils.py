@@ -146,7 +146,7 @@ class TestUtils(unittest.TestCase):
                 },
             }
         }
-        expected_diffs = {"theme_id1": {10: -36.0}, "theme_id2": {10: -64.0}}
+        expected_diffs = {"theme_id1": {10: 16.0}, "theme_id2": {10: 4.0}}
 
         assert expected_diffs == diffs_from_dict_series(
             dict_series.copy(), dict_thematic.copy()

@@ -47,16 +47,19 @@ class GRBType(str, Enum):
     GBG = "gbg"
     KNW = "knw"
 
+
 class DiffMetric(str, Enum):
     """
     Determines which metric is used to determine the difference between the thematic and
     reference data. Different metrics are available:
 
     * TOTAL_AREA: the total difference area
-    * PERCENTAGE: the percentage of the total difference area
+    * TOTAL_PERCENTAGE: the percentage of the total difference area
     * CHANGES_AREA: the sum of the negative and positive difference areas
+    * CHANGES_PERCENTAGE: the percentage of the changed area
     """
 
     TOTAL_AREA = "total_area"
+    TOTAL_PERCENTAGE = "total_percentage"
     CHANGES_AREA = "changes_area"
-    PERCENTAGE = "percentage"
+    CHANGES_PERCENTAGE = "changes_percentage"

@@ -470,25 +470,34 @@ def diffs_from_dict_series(
 
         for thematic_id in thematic_ids:
             result = results_dict.get(thematic_id, {}).get("result")
-            results_diff = results_dict.get(thematic_id, {}).get("results_diff")
-            result_diff_plus = results_dict.get(thematic_id, {}).get("result_diff_plus")
-            result_diff_min = results_dict.get(thematic_id, {}).get("result_diff_min")
-            # calculate the diffs you want to have
-            # diff = results_diff[key].area * 100 / results[key].area #percentage of change
+            result_diff = results_dict.get(thematic_id, {}).get("result_diff")
+            # result_diff_plus = results_dict.get(thematic_id, {}).get("result_diff_plus")
+            # result_diff_min = results_dict.get(thematic_id, {}).get("result_diff_min")
 
-            # difference (m²) between area of resulting geometry and original geometry
             diff = 0
-            if diff_metric == DiffMetric.TOTAL_AREA:
+            if (
+                result_diff is None
+                or result_diff.is_empty
+                or result is None
+                or result.is_empty
+            ):
+                diff = 0
+            elif diff_metric == DiffMetric.TOTAL_AREA:
                 diff = result.area - dict_thematic[thematic_id].area
-            elif diff_metric == DiffMetric.PERCENTAGE:
+            elif diff_metric == DiffMetric.TOTAL_PERCENTAGE:
                 diff = result.area - dict_thematic[thematic_id].area
                 diff = diff * 100 / result.area
             elif diff_metric == DiffMetric.CHANGES_AREA:
-                diff = result_diff_plus.area + result_diff_min.area
+                diff = (
+                    result_diff.area
+                )  # equals the symmetrical difference, so equal to result_diff_plus.area + result_diff_min.area
+                # diff = result_diff_plus.area + result_diff_min.area
+            elif diff_metric == DiffMetric.CHANGES_PERCENTAGE:
+                diff = result_diff.area
+                diff = diff * 100 / result.area
 
-            # round, so the detected changes are within 10cm²
+            # round, so the detected changes are within 10cm² or 0.1%
             diff = round(diff, 1)
-
             diffs[thematic_id][rel_dist] = diff
 
     return diffs
