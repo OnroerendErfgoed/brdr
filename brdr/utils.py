@@ -16,6 +16,7 @@ from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
 
 from brdr.constants import MULTI_SINGLE_ID_SEPARATOR
+from brdr.enums import DiffMetric
 from brdr.typings import ProcessResult
 
 
@@ -420,6 +421,7 @@ def _filter_dict_by_key(dictionary, filter_key):
 def diffs_from_dict_series(
     dict_series: dict[float, dict[str, ProcessResult]],
     dict_thematic: dict[str, BaseGeometry],
+    diff_metric: DiffMetric = DiffMetric.CHANGES_AREA,
 ):
     """
     Calculates a dictionary containing difference metrics for thematic elements based on a distance series.
@@ -434,6 +436,7 @@ def diffs_from_dict_series(
                              - The second dictionary represents the difference in areas from the original thematic data for a specific distance.
         dict_thematic (dict): A dictionary where thematic_ids are thematic element identifiers and values are GeoJSON geometry objects
                                representing the original thematic data.
+       diff_metric (DiffMetric): The metric used to determine the difference between the thematic and reference data.
 
     Returns:
         dict: A dictionary containing difference metrics for each thematic element (`key`) across different distances.
@@ -467,25 +470,24 @@ def diffs_from_dict_series(
 
         for thematic_id in thematic_ids:
             result = results_dict.get(thematic_id, {}).get("result")
-            result_diff = results_dict.get(thematic_id, {}).get("result_diff")
+            results_diff = results_dict.get(thematic_id, {}).get("results_diff")
+            result_diff_plus = results_dict.get(thematic_id, {}).get("result_diff_plus")
+            result_diff_min = results_dict.get(thematic_id, {}).get("result_diff_min")
+            # calculate the diffs you want to have
+            # diff = results_diff[key].area * 100 / results[key].area #percentage of change
 
-            if not result and not result_diff:
-                logging.info(
-                    f"No diff calculated for theme_id {str(thematic_id)}: diff set to zero"
-                )
-                diff = 0
-            else:
-                # calculate the diffs you want to have
-                # diff = results_diff[key].area * 100 / results[key].area #percentage of change
-
-                # difference (m²) between area of resulting geometry and original geometry
+            # difference (m²) between area of resulting geometry and original geometry
+            diff = 0
+            if diff_metric == DiffMetric.TOTAL_AREA:
                 diff = result.area - dict_thematic[thematic_id].area
-                # round, so the detected changes are within 10cm²
-                diff = round(diff, 1)
+            elif diff_metric == DiffMetric.PERCENTAGE:
+                diff = result.area - dict_thematic[thematic_id].area
+                diff = diff * 100 / result.area
+            elif diff_metric == DiffMetric.CHANGES_AREA:
+                diff = result_diff_plus.area + result_diff_min.area
 
-                # diff = abs(results[key].area - dict_thematic[key].area) #absolute difference (m²) between area of resulting geometry and original geometry
-                # diff = abs(results[key].area - dict_thematic[key].area)*100/dict_thematic[key].area #absolute difference (%) between area of resulting geometry and original geometry
-                # TODO: determine a good diff-value for determination
+            # round, so the detected changes are within 10cm²
+            diff = round(diff, 1)
 
             diffs[thematic_id][rel_dist] = diff
 
