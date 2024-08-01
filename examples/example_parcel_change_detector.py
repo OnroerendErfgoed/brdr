@@ -22,11 +22,12 @@ from brdr.utils import get_oe_geojson_by_bbox
 #       evaluate if equality is detected after alignement
 
 
+# TODO: research naar aanduid_id 116448 (equality na 0.5m), 120194 (1m)
 def check_business_equality(base_formula, actual_formula):
     """
     function that checks if 2 formulas are equal (determined by business-logic)
     """
-    # TODO:
+    # TODO: research and implementation of following ideas
     # ideas:
     # * If result_diff smaller than 0.x --> automatic update
     # * big polygons: If 'outer ring' has same formula (do net check inner side) --> automatic update
@@ -147,7 +148,7 @@ actual_aligner.load_reference_data(loader)
 # LOOP AND PROCESS ALL POSSIBLE AFFECTED FEATURES
 # =================================================
 
-# TODO: research naar aanduid_id 116448 (equality na 0.5m), 120194 (1m)
+
 for key in dict_affected:
     geometry_base_original = dict_affected[key]
 

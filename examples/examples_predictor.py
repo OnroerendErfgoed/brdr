@@ -12,7 +12,6 @@ if __name__ == "__main__":
     example to use the predictor-function to automatically predict which resulting geometries are interesting to look at
     (based on detection of breakpoints and relevant distances of 'no-change')
     """
-    # TODO: future possibilities to choose the best proposal automatically? (AI-machine learning?)
     ##Initiate a Aligner
     aligner = Aligner()
     ##Load thematic data & reference data

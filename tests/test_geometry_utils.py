@@ -44,7 +44,6 @@ class TestBuffering(unittest.TestCase):
 
 
 class TestSafeOperations(unittest.TestCase):
-    # TODO: add cases where GEOS-exception occurs
     def test_safe_union(self):
         """Tests safe_union with two points."""
         polygon_a = Polygon(((0, 0), (1, 0), (1, 1), (0, 1), (0, 0)))
