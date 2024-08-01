@@ -858,6 +858,7 @@ class Aligner:
                 )
                 geom_thematic_result = geom_thematic
         # Correction for empty preresults
+        # TODO when a preresult gives an empty response, we better give an exception/warning instead of the original geometry
         if geom_thematic_result.is_empty or geom_thematic_result is None:
             self.logger.feedback_warning(
                 "Empty result: -->resulting geometry = original geometry"
