@@ -434,7 +434,7 @@ def calculate_geom_by_intersection_and_reference(
         not geom_relevant_intersection.is_empty
         and not geom_relevant_difference.is_empty
     ):
-        # intersectie en difference relevant
+        # relevant intersection and relevant difference
         geom_x = safe_intersection(
             geom_reference,
             safe_difference(
@@ -452,29 +452,19 @@ def calculate_geom_by_intersection_and_reference(
                 buffer_distance,
             ),
         )
-        # TODO BEGIN: experimental fix - check if it is ok in all cases?
         # when calculating for OD, we create a 'virtual parcel'. When calculating this virtual parcel, it is buffered to take outer boundaries into account.
-        # This results in a side-effect that there are extra non-logical parts included in the result. The function below tries to exclude these non-logica parts.
+        # This results in a side-effect that there are extra non-logical parts included in the result. The function below tries to exclude these non-logical parts.
         # see eo_id 206363 with relevant distance=0.2m and SNAP_ALL_SIDE
         if is_openbaar_domein:
-            # geom = buffer_neg_pos(geom, buffer_distance)
             geom = get_relevant_polygons_from_geom(geom, buffer_distance)
-        # TODO END
     elif not geom_relevant_intersection.is_empty and geom_relevant_difference.is_empty:
         geom = geom_reference
     elif geom_relevant_intersection.is_empty and not geom_relevant_difference.is_empty:
-        # TODO: check needed
-        # if overlap > threshold_overlap_percentage and openbaar domein:
-        #     geom = snap_geom_to_reference(
-        #       geom_intersection, geom_reference, relevant_distance
-        #   )
-        # else:
         geom = geom_relevant_intersection  # (=empty geometry)
     else:
         if is_openbaar_domein:
             geom = geom_relevant_intersection  # (=empty geometry)
-        # geom = snap_geom_to_reference (geom_intersection, geom_reference,
-        # relevant_distance)
+        # geom = snap_geom_to_reference (geom_intersection, geom_reference, relevant_distance)
         elif threshold_overlap_percentage < 0:
             # if we take a value of -1, the original border will be used
             geom = geom_intersection

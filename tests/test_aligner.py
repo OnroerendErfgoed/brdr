@@ -118,7 +118,6 @@ class TestAligner(unittest.TestCase):
         # predict which relevant distances are interesting to propose as resulting geometry
 
         dict_series, dict_predicted, dict_diffs = self.sample_aligner.predictor(
-
             relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
         )
         self.assertEqual(len(dict_predicted[0]), len(thematic_dict))
@@ -266,7 +265,8 @@ class TestAligner(unittest.TestCase):
             {"ref_id_1": from_wkt("POLYGON ((0 1, 0 10,8 10,10 1,0 1))")}
         )
         self.sample_aligner.process_dict_thematic()
-        self.sample_aligner.get_results_as_dict(True)  # TODO check if merge works
+        result = self.sample_aligner.get_results_as_dict()
+        assert len(result) == 2
 
     def test_get_reference_as_geojson(self):
         self.sample_aligner.load_thematic_data_dict(

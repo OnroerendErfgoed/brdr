@@ -327,8 +327,11 @@ class Aligner:
 
         self.dict_predicted = dict_predicted
 
-
-        return dict_series, dict_predicted, diffs_dict,
+        return (
+            dict_series,
+            dict_predicted,
+            diffs_dict,
+        )
 
     def process_series(
         self,
@@ -655,7 +658,7 @@ class Aligner:
             #  Only the inner-reference-boundaries are used.
             #  The outer-reference-boundaries are not used.
             self.logger.feedback_debug("OD-strategy SNAP_SINGLE_SIDE - variant 2")
-            # TODO: Drop?
+            geom_thematic_od = Polygon()
             pass
 
         # ADD THEMATIC_OD
@@ -859,12 +862,12 @@ class Aligner:
                 )
                 geom_thematic_result = geom_thematic
         # Correction for empty preresults
-        # TODO when a preresult gives an empty response, we better give an exception/warning instead of the original geometry
         if geom_thematic_result.is_empty or geom_thematic_result is None:
             self.logger.feedback_warning(
-                "Empty result: -->resulting geometry = original geometry"
+                "Empty result: -->resulting geometry = empty geometry"
             )
-            geom_thematic_result = geom_thematic
+            # geom_thematic_result = geom_thematic
+            geom_thematic_result = Polygon()
 
         # group all initial multipolygons into a new resulting dictionary
         result.append(geom_thematic_result)
