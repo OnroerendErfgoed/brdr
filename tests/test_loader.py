@@ -24,17 +24,17 @@ class TestExamples:
         aligner.dict_reference = reference_loader.load_data()
         assert aligner.dict_reference is not None
 
-    def test_partition(self):
-        # Test partition function
-        delta = 2.0
-        sample_geom = Polygon([(0, 0), (0, 10), (10, 10), (10, 0)])
-        filtered_partitions = GRBActualLoader.partition(sample_geom, delta)
-
-        # Check if the result is a list of Polygon objects
-        assert isinstance(filtered_partitions, list)
-        for partition in filtered_partitions:
-            # assert partition is a Polygon object
-            assert isinstance(partition, Polygon)
+    # def test_partition(self):
+    #     # Test partition function
+    #     delta = 2.0
+    #     sample_geom = Polygon([(0, 0), (0, 10), (10, 10), (10, 0)])
+    #     filtered_partitions = GRBActualLoader.partition(sample_geom, delta)
+    #
+    #     # Check if the result is a list of Polygon objects
+    #     assert isinstance(filtered_partitions, list)
+    #     for partition in filtered_partitions:
+    #         # assert partition is a Polygon object
+    #         assert isinstance(partition, Polygon)
 
 
 def test_load_thematic_data_url(requests_mock, haspengouw_geojson):

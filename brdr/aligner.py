@@ -24,7 +24,6 @@ from shapely.geometry.base import BaseGeometry
 from brdr.constants import BUFFER_MULTIPLICATION_FACTOR
 from brdr.constants import CORR_DISTANCE
 from brdr.constants import DEFAULT_CRS
-from brdr.constants import DOWNLOAD_LIMIT
 from brdr.constants import THRESHOLD_CIRCLE_RATIO
 from brdr.enums import GRBType
 from brdr.enums import OpenbaarDomeinStrategy
@@ -44,11 +43,10 @@ from brdr.loader import GeoJsonUrlLoader
 from brdr.loader import Loader
 from brdr.logger import Logger
 from brdr.typings import ProcessResult
-from brdr.utils import diffs_from_dict_series, dict_predicted_by_keys
+from brdr.utils import diffs_from_dict_series
 from brdr.utils import geojson_from_dict
 from brdr.utils import get_series_geojson_dict
 from brdr.utils import get_breakpoints_zerostreak
-from brdr.utils import get_collection
 from brdr.utils import merge_process_results
 from brdr.utils import write_geojson
 
@@ -108,7 +106,9 @@ class Aligner:
 
         # reference
         self.name_reference_id = "ref_identifier"  # name of the identifier-field of the reference data (id has to be unique,f.e CAPAKEY for GRB-parcels)
-        self.dict_reference = {}  # dictionary to store all reference geometries
+        self.dict_reference: dict[str, BaseGeometry] = (
+            {}
+        )  # dictionary to store all reference geometries
         self.reference_union = None  # to save a unioned geometry of all reference polygons; needed for calculation in most OD-strategies
 
         # output-dictionaries (when processing dict_thematic)
