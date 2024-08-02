@@ -29,11 +29,14 @@ CORR_DISTANCE = 0.01
 # Download-settings: when extracting features by URL
 # max buffer around thematic geometry to download reference parcels
 MAX_REFERENCE_BUFFER = 10
-# Limit used when extracting features by URL, using the feature API (fe from GRB)
+# Limit used when extracting features by URL, using the feature API (f.e. from GRB)
 DOWNLOAD_LIMIT = 10000
 
 # default CRS:
-DEFAULT_CRS = "EPSG:31370"
+DEFAULT_CRS = "EPSG:31370"  # BelgianLambert72
 
 # MULTI_SINGLE_ID_SEPARATOR #separator to split multipolygon_ids to single polygons
 MULTI_SINGLE_ID_SEPARATOR = "*$*"
+
+# URL of the OGC feature API of GRB to extract collections
+GRB_FEATURE_URL = "https://geo.api.vlaanderen.be/GRB/ogc/features/collections"
