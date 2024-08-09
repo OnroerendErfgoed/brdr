@@ -545,18 +545,6 @@ def merge_process_results(
     return grouped_results
 
 
-def geom_from_dict(dict, key):
-    """
-    Get the geometry from a dictionary with geometries. If key not present,
-    an empty Polygon is returned
-    """
-    if key in dict:
-        geom = dict[key]
-    else:
-        geom = Polygon()
-    return geom
-
-
 def processresult_to_dicts(dict_processresult):
     """
     Transforms a dictionary with all ProcessResults to individual dictionaries of the results
