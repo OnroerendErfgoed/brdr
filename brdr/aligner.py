@@ -874,6 +874,8 @@ class Aligner:
 
         # create all resulting geometries
         geom_thematic_result = make_valid(unary_union(result))
+
+        # negative and positive buffer is added to the difference-calculations, to remove 'very small' differences (smaller than the correction distance)
         geom_result_diff = buffer_pos(
             buffer_neg(
                 safe_symmetric_difference(geom_thematic_result, geom_thematic),
@@ -881,8 +883,22 @@ class Aligner:
             ),
             CORR_DISTANCE,
         )
-        geom_result_diff_plus = safe_difference(geom_thematic_result, geom_thematic)
-        geom_result_diff_min = safe_difference(geom_thematic, geom_thematic_result)
+        geom_result_diff_plus = buffer_pos(
+            buffer_neg(
+                safe_difference(geom_thematic_result, geom_thematic),
+                CORR_DISTANCE,
+            ),
+            CORR_DISTANCE,
+        )
+        geom_result_diff_min = buffer_pos(
+            buffer_neg(
+                safe_difference(geom_thematic, geom_thematic_result),
+                CORR_DISTANCE,
+            ),
+            CORR_DISTANCE,
+        )
+        # geom_result_diff_plus = safe_difference(geom_thematic_result, geom_thematic)
+        # geom_result_diff_min = safe_difference(geom_thematic, geom_thematic_result)
 
         return {
             "result": geom_thematic_result,

@@ -59,7 +59,7 @@ bbox = "172000,172000,174000,174000"
 # bbox = "150000,210000,155000,214900"
 # bbox = "173500,173500,174000,174000" # example "aanduid_id" = 34195
 base_year = "2023"
-base_correction = 1  # relevant distance that is used to align the original geometries to the reference-polygons of the base-year
+base_correction = 0.2  # relevant distance that is used to align the original geometries to the reference-polygons of the base-year
 excluded_area = 10000  # geometries bigger than this, will be excluded
 series = [
     0,
