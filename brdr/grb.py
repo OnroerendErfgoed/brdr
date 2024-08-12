@@ -1,8 +1,6 @@
 import logging
 from datetime import date, datetime
-
 from shapely.geometry.base import BaseGeometry
-
 from brdr.constants import (
     DOWNLOAD_LIMIT,
     DEFAULT_CRS,
@@ -10,14 +8,18 @@ from brdr.constants import (
     GRB_FEATURE_URL,
 )
 from brdr.enums import GRBType
-import numpy as np
-from shapely import STRtree, intersects, prepare
+from shapely import intersects
 from shapely.geometry import shape
 
-from brdr.geometry_utils import create_dictionary_from_url
+from brdr.geometry_utils import (
+    create_dictionary_from_url,
+    features_by_geometric_operation,
+    create_donut,
+)
 from brdr.utils import get_collection
 
 log = logging.getLogger(__name__)
+date_format = "%Y-%m-%d"
 
 
 def is_grb_changed(
@@ -25,12 +27,27 @@ def is_grb_changed(
     grb_type=GRBType.ADP,
     date_start=date.today(),
     date_end=date.today(),
+    border_distance=0,
+    crs=DEFAULT_CRS,
 ):
     """
-    checks if a geometry is possibly affected by changes in the reference layer during a specified timespan
+       checks if a geometry is possibly affected by changes in the reference layer during a specified timespan
+    Args:
+        geometry: Geometry to check on GRB-changes
+        grb_type:  Type of GRB (parcels, buildings,artwork,...) to check
+        date_start: Start of timespan to check if GRB-changes has occurred
+        date_end: End of timespan to check if GRB-changes has occurred
+        border_distance: Distance that can be used to only check the 'border' of the geometry, so 'big' geometries with internal parcel-updates are not affected
+        (Default:0, indicating that the full geometry is checked fot GRB-changes)
+        crs: Coordinate reference system to use
+
+    Returns: Boolean, indicating if GRB is changed underneath the geometry
+
     """
-    # TODO add something that only detects changes in the border of objects, so big objects with internal parcel-updates are not affected?
-    last_version_date = get_last_version_date(geometry, grb_type=grb_type)
+
+    last_version_date = get_last_version_date(
+        geometry, grb_type=grb_type, crs=crs, border_distance=border_distance
+    )
     if last_version_date is None:
         return None
     if date_start <= last_version_date <= date_end:
@@ -44,9 +61,11 @@ def get_geoms_affected_by_grb_change(
     date_start=date.today(),
     date_end=date.today(),
     one_by_one=False,
+    border_distance=0,
+    crs=DEFAULT_CRS,
 ):
     """
-    Get thematic geometries that are affected bij GRB-changes in a specific timespan
+    Get a dictionary of thematic geometries that are affected bij GRB-changes in a specific timespan
 
     Args:
         dict_thematic: dictionary of thematic geometries
@@ -56,13 +75,15 @@ def get_geoms_affected_by_grb_change(
         one_by_one: parameter to choose the methodology to check changes:
             * True: Every thematic geometry is checked individually (loop)
             * False: All GRB-parcels intersecting the thematic dictionary is checked at once
+        border_distance: Distance that can be used to only check the 'border' of the geometry, so 'big' geometries with internal parcel-updates are not affected
+        (Default:0, indicating that the full geometry is checked fot GRB-changes)
     Returns:
-        dictionary/list of affected geometries
+        dictionary of affected geometries
 
     """
-
-    limit = DOWNLOAD_LIMIT
-    crs = DEFAULT_CRS
+    if border_distance > 0:
+        for key in dict_thematic.keys():
+            dict_thematic[key] = create_donut(dict_thematic[key], border_distance)
     if one_by_one:
         affected_dict = {}
         for key in dict_thematic:
@@ -71,12 +92,7 @@ def get_geoms_affected_by_grb_change(
                 affected_dict[key] = geom
         return affected_dict
     else:
-        # TODO: possible optimisation (if necessary) by using seperate calls for all features with smaller bbox (partitioning)
-
         # Temporal filter on VERDATUM
-        # Example:https://geo.api.vlaanderen.be/GRB/ogc/features/v1/collections/ADP/items?limit=10&filter=VERSDATUM%20%3C%20%272023-07-01%27%20AND%20VERSDATUM%20%3E%20%272022-07-01%27&filter-lang=cql-text
-        # Other filter capabilities on OGC feature API: https://portal.ogc.org/files/96288
-
         dict_changed_parcels, name_reference_id = get_reference_data_dict_grb_actual(
             dict_thematic=dict_thematic,
             grb_type=grb_type,
@@ -87,33 +103,28 @@ def get_geoms_affected_by_grb_change(
         )
         affected_dict: dict[str, BaseGeometry] = {}
 
-        # array_features = []
-        # if "features" not in collection:
-        #     logging.info("No detected changes")
-        #     return affected_dict  # empty dict
-        # for feature in collection["features"]:
-        #     geom = shape(feature["geometry"]).buffer(0)
-        #     array_features.append(geom)
         if len(dict_changed_parcels) == 0:
             logging.info("No detected changes")
             return affected_dict  # empty dict
         logging.info("Changed parcels in timespan: " + str(len(dict_changed_parcels)))
-        # TODO extract this STRTREE-intersects to seperate 'geometry_utils'-function (also used in aligner)
-        thematic_tree = STRtree(list(dict_thematic.values()))
-        thematic_items = np.array(list(dict_thematic.keys()))
-        arr_indices = thematic_tree.query(
-            list(dict_changed_parcels.values()), predicate="intersects"
+        thematic_intersections = features_by_geometric_operation(
+            list(dict_thematic.values()),
+            list(dict_thematic.keys()),
+            list(dict_changed_parcels.values()),
+            predicate="intersects",
         )
-        thematic_intersections = thematic_items.take(arr_indices[1])
-        thematic_intersections = list(set(thematic_intersections))
-        logging.info("Number of affected features: " + str(len(thematic_intersections)))
+        logging.info("Number of filtered features: " + str(len(thematic_intersections)))
         for key in thematic_intersections:
             affected_dict[key] = dict_thematic[key]
     return affected_dict
 
 
 def get_last_version_date(
-    geometry, grb_type=GRBType.ADP, crs=DEFAULT_CRS, limit=DOWNLOAD_LIMIT
+    geometry,
+    grb_type=GRBType.ADP,
+    crs=DEFAULT_CRS,
+    limit=DOWNLOAD_LIMIT,
+    border_distance=0,
 ):
     """
     Retrieves the date of the last version for a specific geographic area within  GRB (parcels, buildings,...)).
@@ -131,13 +142,8 @@ def get_last_version_date(
 
     None: If no data is found for the given geometry and GRB type combination.
     """
-    # TODO: performance optimisation? would it be possible and be faster to directly do a spatial filter (intersect), possible by feature API:
-    # example? :https://geo.api.vlaanderen.be/GRB/ogc/features/collections/ADP/items?limit=100&crs=EPSG:31370&%20filter-crs=http://www.opengis.net/def/crs/EPSG/0/31370&filter-lang=cql-text&filter=INTERSECTS(SHAPE,Polygon%20((174210.85811228273087181%20172120.52806779573438689,%20174269.98297141725197434%20172110.67392460664268583,%20174280.9320194051542785%20172026.36625510000158101,%20174215.23773147788597271%20172027.46115989878308028,%20174210.85811228273087181%20172120.52806779573438689)))
-    # https://portal.ogc.org/files/96288
-
-    date_format = "%Y-%m-%d"
-    limit = limit
-    crs = crs
+    if border_distance > 0:
+        geometry = create_donut(geometry, border_distance)
     bbox = str(geometry.bounds).strip("()")
     actual_url = (
         GRB_FEATURE_URL + "/" + grb_type.upper() + "/items?"
@@ -147,23 +153,6 @@ def get_last_version_date(
     collection = get_collection(actual_url, limit)
     if "features" not in collection:
         return None
-
-    # This commented code seems slower then the uncommented version
-    # dict_geoms = {}
-    # dict_versdatum = {}
-    # for c in collection["features"]:
-    #     dict_geoms[c["properties"]["CAPAKEY"]] = shape(c["geometry"])
-    #     dict_versdatum[c["properties"]["CAPAKEY"]] = c["properties"]["VERSDATUM"]
-    # thematic_tree = STRtree(list(dict_geoms.values()))
-    # thematic_items = np.array(list(dict_geoms.keys()))
-    # arr_indices = thematic_tree.query([geometry], predicate="intersects")
-    # thematic_intersections = thematic_items.take(arr_indices[1])
-    # thematic_intersections = list(set(thematic_intersections))
-    # logging.info("Number of intersected features: " + str(len(thematic_intersections)))
-    # for key in thematic_intersections:
-    #     versiondate = datetime.strptime(dict_versdatum[key], date_format).date()
-    #     update_dates.append(versiondate)
-
     for c in collection["features"]:
         if intersects(geometry, shape(c["geometry"])):
             versiondate = datetime.strptime(
@@ -187,7 +176,7 @@ def get_reference_data_dict_grb_actual(
     date_end=None,
 ):
     """
-    Fetches reference data (administrative plots, buildings, or artwork) from the GRB
+    Fetches reference data (administrative plots, buildings, or artwork) from the actual GRB
     API based on thematic data.
 
     This function retrieves reference data from the Grootschalig Referentie
@@ -229,27 +218,21 @@ def get_reference_data_dict_grb_actual(
             f"type not implemented: {str(grb_type)} -->No reference-data loaded"
         )
         return
+
+    versiondate_filter = ""
+    if date_start is not None:
+        versiondate_filter_start = "VERSDATUM>" + date_start.strftime(date_format)
+        versiondate_filter = versiondate_filter_start
+    if date_end is not None:
+        versiondate_filter_end = "VERSDATUM<" + date_end.strftime(date_format)
+        versiondate_filter = versiondate_filter_end
     if not (date_start is None and date_end is None):
-        date_format = "%Y-%m-%d"
-        url_grb = (
-            url_grb
-            + "filter=VERSDATUM>"
-            + date_start.strftime(date_format)
-            + " AND VERSDATUM<"
-            + date_end.strftime(date_format)
-            + "&filter-lang=cql-text"
-        )
-    # url_grb = url_grb
-    # + "&limit="
-    # + str(limit)
-    # + "&crs="
-    # + crs
-    # + "&bbox-crs="
-    # + crs
-    # + "&bbox="
-    # + bbox
+        versiondate_filter = versiondate_filter_start + " AND " + versiondate_filter_end
+    if versiondate_filter != "":
+        url_grb = url_grb + "filter=" + versiondate_filter + "&filter-lang=cql-text"
+
     limit = DOWNLOAD_LIMIT
-    collection = {}
+    dictionary = {}
     bounds_array = []
 
     # Get the bounds of the thematic_data to get the necessary GRB-data
@@ -257,11 +240,10 @@ def get_reference_data_dict_grb_actual(
         # buffer theme geometry with x m (default 10)
         buffer_value = relevant_distance + MAX_REFERENCE_BUFFER
 
-        # params: buffer_value, url,dict_thematic
-        collection = create_dictionary_from_url(
+        dictionary = create_dictionary_from_url(
             bounds_array,
             buffer_value,
-            collection,
+            dictionary,
             crs,
             dict_thematic[key],
             key,
@@ -271,4 +253,4 @@ def get_reference_data_dict_grb_actual(
             url_grb,
         )
 
-    return collection, name_reference_id
+    return dictionary, name_reference_id

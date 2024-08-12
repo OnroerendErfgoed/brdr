@@ -42,6 +42,52 @@ class TestGrb(unittest.TestCase):
         out = is_grb_changed(geom, grb_type=GRBType.ADP, date_start=date(2021, 7, 16))
         self.assertTrue(out)
 
+    def test_is_grb_changed_outerborder(self):
+        geom = Polygon(
+            [(170000, 170000), (170000, 172000), (172000, 172000), (172000, 170000)]
+        )
+        out = is_grb_changed(
+            geom,
+            border_distance=0,
+            grb_type=GRBType.ADP,
+            date_start=date(2024, 7, 1),
+        )
+        self.assertTrue(out)
+        out = is_grb_changed(
+            geom,
+            border_distance=10,
+            grb_type=GRBType.ADP,
+            date_start=date(2024, 7, 1),
+        )
+        self.assertFalse(out)
+
+    def test_get_geoms_affected_by_grb_change_outerborder(self):
+        thematic_dict = {
+            "theme_id_1": Polygon(
+                [(170000, 170000), (170000, 172000), (172000, 172000), (172000, 170000)]
+            )
+        }
+
+        dict_affected = get_geoms_affected_by_grb_change(
+            thematic_dict,
+            grb_type=GRBType.ADP,
+            date_start=date.today() - timedelta(days=30),
+            date_end=date.today(),
+            one_by_one=False,
+            border_distance=0,
+        )
+        assert len(dict_affected.keys()) > 0
+
+        dict_affected = get_geoms_affected_by_grb_change(
+            thematic_dict,
+            grb_type=GRBType.ADP,
+            date_start=date.today() - timedelta(days=30),
+            date_end=date.today(),
+            one_by_one=False,
+            border_distance=10,
+        )
+        assert len(dict_affected.keys()) == 0
+
     def test_get_geoms_affected_by_grb_change(self):
         thematic_dict = {
             "theme_id_1": from_wkt(

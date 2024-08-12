@@ -1,7 +1,7 @@
 import logging
 
 import numpy as np
-from shapely import GEOSException, from_wkt, to_wkt
+from shapely import GEOSException, from_wkt, to_wkt, STRtree
 from shapely import GeometryCollection
 from shapely import Polygon
 from shapely import buffer
@@ -502,6 +502,11 @@ def geom_to_wkt(shapely_geometry):
     return to_wkt(shapely_geometry)
 
 
+def create_donut(geometry, distance):
+    inner_geometry = buffer_neg(geometry, distance)
+    return safe_difference(geometry, inner_geometry)
+
+
 def create_dictionary_from_url(
     bounds_array,
     buffer_value,
@@ -570,6 +575,16 @@ def _get_dict_from_url(input_url, name_reference_id, limit):
             dictionary[key] = make_valid(geom)
         logging.debug(key + "-->" + str(geom))
     return dictionary
+
+
+def features_by_geometric_operation(
+    list_input_geometries, list_input_ids, list_geometries, predicate="intersects"
+):
+    thematic_tree = STRtree(list_input_geometries)
+    thematic_items = np.array(list_input_ids)
+    arr_indices = thematic_tree.query(list_geometries, predicate=predicate)
+    thematic_intersections = list(set(thematic_items.take(arr_indices[1])))
+    return thematic_intersections
 
 
 def partition(geom, delta):

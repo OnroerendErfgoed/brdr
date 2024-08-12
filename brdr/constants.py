@@ -38,5 +38,5 @@ DEFAULT_CRS = "EPSG:31370"  # BelgianLambert72
 # MULTI_SINGLE_ID_SEPARATOR #separator to split multipolygon_ids to single polygons
 MULTI_SINGLE_ID_SEPARATOR = "*$*"
 
-# URL of the OGC feature API of GRB to extract collections
+# URL of the OGC feature API of actual GRB to extract collections
 GRB_FEATURE_URL = "https://geo.api.vlaanderen.be/GRB/ogc/features/collections"
