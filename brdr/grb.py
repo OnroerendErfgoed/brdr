@@ -6,6 +6,7 @@ from brdr.constants import (
     DEFAULT_CRS,
     MAX_REFERENCE_BUFFER,
     GRB_FEATURE_URL,
+    GRB_FISCAL_PARCELS_URL,
 )
 from brdr.enums import GRBType
 from shapely import intersects
@@ -254,3 +255,16 @@ def get_reference_data_dict_grb_actual(
         )
 
     return dictionary, name_reference_id
+
+
+def get_collection_grb_fiscal_parcels(
+    year=str(datetime.now().year), bbox=None, limit=DOWNLOAD_LIMIT, crs=DEFAULT_CRS
+):
+    # Load the Base reference data
+    url = (
+        GRB_FISCAL_PARCELS_URL + "/Adpf" + year + "/items?"
+        "limit=" + str(limit) + "&crs=" + crs
+    )
+    if bbox is not None:
+        url = url + "&bbox-crs=" + crs + "&bbox=" + bbox
+    return get_collection(url, limit)

@@ -7,7 +7,11 @@ from shapely.geometry import shape
 
 from brdr.aligner import Aligner
 from brdr.enums import GRBType
-from brdr.grb import get_last_version_date, get_geoms_affected_by_grb_change
+from brdr.grb import (
+    get_last_version_date,
+    get_geoms_affected_by_grb_change,
+    get_collection_grb_fiscal_parcels,
+)
 from brdr.loader import GeoJsonLoader, GRBActualLoader, DictLoader
 from brdr.utils import get_collection
 from brdr.utils import get_oe_geojson_by_bbox
@@ -82,16 +86,9 @@ logging.info(
     "Number of OE-thematic features loaded into base-aligner: "
     + str(len(base_aligner.dict_thematic))
 )
-# Load the Base reference data
-ref_url = (
-    "https://geo.api.vlaanderen.be/Adpf/ogc/features/collections/Adpf"
-    + base_year
-    + "/items?"
-    "limit=" + str(limit) + "&crs=" + crs + "&bbox-crs=EPSG:31370&bbox=" + bbox
-)
-collection = get_collection(ref_url, limit)
+collection_fiscal_parcels = get_collection_grb_fiscal_parcels(base_year, bbox=bbox)
 
-loader = GeoJsonLoader(collection, "CAPAKEY")
+loader = GeoJsonLoader(collection_fiscal_parcels, "CAPAKEY")
 base_aligner.load_reference_data(loader)
 
 keys_to_exclude = []
