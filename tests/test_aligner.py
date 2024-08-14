@@ -281,6 +281,6 @@ class TestAligner(unittest.TestCase):
         self.sample_aligner.load_reference_data_dict({"ref_id_1": aligned_shape})
         result = self.sample_aligner.process_dict_thematic()
         assert result["theme_id_1"].get("result") == aligned_shape
-        assert result["theme_id_1"].get("result_diff") is Polygon()
-        assert result["theme_id_1"].get("result_diff_min") is Polygon()
-        assert result["theme_id_1"].get("result_diff_plus") is Polygon()
+        assert result["theme_id_1"].get("result_diff") == Polygon()
+        assert result["theme_id_1"].get("result_diff_min") == Polygon()
+        assert result["theme_id_1"].get("result_diff_plus") == Polygon()
