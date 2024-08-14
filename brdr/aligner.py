@@ -216,8 +216,10 @@ class Aligner:
 
         # make a unary union for each key value in the result dict
         for key in ProcessResult.__annotations__:
-            geometry = result_dict.get(key) # noqa
-            result_dict[key] = unary_union(geometry)  if geometry else Polygon() # noqa
+            geometry = result_dict.get(key, Polygon()) # noqa
+            if not geometry.is_empty:
+                geometry = unary_union(geometry)
+            result_dict[key] = geometry # noqa
 
         return result_dict
 
