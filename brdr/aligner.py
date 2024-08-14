@@ -5,7 +5,6 @@ from collections import defaultdict
 from typing import Iterable
 
 import numpy as np
-import shapely
 from math import pi
 from shapely import GeometryCollection
 from shapely import Polygon
@@ -216,9 +215,9 @@ class Aligner:
         result_dict["result_relevant_diff"] = relevant_diff
 
         # make a unary union for each key value in the result dict
-        for key, geometry in result_dict.items():
-            if isinstance(geometry, shapely.Geometry):
-                result_dict[key] = unary_union(get_parts(geometry))  # noqa
+        for key in ProcessResult.__annotations__:
+            geometry = result_dict.get(key) # noqa
+            result_dict[key] = unary_union(geometry)  if geometry else Polygon() # noqa
 
         return result_dict
 
