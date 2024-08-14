@@ -1,15 +1,23 @@
 import logging
 
 import numpy as np
-from shapely import GEOSException, from_wkt, to_wkt, STRtree
+from shapely import GEOSException
 from shapely import GeometryCollection
 from shapely import Polygon
+from shapely import STRtree
 from shapely import buffer
 from shapely import difference
+from shapely import from_wkt
+from shapely import get_exterior_ring
+from shapely import get_interior_ring
+from shapely import get_num_interior_rings
+from shapely import get_parts
 from shapely import intersection
 from shapely import is_empty
 from shapely import make_valid
+from shapely import polygons
 from shapely import symmetric_difference
+from shapely import to_wkt
 from shapely import unary_union
 from shapely import union
 from shapely.geometry import shape
@@ -606,3 +614,39 @@ def partition(geom, delta):
     partitions = grid_bounds(geom, delta)
     filtered_grid = list(filter(prepared_geom.intersects, partitions))
     return filtered_grid
+
+
+def fill_and_remove_gaps(geom_thematic_preresult, buffer_value):
+    geom_thematic_cleaned_holes = geom_thematic_preresult
+    ix_part = 1
+    for part in get_parts(geom_thematic_preresult):
+        exterior_ring = get_exterior_ring(part)
+        exterior_polygon = polygons([exterior_ring])[0]
+        empty_buffered_exterior_polygon = buffer_neg(
+            exterior_polygon, buffer_value
+        ).is_empty
+        if (
+            ix_part > 1
+            and empty_buffered_exterior_polygon
+            and not exterior_polygon.is_empty
+        ):
+            geom_thematic_cleaned_holes = safe_difference(
+                geom_thematic_cleaned_holes, exterior_polygon
+            )
+        num_interior_rings = get_num_interior_rings(part)
+        if num_interior_rings > 0:
+            ix = 0
+            while ix < num_interior_rings:
+                interior_ring = get_interior_ring(part, ix)
+                interior_polygon = polygons([interior_ring])[0]
+
+                empty_buffered_interior_ring = buffer_neg(
+                    interior_polygon, buffer_value
+                ).is_empty
+                if empty_buffered_interior_ring:
+                    geom_thematic_cleaned_holes = safe_union(
+                        geom_thematic_cleaned_holes, interior_polygon
+                    )
+                ix = ix + 1
+        ix_part = ix_part + 1
+    return geom_thematic_cleaned_holes

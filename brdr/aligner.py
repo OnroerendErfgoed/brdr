@@ -2,20 +2,16 @@ import json
 import logging
 import os
 from collections import defaultdict
-from math import pi
 from typing import Iterable
 
 import numpy as np
+from math import pi
 from shapely import GeometryCollection
 from shapely import Polygon
 from shapely import STRtree
 from shapely import equals
-from shapely import get_exterior_ring
-from shapely import get_interior_ring
-from shapely import get_num_interior_rings
 from shapely import get_parts
 from shapely import make_valid
-from shapely import polygons
 from shapely import remove_repeated_points
 from shapely import to_geojson
 from shapely import unary_union
@@ -31,6 +27,7 @@ from brdr.geometry_utils import buffer_neg
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import buffer_pos
 from brdr.geometry_utils import calculate_geom_by_intersection_and_reference
+from brdr.geometry_utils import fill_and_remove_gaps
 from brdr.geometry_utils import safe_difference
 from brdr.geometry_utils import safe_intersection
 from brdr.geometry_utils import safe_symmetric_difference
@@ -45,8 +42,8 @@ from brdr.logger import Logger
 from brdr.typings import ProcessResult
 from brdr.utils import diffs_from_dict_series
 from brdr.utils import geojson_from_dict
-from brdr.utils import get_series_geojson_dict
 from brdr.utils import get_breakpoints_zerostreak
+from brdr.utils import get_series_geojson_dict
 from brdr.utils import merge_process_results
 from brdr.utils import write_geojson
 
@@ -130,7 +127,7 @@ class Aligner:
 
     def process_geometry(
         self,
-        geometry: BaseGeometry,
+        input_geometry: BaseGeometry,
         relevant_distance=1,
         od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
         threshold_overlap_percentage=50,
@@ -139,7 +136,7 @@ class Aligner:
         method to align a geometry to the reference layer
 
         Args:
-            geometry (BaseGeometry): The input geometric object.
+            input_geometry (BaseGeometry): The input geometric object.
             relevant_distance
             od_strategy
             threshold_overlap_percentage (int): The buffer distance (positive or negative).
@@ -163,14 +160,17 @@ class Aligner:
         self.relevant_distance = relevant_distance
         self.od_strategy = od_strategy
         self.threshold_overlap_percentage = threshold_overlap_percentage
+
+        # combine all parts of the input geometry to one polygon
+        input_geometry = unary_union(get_parts(input_geometry))
+
         # array with all relevant parts of a thematic geometry; initial empty Polygon
-        preresult = [Polygon()]
         (
             geometry,
             preresult,
             relevant_intersection_array,
             relevant_diff_array,
-        ) = self._calculate_intersection_between_geometry_and_od(geometry, preresult)
+        ) = self._calculate_intersection_between_geometry_and_od(input_geometry)
         # get a list of all ref_ids that are intersecting the thematic geometry
         ref_intersections = self.reference_items.take(
             self.reference_tree.query(geometry)
@@ -213,6 +213,14 @@ class Aligner:
 
         result_dict["result_relevant_intersection"] = relevant_intersection
         result_dict["result_relevant_diff"] = relevant_diff
+
+        # make a unary union for each key value in the result dict
+        for key in ProcessResult.__annotations__:
+            geometry = result_dict.get(key, Polygon()) # noqa
+            if not geometry.is_empty:
+                geometry = unary_union(geometry)
+            result_dict[key] = geometry # noqa
+
         return result_dict
 
     def process_dict_thematic(
@@ -552,10 +560,10 @@ class Aligner:
         self.reference_union = None
         return
 
-    def _calculate_intersection_between_geometry_and_od(self, geometry, preresult):
+    def _calculate_intersection_between_geometry_and_od(self, geometry):
         # Calculate the intersection between thematic and Openbaar Domein
-        relevant_intersection_array = [Polygon()]
-        relevant_difference_array = [Polygon()]
+        relevant_intersection_array = []
+        relevant_difference_array = []
         geom_thematic_od = Polygon()
 
         if self.od_strategy == OpenbaarDomeinStrategy.EXCLUDE:
@@ -597,11 +605,7 @@ class Aligner:
                 geom_thematic_od,
                 relevant_difference_array,
                 relevant_intersection_array,
-            ) = self._od_snap_all_side(
-                geometry,
-                relevant_difference_array,
-                relevant_intersection_array,
-            )
+            ) = self._od_snap_all_side(geometry)
         elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_FULL_AREA_SINGLE_SIDE:
             # Strategy useful for bigger areas.
             # integrates the entire inner area of the input geometry,
@@ -624,11 +628,7 @@ class Aligner:
                 geom_thematic_od,
                 relevant_difference_array,
                 relevant_intersection_array,
-            ) = self._od_snap_all_side(
-                geometry,
-                relevant_difference_array,
-                relevant_intersection_array,
-            )
+            ) = self._od_snap_all_side(geometry)
             # This part is a copy of SNAP_FULL_AREA_SINGLE_SIDE
             geom_theme_od_min_clipped_plus_buffered_clipped = self._od_full_area(
                 geometry
@@ -662,9 +662,7 @@ class Aligner:
             pass
 
         # ADD THEMATIC_OD
-        preresult = self.add_multi_polygons_from_geom_to_array(
-            geom_thematic_od, preresult
-        )
+        preresult = self.add_multi_polygons_from_geom_to_array(geom_thematic_od, [])
         return (
             geometry,
             preresult,
@@ -693,12 +691,9 @@ class Aligner:
         geom_thematic_od = geom_theme_od_min_clipped_plus_buffered_clipped
         return geom_thematic_od
 
-    def _od_snap_all_side(
-        self,
-        geometry,
-        relevant_difference_array,
-        relevant_intersection_array,
-    ):
+    def _od_snap_all_side(self, geometry):
+        relevant_difference_array = []
+        relevant_intersection_array = []
         geom_thematic_buffered = make_valid(
             buffer_pos(geometry, BUFFER_MULTIPLICATION_FACTOR * self.relevant_distance)
         )
@@ -725,10 +720,10 @@ class Aligner:
                 self.threshold_overlap_percentage,
             )
             relevant_intersection_array = self.add_multi_polygons_from_geom_to_array(
-                geom_relevant_intersection, relevant_intersection_array
+                geom_relevant_intersection, []
             )
             relevant_difference_array = self.add_multi_polygons_from_geom_to_array(
-                geom_relevant_diff, relevant_difference_array
+                geom_relevant_diff, []
             )
         return geom_thematic_od, relevant_difference_array, relevant_intersection_array
 
@@ -772,6 +767,23 @@ class Aligner:
         geom_preresult = make_valid(unary_union(preresult))
         geom_thematic = make_valid(geom_thematic)
 
+        if not (geom_thematic is None or geom_thematic.is_empty):
+            # Correction for circles
+            # calculate ratio to see if it is a circle, and keep the original geometry if a
+            # circle: (Polsby-popper score)
+            if (
+                4 * pi * (geom_thematic.area / (geom_thematic.length**2))
+                > THRESHOLD_CIRCLE_RATIO
+            ):
+                self.logger.feedback_warning(
+                    "Circle: -->resulting geometry = original geometry"
+                )
+                return {"result": geom_thematic}
+
+            # Correction for unchanged geometries
+            if geom_preresult == geom_thematic:
+                return {"result": geom_thematic}
+
         # Corrections for areas that differ more than the relevant distance
         geom_thematic_dissolved = buffer_pos(
             buffer_neg(
@@ -807,39 +819,9 @@ class Aligner:
         )
         # Correction for Inner holes(donuts) / multipolygons
         # fill and remove gaps
-        geom_thematic_cleaned_holes = geom_thematic_preresult
-        ix_part = 1
-        for part in get_parts(geom_thematic_preresult):
-            exterior_ring = get_exterior_ring(part)
-            exterior_polygon = polygons([exterior_ring])[0]
-            empty_buffered_exterior_polygon = buffer_neg(
-                exterior_polygon, self.buffer_distance()
-            ).is_empty
-            if (
-                ix_part > 1
-                and empty_buffered_exterior_polygon
-                and not exterior_polygon.is_empty
-            ):
-                geom_thematic_cleaned_holes = safe_difference(
-                    geom_thematic_cleaned_holes, exterior_polygon
-                )
-            num_interior_rings = get_num_interior_rings(part)
-            if num_interior_rings > 0:
-                ix = 0
-                while ix < num_interior_rings:
-                    interior_ring = get_interior_ring(part, ix)
-                    interior_polygon = polygons([interior_ring])[0]
-
-                    empty_buffered_interior_ring = buffer_neg(
-                        interior_polygon, self.buffer_distance()
-                    ).is_empty
-                    if empty_buffered_interior_ring:
-                        geom_thematic_cleaned_holes = safe_union(
-                            geom_thematic_cleaned_holes, interior_polygon
-                        )
-                    ix = ix + 1
-            ix_part = ix_part + 1
-
+        geom_thematic_cleaned_holes = fill_and_remove_gaps(
+            geom_thematic_preresult, self.buffer_distance()
+        )
         geom_thematic_result = buffer_pos(
             buffer_neg(
                 buffer_pos(geom_thematic_cleaned_holes, CORR_DISTANCE),
@@ -848,19 +830,7 @@ class Aligner:
             CORR_DISTANCE,
         )
         geom_thematic_result = make_valid(remove_repeated_points(geom_thematic_result))
-        # Correction for circles
 
-        # calculate ratio to see if it is a circle, and keep the original geometry if a
-        # circle: (Polsby-popper score)
-        if not (geom_thematic.is_empty or geom_thematic is None):
-            if (
-                4 * pi * (geom_thematic.area / (geom_thematic.length**2))
-                > THRESHOLD_CIRCLE_RATIO
-            ):
-                self.logger.feedback_warning(
-                    "Circle: -->resulting geometry = original geometry"
-                )
-                geom_thematic_result = geom_thematic
         # Correction for empty preresults
         if geom_thematic_result.is_empty or geom_thematic_result is None:
             self.logger.feedback_warning(

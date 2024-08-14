@@ -1,4 +1,3 @@
-import datetime
 import os
 import unittest
 
@@ -12,8 +11,6 @@ from brdr.aligner import Aligner
 from brdr.enums import OpenbaarDomeinStrategy
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import grid_bounds
-from brdr.grb import get_last_version_date
-from brdr.loader import GRBActualLoader
 from brdr.loader import GeoJsonLoader
 from brdr.typings import FeatureCollection
 from brdr.typings import ProcessResult
@@ -277,3 +274,13 @@ class TestAligner(unittest.TestCase):
         )
         self.sample_aligner.process_dict_thematic()
         self.sample_aligner.get_reference_as_geojson()
+
+    def test_fully_aligned_input(self):
+        aligned_shape = from_wkt("POLYGON ((0 0, 0 9, 5 10, 10 0, 0 0))")
+        self.sample_aligner.load_thematic_data_dict({"theme_id_1": aligned_shape})
+        self.sample_aligner.load_reference_data_dict({"ref_id_1": aligned_shape})
+        result = self.sample_aligner.process_dict_thematic()
+        assert result["theme_id_1"].get("result") == aligned_shape
+        assert result["theme_id_1"].get("result_diff") == Polygon()
+        assert result["theme_id_1"].get("result_diff_min") == Polygon()
+        assert result["theme_id_1"].get("result_diff_plus") == Polygon()
