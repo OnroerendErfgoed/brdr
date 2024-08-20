@@ -49,7 +49,7 @@ def get_series_geojson_dict(
     features_list_dict = {}
 
     for relative_distance, results_dict in series_dict.items():
-        prop_dict = (series_prop_dict or {}).get(relative_distance, {})
+        prop_dict = dict(series_prop_dict or {}).get(relative_distance, {})
         for theme_id, process_result in results_dict.items():
             properties = prop_dict.get(theme_id, {})
             properties[id_field] = theme_id
@@ -86,7 +86,7 @@ def feature_from_geom(
         Feature: The GeoJSON feature.
     """
 
-    properties = properties or {}
+    properties = dict(properties or {})
     if geom_attributes:
         area = geom.area
         perimeter = geom.length
@@ -102,7 +102,7 @@ def geojson_from_dict(dictionary, crs, id_field, prop_dict=None, geom_attributes
     """
     features = []
     for key, geom in dictionary.items():
-        properties = (prop_dict or {}).get(key, {})
+        properties = dict(prop_dict or {}).get(key, {})
         properties[id_field] = key
         features.append(feature_from_geom(geom, properties, geom_attributes))
     crs_geojson = {"type": "name", "properties": {"name": crs}}

@@ -91,6 +91,8 @@ collection_fiscal_parcels = get_collection_grb_fiscal_parcels(base_year, bbox=bb
 loader = GeoJsonLoader(collection_fiscal_parcels, "CAPAKEY")
 base_aligner.load_reference_data(loader)
 
+
+#Exclude objects bigger than specified area
 keys_to_exclude = []
 for key in base_aligner.dict_thematic:
     if base_aligner.dict_thematic[key].area > excluded_area:

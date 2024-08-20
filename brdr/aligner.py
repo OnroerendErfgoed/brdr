@@ -473,11 +473,6 @@ class Aligner:
             {self.relevant_distance: results_dict},
         )
 
-    def get_predictions_as_dict(self):
-        """
-        get a dict with results for the predicted relevant distances
-        """
-        return self.dict_predicted
 
     def get_predictions_as_geojson(self, formula=False, series_dict=None):
         """
@@ -489,8 +484,8 @@ class Aligner:
 
         for relevant_distance, results_dict in series_dict.items():
             for theme_id, process_results in results_dict.items():
-                result = process_results["result"]
                 if formula:
+                    result = process_results["result"]
                     formula = self.get_formula(result)
                     prop_dictionary[relevant_distance][theme_id] = {
                         "formula": json.dumps(formula)
