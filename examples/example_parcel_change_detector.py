@@ -10,7 +10,7 @@ from brdr.enums import GRBType
 from brdr.grb import (
     get_last_version_date,
     get_geoms_affected_by_grb_change,
-    get_collection_grb_fiscal_parcels,
+    get_collection_grb_fiscal_parcels, evaluate_grb_affected,
 )
 from brdr.loader import GeoJsonLoader, GRBActualLoader, DictLoader
 from brdr.utils import get_collection
@@ -26,31 +26,10 @@ from brdr.utils import get_oe_geojson_by_bbox
 #       evaluate if equality is detected after alignement
 
 
-# TODO: research naar aanduid_id 116448 (equality na 0.5m), 120194 (1m)
-def check_business_equality(base_formula, actual_formula):
-    """
-    function that checks if 2 formulas are equal (determined by business-logic)
-    """
-    # TODO: research and implementation of following ideas
-    # ideas:
-    # * If result_diff smaller than 0.x --> automatic update
-    # * big polygons: If 'outer ring' has same formula (do net check inner side) --> automatic update
-    # ** outer ring can be calculated: 1) nageative buffer 2) original - buffered
-    if base_formula.keys() != actual_formula.keys():
-        return False
-    for key in base_formula.keys():
-        if base_formula[key]["full"] != actual_formula[key]["full"]:
-            return False
-        # if abs(base_formula[key]['area'] - actual_formula[key]['area'])>1: #area changed by 1 m²
-        #     return False
-        # if abs(base_formula[key]['area'] - actual_formula[key]['area'])/base_formula[key]['area'] > 0.01: #area changed by 1%
-        #     return False
-    return True
 
 
-counter_equality = 0
-counter_equality_by_alignment = 0
-counter_difference = 0
+
+
 counter_excluded = 0
 # PARAMS
 # =========
@@ -111,10 +90,12 @@ base_process_result = base_aligner.process_dict_thematic(
 )
 
 thematic_dict = {}
+thematic_dict_formula = {}
 i = 0
 for key in base_process_result:
     i = i + 1
     thematic_dict[key] = base_process_result[key]["result"]
+    thematic_dict_formula[key] = base_aligner.get_formula(thematic_dict[key])
     if i > 500:
         break
 
@@ -143,49 +124,10 @@ actual_aligner.load_thematic_data(loader)
 loader = GRBActualLoader(grb_type=GRBType.ADP, partition=0, aligner=actual_aligner)
 actual_aligner.load_reference_data(loader)
 
-
 # LOOP AND PROCESS ALL POSSIBLE AFFECTED FEATURES
 # =================================================
+counter_equality, counter_equality_by_alignment, counter_difference =evaluate_grb_affected(dict_affected, thematic_dict_formula,series,actual_aligner)
 
-
-for key in dict_affected:
-    geometry_base_original = dict_affected[key]
-
-    last_version_date = get_last_version_date(geometry_base_original)
-    logging.info("key:" + key + "-->last_version_date: " + str(last_version_date))
-    logging.info("Original formula: " + key)
-    base_formula = base_aligner.get_formula(geometry_base_original)
-    logging.info(str(base_formula))
-
-    for i in series:
-        actual_process_result = actual_aligner.process_geometry(
-            geometry_base_original, i
-        )
-        logging.info("New formula: " + key + " with relevant distance(m) : " + str(i))
-        actual_formula = actual_aligner.get_formula(actual_process_result["result"])
-        logging.info(str(actual_formula))
-        diff = True
-        if check_business_equality(
-            base_formula, actual_formula
-        ):  # Logic to be determined by business
-            if i == 0:
-                counter_equality = counter_equality + 1
-                logging.info(
-                    "equality detected for: " + key + " at distance(m): " + str(i)
-                )
-            else:
-                counter_equality_by_alignment = counter_equality_by_alignment + 1
-                logging.info(
-                    "equality_by_alignment detected for: "
-                    + key
-                    + " at distance(m): "
-                    + str(i)
-                )
-            diff = False
-            break
-    if diff:
-        counter_difference = counter_difference + 1
-        logging.info("Difference detected for: " + key)
 logging.info(
     "Features: "
     + str(len(dict_affected))

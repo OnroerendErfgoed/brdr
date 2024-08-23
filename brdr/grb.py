@@ -268,3 +268,79 @@ def get_collection_grb_fiscal_parcels(
     if bbox is not None:
         url = url + "&bbox-crs=" + crs + "&bbox=" + bbox
     return get_collection(url, limit)
+
+def evaluate_grb_affected(dict_affected, thematic_dict_formula,series,actual_aligner):
+    """
+    evaluate affected geometries and give attributes to evaluate and decide if new proposals can be used
+    #TODO refine function
+    #TODO change output
+    #TODO create output with attributes, and see that it can be exported to geojson
+    """
+    counter_equality = 0
+    counter_equality_by_alignment = 0
+    counter_difference = 0
+    dict_comparison = {}
+    for key in dict_affected:
+        geometry_base_original = dict_affected[key]
+        last_version_date = get_last_version_date(geometry_base_original)
+        logging.info("key:" + key + "-->last_version_date: " + str(last_version_date))
+        logging.info("Original formula: " + key)
+        base_formula = thematic_dict_formula[key]
+        logging.info(str(base_formula))
+
+        for i in series:
+            actual_process_result = actual_aligner.process_geometry(
+                geometry_base_original, i
+            )
+            logging.info("New formula: " + key + " with relevant distance(m) : " + str(i))
+            actual_formula = actual_aligner.get_formula(actual_process_result["result"])
+            logging.info(str(actual_formula))
+            diff = True
+            if check_business_equality(
+                    base_formula, actual_formula
+            ):  # Logic to be determined by business
+                if i == 0:
+                    counter_equality = counter_equality + 1
+                    logging.info(
+                        "equality detected for: " + key + " at distance(m): " + str(i)
+                    )
+                else:
+                    counter_equality_by_alignment = counter_equality_by_alignment + 1
+                    logging.info(
+                        "equality_by_alignment detected for: "
+                        + key
+                        + " at distance(m): "
+                        + str(i)
+                    )
+                diff = False
+                break
+        if diff:
+            counter_difference = counter_difference + 1
+            logging.info("Difference detected for: " + key)
+    return counter_equality, counter_equality_by_alignment, counter_difference
+
+
+
+def check_business_equality(base_formula, actual_formula):
+    """
+    function that checks if 2 formulas are equal (determined by business-logic)
+    """
+    # TODO: research naar aanduid_id 116448 (equality na 0.5m), 120194 (1m)
+    # TODO: research and implementation of following ideas
+    # ideas:
+    # * If result_diff smaller than 0.x --> automatic update
+    # * big polygons: If 'outer ring' has same formula (do net check inner side) --> automatic update
+    # ** outer ring can be calculated: 1) nageative buffer 2) original - buffered
+    try:
+        if base_formula["reference_features"].keys() != actual_formula["reference_features"].keys():
+            return False
+        for key in base_formula["reference_features"].keys():
+            if base_formula["reference_features"][key]["full"] != actual_formula["reference_features"][key]["full"]:
+                return False
+            # if abs(base_formula[key]['area'] - actual_formula[key]['area'])>1: #area changed by 1 m²
+            #     return False
+            # if abs(base_formula[key]['area'] - actual_formula[key]['area'])/base_formula[key]['area'] > 0.01: #area changed by 1%
+            #     return False
+        return True
+    except:
+        return False

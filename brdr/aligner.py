@@ -406,6 +406,10 @@ class Aligner:
                     with_geom is True).
         """
         dict_formula = {}
+        dict_formula["full"] = True
+        dict_formula["reference_features"] = {}
+        full_total = True
+
         ref_intersections = self.reference_items.take(
             self.reference_tree.query(geometry)
         ).tolist()
@@ -430,18 +434,19 @@ class Aligner:
                     geom = to_geojson(geom_reference)
                 else:
                     full = False
+                    full_total = False
                     area = round(geom_intersection.area, 2)
                     geom = to_geojson(geom_intersection)
             if not with_geom:
                 geom = None
 
-            dict_formula[key_ref] = {
+            dict_formula["reference_features"][key_ref] = {
                 "full": full,
                 "area": area,
                 "percentage": perc,
                 "geometry": geom,
             }
-
+        dict_formula["full"]= full_total
         self.logger.feedback_debug(str(dict_formula))
         return dict_formula
 

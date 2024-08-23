@@ -72,7 +72,8 @@ class TestAligner(unittest.TestCase):
         ref_dict = {key: self.sample_geom}
         self.sample_aligner.load_reference_data_dict(ref_dict)
         res = self.sample_aligner.get_formula(self.sample_geom, with_geom=True)
-        result = res[key]
+        self.assertTrue(res["full"])
+        result = res["reference_features"][key]
         self.assertTrue(result["full"])
         self.assertEqual(result["percentage"], 100)
 
@@ -82,7 +83,8 @@ class TestAligner(unittest.TestCase):
         ref_dict = {key: self.sample_geom.buffer(0.5)}
         self.sample_aligner.load_reference_data_dict(ref_dict)
         res = self.sample_aligner.get_formula(self.sample_geom, with_geom=True)
-        result = res[key]
+        self.assertFalse(res["full"])
+        result = res["reference_features"][key]
         self.assertFalse(result["full"])
         self.assertGreater(result["percentage"], 0)
         self.assertLess(result["percentage"], 100)
