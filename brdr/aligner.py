@@ -330,6 +330,9 @@ class Aligner:
                 relevant_distances, diff_values
             )
             logging.debug(str(theme_id))
+            if len(zero_streaks)==0:
+                dict_predicted[relevant_distances[0]][theme_id]=dict_series[relevant_distances[0]][theme_id]
+                logging.info("No zero-streaks found for: " + str(theme_id))
             for zs in zero_streaks:
                 dict_predicted[zs[0]][theme_id] = dict_series[zs[0]][theme_id]
 

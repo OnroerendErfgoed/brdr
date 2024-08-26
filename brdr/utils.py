@@ -7,7 +7,6 @@ from geojson import Feature
 from geojson import FeatureCollection
 from geojson import dump
 from shapely import GeometryCollection
-from shapely import Polygon
 from shapely import make_valid
 from shapely import node
 from shapely import polygonize
@@ -18,22 +17,6 @@ from shapely.geometry.base import BaseGeometry
 from brdr.constants import MULTI_SINGLE_ID_SEPARATOR
 from brdr.enums import DiffMetric
 from brdr.typings import ProcessResult
-
-
-# def geojson_tuple_from_tuple(
-#     my_tuple, crs, name_id, prop_dict=None, geom_attributes=True
-# ):
-#     """
-#     get a geojson-tuple (6 geojsons) for a tuple of results (results, result_diff, ...)
-#     """
-#     feature_collections = []
-#     for count, tup in enumerate(my_tuple):
-#         feature_collections.append(
-#             geojson_from_dict(
-#                 tup, crs, name_id, prop_dict=prop_dict, geom_attributes=geom_attributes
-#             )
-#         )
-#     return tuple(feature_collections)
 
 
 def get_series_geojson_dict(
@@ -342,11 +325,11 @@ def get_breakpoints_zerostreak(x, y):
             last_extreme = derivative[i]
             extremes.append((x[i], derivative[i], "minimum"))
     for extremum in extremes:
-        logging.info(
+        logging.debug(
             f"breakpoints: relevant_distance:{extremum[0]:.2f}, extreme:{extremum[1]:.2f} ({extremum[2]})"
         )
     for st in zero_streaks:
-        logging.info(
+        logging.debug(
             f"zero_streaks: [{st[0]:.2f} - {st[1]:.2f}] - center:{st[2]:.2f} - counter:{st[3]:.2f} - min/max-extreme:{st[4]:.2f} "
         )
     # plt.plot(series, afgeleide, label='afgeleide-' + str(key))
@@ -581,20 +564,19 @@ def processresult_to_dicts(dict_processresult):
     )
 
 
-def dict_predicted_by_keys(dict_predicted):
+def dict_series_by_keys(dict_series):
     """
-    Transforms a dict_predicted into a dictionary with theme_id as keys, and a dictionary with all predicted distances and their resulting geometry as a value.
+    Transforms a dict_series into a dictionary with theme_id as keys, and a dictionary with all predicted distances and their resulting geometry as a value.
     Args:
-        dict_predicted: a dictionary result of the 'predictor'
+        dict_series: a dictionary result of the 'series/predictor'
 
-    Returns: dictionary with theme_id as keys, and a dictionary with all predicted distances and their resulting geometry as a value.
+    Returns: dictionary with theme_id as keys, and a dictionary with all serial distances and their resulting geometry as a value.
 
     """
-    dict_predicted_by_keys = {}
-    for dist, res in dict_predicted.items():
-        for key in dict_predicted[dist]:
-            result = {key: res[key]}
-            if key not in dict_predicted_by_keys.keys():
-                dict_predicted_by_keys[key] = {}
-            dict_predicted_by_keys[key][dist] = result
-    return dict_predicted_by_keys
+    dict_series_keys = {}
+    for dist, res in dict_series.items():
+        for key in res.keys():
+            if key not in dict_series_keys.keys():
+                dict_series_keys[key] = {}
+            dict_series_keys[key][dist] = {key: res[key]}
+    return dict_series_keys

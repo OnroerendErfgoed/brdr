@@ -3,7 +3,7 @@ import numpy as np
 from brdr.aligner import Aligner
 from brdr.enums import GRBType
 from brdr.loader import DictLoader, GRBActualLoader
-from brdr.utils import get_oe_dict_by_ids, dict_predicted_by_keys
+from brdr.utils import get_oe_dict_by_ids, dict_series_by_keys
 from examples import show_map, plot_series
 
 if __name__ == "__main__":
@@ -33,7 +33,7 @@ if __name__ == "__main__":
     dict_series, dict_predicted, diffs = aligner.predictor(
         relevant_distances=series, od_strategy=2, threshold_overlap_percentage=50
     )
-    dict_predicted = dict_predicted_by_keys(dict_predicted)
+    dict_predicted = dict_series_by_keys(dict_predicted)
     for key in dict_predicted.keys():
         diff = {}
         diff[key] = diffs[key]

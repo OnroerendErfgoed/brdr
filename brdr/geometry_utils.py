@@ -552,7 +552,7 @@ def create_dictionary_from_url(
 def _create_dictionary(input_dict, crs, geom, key, limit, name_reference_id, url):
     output_dict = {}
     output_dict.update(input_dict)
-    bbox = str(geom.bounds).strip("()")
+    bbox = get_bbox(geom)
     url_with_bbox = (
         url
         + "&f=application%2Fgeo%2Bjson"
@@ -592,6 +592,7 @@ def features_by_geometric_operation(
     thematic_items = np.array(list_input_ids)
     arr_indices = thematic_tree.query(list_geometries, predicate=predicate)
     thematic_intersections = list(set(thematic_items.take(arr_indices[1])))
+    thematic_intersections =[str(element) for element in thematic_intersections]
     return thematic_intersections
 
 
@@ -650,3 +651,9 @@ def fill_and_remove_gaps(geom_thematic_preresult, buffer_value):
                 ix = ix + 1
         ix_part = ix_part + 1
     return geom_thematic_cleaned_holes
+
+def get_bbox(geometry):
+    """
+    Get the BBOX (string) of a shapely geometry
+    """
+    return str(geometry.bounds).strip("()")

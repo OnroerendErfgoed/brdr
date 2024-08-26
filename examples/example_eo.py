@@ -1,7 +1,7 @@
 import numpy as np
 
 from brdr.aligner import Aligner
-from brdr.utils import get_oe_dict_by_ids, write_geojson, dict_predicted_by_keys
+from brdr.utils import get_oe_dict_by_ids, write_geojson, dict_series_by_keys
 from examples import show_map, plot_series
 
 if __name__ == "__main__":
@@ -44,7 +44,7 @@ if __name__ == "__main__":
     write_geojson("output/predicted.geojson", fcs["result"])
     write_geojson("output/predicted_diff.geojson", fcs["result_diff"])
 
-    dict_predicted = dict_predicted_by_keys(dict_predicted)
+    dict_predicted = dict_series_by_keys(dict_predicted)
     for key in dict_predicted.keys():
         diff = {}
         diff[key] = diffs[key]

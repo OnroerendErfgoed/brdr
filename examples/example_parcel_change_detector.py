@@ -10,10 +10,10 @@ from brdr.enums import GRBType
 from brdr.grb import (
     get_last_version_date,
     get_geoms_affected_by_grb_change,
-    get_collection_grb_fiscal_parcels, evaluate_grb_affected,
+    get_collection_grb_fiscal_parcels, evaluate_grb_affected, evaluate,
 )
 from brdr.loader import GeoJsonLoader, GRBActualLoader, DictLoader
-from brdr.utils import get_collection
+from brdr.utils import get_collection, get_oe_dict_by_ids
 from brdr.utils import get_oe_geojson_by_bbox
 
 
@@ -59,6 +59,7 @@ series = [
 base_aligner = Aligner()
 # Load the thematic data to evaluate
 loader = GeoJsonLoader(get_oe_geojson_by_bbox(bbox), "aanduid_id")
+#loader = DictLoader(get_oe_dict_by_ids(['554','1573','124023','1873','1782','1324']))
 base_aligner.load_thematic_data(loader)
 
 logging.info(
@@ -126,7 +127,22 @@ actual_aligner.load_reference_data(loader)
 
 # LOOP AND PROCESS ALL POSSIBLE AFFECTED FEATURES
 # =================================================
-counter_equality, counter_equality_by_alignment, counter_difference =evaluate_grb_affected(dict_affected, thematic_dict_formula,series,actual_aligner)
+#counter_equality, counter_equality_by_alignment, counter_difference =evaluate_grb_affected(dict_affected, thematic_dict_formula,series,actual_aligner)
+dict_evaluated_result, prop_dictionary = evaluate(actual_aligner,thematic_dict_formula,series)
+counter_equality=0
+counter_equality_by_alignment=0
+counter_difference = 0
+for theme_id in dict_affected:
+    for dist in series:
+        if "evaluation" in prop_dictionary[dist][theme_id].keys():
+            ev =prop_dictionary[dist][theme_id]["evaluation"]
+            if ev.startswith("EQUAL") and dist==0:
+                counter_equality = counter_equality +1
+            elif ev.startswith("EQUAL") and dist > 0:
+                counter_equality_by_alignment= counter_equality_by_alignment+1
+            else:
+                counter_difference = counter_difference+1
+            break
 
 logging.info(
     "Features: "
