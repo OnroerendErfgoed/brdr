@@ -285,8 +285,10 @@ def evaluate (actual_aligner,thematic_dict_formula,series=np.arange(0, 200, 10, 
             prop_dictionary[dist] [theme_id] = {}
 
     dict_series,dict_predicted,diffs_dict= actual_aligner.predictor(series)
-
+    equality=False
     for dist,dict_predicted_dist in dict_predicted.items():
+        if equality:
+            break
         for theme_id in dict_predicted_dist.keys():
             results = dict_predicted_dist[theme_id]
             actual_formula = actual_aligner.get_formula(results["result"])

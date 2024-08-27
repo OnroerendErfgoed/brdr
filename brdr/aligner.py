@@ -723,7 +723,7 @@ class Aligner:
         )
         geom_reference = safe_difference(
             geom_thematic_buffered, clip_ref_thematic_buffered
-        )  # beide OD-stukken worden SNAPPED toegevoegd
+        )  # Both OD-parts are SNAPPED added
         geom_thematic = geometry
         if geom_reference.is_empty or geom_reference is None:
             geom_thematic_od = geom_reference
@@ -749,9 +749,9 @@ class Aligner:
         return geom_thematic_od, relevant_difference_array, relevant_intersection_array
 
     # def _snap_geom_to_reference(self, geom_input, geom_reference, relevant_distance):
-    # Deze functie werkt niet correct met Shapely. Deze vermijdt dat polygonen
-    # collapsen als alles bijeen wordt gesnapt, wat we in sommige gevallen
-    # effectief willen.
+    # """
+    # This feature does not work correctly with Shapely. This avoids polygons collapse if everything is taken together, which we do in some cases effectively want.
+    # """
     # return snap(geom_input, geom_reference, relevant_distance)
 
     def _get_reference_union(self):
