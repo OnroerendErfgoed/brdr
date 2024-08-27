@@ -93,7 +93,7 @@ class Aligner:
                 reference (default 1: SNAP_SINGLE_SIDE)
             crs (str, optional): Coordinate Reference System (CRS) of the data.
                 (default EPSG:31370)
-            area_limit (int, optional): Maximum area in m² for processing. (default 100000)
+            area_limit (int, optional): Maximum area for processing. (default 100000)
 
 
         """
@@ -101,6 +101,7 @@ class Aligner:
         self.relevant_distance = relevant_distance
         self.od_strategy = od_strategy
         self.threshold_overlap_percentage = threshold_overlap_percentage
+        self.area_limit = area_limit
 
         # PROCESSING DEFAULTS
         # thematic
