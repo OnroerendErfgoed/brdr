@@ -164,7 +164,7 @@ class Aligner:
             -
         Example:
         """
-        if input_geometry.area > self.area_limit:
+        if self.area_limit and input_geometry.area > self.area_limit:
             message = "The input geometry is too large to process."
             self.logger.feedback_warning(message)
             raise ValueError(message)
