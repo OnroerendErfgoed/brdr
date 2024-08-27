@@ -1,7 +1,8 @@
 import json
 from abc import ABC
 
-from brdr.geometry_utils import get_bbox
+from brdr.constants import MAX_REFERENCE_BUFFER
+from brdr.geometry_utils import get_bbox, buffer_pos
 from brdr.grb import get_reference_data_dict_grb_actual, get_collection_grb_fiscal_parcels
 import requests as requests
 from shapely import make_valid, unary_union
@@ -108,9 +109,7 @@ class GRBFiscalParcelLoader(GeoJsonLoader):
         geom_array = []
         if not self.aligner.dict_thematic:
             raise ValueError("Thematic data not loaded")
-        for key, geom in self.aligner.dict_thematic.items():
-            geom_array.append(geom)
-        geom_union = unary_union(geom_array)
+        geom_union = buffer_pos(self.aligner._get_thematic_union(),MAX_REFERENCE_BUFFER)
         _input = get_collection_grb_fiscal_parcels(year=self.year, bbox=get_bbox(geom_union))
         self.aligner.logger.feedback_info(f"Adpf downloaded: {self.year}")
         super().__init__(_input, "CAPAKEY")

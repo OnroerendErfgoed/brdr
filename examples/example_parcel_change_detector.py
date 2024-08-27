@@ -12,7 +12,7 @@ from brdr.grb import (
     get_geoms_affected_by_grb_change,
     get_collection_grb_fiscal_parcels, evaluate,
 )
-from brdr.loader import GeoJsonLoader, GRBActualLoader, DictLoader
+from brdr.loader import GeoJsonLoader, GRBActualLoader, DictLoader, GRBFiscalParcelLoader
 from brdr.utils import get_collection, get_oe_dict_by_ids
 from brdr.utils import get_oe_geojson_by_bbox
 
@@ -66,11 +66,7 @@ logging.info(
     "Number of OE-thematic features loaded into base-aligner: "
     + str(len(base_aligner.dict_thematic))
 )
-collection_fiscal_parcels = get_collection_grb_fiscal_parcels(base_year, bbox=bbox)
-
-loader = GeoJsonLoader(collection_fiscal_parcels, "CAPAKEY")
-base_aligner.load_reference_data(loader)
-
+base_aligner.load_reference_data(GRBFiscalParcelLoader(year=base_year,aligner =base_aligner))
 
 #Exclude objects bigger than specified area
 keys_to_exclude = []

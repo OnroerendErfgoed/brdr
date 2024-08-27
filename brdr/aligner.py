@@ -109,12 +109,15 @@ class Aligner:
         self.name_thematic_id = "theme_identifier"
         # dictionary to store all thematic geometries to handle
         self.dict_thematic: dict[str, BaseGeometry] = {}
+        # dictionary to store all unionedthematic geometries
+        self.thematic_union = None  # to save a unioned geometry of all thematic polygons;
 
         # reference
         self.name_reference_id = "ref_identifier"  # name of the identifier-field of the reference data (id has to be unique,f.e CAPAKEY for GRB-parcels)
         self.dict_reference: dict[str, BaseGeometry] = (
             {}
-        )  # dictionary to store all reference geometries
+        )
+        # dictionary to store all reference geometries
         self.reference_union = None  # to save a unioned geometry of all reference polygons; needed for calculation in most OD-strategies
 
         # output-dictionaries (when processing dict_thematic)
@@ -753,8 +756,13 @@ class Aligner:
 
     def _get_reference_union(self):
         if self.reference_union is None:
-            self.reference_union = unary_union(list(self.dict_reference.values()))
+            self.reference_union = make_valid(unary_union(list(self.dict_reference.values())))
         return self.reference_union
+
+    def _get_thematic_union(self):
+        if self.thematic_union is None:
+            self.thematic_union = make_valid(unary_union(list(self.dict_thematic.values())))
+        return self.thematic_union
 
     def _postprocess_preresult(self, preresult, geom_thematic) -> ProcessResult:
         """
