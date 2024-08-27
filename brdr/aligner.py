@@ -17,6 +17,7 @@ from shapely import to_geojson
 from shapely import unary_union
 from shapely.geometry.base import BaseGeometry
 
+from brdr.constants import AREA_LIMIT
 from brdr.constants import BUFFER_MULTIPLICATION_FACTOR
 from brdr.constants import CORR_DISTANCE
 from brdr.constants import DEFAULT_CRS
@@ -71,6 +72,7 @@ class Aligner:
         threshold_overlap_percentage=50,
         od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
         crs=DEFAULT_CRS,
+        area_limit=AREA_LIMIT,
     ):
         """
         Initializes the Aligner object
@@ -87,6 +89,12 @@ class Aligner:
                 from which overlapping-percentage a reference-polygon has to be included
                 when there aren't relevant intersections or relevant differences
                 (default 50%)
+            od_strategy (int, optional): Determines how the algorithm deals with parts of the geometry that are not on the
+                reference (default 1: SNAP_SINGLE_SIDE)
+            crs (str, optional): Coordinate Reference System (CRS) of the data.
+                (default EPSG:31370)
+            area_limit (int, optional): Maximum area in m² for processing. (default 100000)
+
 
         """
         self.logger = Logger(feedback)
@@ -156,6 +164,11 @@ class Aligner:
             -
         Example:
         """
+        if input_geometry.area > self.area_limit:
+            message = "The input geometry is too large to process."
+            self.logger.feedback_warning(message)
+            raise ValueError(message)
+
         self.logger.feedback_debug("process geometry")
         self.relevant_distance = relevant_distance
         self.od_strategy = od_strategy
@@ -216,10 +229,10 @@ class Aligner:
 
         # make a unary union for each key value in the result dict
         for key in ProcessResult.__annotations__:
-            geometry = result_dict.get(key, Polygon()) # noqa
+            geometry = result_dict.get(key, Polygon())  # noqa
             if not geometry.is_empty:
                 geometry = unary_union(geometry)
-            result_dict[key] = geometry # noqa
+            result_dict[key] = geometry  # noqa
 
         return result_dict
 
@@ -330,8 +343,10 @@ class Aligner:
                 relevant_distances, diff_values
             )
             logging.debug(str(theme_id))
-            if len(zero_streaks)==0:
-                dict_predicted[relevant_distances[0]][theme_id]=dict_series[relevant_distances[0]][theme_id]
+            if len(zero_streaks) == 0:
+                dict_predicted[relevant_distances[0]][theme_id] = dict_series[
+                    relevant_distances[0]
+                ][theme_id]
                 logging.info("No zero-streaks found for: " + str(theme_id))
             for zs in zero_streaks:
                 dict_predicted[zs[0]][theme_id] = dict_series[zs[0]][theme_id]
@@ -449,7 +464,7 @@ class Aligner:
                 "percentage": perc,
                 "geometry": geom,
             }
-        dict_formula["full"]= full_total
+        dict_formula["full"] = full_total
         self.logger.feedback_debug(str(dict_formula))
         return dict_formula
 
@@ -480,7 +495,6 @@ class Aligner:
             formula,
             {self.relevant_distance: results_dict},
         )
-
 
     def get_predictions_as_geojson(self, formula=False, series_dict=None):
         """
