@@ -10,7 +10,7 @@ from brdr.enums import GRBType
 from brdr.grb import (
     get_last_version_date,
     get_geoms_affected_by_grb_change,
-    get_collection_grb_fiscal_parcels, evaluate_grb_affected, evaluate,
+    get_collection_grb_fiscal_parcels, evaluate,
 )
 from brdr.loader import GeoJsonLoader, GRBActualLoader, DictLoader
 from brdr.utils import get_collection, get_oe_dict_by_ids

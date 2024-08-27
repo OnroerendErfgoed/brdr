@@ -271,7 +271,7 @@ def get_collection_grb_fiscal_parcels(
         url = url + "&bbox-crs=" + crs + "&bbox=" + bbox
     return get_collection(url, limit)
 
-def evaluate (actual_aligner,thematic_dict_formula,series=np.arange(0, 200, 10, dtype=int) / 100):
+def evaluate (actual_aligner,thematic_dict_formula,series=np.arange(0, 200, 10, dtype=int) / 100,threshold_area=5,threshold_percentage=1):
     """
     evaluate affected geometries and give attributes to evaluate and decide if new proposals can be used
     """
@@ -291,7 +291,7 @@ def evaluate (actual_aligner,thematic_dict_formula,series=np.arange(0, 200, 10, 
             results = dict_predicted_dist[theme_id]
             actual_formula = actual_aligner.get_formula(results["result"])
             prop_dictionary[dist][theme_id]["formula"] = actual_formula
-            equality, property = check_equality(actual_aligner.dict_thematic[theme_id],thematic_dict_formula[theme_id], results["result"],actual_formula)
+            equality, property = check_equality(actual_aligner.dict_thematic[theme_id],thematic_dict_formula[theme_id], results["result"],actual_formula,threshold_area,threshold_percentage)
             if equality:
                 dict_evaluated_result[dist][theme_id] = dict_predicted[dist][theme_id]
                 prop_dictionary[dist][theme_id]["evaluation"] = property
@@ -312,7 +312,7 @@ def evaluate (actual_aligner,thematic_dict_formula,series=np.arange(0, 200, 10, 
     #add parameters if (base_formula["reference_features"][key]["full"] == actual_formula["reference_features"][key]["full"]) and (abs(base_formula["reference_features"][key]['area'] - actual_formula["reference_features"][key]['area']) > 5) and (abs(base_formula["reference_features"][key]['area'] - actual_formula["reference_features"][key]['area']) / base_formula[key]['area']> 0.05):
     return dict_evaluated_result, prop_dictionary
 
-def check_equality(base_geometry, base_formula, actual_geometry, actual_formula):
+def check_equality(base_geometry, base_formula, actual_geometry, actual_formula,threshold_area=5,threshold_percentage=1):
     """
     function that checks if 2 formulas are equal (determined by business-logic)
     """
@@ -329,7 +329,7 @@ def check_equality(base_geometry, base_formula, actual_geometry, actual_formula)
         if base_formula["full"] and base_formula["full"]:
             return True, "EQUAL_FORMULA_FULL"
         for key in base_formula["reference_features"].keys():
-            if (base_formula["reference_features"][key]["full"] == actual_formula["reference_features"][key]["full"]) and (abs(base_formula["reference_features"][key]['area'] - actual_formula["reference_features"][key]['area']) <10) and ((abs(base_formula["reference_features"][key]['area'] - actual_formula["reference_features"][key]['area']) / base_formula["reference_features"][key]['area'])<0.1):
+            if (base_formula["reference_features"][key]["full"] == actual_formula["reference_features"][key]["full"]) and (abs(base_formula["reference_features"][key]['area'] - actual_formula["reference_features"][key]['area']) <threshold_area) and ((abs(base_formula["reference_features"][key]['area'] - actual_formula["reference_features"][key]['area'])*100 / base_formula["reference_features"][key]['area'])<threshold_percentage):
                 return True, "EQUAL_FORMULA"
     if base_formula["full"] and base_formula["full"]:
         return True, "EQUAL_FULL"

@@ -9,7 +9,7 @@ from brdr.geometry_utils import get_bbox
 from brdr.grb import (
     get_geoms_affected_by_grb_change, evaluate, get_collection_grb_fiscal_parcels,
 )
-from brdr.loader import DictLoader, GeoJsonLoader
+from brdr.loader import DictLoader, GeoJsonLoader, GRBFiscalParcelLoader
 from brdr.loader import GRBActualLoader
 from brdr.utils import get_series_geojson_dict
 
@@ -22,8 +22,9 @@ bbox = get_bbox(thematic_dict["theme_id_1"])
 base_aligner = Aligner()
 base_aligner.load_thematic_data(DictLoader(thematic_dict))
 base_year ="2022"
-collection_fiscal_parcels = get_collection_grb_fiscal_parcels(base_year, bbox=bbox)
-base_aligner.load_reference_data(GeoJsonLoader(collection_fiscal_parcels, "CAPAKEY"))
+#collection_fiscal_parcels = get_collection_grb_fiscal_parcels(base_year, bbox=bbox)
+#base_aligner.load_reference_data(GeoJsonLoader(collection_fiscal_parcels, "CAPAKEY"))
+base_aligner.load_reference_data(GRBFiscalParcelLoader(year=base_year,aligner =base_aligner))
 base_process_result = base_aligner.process_dict_thematic(relevant_distance=1)
 thematic_dict_formula = {}
 for key in base_process_result:
