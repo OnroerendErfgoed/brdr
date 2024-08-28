@@ -1,5 +1,5 @@
 import unittest
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 
 import numpy as np
 from shapely import Polygon, from_wkt
@@ -14,8 +14,7 @@ from brdr.grb import (
 )
 from brdr.loader import DictLoader, GeoJsonLoader
 from brdr.loader import GRBActualLoader
-from brdr.utils import (
-    get_oe_dict_by_ids, get_series_geojson_dict,
+from brdr.utils import (get_series_geojson_dict,
 )
 
 

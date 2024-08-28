@@ -1,3 +1,4 @@
+import json
 import logging
 from datetime import date, datetime
 
@@ -282,7 +283,7 @@ def evaluate (actual_aligner,thematic_dict_formula,series=np.arange(0, 200, 10, 
         for theme_id in dict_predicted_dist.keys():
             results = dict_predicted_dist[theme_id]
             actual_formula = actual_aligner.get_formula(results["result"])
-            prop_dictionary[dist][theme_id]["formula"] = actual_formula
+            prop_dictionary[dist][theme_id]["formula"] = json.dumps(actual_formula)
             equality, property = check_equality(actual_aligner.dict_thematic[theme_id],thematic_dict_formula[theme_id], results["result"],actual_formula,threshold_area,threshold_percentage)
             if equality:
                 dict_evaluated_result[dist][theme_id] = dict_predicted[dist][theme_id]

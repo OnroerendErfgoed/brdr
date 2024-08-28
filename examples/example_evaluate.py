@@ -55,4 +55,4 @@ fc = get_series_geojson_dict(
             series_prop_dict=prop_dictionary,
         )
 
-print (fc)
+print (fc["result"])
