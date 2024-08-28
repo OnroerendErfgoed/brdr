@@ -2,7 +2,7 @@ import json
 from abc import ABC
 
 from brdr.constants import MAX_REFERENCE_BUFFER
-from brdr.geometry_utils import get_bbox, buffer_pos
+from brdr.geometry_utils import get_bbox, buffer_pos,partition
 from brdr.grb import get_reference_data_dict_grb_actual, get_collection_grb_fiscal_parcels
 import requests as requests
 from shapely import make_valid, unary_union
@@ -103,15 +103,23 @@ class GRBActualLoader(Loader):
         self.data_dict = data_dict
 
 class GRBFiscalParcelLoader(GeoJsonLoader):
-    def __init__(self, year: str, aligner):
+    def __init__(self, year: str, aligner,prt=1000):
         self.aligner = aligner
         self.year = year
-        geom_array = []
         if not self.aligner.dict_thematic:
             raise ValueError("Thematic data not loaded")
         geom_union = buffer_pos(self.aligner._get_thematic_union(),MAX_REFERENCE_BUFFER)
-        _input = get_collection_grb_fiscal_parcels(year=self.year, bbox=get_bbox(geom_union))
-        self.aligner.logger.feedback_info(f"Adpf downloaded: {self.year}")
+        collection = {}
+        if prt < 1:
+            collection = get_collection_grb_fiscal_parcels(year=self.year, bbox=get_bbox(geom_union))
+        else:
+            geoms = partition(geom_union,prt)
+            for g in geoms:
+                coll = get_collection_grb_fiscal_parcels(year=self.year, bbox=get_bbox(g))
+                if collection=={}:
+                    collection = dict(coll)
+                elif "features" in collection:
+                    collection["features"].extend(coll["features"])
+        _input = dict(collection)
+        self.aligner.logger.feedback_info(f"Adpf downloaded for year: {self.year}")
         super().__init__(_input, "CAPAKEY")
-
-

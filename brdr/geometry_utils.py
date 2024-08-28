@@ -611,6 +611,7 @@ def partition(geom, delta):
         list: A filtered list of Polygon objects representing the partitions
             overlapping the original geometric object.
     """
+    #TODO: partitioning results in multiple squares, this can be improved by partitioning with a quadtree with rectangles? https://www.fundza.com/algorithmic/quadtree/index.html
     prepared_geom = prep(geom)
     partitions = grid_bounds(geom, delta)
     filtered_grid = list(filter(prepared_geom.intersects, partitions))

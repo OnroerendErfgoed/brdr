@@ -238,8 +238,10 @@ def get_reference_data_dict_grb_actual(
     dictionary = {}
     bounds_array = []
 
+    #TODO: this function will loop over all thematic features to get all actual parcels. this can be improved by using the thematic_union to retrieve the actual parcels (less calls)
     # Get the bounds of the thematic_data to get the necessary GRB-data
     for key in dict_thematic:
+        logging.debug ("ID to retrieve tha actual GRB-data" + key)
         # buffer theme geometry with x m (default 10)
         buffer_value = relevant_distance + MAX_REFERENCE_BUFFER
 

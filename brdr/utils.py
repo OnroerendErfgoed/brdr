@@ -483,6 +483,7 @@ def get_collection(ref_url, limit):
         url = ref_url + "&startIndex=" + str(start_index)
         logging.debug(url)
         json = requests.get(url).json()
+        logging.debug ("called url: " + url)
         feature_collection = json
         if (
             "features" not in feature_collection
