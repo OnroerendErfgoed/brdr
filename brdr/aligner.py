@@ -170,7 +170,6 @@ class Aligner:
         """
         if self.area_limit and input_geometry.area > self.area_limit:
             message = "The input geometry is too large to process."
-            self.logger.feedback_warning(message)
             raise ValueError(message)
 
         self.logger.feedback_debug("process geometry")
@@ -272,12 +271,15 @@ class Aligner:
         self.dict_result = {}
         for key in self.dict_thematic:
             self.logger.feedback_info("thematic id to process: " + str(key))
-            self.dict_result[key] = self.process_geometry(
-                self.dict_thematic[key],
-                relevant_distance,
-                od_strategy,
-                threshold_overlap_percentage,
-            )
+            try:
+                self.dict_result[key] = self.process_geometry(
+                    self.dict_thematic[key],
+                    relevant_distance,
+                    od_strategy,
+                    threshold_overlap_percentage,
+                )
+            except ValueError as e:
+                self.logger.feedback_warning(str(e))
         return self.dict_result
 
     def predictor(
