@@ -138,7 +138,7 @@ def multipolygons_to_singles(dict_geoms):
                 resulting_dict_geoms[new_key] = p
                 i = i + 1
         else:
-            print("geom excluded: " + str(geom))
+            logging.debug( "geom excluded: " + str(geom) + " for key: " + str(key))
     return resulting_dict_geoms
 
 
@@ -481,9 +481,8 @@ def get_collection(ref_url, limit):
     collection = {}
     while True:
         url = ref_url + "&startIndex=" + str(start_index)
-        logging.debug(url)
+        logging.debug("called url: " + url)
         json = requests.get(url).json()
-        logging.debug ("called url: " + url)
         feature_collection = json
         if (
             "features" not in feature_collection

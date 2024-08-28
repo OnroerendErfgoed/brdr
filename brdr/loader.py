@@ -90,12 +90,10 @@ class GRBActualLoader(Loader):
         self.load_reference_data_grb_actual(grb_type=self.grb_type, partition=self.part)
         return super().load_data()
 
-    def load_reference_data_grb_actual(self, *, grb_type=GRBType.ADP, partition=0):
+    def load_reference_data_grb_actual(self, *, grb_type=GRBType.ADP, partition=partition):
         data_dict, id_property = get_reference_data_dict_grb_actual(
-            dict_thematic=self.aligner.dict_thematic,
-            relevant_distance=self.aligner.relevant_distance,
+            aligner=self.aligner,
             grb_type=grb_type,
-            crs=self.aligner.CRS,
             partition=partition,
         )
         self.aligner.name_reference_id = id_property

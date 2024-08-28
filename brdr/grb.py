@@ -17,7 +17,7 @@ from shapely.geometry import shape
 from brdr.geometry_utils import (
     create_dictionary_from_url,
     features_by_geometric_operation,
-    create_donut, get_bbox,
+    create_donut, get_bbox, buffer_pos,
 )
 from brdr.utils import get_collection, dict_series_by_keys
 
@@ -59,13 +59,12 @@ def is_grb_changed(
 
 
 def get_geoms_affected_by_grb_change(
-    dict_thematic,
+    aligner,
     grb_type=GRBType.ADP,
     date_start=date.today(),
     date_end=date.today(),
     one_by_one=False,
     border_distance=0,
-    crs=DEFAULT_CRS,
 ):
     """
     Get a dictionary of thematic geometries that are affected bij GRB-changes in a specific timespan
@@ -84,6 +83,8 @@ def get_geoms_affected_by_grb_change(
         dictionary of affected geometries
 
     """
+    dict_thematic = aligner.dict_thematic
+    crs = aligner.CRS
     if border_distance > 0:
         for key in dict_thematic.keys():
             dict_thematic[key] = create_donut(dict_thematic[key], border_distance)
@@ -97,9 +98,8 @@ def get_geoms_affected_by_grb_change(
     else:
         # Temporal filter on VERDATUM
         dict_changed_parcels, name_reference_id = get_reference_data_dict_grb_actual(
-            dict_thematic=dict_thematic,
+            aligner=aligner,
             grb_type=grb_type,
-            crs=crs,
             partition=0,
             date_start=date_start,
             date_end=date_end,
@@ -170,11 +170,9 @@ def get_last_version_date(
 
 
 def get_reference_data_dict_grb_actual(
-    dict_thematic,
-    relevant_distance=1,
+    aligner,
     grb_type=GRBType.ADP,
-    crs=DEFAULT_CRS,
-    partition=0,
+    partition=1000,
     date_start=None,
     date_end=None,
 ):
@@ -235,28 +233,18 @@ def get_reference_data_dict_grb_actual(
         url_grb = url_grb + "filter=" + versiondate_filter + "&filter-lang=cql-text"
 
     limit = DOWNLOAD_LIMIT
-    dictionary = {}
-    bounds_array = []
+    unioned_geom_buffered = buffer_pos(
+        aligner._get_thematic_union(),
+        aligner.relevant_distance + MAX_REFERENCE_BUFFER)
 
-    #TODO: this function will loop over all thematic features to get all actual parcels. this can be improved by using the thematic_union to retrieve the actual parcels (less calls)
-    # Get the bounds of the thematic_data to get the necessary GRB-data
-    for key in dict_thematic:
-        logging.debug ("ID to retrieve tha actual GRB-data" + key)
-        # buffer theme geometry with x m (default 10)
-        buffer_value = relevant_distance + MAX_REFERENCE_BUFFER
-
-        dictionary = create_dictionary_from_url(
-            bounds_array,
-            buffer_value,
-            dictionary,
-            crs,
-            dict_thematic[key],
-            key,
-            limit,
-            name_reference_id,
-            partition,
-            url_grb,
-        )
+    dictionary = create_dictionary_from_url(
+        aligner.CRS,
+        unioned_geom_buffered,
+        limit,
+        name_reference_id,
+        partition,
+        url_grb,
+    )
 
     return dictionary, name_reference_id
 

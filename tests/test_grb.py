@@ -69,9 +69,10 @@ class TestGrb(unittest.TestCase):
                 [(170000, 170000), (170000, 172000), (172000, 172000), (172000, 170000)]
             )
         }
-
+        aligner=Aligner()
+        aligner.load_thematic_data(DictLoader(thematic_dict))
         dict_affected = get_geoms_affected_by_grb_change(
-            thematic_dict,
+            aligner=aligner,
             grb_type=GRBType.ADP,
             date_start=date.today() - timedelta(days=30),
             date_end=date.today(),
@@ -81,7 +82,7 @@ class TestGrb(unittest.TestCase):
         assert len(dict_affected.keys()) > 0
 
         dict_affected = get_geoms_affected_by_grb_change(
-            thematic_dict,
+            aligner=aligner,
             grb_type=GRBType.ADP,
             date_start=date.today() - timedelta(days=30),
             date_end=date.today(),
@@ -96,8 +97,10 @@ class TestGrb(unittest.TestCase):
                 "MultiPolygon (((174184.09476602054201066 171899.68933439542888664, 174400.56834639035514556 171832.959863749332726, 174388.65236948925303295 171770.99678386366576888, 174182.10876987033407204 171836.13745758961886168, 174184.88916448061354458 171873.07698598300339654, 174184.09476602054201066 171899.68933439542888664)))"
             )
         }
+        aligner=Aligner()
+        aligner.load_thematic_data(DictLoader(thematic_dict))
         dict_affected = get_geoms_affected_by_grb_change(
-            thematic_dict,
+            aligner=aligner,
             grb_type=GRBType.ADP,
             date_start=date.today() - timedelta(days=1),
             date_end=date.today(),
@@ -106,7 +109,7 @@ class TestGrb(unittest.TestCase):
         assert len(dict_affected.keys()) == 0
 
         dict_affected = get_geoms_affected_by_grb_change(
-            thematic_dict,
+            aligner=aligner,
             grb_type=GRBType.ADP,
             date_start=date.today() - timedelta(days=1000),
             date_end=date.today(),
@@ -118,8 +121,10 @@ class TestGrb(unittest.TestCase):
                 "MultiPolygon (((174180.20077791667426936 171966.14649116666987538, 174415.60530965600628406 171940.9636807945498731, 174388.65236948925303295 171770.99678386366576888, 174182.10876987033407204 171836.13745758961886168, 174184.88916448061354458 171873.07698598300339654, 174180.20077791667426936 171966.14649116666987538)))"
             )
         }
+        aligner2=Aligner()
+        aligner2.load_thematic_data(DictLoader(thematic_dict2))
         dict_affected = get_geoms_affected_by_grb_change(
-            thematic_dict2,
+            aligner=aligner2,
             grb_type=GRBType.ADP,
             date_start=date.today() - timedelta(days=1000),
             date_end=date.today(),
@@ -133,8 +138,10 @@ class TestGrb(unittest.TestCase):
                 "MultiPolygon (((174180.20077791667426936 171966.14649116666987538, 174415.60530965600628406 171940.9636807945498731, 174388.65236948925303295 171770.99678386366576888, 174182.10876987033407204 171836.13745758961886168, 174184.88916448061354458 171873.07698598300339654, 174180.20077791667426936 171966.14649116666987538)))"
             )
         }
+        aligner=Aligner()
+        aligner.load_thematic_data(DictLoader(thematic_dict))
         dict_affected = get_geoms_affected_by_grb_change(
-            thematic_dict,
+            aligner=aligner,
             grb_type=GRBType.ADP,
             date_start=date.today() - timedelta(days=1),
             date_end=date.today(),
@@ -143,7 +150,7 @@ class TestGrb(unittest.TestCase):
         assert len(dict_affected.keys()) == 0
 
         dict_affected = get_geoms_affected_by_grb_change(
-            thematic_dict,
+            aligner=aligner,
             grb_type=GRBType.ADP,
             date_start=date.today() - timedelta(days=1000),
             date_end=date.today(),
@@ -165,11 +172,14 @@ class TestGrb(unittest.TestCase):
         base_aligner.load_reference_data(GeoJsonLoader(collection_fiscal_parcels, "CAPAKEY"))
         base_process_result = base_aligner.process_dict_thematic(relevant_distance=1)
         thematic_dict_formula = {}
+        thematic_dict_result = {}
         for key in base_process_result:
-            thematic_dict[key] = base_process_result[key]["result"]
-            thematic_dict_formula[key] = base_aligner.get_formula(thematic_dict[key])
+            thematic_dict_result[key] = base_process_result[key]["result"]
+            thematic_dict_formula[key] = base_aligner.get_formula(thematic_dict_result[key])
+        aligner_result=Aligner()
+        aligner_result.load_thematic_data(DictLoader(thematic_dict_result))
         dict_affected = get_geoms_affected_by_grb_change(
-            thematic_dict,
+            aligner=aligner_result,
             grb_type=GRBType.ADP,
             date_start=date(2022, 1, 1),
             date_end=date.today(),

@@ -261,14 +261,13 @@ def safe_difference(geom_a, geom_b):
     try:
         geom = difference(geom_a, geom_b)
     except GEOSException:
-        print("difference_error")
+        logging.debug("difference_error")
         try:
             logging.warning(
                 "difference_error for geoms:" + geom_a.wkt + " and " + geom_b.wkt
             )
             geom = difference(buffer(geom_a, 0.0000001), buffer(geom_b, 0.0000001))
         except Exception:
-            print("error: empty geometry returned")
             logging.error("error: empty geometry returned")
             geom = Polygon()
 
@@ -516,40 +515,29 @@ def create_donut(geometry, distance):
 
 
 def create_dictionary_from_url(
-    bounds_array,
-    buffer_value,
-    output_dictionary,
     crs,
-    geometry,
-    key,
+    geom,
     limit,
     name_reference_id,
     prt,
     url,
 ):
-    geom = buffer(
-        geometry,
-        buffer_value,
-        quad_segs=QUAD_SEGMENTS,
-        join_style="mitre",
-        mitre_limit=MITRE_LIMIT,
-    )
-    bounds_array.append(geom)
+
+    output_dictionary={}
     if prt < 1:
         output_dictionary = _create_dictionary(
-            output_dictionary, crs, geom, key, limit, name_reference_id, url
+            output_dictionary, crs, geom, limit, name_reference_id, url
         )
     if prt > 0:
-        geom = unary_union(bounds_array)
         grid = partition(geom, prt)
         for g in grid:
             output_dictionary = _create_dictionary(
-                output_dictionary, crs, g, key, limit, name_reference_id, url
+                output_dictionary, crs, g, limit, name_reference_id, url
             )
     return output_dictionary
 
 
-def _create_dictionary(input_dict, crs, geom, key, limit, name_reference_id, url):
+def _create_dictionary(input_dict, crs, geom, limit, name_reference_id, url):
     output_dict = {}
     output_dict.update(input_dict)
     bbox = get_bbox(geom)
@@ -565,13 +553,15 @@ def _create_dictionary(input_dict, crs, geom, key, limit, name_reference_id, url
         + "&bbox="
         + bbox
     )
-    logging.debug(key + "-->" + str(url_with_bbox))
-    coll = _get_dict_from_url(url_with_bbox, name_reference_id, limit)
-    output_dict.update(coll)
+    dict = _get_dict_from_geojson_url(url_with_bbox, name_reference_id, limit)
+    output_dict.update(dict)
     return output_dict
 
 
-def _get_dict_from_url(input_url, name_reference_id, limit):
+def _get_dict_from_geojson_url(input_url, name_reference_id, limit):
+    """
+    creates a dictionary of key-values (ID, geometry) based on the geojson-url and the name of the unique attribute field that has to be used as key/uniqueID.
+    """
     collection = get_collection(input_url, limit)
     dictionary = {}
     if "features" not in collection or len(collection["features"]) == 0:

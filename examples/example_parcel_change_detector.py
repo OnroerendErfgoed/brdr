@@ -86,19 +86,20 @@ base_process_result = base_aligner.process_dict_thematic(
     relevant_distance=base_correction
 )
 
-thematic_dict = {}
 thematic_dict_formula = {}
+thematic_dict_result = {}
 i = 0
 for key in base_process_result:
     i = i + 1
-    thematic_dict[key] = base_process_result[key]["result"]
-    thematic_dict_formula[key] = base_aligner.get_formula(thematic_dict[key])
+    thematic_dict_result[key] = base_process_result[key]["result"]
+    thematic_dict_formula[key] = base_aligner.get_formula(thematic_dict_result[key])
     if i > 500:
         break
 
-
+base_aligner_result = Aligner()
+base_aligner_result.load_thematic_data(DictLoader(thematic_dict_result))
 dict_affected = get_geoms_affected_by_grb_change(
-    thematic_dict,
+    aligner=base_aligner_result,
     grb_type=GRBType.ADP,
     date_start=date.today() - timedelta(days=365),
     date_end=date.today(),
@@ -118,7 +119,7 @@ logging.info(
 actual_aligner = Aligner()
 loader = DictLoader(dict_affected)
 actual_aligner.load_thematic_data(loader)
-loader = GRBActualLoader(grb_type=GRBType.ADP, partition=0, aligner=actual_aligner)
+loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=actual_aligner)
 actual_aligner.load_reference_data(loader)
 
 # LOOP AND PROCESS ALL POSSIBLE AFFECTED FEATURES
