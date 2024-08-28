@@ -2,7 +2,6 @@ import json
 import logging
 from datetime import date, datetime
 
-import numpy as np
 from shapely.geometry.base import BaseGeometry
 from brdr.constants import (
     DOWNLOAD_LIMIT,
@@ -11,7 +10,7 @@ from brdr.constants import (
     GRB_FEATURE_URL,
     GRB_FISCAL_PARCELS_URL,
 )
-from brdr.enums import GRBType
+from brdr.enums import GRBType, Evaluation
 from shapely import intersects
 from shapely.geometry import shape
 
@@ -262,29 +261,28 @@ def get_collection_grb_fiscal_parcels(
         url = url + "&bbox-crs=" + crs + "&bbox=" + bbox
     return get_collection(url, limit)
 
-def evaluate (actual_aligner,thematic_dict_formula,series=np.arange(0, 200, 10, dtype=int) / 100,threshold_area=5,threshold_percentage=1):
+def evaluate (actual_aligner,dict_series,dict_predicted,thematic_dict_formula,threshold_area=5,threshold_percentage=1):
     """
     evaluate affected geometries and give attributes to evaluate and decide if new proposals can be used
     """
-    theme_ids = actual_aligner.dict_thematic.keys()
+    theme_ids = list(dict_series_by_keys(dict_series).keys())
     dict_evaluated_result = {}
     prop_dictionary = {}
-    for dist in series:
+    #Fill the dictionary-structure with empty values
+    for dist in dict_series.keys():
         dict_evaluated_result[dist]= {}
         prop_dictionary[dist] = {}
         for theme_id in theme_ids:
             prop_dictionary[dist] [theme_id] = {}
 
-    dict_series,dict_predicted,diffs_dict= actual_aligner.predictor(series)
     equality=False
-    for dist,dict_predicted_dist in dict_predicted.items():
+    for dist,dict_predicted_for_dist in dict_predicted.items():
         if equality:
             break
-        for theme_id in dict_predicted_dist.keys():
-            results = dict_predicted_dist[theme_id]
+        for theme_id,results in dict_predicted_for_dist.items():
             actual_formula = actual_aligner.get_formula(results["result"])
             prop_dictionary[dist][theme_id]["formula"] = json.dumps(actual_formula)
-            equality, property = check_equality(actual_aligner.dict_thematic[theme_id],thematic_dict_formula[theme_id], results["result"],actual_formula,threshold_area,threshold_percentage)
+            equality, property = check_equality(thematic_dict_formula[theme_id], actual_formula,threshold_area,threshold_percentage)
             if equality:
                 dict_evaluated_result[dist][theme_id] = dict_predicted[dist][theme_id]
                 prop_dictionary[dist][theme_id]["evaluation"] = property
@@ -297,15 +295,14 @@ def evaluate (actual_aligner,thematic_dict_formula,series=np.arange(0, 200, 10, 
         if theme_id not in evaluated_theme_ids:
             if len(dict_predicted_keys[theme_id].keys())==0:
                 dict_evaluated_result[0][theme_id] = dict_series[0][theme_id]
-                prop_dictionary[0][theme_id]["evaluation"] = "NO_PREDICTION"
+                prop_dictionary[0][theme_id]["evaluation"] = Evaluation.NO_PREDICTION_5
                 continue
             smallest_predicted_dist = list(dict_predicted_keys[theme_id].keys())[0]
             dict_evaluated_result[smallest_predicted_dist][theme_id] = dict_predicted[smallest_predicted_dist][theme_id]
-            prop_dictionary[smallest_predicted_dist][theme_id]["evaluation"] = "TO_CHECK"
-    #add parameters if (base_formula["reference_features"][key]["full"] == actual_formula["reference_features"][key]["full"]) and (abs(base_formula["reference_features"][key]['area'] - actual_formula["reference_features"][key]['area']) > 5) and (abs(base_formula["reference_features"][key]['area'] - actual_formula["reference_features"][key]['area']) / base_formula[key]['area']> 0.05):
+            prop_dictionary[smallest_predicted_dist][theme_id]["evaluation"] = Evaluation.TO_CHECK_4
     return dict_evaluated_result, prop_dictionary
 
-def check_equality(base_geometry, base_formula, actual_geometry, actual_formula,threshold_area=5,threshold_percentage=1):
+def check_equality(base_formula, actual_formula,threshold_area=5,threshold_percentage=1):
     """
     function that checks if 2 formulas are equal (determined by business-logic)
     """
@@ -320,10 +317,10 @@ def check_equality(base_geometry, base_formula, actual_geometry, actual_formula,
 
     if base_formula["reference_features"].keys()==actual_formula["reference_features"].keys():
         if base_formula["full"] and base_formula["full"]:
-            return True, "EQUAL_FORMULA_FULL"
+            return True, Evaluation.EQUALITY_FORMULA_GEOM_1
         for key in base_formula["reference_features"].keys():
             if (base_formula["reference_features"][key]["full"] == actual_formula["reference_features"][key]["full"]) and (abs(base_formula["reference_features"][key]['area'] - actual_formula["reference_features"][key]['area']) <threshold_area) and ((abs(base_formula["reference_features"][key]['area'] - actual_formula["reference_features"][key]['area'])*100 / base_formula["reference_features"][key]['area'])<threshold_percentage):
-                return True, "EQUAL_FORMULA"
+                return True, Evaluation.EQUALITY_FORMULA_2
     if base_formula["full"] and base_formula["full"]:
-        return True, "EQUAL_FULL"
-    return False, "NO_EQUALITY_DETECTED"
+        return True, Evaluation.EQUALITY_GEOM_3
+    return False, Evaluation.NO_PREDICTION_5

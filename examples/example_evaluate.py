@@ -39,15 +39,19 @@ dict_affected = get_geoms_affected_by_grb_change(
     one_by_one=False,
 )
 
-series = np.arange(0, 200, 10, dtype=int) / 100
 
 actual_aligner = Aligner()
 loader = DictLoader(dict_affected)
 actual_aligner.load_thematic_data(loader)
 loader = GRBActualLoader(grb_type=GRBType.ADP, partition=0, aligner=actual_aligner)
 actual_aligner.load_reference_data(loader)
+series = np.arange(0, 200, 10, dtype=int) / 100
+dict_series,dict_predicted,diffs_dict= actual_aligner.predictor(series)
 
-dict_evaluated,prop_dictionary = evaluate(actual_aligner,thematic_dict_formula, series, )
+#diffs_dict=merge_diffs_dict(diffs_dict)
+
+dict_evaluated,prop_dictionary = evaluate(actual_aligner,dict_series,dict_predicted,thematic_dict_formula,threshold_area=5,threshold_percentage=1)
+
 fc = get_series_geojson_dict(
             dict_evaluated,
             crs=actual_aligner.CRS,

@@ -497,6 +497,17 @@ def get_collection(ref_url, limit):
     return collection
 
 
+def merge_dict_series(
+        dict_series: dict[float,dict[str, ProcessResult]]
+) -> dict[float,dict[str, ProcessResult]]:
+    """
+    Merges dict_series (dict_predicted) with  seperated IDs (MULTI_SINGLE_ID_SEPARATOR) to their original unique ID
+    """
+    dict_series_merged = {}
+    for dist,item in dict_series.items():
+        dict_series_merged[dist]=merge_process_results(item)
+    return dict_series_merged
+
 def merge_process_results(
     result_dict: dict[str, ProcessResult]
 ) -> dict[str, ProcessResult]:

@@ -63,3 +63,21 @@ class DiffMetric(str, Enum):
     TOTAL_PERCENTAGE = "total_percentage"
     CHANGES_AREA = "changes_area"
     CHANGES_PERCENTAGE = "changes_percentage"
+
+
+class Evaluation(str, Enum):
+    """
+    Enum to evaluate an automatically updated geometry:
+
+    * EQUALITY_FORMULA_GEOM_1 = "equality_formula_geom_1"
+    * EQUALITY_FORMULA_2 = "equality_formula_2"
+    * EQUALITY_GEOM_3 = "equality_geom_3"
+    * TO_CHECK = "to_check"
+    * NO_PREDICTION = "no_prediction"
+    """
+
+    EQUALITY_FORMULA_GEOM_1 = "equality_formula_geom_1"
+    EQUALITY_FORMULA_2 = "equality_formula_2"
+    EQUALITY_GEOM_3 = "equality_geom_3"
+    TO_CHECK_4 = "to_check"
+    NO_PREDICTION_5 = "no_prediction"

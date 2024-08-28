@@ -124,8 +124,9 @@ actual_aligner.load_reference_data(loader)
 
 # LOOP AND PROCESS ALL POSSIBLE AFFECTED FEATURES
 # =================================================
-#counter_equality, counter_equality_by_alignment, counter_difference =evaluate_grb_affected(dict_affected, thematic_dict_formula,series,actual_aligner)
-dict_evaluated_result, prop_dictionary = evaluate(actual_aligner,thematic_dict_formula,series)
+series = np.arange(0, 200, 10, dtype=int) / 100
+dict_series,dict_predicted,diffs_dict= actual_aligner.predictor(series)
+dict_evaluated_result, prop_dictionary = evaluate(actual_aligner,dict_series,dict_predicted,thematic_dict_formula,threshold_area=5,threshold_percentage=1)
 counter_equality=0
 counter_equality_by_alignment=0
 counter_difference = 0
@@ -133,9 +134,9 @@ for theme_id in dict_affected:
     for dist in series:
         if "evaluation" in prop_dictionary[dist][theme_id].keys():
             ev =prop_dictionary[dist][theme_id]["evaluation"]
-            if ev.startswith("EQUAL") and dist==0:
+            if ev.startswith("equal") and dist==0:
                 counter_equality = counter_equality +1
-            elif ev.startswith("EQUAL") and dist > 0:
+            elif ev.startswith("equal") and dist > 0:
                 counter_equality_by_alignment= counter_equality_by_alignment+1
             else:
                 counter_difference = counter_difference+1
