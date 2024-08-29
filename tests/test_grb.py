@@ -12,7 +12,7 @@ from brdr.grb import (
     is_grb_changed,
     get_geoms_affected_by_grb_change, evaluate, get_collection_grb_fiscal_parcels,
 )
-from brdr.loader import DictLoader, GeoJsonLoader
+from brdr.loader import DictLoader, GeoJsonLoader, GRBFiscalParcelLoader
 from brdr.loader import GRBActualLoader
 from brdr.utils import (get_series_geojson_dict,
 )
@@ -163,12 +163,9 @@ class TestGrb(unittest.TestCase):
                 "MultiPolygon (((174180.20077791667426936 171966.14649116666987538, 174415.60530965600628406 171940.9636807945498731, 174388.65236948925303295 171770.99678386366576888, 174182.10876987033407204 171836.13745758961886168, 174184.88916448061354458 171873.07698598300339654, 174180.20077791667426936 171966.14649116666987538)))"
             )
         }
-        bbox = get_bbox(thematic_dict["theme_id_1"])
         base_aligner = Aligner()
         base_aligner.load_thematic_data(DictLoader(thematic_dict))
-        base_year = "2022"
-        collection_fiscal_parcels = get_collection_grb_fiscal_parcels(base_year, bbox=bbox)
-        base_aligner.load_reference_data(GeoJsonLoader(collection_fiscal_parcels, "CAPAKEY"))
+        base_aligner.load_reference_data(GRBFiscalParcelLoader(aligner=base_aligner,year="2022", partition=1000))
         base_process_result = base_aligner.process_dict_thematic(relevant_distance=1)
         thematic_dict_formula = {}
         thematic_dict_result = {}

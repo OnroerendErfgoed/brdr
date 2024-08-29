@@ -4,12 +4,11 @@ import numpy as np
 
 from brdr.aligner import Aligner
 from brdr.enums import GRBType
-from brdr.loader import GRBActualLoader, DictLoader
+from brdr.loader import GRBActualLoader, DictLoader, GeoJsonLoader
 from brdr.utils import diffs_from_dict_series
 from brdr.utils import get_breakpoints_zerostreak
 from brdr.utils import get_oe_dict_by_ids
 from brdr.utils import multipolygons_to_singles
-
 
 class TestExamples(unittest.TestCase):
 
@@ -169,64 +168,28 @@ class TestExamples(unittest.TestCase):
         }
 
         # Load thematic data
-        aligner0.load_thematic_data_geojson(testdata, "theme_identifier")
-        aligner0.dict_thematic = multipolygons_to_singles(aligner0.dict_thematic)
-        aligner0.load_thematic_data_dict(
-            aligner0.dict_thematic,
-        )
+        aligner0.load_thematic_data(GeoJsonLoader(_input=testdata, id_property="theme_identifier"))
+        dict_thematic = multipolygons_to_singles(aligner0.dict_thematic)
+        aligner0.load_thematic_data(DictLoader(dict_thematic))
+
         # gebruik de actuele adp-percelen adp= administratieve percelen
         aligner = Aligner()
-        aligner.load_thematic_data_dict(
-            aligner0.dict_thematic,
-        )
-        aligner.load_reference_data_grb_actual(grb_type="adp", partition=1000)
+        aligner.load_thematic_data(DictLoader(dict_thematic))
+        aligner.load_reference_data(GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner))
 
         _, dict_predicted, _ = aligner.predictor()
 
         self.assertGreater(len(dict_predicted), 0)
         fcs = aligner.get_predictions_as_geojson(formula=True)
         self.assertEqual(len(fcs), 6)
-        # aligner.export_results("output/")
-        # write_geojson("output/predicted.geojson", fcs[0])
-        # write_geojson("output/predicted_diff.geojson", fcs[1])
-
-    # def test_example_parcel_change_detector(self):
-    #     aligner_x = Aligner()
-    #     dict_theme = get_oe_dict_by_ids([131635])
-    #     # Load thematic data & reference data (parcels)
-    #     aligner_x.load_thematic_data_dict(dict_theme)
-    #     aligner_x.load_reference_data_grb_actual(
-    #         grb_type="adp", partition=1000
-    #     )  # gebruik de actuele adp-percelen adp= administratieve percelen
-    #
-    #     aligner_y = Aligner()
-    #     # Load thematic data & reference data (buildings)
-    #     aligner_y.load_thematic_data_dict(dict_theme, 'aanduid_id')
-    #     aligner_y.load_reference_data_grb_actual(
-    #         grb_type="gbg", partition=1000
-    #     )  # gebruik de actuele adp-percelen adp= administratieve percelen
-    #
-    #     # Example how to use a series (for histogram)
-    #     series = np.arange(0, 300, 10, dtype=int)/100
-    #     x_dict_series = aligner_x.process_series(series, 4, 50)
-    #     x_resulting_areas = diffs_from_dict_series(x_dict_series, aligner_x.dict_thematic)
-    #     y_dict_series = aligner_y.process_series(series, 4, 50)
-    #     y_resulting_areas = diffs_from_dict_series(y_dict_series, aligner_y.dict_thematic)
-    #     # plot_diffs(series,x_resulting_areas)
-    #     # plot_diffs(series,y_resulting_areas)
-    #     # Make a 1-by-1 comparison for each thematic feature compared to the 2 references (
-    #     # parcels and buildings)
-    #     for key in x_resulting_areas:
-    #         dict_diff = {"x" + str(key): x_resulting_areas[key], "y" + str(key): y_resulting_areas[key]}
 
     def test_example_wanted_changes(self):
         aligner = Aligner()
         ##Load thematic data & reference data
         dict_theme = get_oe_dict_by_ids([131635])
-        aligner.load_thematic_data_dict(dict_theme)
-        aligner.load_reference_data_grb_actual(
-            grb_type="adp", partition=1000
-        )  # gebruik de actuele adp-percelen adp= administratieve percelen
+        aligner.load_thematic_data(DictLoader(dict_theme))
+        aligner.load_reference_data(GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner))
+
         # Example how to use the Aligner
         rel_dist = 2
         dict_results_by_distance = {}

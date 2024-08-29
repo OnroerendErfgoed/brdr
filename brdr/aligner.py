@@ -17,7 +17,6 @@ from shapely import to_geojson
 from shapely import unary_union
 from shapely.geometry.base import BaseGeometry
 
-from brdr.constants import AREA_LIMIT
 from brdr.constants import BUFFER_MULTIPLICATION_FACTOR
 from brdr.constants import CORR_DISTANCE
 from brdr.constants import DEFAULT_CRS
@@ -72,7 +71,7 @@ class Aligner:
         threshold_overlap_percentage=50,
         od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
         crs=DEFAULT_CRS,
-        area_limit=AREA_LIMIT,
+        area_limit=None,
     ):
         """
         Initializes the Aligner object
@@ -969,7 +968,7 @@ class Aligner:
 
     def load_reference_data_geojson(self, reference_input, name_reference_id):
         logging.warning("deprecated method, use load_reference_data instead")
-        loader = GeoJsonLoader(reference_input, name_reference_id)
+        loader = GeoJsonLoader(_input=reference_input, id_property=name_reference_id)
         self.load_reference_data(loader)
 
     def load_reference_data_file(self, path_to_file, name_reference_id):

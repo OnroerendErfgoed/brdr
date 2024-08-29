@@ -32,9 +32,9 @@ class DictLoader(Loader):
 
 class GeoJsonLoader(Loader):
     def __init__(
-        self,
-        _input: FeatureCollection,
+        self,*,
         id_property: str,
+            _input: FeatureCollection = None,
     ):
         super().__init__()
         self.id_property = id_property
@@ -67,13 +67,13 @@ class GeoJsonFileLoader(GeoJsonLoader):
     def __init__(self, path_to_file, id_property):
         with open(path_to_file, "r") as f:
             _input = json.load(f)
-        super().__init__(_input, id_property)
+        super().__init__(_input=_input, id_property=id_property)
 
 
 class GeoJsonUrlLoader(GeoJsonLoader):
     def __init__(self, url, id_property):
         _input = requests.get(url).json()
-        super().__init__(_input, id_property)
+        super().__init__(_input=_input, id_property=id_property)
 
 
 class GRBActualLoader(Loader):
@@ -101,23 +101,31 @@ class GRBActualLoader(Loader):
         self.data_dict = data_dict
 
 class GRBFiscalParcelLoader(GeoJsonLoader):
-    def __init__(self, year: str, aligner,prt=1000):
+    def __init__(self, year: str, aligner,partition=1000):
         self.aligner = aligner
         self.year = year
+        self.part = partition
+        if not self.aligner.dict_thematic:
+            raise ValueError("Thematic data not loaded")
+
+        self.aligner.logger.feedback_info(f"Adpf downloaded for year: {self.year}")
+        super().__init__(_input=None, id_property="CAPAKEY")
+
+    def load_data(self):
         if not self.aligner.dict_thematic:
             raise ValueError("Thematic data not loaded")
         geom_union = buffer_pos(self.aligner._get_thematic_union(),MAX_REFERENCE_BUFFER)
         collection = {}
-        if prt < 1:
+        if self.part < 1:
             collection = get_collection_grb_fiscal_parcels(year=self.year, bbox=get_bbox(geom_union))
         else:
-            geoms = partition(geom_union,prt)
+            geoms = partition(geom_union,self.part)
             for g in geoms:
                 coll = get_collection_grb_fiscal_parcels(year=self.year, bbox=get_bbox(g))
                 if collection=={}:
                     collection = dict(coll)
                 elif "features" in collection:
                     collection["features"].extend(coll["features"])
-        _input = dict(collection)
-        self.aligner.logger.feedback_info(f"Adpf downloaded for year: {self.year}")
-        super().__init__(_input, "CAPAKEY")
+        self.input = dict(collection)
+
+        return super().load_data()

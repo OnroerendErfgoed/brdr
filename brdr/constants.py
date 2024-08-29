@@ -44,5 +44,3 @@ GRB_FEATURE_URL = "https://geo.api.vlaanderen.be/GRB/ogc/features/collections"
 # URL of the OGC feature API of GRB fiscal parcels (situation of 1st of January) to extract collections
 GRB_FISCAL_PARCELS_URL = "https://geo.api.vlaanderen.be/Adpf/ogc/features/collections"
 
-# input geometry area limit in the selected crs unit (default meters), to prevent resource-intensive operations
-AREA_LIMIT = 100000
