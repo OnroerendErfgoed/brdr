@@ -8,10 +8,10 @@ from shapely.geometry import Polygon
 from shapely.geometry import shape
 
 from brdr.aligner import Aligner
-from brdr.enums import OpenbaarDomeinStrategy, GRBType
+from brdr.enums import OpenbaarDomeinStrategy
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import grid_bounds
-from brdr.loader import GeoJsonLoader, GRBActualLoader
+from brdr.loader import GeoJsonLoader
 from brdr.typings import FeatureCollection
 from brdr.typings import ProcessResult
 

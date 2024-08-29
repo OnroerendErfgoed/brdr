@@ -2,7 +2,8 @@ import numpy as np
 
 from brdr.aligner import Aligner
 from brdr.enums import GRBType
-from brdr.loader import GeoJsonFileLoader, GRBActualLoader
+from brdr.grb import GRBActualLoader
+from brdr.loader import GeoJsonFileLoader
 from brdr.utils import dict_series_by_keys
 from examples import show_map
 

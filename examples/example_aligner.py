@@ -1,6 +1,7 @@
 from brdr.aligner import Aligner
 from brdr.enums import OpenbaarDomeinStrategy, GRBType
-from brdr.loader import GRBActualLoader, DictLoader, GeoJsonLoader
+from brdr.grb import GRBActualLoader
+from brdr.loader import GeoJsonLoader
 from examples import show_map
 
 if __name__ == "__main__":

@@ -2,17 +2,15 @@ import logging
 from datetime import date, timedelta
 
 import numpy as np
-from shapely import STRtree
-from shapely.geometry import shape
 
 from brdr.aligner import Aligner
 from brdr.enums import GRBType
 from brdr.grb import (
     get_last_version_date,
     get_geoms_affected_by_grb_change,
-    get_collection_grb_fiscal_parcels, evaluate,
+    get_collection_grb_fiscal_parcels, evaluate, GRBFiscalParcelLoader, GRBActualLoader,
 )
-from brdr.loader import GeoJsonLoader, GRBActualLoader, DictLoader, GRBFiscalParcelLoader
+from brdr.loader import GeoJsonLoader, DictLoader
 from brdr.utils import get_oe_geojson_by_bbox
 
 # This code shows an example how the aligner can be used inside a flow of

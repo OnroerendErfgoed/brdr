@@ -1,9 +1,7 @@
 # Initiate brdr
 import tests
 from brdr.aligner import Aligner
-from brdr.enums import OpenbaarDomeinStrategy
-from brdr.utils import multipolygons_to_singles, write_geojson, dict_series_by_keys
-from examples import show_map
+from brdr.utils import multipolygons_to_singles, write_geojson
 
 aligner0 = Aligner()
 

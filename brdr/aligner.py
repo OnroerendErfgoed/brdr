@@ -32,8 +32,8 @@ from brdr.geometry_utils import safe_difference
 from brdr.geometry_utils import safe_intersection
 from brdr.geometry_utils import safe_symmetric_difference
 from brdr.geometry_utils import safe_union
+from brdr.grb import GRBActualLoader
 from brdr.loader import DictLoader
-from brdr.loader import GRBActualLoader
 from brdr.loader import GeoJsonFileLoader
 from brdr.loader import GeoJsonLoader
 from brdr.loader import GeoJsonUrlLoader
@@ -108,17 +108,23 @@ class Aligner:
         self.name_thematic_id = "theme_identifier"
         # dictionary to store all thematic geometries to handle
         self.dict_thematic: dict[str, BaseGeometry] = {}
-        # dictionary to store all unionedthematic geometries
-        self.dict_thematic_properties: dict[str, dict] = ({} )  # dictionary to store properties of the reference-features (optional)
-
-        self.thematic_union = None  # to save a unioned geometry of all thematic polygons;
+        # dictionary to store properties of the reference-features (optional)
+        self.dict_thematic_properties: dict[str, dict] = ({} )
+        # dictionary to store all unioned thematic geometries
+        self.thematic_union = None
 
         # reference
-        self.name_reference_id = "ref_identifier"  # name of the identifier-field of the reference data (id has to be unique,f.e CAPAKEY for GRB-parcels)
-        self.dict_reference: dict[str, BaseGeometry] = ({})# dictionary to store all reference geometries
-        self.dict_reference_properties: dict[str, dict] = ( {})# dictionary to store properties of the reference-features (optional)
 
-        self.reference_union = None  # to save a unioned geometry of all reference polygons; needed for calculation in most OD-strategies
+        # name of the identifier-field of the reference data (id has to be unique,f.e CAPAKEY for GRB-parcels)
+        self.name_reference_id = "ref_identifier"
+        # dictionary to store all reference geometries
+        self.dict_reference: dict[str, BaseGeometry] = ({})
+        # dictionary to store properties of the reference-features (optional)
+        self.dict_reference_properties: dict[str, dict] = ( {})
+        # to save a unioned geometry of all reference polygons; needed for calculation in most OD-strategies
+        self.reference_union = None
+
+        #results
 
         # output-dictionaries (when processing dict_thematic)
         self.dict_result: dict[str, ProcessResult] = {}

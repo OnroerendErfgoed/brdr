@@ -10,10 +10,10 @@ from brdr.geometry_utils import get_bbox
 from brdr.grb import (
     get_last_version_date,
     is_grb_changed,
-    get_geoms_affected_by_grb_change, evaluate, get_collection_grb_fiscal_parcels,
+    get_geoms_affected_by_grb_change, evaluate, get_collection_grb_fiscal_parcels, GRBActualLoader,
+    GRBFiscalParcelLoader,
 )
-from brdr.loader import DictLoader, GeoJsonLoader, GRBFiscalParcelLoader
-from brdr.loader import GRBActualLoader
+from brdr.loader import DictLoader
 from brdr.utils import (get_series_geojson_dict,
 )
 

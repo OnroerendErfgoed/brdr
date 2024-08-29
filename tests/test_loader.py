@@ -3,8 +3,8 @@ from shapely import Polygon
 
 from brdr.aligner import Aligner
 from brdr.enums import GRBType
+from brdr.grb import GRBActualLoader
 from brdr.loader import DictLoader
-from brdr.loader import GRBActualLoader
 from brdr.utils import get_oe_dict_by_ids
 
 

@@ -4,7 +4,8 @@ import numpy as np
 
 from brdr.aligner import Aligner
 from brdr.enums import GRBType
-from brdr.loader import GRBActualLoader, DictLoader, GeoJsonLoader
+from brdr.grb import GRBActualLoader
+from brdr.loader import DictLoader, GeoJsonLoader
 from brdr.utils import diffs_from_dict_series
 from brdr.utils import get_breakpoints_zerostreak
 from brdr.utils import get_oe_dict_by_ids

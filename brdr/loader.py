@@ -1,14 +1,9 @@
 import json
 from abc import ABC
 
-from brdr.constants import MAX_REFERENCE_BUFFER
-from brdr.geometry_utils import buffer_pos
-from brdr.grb import get_collection_grb_fiscal_parcels, get_collection_grb_actual
+
 import requests as requests
-from shapely import make_valid, unary_union
-from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
-from brdr.enums import GRBType
 from brdr.typings import FeatureCollection
 from brdr.utils import geojson_to_dicts
 
@@ -75,35 +70,4 @@ class GeoJsonUrlLoader(GeoJsonLoader):
         _input = requests.get(url).json()
         super().__init__(_input=_input, id_property=id_property)
 
-class GRBActualLoader(GeoJsonLoader):
-    def __init__(self, grb_type: GRBType,aligner, partition: int=1000):
-        self.aligner = aligner
-        self.grb_type = grb_type
-        self.part = partition
-        super().__init__()
 
-    def load_data(self):
-        if not self.aligner.dict_thematic:
-            raise ValueError("Thematic data not loaded")
-        geom_union = buffer_pos(self.aligner._get_thematic_union(), MAX_REFERENCE_BUFFER)
-        collection, id_property = get_collection_grb_actual(grb_type=self.grb_type, geometry=geom_union, partition=self.part,crs=self.aligner.CRS)
-        self.id_property = id_property
-        self.input = dict(collection)
-        self.aligner.logger.feedback_info(f"GRB downloaded: {self.grb_type}")
-        return super().load_data()
-
-class GRBFiscalParcelLoader(GeoJsonLoader):
-    def __init__(self, year: str, aligner,partition=1000):
-        self.aligner = aligner
-        self.year = year
-        self.part = partition
-        super().__init__(_input=None, id_property="CAPAKEY")
-
-    def load_data(self):
-        if not self.aligner.dict_thematic:
-            raise ValueError("Thematic data not loaded")
-        geom_union = buffer_pos(self.aligner._get_thematic_union(),MAX_REFERENCE_BUFFER)
-        collection = get_collection_grb_fiscal_parcels(year=self.year, geometry=geom_union, partition=self.part, crs=self.aligner.CRS)
-        self.input = dict(collection)
-        self.aligner.logger.feedback_info(f"Adpf downloaded for year: {self.year}")
-        return super().load_data()

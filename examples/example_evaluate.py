@@ -7,10 +7,9 @@ from brdr.aligner import Aligner
 from brdr.enums import GRBType
 from brdr.geometry_utils import get_bbox
 from brdr.grb import (
-    get_geoms_affected_by_grb_change, evaluate,
+    get_geoms_affected_by_grb_change, evaluate, GRBFiscalParcelLoader, GRBActualLoader,
 )
-from brdr.loader import DictLoader, GRBFiscalParcelLoader
-from brdr.loader import GRBActualLoader
+from brdr.loader import DictLoader
 from brdr.utils import get_series_geojson_dict
 
 thematic_dict = {
