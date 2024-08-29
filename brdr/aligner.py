@@ -109,7 +109,7 @@ class Aligner:
         # dictionary to store all thematic geometries to handle
         self.dict_thematic: dict[str, BaseGeometry] = {}
         # dictionary to store properties of the reference-features (optional)
-        self.dict_thematic_properties: dict[str, dict] = ({} )
+        self.dict_thematic_properties: dict[str, dict] = {}
         # dictionary to store all unioned thematic geometries
         self.thematic_union = None
 
@@ -118,13 +118,13 @@ class Aligner:
         # name of the identifier-field of the reference data (id has to be unique,f.e CAPAKEY for GRB-parcels)
         self.name_reference_id = "ref_identifier"
         # dictionary to store all reference geometries
-        self.dict_reference: dict[str, BaseGeometry] = ({})
+        self.dict_reference: dict[str, BaseGeometry] = {}
         # dictionary to store properties of the reference-features (optional)
-        self.dict_reference_properties: dict[str, dict] = ( {})
+        self.dict_reference_properties: dict[str, dict] = {}
         # to save a unioned geometry of all reference polygons; needed for calculation in most OD-strategies
         self.reference_union = None
 
-        #results
+        # results
 
         # output-dictionaries (when processing dict_thematic)
         self.dict_result: dict[str, ProcessResult] = {}
@@ -765,12 +765,16 @@ class Aligner:
 
     def _get_reference_union(self):
         if self.reference_union is None:
-            self.reference_union = make_valid(unary_union(list(self.dict_reference.values())))
+            self.reference_union = make_valid(
+                unary_union(list(self.dict_reference.values()))
+            )
         return self.reference_union
 
     def _get_thematic_union(self):
         if self.thematic_union is None:
-            self.thematic_union = make_valid(unary_union(list(self.dict_thematic.values())))
+            self.thematic_union = make_valid(
+                unary_union(list(self.dict_thematic.values()))
+            )
         return self.thematic_union
 
     def _postprocess_preresult(self, preresult, geom_thematic) -> ProcessResult:
@@ -941,11 +945,11 @@ class Aligner:
         return array
 
     def load_reference_data(self, loader: Loader):
-        self.dict_reference,self.dict_reference_properties = loader.load_data()
+        self.dict_reference, self.dict_reference_properties = loader.load_data()
         self._prepare_reference_data()
 
     def load_thematic_data(self, loader: Loader):
-        self.dict_thematic,self.dict_thematic_properties = loader.load_data()
+        self.dict_thematic, self.dict_thematic_properties = loader.load_data()
 
     # Deprecated loader methods
     def load_thematic_data_geojson(self, thematic_input, name_thematic_id):

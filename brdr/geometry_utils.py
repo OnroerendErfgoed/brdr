@@ -519,7 +519,7 @@ def features_by_geometric_operation(
     thematic_items = np.array(list_input_ids)
     arr_indices = thematic_tree.query(list_geometries, predicate=predicate)
     thematic_intersections = list(set(thematic_items.take(arr_indices[1])))
-    thematic_intersections =[str(element) for element in thematic_intersections]
+    thematic_intersections = [str(element) for element in thematic_intersections]
     return thematic_intersections
 
 
@@ -538,7 +538,7 @@ def get_partitions(geom, delta):
         list: A filtered list of Polygon objects representing the partitions
             overlapping the original geometric object.
     """
-    #TODO: partitioning results in multiple squares, this can be improved by partitioning with a quadtree with rectangles? https://www.fundza.com/algorithmic/quadtree/index.html
+    # TODO: partitioning results in multiple squares, this can be improved by partitioning with a quadtree with rectangles? https://www.fundza.com/algorithmic/quadtree/index.html
     prepared_geom = prep(geom)
     partitions = grid_bounds(geom, delta)
     filtered_grid = list(filter(prepared_geom.intersects, partitions))
@@ -579,6 +579,7 @@ def fill_and_remove_gaps(geom_thematic_preresult, buffer_value):
                 ix = ix + 1
         ix_part = ix_part + 1
     return geom_thematic_cleaned_holes
+
 
 def get_bbox(geometry):
     """

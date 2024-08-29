@@ -11,10 +11,10 @@ from brdr.utils import geojson_to_dicts
 class Loader(ABC):
     def __init__(self):
         self.data_dict: dict[str, BaseGeometry] = {}
-        self.data_dict_properties:dict[str, dict] = {}
+        self.data_dict_properties: dict[str, dict] = {}
 
     def load_data(self):
-        return self.data_dict,self.data_dict_properties
+        return self.data_dict, self.data_dict_properties
 
 
 class DictLoader(Loader):
@@ -29,10 +29,11 @@ class DictLoader(Loader):
 
 class GeoJsonLoader(Loader):
     def __init__(
-        self,*,
+        self,
+        *,
         id_property: str = None,
-            _input: FeatureCollection = None,
-            data_dict_properties =None
+        _input: FeatureCollection = None,
+        data_dict_properties=None,
     ):
         super().__init__()
         self.id_property = id_property
@@ -54,7 +55,9 @@ class GeoJsonLoader(Loader):
             None.
         """
         # THEMATIC PREPARATION
-        self.data_dict,self.data_dict_properties = geojson_to_dicts(self.input, self.id_property)
+        self.data_dict, self.data_dict_properties = geojson_to_dicts(
+            self.input, self.id_property
+        )
         return
 
 
@@ -69,5 +72,3 @@ class GeoJsonUrlLoader(GeoJsonLoader):
     def __init__(self, url, id_property):
         _input = requests.get(url).json()
         super().__init__(_input=_input, id_property=id_property)
-
-

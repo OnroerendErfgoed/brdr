@@ -21,18 +21,29 @@ if __name__ == "__main__":
 
     # Load thematic data & reference data
     loader = GeoJsonFileLoader(
-        path_to_file="../tests/testdata/test_parcel_vs_building.geojson", id_property="theme_id"
+        path_to_file="../tests/testdata/test_parcel_vs_building.geojson",
+        id_property="theme_id",
     )
     aligner.load_thematic_data(loader)
 
     adploader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
     gbgloader = GRBActualLoader(grb_type=GRBType.GBG, partition=1000, aligner=aligner)
-    collection_adp, name_reference_id_adp = get_collection_grb_actual(aligner._get_thematic_union(), grb_type=GRBType.ADP, partition=1000,
-                              date_start=None, date_end=None)
+    collection_adp, name_reference_id_adp = get_collection_grb_actual(
+        aligner._get_thematic_union(),
+        grb_type=GRBType.ADP,
+        partition=1000,
+        date_start=None,
+        date_end=None,
+    )
     dict_adp = geojson_to_dicts(collection_adp, name_reference_id_adp)
 
-    collection_gbg, name_reference_id_gbg = get_collection_grb_actual(aligner._get_thematic_union(), grb_type=GRBType.GBG, partition=1000,
-                              date_start=None, date_end=None)
+    collection_gbg, name_reference_id_gbg = get_collection_grb_actual(
+        aligner._get_thematic_union(),
+        grb_type=GRBType.GBG,
+        partition=1000,
+        date_start=None,
+        date_end=None,
+    )
     dict_gbg = geojson_to_dicts(collection_gbg, name_reference_id_gbg)
 
     dict_adp_gbg = dict_adp

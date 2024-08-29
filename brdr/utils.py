@@ -139,7 +139,7 @@ def multipolygons_to_singles(dict_geoms):
                 resulting_dict_geoms[new_key] = p
                 i = i + 1
         else:
-            logging.debug( "geom excluded: " + str(geom) + " for key: " + str(key))
+            logging.debug("geom excluded: " + str(geom) + " for key: " + str(key))
     return resulting_dict_geoms
 
 
@@ -495,15 +495,16 @@ def get_collection(ref_url, limit):
             collection = feature_collection
         else:
             collection["features"].extend(feature_collection["features"])
-        if (len(feature_collection["features"]) < limit):
+        if len(feature_collection["features"]) < limit:
             break
     return collection
+
 
 def geojson_to_dicts(collection, id_property):
     data_dict = {}
     data_dict_properties = {}
     if collection is None or "features" not in collection:
-        return data_dict,data_dict_properties
+        return data_dict, data_dict_properties
     for f in collection["features"]:
         key = str(f["properties"][id_property])
         geom = shape(f["geometry"])
@@ -511,39 +512,50 @@ def geojson_to_dicts(collection, id_property):
         data_dict_properties[key] = f["properties"]
     return data_dict, data_dict_properties
 
-def get_collection_by_partition(url, geometry, partition=1000, limit=DOWNLOAD_LIMIT, crs=DEFAULT_CRS
-                                ):
+
+def get_collection_by_partition(
+    url, geometry, partition=1000, limit=DOWNLOAD_LIMIT, crs=DEFAULT_CRS
+):
     collection = {}
-    if geometry==None:
-        collection = get_collection(_add_bbox_to_url(url=url, crs=crs, bbox=None),limit)
+    if geometry == None:
+        collection = get_collection(
+            _add_bbox_to_url(url=url, crs=crs, bbox=None), limit
+        )
     elif partition < 1:
-        collection = get_collection(_add_bbox_to_url(url=url,crs=crs,bbox=get_bbox(geometry)), limit)
+        collection = get_collection(
+            _add_bbox_to_url(url=url, crs=crs, bbox=get_bbox(geometry)), limit
+        )
     else:
         geoms = get_partitions(geometry, partition)
         for g in geoms:
-            coll = get_collection(_add_bbox_to_url(url=url,crs=crs,bbox=get_bbox(g)), limit)
+            coll = get_collection(
+                _add_bbox_to_url(url=url, crs=crs, bbox=get_bbox(g)), limit
+            )
             if collection == {}:
                 collection = dict(coll)
             elif "features" in collection and "features" in coll:
                 collection["features"].extend(coll["features"])
     return collection
 
-def _add_bbox_to_url(url,crs=DEFAULT_CRS,bbox=None):
+
+def _add_bbox_to_url(url, crs=DEFAULT_CRS, bbox=None):
     # Load the Base reference data
     if bbox is not None:
         url = url + "&bbox-crs=" + crs + "&bbox=" + bbox
     return url
 
+
 def merge_dict_series(
-        dict_series: dict[float,dict[str, ProcessResult]]
-) -> dict[float,dict[str, ProcessResult]]:
+    dict_series: dict[float, dict[str, ProcessResult]]
+) -> dict[float, dict[str, ProcessResult]]:
     """
     Merges dict_series (dict_predicted) with  seperated IDs (MULTI_SINGLE_ID_SEPARATOR) to their original unique ID
     """
     dict_series_merged = {}
-    for dist,item in dict_series.items():
-        dict_series_merged[dist]=merge_process_results(item)
+    for dist, item in dict_series.items():
+        dict_series_merged[dist] = merge_process_results(item)
     return dict_series_merged
+
 
 def merge_process_results(
     result_dict: dict[str, ProcessResult]

@@ -43,4 +43,3 @@ GRB_FEATURE_URL = "https://geo.api.vlaanderen.be/GRB/ogc/features/collections"
 
 # URL of the OGC feature API of GRB fiscal parcels (situation of 1st of January) to extract collections
 GRB_FISCAL_PARCELS_URL = "https://geo.api.vlaanderen.be/Adpf/ogc/features/collections"
-

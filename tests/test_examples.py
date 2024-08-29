@@ -11,6 +11,7 @@ from brdr.utils import get_breakpoints_zerostreak
 from brdr.utils import get_oe_dict_by_ids
 from brdr.utils import multipolygons_to_singles
 
+
 class TestExamples(unittest.TestCase):
 
     def test_example_131635(self):
@@ -35,7 +36,7 @@ class TestExamples(unittest.TestCase):
         gbg_loader = GRBActualLoader(
             grb_type=GRBType.GBG, partition=1000, aligner=aligner
         )
-        dict_ref,dict_ref_properties = adp_loader.load_data()
+        dict_ref, dict_ref_properties = adp_loader.load_data()
         dict_ref2, dict_ref_properties2 = gbg_loader.load_data()
         dict_ref.update(dict_ref2)  # combine 2 dictionaries
         # make a polygonized version of the reference data with non-overlapping polygons
@@ -170,14 +171,18 @@ class TestExamples(unittest.TestCase):
         }
 
         # Load thematic data
-        aligner0.load_thematic_data(GeoJsonLoader(_input=testdata, id_property="theme_identifier"))
+        aligner0.load_thematic_data(
+            GeoJsonLoader(_input=testdata, id_property="theme_identifier")
+        )
         dict_thematic = multipolygons_to_singles(aligner0.dict_thematic)
         aligner0.load_thematic_data(DictLoader(dict_thematic))
 
         # gebruik de actuele adp-percelen adp= administratieve percelen
         aligner = Aligner()
         aligner.load_thematic_data(DictLoader(dict_thematic))
-        aligner.load_reference_data(GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner))
+        aligner.load_reference_data(
+            GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
+        )
 
         _, dict_predicted, _ = aligner.predictor()
 
@@ -190,7 +195,9 @@ class TestExamples(unittest.TestCase):
         ##Load thematic data & reference data
         dict_theme = get_oe_dict_by_ids([131635])
         aligner.load_thematic_data(DictLoader(dict_theme))
-        aligner.load_reference_data(GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner))
+        aligner.load_reference_data(
+            GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
+        )
 
         # Example how to use the Aligner
         rel_dist = 2

@@ -20,8 +20,8 @@ class TestExamples:
             grb_type=GRBType.ADP, aligner=aligner, partition=0
         )
 
-        aligner.dict_thematic,props_thematic = thematic_loader.load_data()
-        aligner.dict_reference,props_reference = reference_loader.load_data()
+        aligner.dict_thematic, props_thematic = thematic_loader.load_data()
+        aligner.dict_reference, props_reference = reference_loader.load_data()
         assert aligner.dict_reference is not None
 
     # def test_partition(self):
