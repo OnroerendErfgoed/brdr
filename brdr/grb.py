@@ -279,7 +279,8 @@ def evaluate (actual_aligner,dict_series,dict_predicted,thematic_dict_formula,th
     for dist,dict_predicted_for_dist in dict_predicted.items():
         if equality:
             break
-        for theme_id,results in dict_predicted_for_dist.items():
+        for theme_id in dict_predicted_for_dist.keys():
+            results = dict_series[dist][theme_id]
             actual_formula = actual_aligner.get_formula(results["result"])
             prop_dictionary[dist][theme_id]["formula"] = json.dumps(actual_formula)
             equality, property = check_equality(thematic_dict_formula[theme_id], actual_formula,threshold_area,threshold_percentage)

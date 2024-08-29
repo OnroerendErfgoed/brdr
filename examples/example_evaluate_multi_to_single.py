@@ -24,7 +24,7 @@ base_aligner = Aligner()
 base_aligner.load_thematic_data(DictLoader(thematic_dict))
 base_year ="2022"
 base_aligner.load_reference_data(GRBFiscalParcelLoader(year=base_year,aligner =base_aligner))
-base_process_result = base_aligner.process_dict_thematic(relevant_distance=1)
+base_process_result = base_aligner.process_dict_thematic(relevant_distance=2)
 base_process_result = merge_process_results(base_process_result)
 thematic_dict_formula = {}
 thematic_dict_result ={}

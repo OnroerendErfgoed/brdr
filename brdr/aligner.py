@@ -431,6 +431,7 @@ class Aligner:
         """
         dict_formula = {}
         dict_formula["full"] = True
+        dict_formula["versiondate"] = None
         dict_formula["reference_features"] = {}
         full_total = True
 
