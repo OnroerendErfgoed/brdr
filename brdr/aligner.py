@@ -109,14 +109,15 @@ class Aligner:
         # dictionary to store all thematic geometries to handle
         self.dict_thematic: dict[str, BaseGeometry] = {}
         # dictionary to store all unionedthematic geometries
+        self.dict_thematic_properties: dict[str, dict] = ({} )  # dictionary to store properties of the reference-features (optional)
+
         self.thematic_union = None  # to save a unioned geometry of all thematic polygons;
 
         # reference
         self.name_reference_id = "ref_identifier"  # name of the identifier-field of the reference data (id has to be unique,f.e CAPAKEY for GRB-parcels)
-        self.dict_reference: dict[str, BaseGeometry] = (
-            {}
-        )
-        # dictionary to store all reference geometries
+        self.dict_reference: dict[str, BaseGeometry] = ({})# dictionary to store all reference geometries
+        self.dict_reference_properties: dict[str, dict] = ( {})# dictionary to store properties of the reference-features (optional)
+
         self.reference_union = None  # to save a unioned geometry of all reference polygons; needed for calculation in most OD-strategies
 
         # output-dictionaries (when processing dict_thematic)
@@ -934,11 +935,11 @@ class Aligner:
         return array
 
     def load_reference_data(self, loader: Loader):
-        self.dict_reference = loader.load_data()
+        self.dict_reference,self.dict_reference_properties = loader.load_data()
         self._prepare_reference_data()
 
     def load_thematic_data(self, loader: Loader):
-        self.dict_thematic = loader.load_data()
+        self.dict_thematic,self.dict_thematic_properties = loader.load_data()
 
     # Deprecated loader methods
     def load_thematic_data_geojson(self, thematic_input, name_thematic_id):

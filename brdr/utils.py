@@ -499,15 +499,17 @@ def get_collection(ref_url, limit):
             break
     return collection
 
-def collection_to_dict(collection,id_property):
+def geojson_to_dicts(collection, id_property):
     data_dict = {}
+    data_dict_properties = {}
     if collection is None or "features" not in collection:
-        return data_dict
+        return data_dict,data_dict_properties
     for f in collection["features"]:
         key = str(f["properties"][id_property])
         geom = shape(f["geometry"])
         data_dict[key] = make_valid(geom)
-    return data_dict
+        data_dict_properties[key] = f["properties"]
+    return data_dict, data_dict_properties
 
 def get_collection_by_partition(url, geometry, partition=1000, limit=DOWNLOAD_LIMIT, crs=DEFAULT_CRS
                                 ):

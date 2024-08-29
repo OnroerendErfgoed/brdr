@@ -17,7 +17,7 @@ from brdr.geometry_utils import (
     features_by_geometric_operation,
     create_donut, get_bbox
 )
-from brdr.utils import get_collection, dict_series_by_keys, get_collection_by_partition, collection_to_dict
+from brdr.utils import get_collection, dict_series_by_keys, get_collection_by_partition, geojson_to_dicts
 
 log = logging.getLogger(__name__)
 date_format = "%Y-%m-%d"
@@ -104,7 +104,7 @@ def get_geoms_affected_by_grb_change(
             date_end=date_end,
             crs=crs
         )
-        dict_changed_grb=collection_to_dict(coll_changed_grb,name_reference_id)
+        dict_changed_grb,dict_changed_grb_properties=geojson_to_dicts(coll_changed_grb, name_reference_id)
 
         affected_dict: dict[str, BaseGeometry] = {}
 

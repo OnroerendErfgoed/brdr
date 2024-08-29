@@ -10,15 +10,16 @@ from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
 from brdr.enums import GRBType
 from brdr.typings import FeatureCollection
-from brdr.utils import collection_to_dict
+from brdr.utils import geojson_to_dicts
 
 
 class Loader(ABC):
     def __init__(self):
         self.data_dict: dict[str, BaseGeometry] = {}
+        self.data_dict_properties:dict[str, dict] = {}
 
     def load_data(self):
-        return self.data_dict
+        return self.data_dict,self.data_dict_properties
 
 
 class DictLoader(Loader):
@@ -36,6 +37,7 @@ class GeoJsonLoader(Loader):
         self,*,
         id_property: str = None,
             _input: FeatureCollection = None,
+            data_dict_properties =None
     ):
         super().__init__()
         self.id_property = id_property
@@ -57,7 +59,7 @@ class GeoJsonLoader(Loader):
             None.
         """
         # THEMATIC PREPARATION
-        self.data_dict = collection_to_dict(self.input, self.id_property)
+        self.data_dict,self.data_dict_properties = geojson_to_dicts(self.input, self.id_property)
         return
 
 

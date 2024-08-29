@@ -2,7 +2,7 @@ from brdr.enums import GRBType
 from brdr.grb import get_collection_grb_actual
 from brdr.loader import GRBActualLoader, GeoJsonFileLoader
 from brdr.aligner import Aligner
-from brdr.utils import polygonize_reference_data, collection_to_dict
+from brdr.utils import polygonize_reference_data, geojson_to_dicts
 from examples import show_map, print_formula
 
 # example to test what happens if we combine borders
@@ -29,11 +29,11 @@ if __name__ == "__main__":
     gbgloader = GRBActualLoader(grb_type=GRBType.GBG, partition=1000, aligner=aligner)
     collection_adp, name_reference_id_adp = get_collection_grb_actual(aligner._get_thematic_union(), grb_type=GRBType.ADP, partition=1000,
                               date_start=None, date_end=None)
-    dict_adp = collection_to_dict(collection_adp,name_reference_id_adp)
+    dict_adp = geojson_to_dicts(collection_adp, name_reference_id_adp)
 
     collection_gbg, name_reference_id_gbg = get_collection_grb_actual(aligner._get_thematic_union(), grb_type=GRBType.GBG, partition=1000,
                               date_start=None, date_end=None)
-    dict_gbg = collection_to_dict(collection_gbg,name_reference_id_gbg)
+    dict_gbg = geojson_to_dicts(collection_gbg, name_reference_id_gbg)
 
     dict_adp_gbg = dict_adp
     dict_adp_gbg.update(dict_gbg)  # combine 2 dictionaries
