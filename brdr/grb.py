@@ -6,20 +6,18 @@ from shapely.geometry.base import BaseGeometry
 from brdr.constants import (
     DOWNLOAD_LIMIT,
     DEFAULT_CRS,
-    MAX_REFERENCE_BUFFER,
     GRB_FEATURE_URL,
     GRB_FISCAL_PARCELS_URL,
 )
 from brdr.enums import GRBType, Evaluation
-from shapely import intersects
+from shapely import intersects, make_valid
 from shapely.geometry import shape
 
 from brdr.geometry_utils import (
-    create_dictionary_from_url,
     features_by_geometric_operation,
-    create_donut, get_bbox, buffer_pos,
+    create_donut, get_bbox
 )
-from brdr.utils import get_collection, dict_series_by_keys
+from brdr.utils import get_collection, dict_series_by_keys, get_collection_by_partition, collection_to_dict
 
 log = logging.getLogger(__name__)
 date_format = "%Y-%m-%d"
@@ -97,23 +95,27 @@ def get_geoms_affected_by_grb_change(
         return affected_dict
     else:
         # Temporal filter on VERDATUM
-        dict_changed_parcels, name_reference_id = get_reference_data_dict_grb_actual(
-            aligner=aligner,
+        geometry = aligner._get_thematic_union()
+        coll_changed_grb, name_reference_id = get_collection_grb_actual(
+            geometry,
             grb_type=grb_type,
-            partition=0,
+            partition=1000,
             date_start=date_start,
             date_end=date_end,
+            crs=crs
         )
+        dict_changed_grb=collection_to_dict(coll_changed_grb,name_reference_id)
+
         affected_dict: dict[str, BaseGeometry] = {}
 
-        if len(dict_changed_parcels) == 0:
+        if len(dict_changed_grb) == 0:
             logging.info("No detected changes")
             return affected_dict  # empty dict
-        logging.info("Changed parcels in timespan: " + str(len(dict_changed_parcels)))
+        logging.info("Changed parcels in timespan: " + str(len(dict_changed_grb)))
         thematic_intersections = features_by_geometric_operation(
             list(dict_thematic.values()),
             list(dict_thematic.keys()),
-            list(dict_changed_parcels.values()),
+            list(dict_changed_grb.values()),
             predicate="intersects",
         )
         logging.info("Number of filtered features: " + str(len(thematic_intersections)))
@@ -168,46 +170,9 @@ def get_last_version_date(
         return update_dates[0]
     return None
 
+def get_collection_grb_actual(geometry,grb_type=GRBType.ADP, partition=1000,limit=DOWNLOAD_LIMIT,crs=DEFAULT_CRS,date_start=None,date_end=None):
 
-def get_reference_data_dict_grb_actual(
-    aligner,
-    grb_type=GRBType.ADP,
-    partition=1000,
-    date_start=None,
-    date_end=None,
-):
-    """
-    Fetches reference data (administrative plots, buildings, or artwork) from the actual GRB
-    API based on thematic data.
-
-    This function retrieves reference data from the Grootschalig Referentie
-    Bestand (GRB) depending on the specified `grb_type` (e.g., administrative
-    plots (ADP), buildings (GBG), or artwork (KNW)).
-    It uses the bounding boxes of the geometries in the loaded thematic data
-    (`self.aligner.dict_thematic`) to filter the relevant reference data
-    geographically.
-
-    Args:
-        grb_type (GRBType, optional): The type of reference data to retrieve.
-            Defaults to GRBType.ADP (administrative plots).
-        partition (int, optional): If greater than zero, partitions the bounding box
-            of the thematic data into a grid before fetching reference data by
-            partition. Defaults to 0 (no partitioning).
-
-    Returns:
-        tuple: A tuple containing two elements:
-
-            - dict: A dictionary where keys are reference data identifiers
-              (as defined by `name_reference_id`) and values are GeoJSON  geometry
-              objects representing the reference data.
-            - str: The name of the reference data identifier property
-              (e.g., "CAPAKEY" for ADP).
-
-    Raises:
-        ValueError: If an unsupported `grb_type` is provided.
-    """
-
-    url_grb = GRB_FEATURE_URL + "/" + grb_type.upper() + "/items?"
+    url = GRB_FEATURE_URL + "/" + grb_type.upper() + "/items?limit=" + str(limit) + "&crs=" + crs
     if grb_type == GRBType.ADP:
         name_reference_id = "CAPAKEY"
     elif grb_type == "gbg":
@@ -218,7 +183,7 @@ def get_reference_data_dict_grb_actual(
         logging.warning(
             f"type not implemented: {str(grb_type)} -->No reference-data loaded"
         )
-        return
+        return {},None
 
     versiondate_filter = ""
     if date_start is not None:
@@ -230,36 +195,20 @@ def get_reference_data_dict_grb_actual(
     if not (date_start is None and date_end is None):
         versiondate_filter = versiondate_filter_start + " AND " + versiondate_filter_end
     if versiondate_filter != "":
-        url_grb = url_grb + "filter=" + versiondate_filter + "&filter-lang=cql-text"
+        url = url + "&filter=" + versiondate_filter + "&filter-lang=cql-text"
 
-    limit = DOWNLOAD_LIMIT
-    unioned_geom_buffered = buffer_pos(
-        aligner._get_thematic_union(),
-        aligner.relevant_distance + MAX_REFERENCE_BUFFER)
+    collection = get_collection_by_partition(url, geometry=geometry, partition=partition, limit=limit, crs=crs )
+    return collection, name_reference_id
 
-    dictionary = create_dictionary_from_url(
-        aligner.CRS,
-        unioned_geom_buffered,
-        limit,
-        name_reference_id,
-        partition,
-        url_grb,
-    )
-
-    return dictionary, name_reference_id
-
-
-def get_collection_grb_fiscal_parcels(
-    year=str(datetime.now().year), bbox=None, limit=DOWNLOAD_LIMIT, crs=DEFAULT_CRS
+def get_collection_grb_fiscal_parcels(geometry,year=str(datetime.now().year), partition=1000, limit=DOWNLOAD_LIMIT, crs=DEFAULT_CRS
 ):
-    # Load the Base reference data
     url = (
         GRB_FISCAL_PARCELS_URL + "/Adpf" + year + "/items?"
         "limit=" + str(limit) + "&crs=" + crs
     )
-    if bbox is not None:
-        url = url + "&bbox-crs=" + crs + "&bbox=" + bbox
-    return get_collection(url, limit)
+    return get_collection_by_partition(url, geometry=geometry, partition=partition, limit=limit, crs=crs
+                                       )
+
 
 def evaluate (actual_aligner,dict_series,dict_predicted,thematic_dict_formula,threshold_area=5,threshold_percentage=1):
     """

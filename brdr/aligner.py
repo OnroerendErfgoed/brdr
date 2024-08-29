@@ -981,7 +981,7 @@ class Aligner:
         loader = GeoJsonUrlLoader(url, name_reference_id)
         self.load_reference_data(loader)
 
-    def load_reference_data_grb_actual(self, *, grb_type=GRBType.ADP, partition=0):
+    def load_reference_data_grb_actual(self, *, grb_type=GRBType.ADP, partition=1000):
         logging.warning("deprecated method, use load_reference_data instead")
-        loader = GRBActualLoader(grb_type, partition, self)
+        loader = GRBActualLoader(grb_type=grb_type, partition=partition, aligner=self)
         self.load_reference_data(loader)

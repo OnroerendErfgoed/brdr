@@ -42,7 +42,7 @@ if __name__ == "__main__":
         ],
     }
 
-    loader = GeoJsonLoader(thematic_json, id_property="theme_identifier")
+    loader = GeoJsonLoader(_input=thematic_json, id_property="theme_identifier")
     aligner.load_thematic_data(loader)
     loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
     aligner.load_reference_data(loader)

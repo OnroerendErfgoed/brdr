@@ -14,8 +14,9 @@ from shapely import unary_union
 from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
 
-from brdr.constants import MULTI_SINGLE_ID_SEPARATOR
+from brdr.constants import MULTI_SINGLE_ID_SEPARATOR, DEFAULT_CRS, DOWNLOAD_LIMIT
 from brdr.enums import DiffMetric
+from brdr.geometry_utils import get_partitions, get_bbox
 from brdr.typings import ProcessResult
 
 
@@ -483,7 +484,7 @@ def get_collection(ref_url, limit):
         url = ref_url + "&startIndex=" + str(start_index)
         logging.debug("called url: " + url)
         json = requests.get(url).json()
-        feature_collection = json
+        feature_collection = dict(json)
         if (
             "features" not in feature_collection
             or len(feature_collection["features"]) == 0
@@ -494,8 +495,42 @@ def get_collection(ref_url, limit):
             collection = feature_collection
         else:
             collection["features"].extend(feature_collection["features"])
+        if (len(feature_collection["features"]) < limit):
+            break
     return collection
 
+def collection_to_dict(collection,id_property):
+    data_dict = {}
+    if collection is None or "features" not in collection:
+        return data_dict
+    for f in collection["features"]:
+        key = str(f["properties"][id_property])
+        geom = shape(f["geometry"])
+        data_dict[key] = make_valid(geom)
+    return data_dict
+
+def get_collection_by_partition(url, geometry, partition=1000, limit=DOWNLOAD_LIMIT, crs=DEFAULT_CRS
+                                ):
+    collection = {}
+    if geometry==None:
+        collection = get_collection(_add_bbox_to_url(url=url, crs=crs, bbox=None),limit)
+    elif partition < 1:
+        collection = get_collection(_add_bbox_to_url(url=url,crs=crs,bbox=get_bbox(geometry)), limit)
+    else:
+        geoms = get_partitions(geometry, partition)
+        for g in geoms:
+            coll = get_collection(_add_bbox_to_url(url=url,crs=crs,bbox=get_bbox(g)), limit)
+            if collection == {}:
+                collection = dict(coll)
+            elif "features" in collection and "features" in coll:
+                collection["features"].extend(coll["features"])
+    return collection
+
+def _add_bbox_to_url(url,crs=DEFAULT_CRS,bbox=None):
+    # Load the Base reference data
+    if bbox is not None:
+        url = url + "&bbox-crs=" + crs + "&bbox=" + bbox
+    return url
 
 def merge_dict_series(
         dict_series: dict[float,dict[str, ProcessResult]]

@@ -38,7 +38,9 @@ dict_affected = get_geoms_affected_by_grb_change(
     date_end=date.today(),
     one_by_one=False,
 )
-
+if dict_affected=={}:
+    print("No affected dicts")
+    exit()
 
 actual_aligner = Aligner()
 loader = DictLoader(dict_affected)
