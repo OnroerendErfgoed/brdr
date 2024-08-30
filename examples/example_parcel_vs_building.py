@@ -14,7 +14,7 @@ if __name__ == "__main__":
         "../tests/testdata/test_parcel_vs_building.geojson", "theme_id"
     )
     aligner_x.load_reference_data_grb_actual(
-        grb_type="adp", partition=1000
+        grb_type=GRBType.ADP, partition=1000
     )  # gebruik de actuele adp-percelen adp= administratieve percelen
 
     aligner_y = Aligner()
@@ -23,7 +23,7 @@ if __name__ == "__main__":
         "../tests/testdata/test_parcel_vs_building.geojson", "theme_id"
     )
     aligner_y.load_reference_data_grb_actual(
-        grb_type="gbg", partition=1000
+        grb_type=GRBType.GBG, partition=1000
     )  # gebruik de actuele adp-percelen adp= administratieve percelen
 
     # Example how to use a series (for histogram)

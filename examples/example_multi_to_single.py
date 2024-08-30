@@ -18,7 +18,7 @@ if __name__ == "__main__":
     # Get a specific feature of OE that exists out of a Multipolygon
 
     aligner.load_thematic_data_dict(dict_theme)
-    aligner.load_reference_data_grb_actual(grb_type="gbg", partition=1000)
+    aligner.load_reference_data_grb_actual(grb_type=GRBType.GBG, partition=1000)
 
     rel_dist = 2
     dict_results_by_distance = {}
@@ -35,7 +35,7 @@ if __name__ == "__main__":
     # Get a specific feature of OE that exists out of a Multipolygon
     dict_theme = multipolygons_to_singles(dict_theme)
     aligner.load_thematic_data_dict(dict_theme)
-    aligner.load_reference_data_grb_actual(grb_type="gbg", partition=1000)
+    aligner.load_reference_data_grb_actual(grb_type=GRBType.GBG, partition=1000)
 
     rel_dist = 5
     dict_results_by_distance = {}

@@ -19,7 +19,7 @@ aligner = Aligner()
 aligner.load_thematic_data_dict(
     aligner0.dict_thematic,
 )
-aligner.load_reference_data_grb_actual(grb_type="adp", partition=1000)
+aligner.load_reference_data_grb_actual(grb_type=GRBType.ADP, partition=1000)
 
 # Example how to use the Aligner
 # rel_dist = 2

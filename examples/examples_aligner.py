@@ -13,7 +13,7 @@ if __name__ == "__main__":
     )
 
     # Use GRB adp-parcels as reference polygons adp= administratieve percelen
-    aligner.load_reference_data_grb_actual(grb_type="adp", partition=1000)
+    aligner.load_reference_data_grb_actual(grb_type=GRBType.ADP, partition=1000)
     # alternative reference poly
     # # Use GRB-gbg (buildings), gbg= gebouw aan de grond
     # x.load_reference_data_grb_actual('gbg')

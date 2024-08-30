@@ -447,6 +447,7 @@ class Aligner:
         dict_formula["reference_source"] = self.dict_reference_source
         dict_formula["full"] = True
         dict_formula["reference_features"] = {}
+        dict_formula["reference_od"] = None
         dict_formula["last_version_date"] = None
 
         full_total = True
@@ -455,17 +456,18 @@ class Aligner:
         ref_intersections = self.reference_items.take(
             self.reference_tree.query(geometry)
         ).tolist()
+        intersected = []
         for key_ref in ref_intersections:
+            geom = None
             geom_reference = self.dict_reference[key_ref]
             geom_intersection = make_valid(safe_intersection(geometry, geom_reference))
             if geom_intersection.is_empty or geom_intersection is None:
                 continue
-
+            intersected.append(geom_intersection)
             # Add a last_version_date if available in properties
             if (
                 key_ref in self.dict_reference_properties
-                and GRB_VERSION_DATE
-                in self.dict_reference_properties[key_ref][GRB_VERSION_DATE]
+                and GRB_VERSION_DATE in self.dict_reference_properties[key_ref]
             ):
                 version_date = datetime.strptime(
                     self.dict_reference_properties[key_ref][GRB_VERSION_DATE][:10],
@@ -479,7 +481,8 @@ class Aligner:
                 full = True
                 area = round(geom_reference.area, 2)
                 perc = 100
-                geom = to_geojson(geom_reference)
+                if with_geom:
+                    geom = to_geojson(geom_reference)
             else:
                 perc = round(geom_intersection.area * 100 / geom_reference.area, 2)
                 if perc < 0.01:
@@ -488,14 +491,14 @@ class Aligner:
                     full = True
                     area = round(geom_reference.area, 2)
                     perc = 100
-                    geom = to_geojson(geom_reference)
+                    if with_geom:
+                        geom = to_geojson(geom_reference)
                 else:
                     full = False
                     full_total = False
                     area = round(geom_intersection.area, 2)
-                    geom = to_geojson(geom_intersection)
-            if not with_geom:
-                geom = None
+                    if with_geom:
+                        geom = to_geojson(geom_intersection)
 
             dict_formula["reference_features"][key_ref] = {
                 "full": full,
@@ -506,6 +509,14 @@ class Aligner:
         dict_formula["full"] = full_total
         if last_version_date is not None:
             dict_formula["versiondate"] = last_version_date.strftime(date_format)
+        geom_od = safe_difference(geometry, make_valid(unary_union(intersected)))
+        if geom_od is not None:
+            area_od = round(geom_od.area, 2)
+            if area_od > 0:
+                dict_formula["reference_od"] = {
+                    "area": area_od,
+                    "geometry": to_geojson(geom_od),
+                }
         self.logger.feedback_debug(str(dict_formula))
         return dict_formula
 

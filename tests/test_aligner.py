@@ -8,7 +8,7 @@ from shapely.geometry import Polygon
 from shapely.geometry import shape
 
 from brdr.aligner import Aligner
-from brdr.enums import OpenbaarDomeinStrategy
+from brdr.enums import OpenbaarDomeinStrategy, GRBType
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import grid_bounds
 from brdr.loader import GeoJsonLoader
@@ -130,7 +130,7 @@ class TestAligner(unittest.TestCase):
         self.sample_aligner.load_thematic_data_dict(thematic_dict)
         # LOAD REFERENCE DICTIONARY
         self.sample_aligner.load_reference_data_grb_actual(
-            grb_type="adp", partition=1000
+            grb_type=GRBType.ADP, partition=1000
         )
         self.assertGreater(len(self.sample_aligner.dict_reference), 0)
 
@@ -143,7 +143,7 @@ class TestAligner(unittest.TestCase):
         self.sample_aligner.load_thematic_data_dict(thematic_dict)
         # LOAD REFERENCE DICTIONARY
         self.sample_aligner.load_reference_data_grb_actual(
-            grb_type="gbg", partition=1000
+            grb_type=GRBType.GBG, partition=1000
         )
         self.assertGreater(len(self.sample_aligner.dict_reference), 0)
 
@@ -155,7 +155,7 @@ class TestAligner(unittest.TestCase):
         }
         self.sample_aligner.load_thematic_data_dict(thematic_dict)
         # LOAD REFERENCE DICTIONARY
-        self.sample_aligner.load_reference_data_grb_actual(grb_type="knw", partition=0)
+        self.sample_aligner.load_reference_data_grb_actual(grb_type=GRBType.KNW, partition=0)
         self.sample_aligner.process_dict_thematic()
         self.assertGreaterEqual(len(self.sample_aligner.dict_reference), 0)
 
@@ -187,7 +187,7 @@ class TestAligner(unittest.TestCase):
         self.sample_aligner.load_thematic_data_dict(thematic_dict)
         # LOAD REFERENCE DICTIONARY
         self.sample_aligner.load_reference_data_grb_actual(
-            grb_type="adp", partition=1000
+            grb_type=GRBType.ADP, partition=1000
         )
         result_dict = self.sample_aligner.process_dict_thematic()
         self.assertEqual(len(result_dict), len(thematic_dict))
@@ -198,7 +198,7 @@ class TestAligner(unittest.TestCase):
         self.sample_aligner.load_thematic_data_dict(thematic_dict)
         # LOAD REFERENCE DICTIONARY
         self.sample_aligner.load_reference_data_grb_actual(
-            grb_type="adp", partition=1000
+            grb_type=GRBType.ADP, partition=1000
         )
         results_dict = self.sample_aligner.process_dict_thematic()
         self.assertEqual(geometry, results_dict["key"]["result"])

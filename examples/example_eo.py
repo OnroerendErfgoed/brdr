@@ -24,7 +24,7 @@ if __name__ == "__main__":
     ]
     dict_theme = get_oe_dict_by_ids(erfgoedobjecten, oetype="erfgoedobjecten")
     aligner.load_thematic_data_dict(dict_theme)
-    aligner.load_reference_data_grb_actual(grb_type="adp", partition=1000)
+    aligner.load_reference_data_grb_actual(grb_type=GRBType.ADP, partition=1000)
 
     # RESULTS
     # rel_dist = 0.2

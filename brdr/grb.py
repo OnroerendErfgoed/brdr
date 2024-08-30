@@ -370,7 +370,7 @@ class GRBActualLoader(GeoJsonLoader):
         self.aligner = aligner
         self.grb_type = grb_type
         self.part = partition
-        self.data_dict_source["source"] = grb_type
+        self.data_dict_source["source"] = grb_type.value
 
     def load_data(self):
         if not self.aligner.dict_thematic:
