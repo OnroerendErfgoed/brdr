@@ -2,6 +2,7 @@ import json
 import logging
 import os
 from collections import defaultdict
+from datetime import datetime, date
 from typing import Iterable
 
 import numpy as np
@@ -17,7 +18,7 @@ from shapely import to_geojson
 from shapely import unary_union
 from shapely.geometry.base import BaseGeometry
 
-from brdr.constants import BUFFER_MULTIPLICATION_FACTOR
+from brdr.constants import BUFFER_MULTIPLICATION_FACTOR, GRB_VERSION_DATE
 from brdr.constants import CORR_DISTANCE
 from brdr.constants import DEFAULT_CRS
 from brdr.constants import THRESHOLD_CIRCLE_RATIO
@@ -32,8 +33,8 @@ from brdr.geometry_utils import safe_difference
 from brdr.geometry_utils import safe_intersection
 from brdr.geometry_utils import safe_symmetric_difference
 from brdr.geometry_utils import safe_union
+from brdr.grb import GRBActualLoader
 from brdr.loader import DictLoader
-from brdr.loader import GRBActualLoader
 from brdr.loader import GeoJsonFileLoader
 from brdr.loader import GeoJsonLoader
 from brdr.loader import GeoJsonUrlLoader
@@ -46,6 +47,8 @@ from brdr.utils import get_breakpoints_zerostreak
 from brdr.utils import get_series_geojson_dict
 from brdr.utils import merge_process_results
 from brdr.utils import write_geojson
+
+date_format = "%Y-%m-%d"
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(message)s", datefmt="%d-%b-%y %H:%M:%S"
@@ -108,16 +111,27 @@ class Aligner:
         self.name_thematic_id = "theme_identifier"
         # dictionary to store all thematic geometries to handle
         self.dict_thematic: dict[str, BaseGeometry] = {}
-        # dictionary to store all unionedthematic geometries
-        self.thematic_union = None  # to save a unioned geometry of all thematic polygons;
+        # dictionary to store properties of the reference-features (optional)
+        self.dict_thematic_properties: dict[str, dict] = {}
+        # Dict to store source-information of the thematic dictionary
+        self.dict_thematic_source: dict[str, str] = {}
+        # dictionary to store all unioned thematic geometries
+        self.thematic_union = None
 
         # reference
-        self.name_reference_id = "ref_identifier"  # name of the identifier-field of the reference data (id has to be unique,f.e CAPAKEY for GRB-parcels)
-        self.dict_reference: dict[str, BaseGeometry] = (
-            {}
-        )
+
+        # name of the identifier-field of the reference data (id has to be unique,f.e CAPAKEY for GRB-parcels)
+        self.name_reference_id = "ref_identifier"
         # dictionary to store all reference geometries
-        self.reference_union = None  # to save a unioned geometry of all reference polygons; needed for calculation in most OD-strategies
+        self.dict_reference: dict[str, BaseGeometry] = {}
+        # dictionary to store properties of the reference-features (optional)
+        self.dict_reference_properties: dict[str, dict] = {}
+        # Dict to store source-information of the reference dictionary
+        self.dict_reference_source: dict[str, str] = {}
+        # to save a unioned geometry of all reference polygons; needed for calculation in most OD-strategies
+        self.reference_union = None
+
+        # results
 
         # output-dictionaries (when processing dict_thematic)
         self.dict_result: dict[str, ProcessResult] = {}
@@ -429,10 +443,14 @@ class Aligner:
                     with_geom is True).
         """
         dict_formula = {}
+        dict_formula["alignment_date"] = datetime.now().strftime(date_format)
+        dict_formula["reference_source"] = self.dict_reference_source
         dict_formula["full"] = True
-        dict_formula["versiondate"] = None
         dict_formula["reference_features"] = {}
+        dict_formula["last_version_date"] = None
+
         full_total = True
+        last_version_date = None
 
         ref_intersections = self.reference_items.take(
             self.reference_tree.query(geometry)
@@ -442,6 +460,21 @@ class Aligner:
             geom_intersection = make_valid(safe_intersection(geometry, geom_reference))
             if geom_intersection.is_empty or geom_intersection is None:
                 continue
+
+            # Add a last_version_date if available in properties
+            if (
+                key_ref in self.dict_reference_properties
+                and GRB_VERSION_DATE
+                in self.dict_reference_properties[key_ref][GRB_VERSION_DATE]
+            ):
+                version_date = datetime.strptime(
+                    self.dict_reference_properties[key_ref][GRB_VERSION_DATE][:10],
+                    date_format,
+                ).date()
+                if last_version_date is None and version_date is not None:
+                    last_version_date = version_date
+                if version_date is not None and version_date > last_version_date:
+                    last_version_date = version_date
             if equals(geom_intersection, geom_reference):
                 full = True
                 area = round(geom_reference.area, 2)
@@ -471,6 +504,8 @@ class Aligner:
                 "geometry": geom,
             }
         dict_formula["full"] = full_total
+        if last_version_date is not None:
+            dict_formula["versiondate"] = last_version_date.strftime(date_format)
         self.logger.feedback_debug(str(dict_formula))
         return dict_formula
 
@@ -758,12 +793,16 @@ class Aligner:
 
     def _get_reference_union(self):
         if self.reference_union is None:
-            self.reference_union = make_valid(unary_union(list(self.dict_reference.values())))
+            self.reference_union = make_valid(
+                unary_union(list(self.dict_reference.values()))
+            )
         return self.reference_union
 
     def _get_thematic_union(self):
         if self.thematic_union is None:
-            self.thematic_union = make_valid(unary_union(list(self.dict_thematic.values())))
+            self.thematic_union = make_valid(
+                unary_union(list(self.dict_thematic.values()))
+            )
         return self.thematic_union
 
     def _postprocess_preresult(self, preresult, geom_thematic) -> ProcessResult:
@@ -934,11 +973,17 @@ class Aligner:
         return array
 
     def load_reference_data(self, loader: Loader):
-        self.dict_reference = loader.load_data()
+        (
+            self.dict_reference,
+            self.dict_reference_properties,
+            self.dict_reference_source,
+        ) = loader.load_data()
         self._prepare_reference_data()
 
     def load_thematic_data(self, loader: Loader):
-        self.dict_thematic = loader.load_data()
+        self.dict_thematic, self.dict_thematic_properties, self.dict_thematic_source = (
+            loader.load_data()
+        )
 
     # Deprecated loader methods
     def load_thematic_data_geojson(self, thematic_input, name_thematic_id):
@@ -981,7 +1026,7 @@ class Aligner:
         loader = GeoJsonUrlLoader(url, name_reference_id)
         self.load_reference_data(loader)
 
-    def load_reference_data_grb_actual(self, *, grb_type=GRBType.ADP, partition=0):
+    def load_reference_data_grb_actual(self, *, grb_type=GRBType.ADP, partition=1000):
         logging.warning("deprecated method, use load_reference_data instead")
-        loader = GRBActualLoader(grb_type, partition, self)
+        loader = GRBActualLoader(grb_type=grb_type, partition=partition, aligner=self)
         self.load_reference_data(loader)

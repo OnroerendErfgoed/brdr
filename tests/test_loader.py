@@ -3,8 +3,9 @@ from shapely import Polygon
 
 from brdr.aligner import Aligner
 from brdr.enums import GRBType
+from brdr.geometry_utils import get_partitions
+from brdr.grb import GRBActualLoader
 from brdr.loader import DictLoader
-from brdr.loader import GRBActualLoader
 from brdr.utils import get_oe_dict_by_ids
 
 
@@ -20,21 +21,13 @@ class TestExamples:
             grb_type=GRBType.ADP, aligner=aligner, partition=0
         )
 
-        aligner.dict_thematic = thematic_loader.load_data()
-        aligner.dict_reference = reference_loader.load_data()
+        aligner.dict_thematic, props_thematic, thematic_source = (
+            thematic_loader.load_data()
+        )
+        aligner.dict_reference, props_reference, reference_source = (
+            reference_loader.load_data()
+        )
         assert aligner.dict_reference is not None
-
-    # def test_partition(self):
-    #     # Test partition function
-    #     delta = 2.0
-    #     sample_geom = Polygon([(0, 0), (0, 10), (10, 10), (10, 0)])
-    #     filtered_partitions = GRBActualLoader.partition(sample_geom, delta)
-    #
-    #     # Check if the result is a list of Polygon objects
-    #     assert isinstance(filtered_partitions, list)
-    #     for partition in filtered_partitions:
-    #         # assert partition is a Polygon object
-    #         assert isinstance(partition, Polygon)
 
 
 def test_load_thematic_data_url(requests_mock, haspengouw_geojson):

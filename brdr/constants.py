@@ -38,9 +38,22 @@ DEFAULT_CRS = "EPSG:31370"  # BelgianLambert72
 # MULTI_SINGLE_ID_SEPARATOR #separator to split multipolygon_ids to single polygons
 MULTI_SINGLE_ID_SEPARATOR = "*$*"
 
+
+# GRB_CONSTANTS
 # URL of the OGC feature API of actual GRB to extract collections
 GRB_FEATURE_URL = "https://geo.api.vlaanderen.be/GRB/ogc/features/collections"
 
 # URL of the OGC feature API of GRB fiscal parcels (situation of 1st of January) to extract collections
 GRB_FISCAL_PARCELS_URL = "https://geo.api.vlaanderen.be/Adpf/ogc/features/collections"
 
+# Property-name of version_date
+GRB_VERSION_DATE = "VERSDATUM"
+
+# Property-name of id of GRB-parcels
+GRB_PARCEL_ID = "CAPAKEY"
+
+# Property-name of id of GRB-parcels
+GRB_BUILDING_ID = "OIDN"
+
+# Property-name of id of GRB-parcels
+GRB_KNW_ID = "OIDN"

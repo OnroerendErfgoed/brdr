@@ -1,6 +1,7 @@
 from brdr.aligner import Aligner
 from brdr.enums import OpenbaarDomeinStrategy, GRBType
-from brdr.loader import GRBActualLoader, DictLoader, GeoJsonLoader
+from brdr.grb import GRBActualLoader
+from brdr.loader import GeoJsonLoader
 from examples import show_map
 
 if __name__ == "__main__":
@@ -42,7 +43,7 @@ if __name__ == "__main__":
         ],
     }
 
-    loader = GeoJsonLoader(thematic_json, id_property="theme_identifier")
+    loader = GeoJsonLoader(_input=thematic_json, id_property="theme_identifier")
     aligner.load_thematic_data(loader)
     loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
     aligner.load_reference_data(loader)

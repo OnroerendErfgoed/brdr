@@ -2,17 +2,18 @@ import logging
 from datetime import date, timedelta
 
 import numpy as np
-from shapely import STRtree
-from shapely.geometry import shape
 
 from brdr.aligner import Aligner
 from brdr.enums import GRBType
 from brdr.grb import (
     get_last_version_date,
     get_geoms_affected_by_grb_change,
-    get_collection_grb_fiscal_parcels, evaluate,
+    get_collection_grb_fiscal_parcels,
+    evaluate,
+    GRBFiscalParcelLoader,
+    GRBActualLoader,
 )
-from brdr.loader import GeoJsonLoader, GRBActualLoader, DictLoader, GRBFiscalParcelLoader
+from brdr.loader import GeoJsonLoader, DictLoader
 from brdr.utils import get_oe_geojson_by_bbox
 
 # This code shows an example how the aligner can be used inside a flow of
@@ -52,16 +53,18 @@ series = [
 base_aligner = Aligner()
 # Load the thematic data to evaluate
 loader = GeoJsonLoader(_input=get_oe_geojson_by_bbox(bbox), id_property="aanduid_id")
-#loader = DictLoader(get_oe_dict_by_ids(['554','1573','124023','1873','1782','1324']))
+# loader = DictLoader(get_oe_dict_by_ids(['554','1573','124023','1873','1782','1324']))
 base_aligner.load_thematic_data(loader)
 
 logging.info(
     "Number of OE-thematic features loaded into base-aligner: "
     + str(len(base_aligner.dict_thematic))
 )
-base_aligner.load_reference_data(GRBFiscalParcelLoader(year=base_year,aligner=base_aligner))
+base_aligner.load_reference_data(
+    GRBFiscalParcelLoader(year=base_year, aligner=base_aligner)
+)
 
-#Exclude objects bigger than specified area
+# Exclude objects bigger than specified area
 keys_to_exclude = []
 for key in base_aligner.dict_thematic:
     if base_aligner.dict_thematic[key].area > excluded_area:
@@ -118,21 +121,28 @@ actual_aligner.load_reference_data(loader)
 # LOOP AND PROCESS ALL POSSIBLE AFFECTED FEATURES
 # =================================================
 series = np.arange(0, 200, 10, dtype=int) / 100
-dict_series,dict_predicted,diffs_dict= actual_aligner.predictor(series)
-dict_evaluated_result, prop_dictionary = evaluate(actual_aligner,dict_series,dict_predicted,thematic_dict_formula,threshold_area=5,threshold_percentage=1)
-counter_equality=0
-counter_equality_by_alignment=0
+dict_series, dict_predicted, diffs_dict = actual_aligner.predictor(series)
+dict_evaluated_result, prop_dictionary = evaluate(
+    actual_aligner,
+    dict_series,
+    dict_predicted,
+    thematic_dict_formula,
+    threshold_area=5,
+    threshold_percentage=1,
+)
+counter_equality = 0
+counter_equality_by_alignment = 0
 counter_difference = 0
 for theme_id in dict_affected:
     for dist in series:
         if "evaluation" in prop_dictionary[dist][theme_id].keys():
-            ev =prop_dictionary[dist][theme_id]["evaluation"]
-            if ev.startswith("equal") and dist==0:
-                counter_equality = counter_equality +1
+            ev = prop_dictionary[dist][theme_id]["evaluation"]
+            if ev.startswith("equal") and dist == 0:
+                counter_equality = counter_equality + 1
             elif ev.startswith("equal") and dist > 0:
-                counter_equality_by_alignment= counter_equality_by_alignment+1
+                counter_equality_by_alignment = counter_equality_by_alignment + 1
             else:
-                counter_difference = counter_difference+1
+                counter_difference = counter_difference + 1
             break
 
 logging.info(

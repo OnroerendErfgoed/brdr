@@ -2,7 +2,8 @@ import numpy as np
 
 from brdr.aligner import Aligner
 from brdr.enums import GRBType
-from brdr.loader import DictLoader, GRBActualLoader
+from brdr.grb import GRBActualLoader
+from brdr.loader import DictLoader
 from brdr.utils import get_oe_dict_by_ids, dict_series_by_keys
 from examples import show_map, plot_series
 

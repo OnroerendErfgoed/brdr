@@ -1,6 +1,6 @@
 from brdr.aligner import Aligner
 from brdr.enums import OpenbaarDomeinStrategy
-from brdr.geometry_utils import geom_from_wkt, geom_to_wkt
+from brdr.geometry_utils import geom_from_wkt
 from brdr.loader import DictLoader
 
 # CREATE AN ALIGNER

@@ -10,11 +10,15 @@ from brdr.geometry_utils import get_bbox
 from brdr.grb import (
     get_last_version_date,
     is_grb_changed,
-    get_geoms_affected_by_grb_change, evaluate, get_collection_grb_fiscal_parcels,
+    get_geoms_affected_by_grb_change,
+    evaluate,
+    get_collection_grb_fiscal_parcels,
+    GRBActualLoader,
+    GRBFiscalParcelLoader,
 )
-from brdr.loader import DictLoader, GeoJsonLoader, GRBFiscalParcelLoader
-from brdr.loader import GRBActualLoader
-from brdr.utils import (get_series_geojson_dict,
+from brdr.loader import DictLoader
+from brdr.utils import (
+    get_series_geojson_dict,
 )
 
 
@@ -68,7 +72,7 @@ class TestGrb(unittest.TestCase):
                 [(170000, 170000), (170000, 172000), (172000, 172000), (172000, 170000)]
             )
         }
-        aligner=Aligner()
+        aligner = Aligner()
         aligner.load_thematic_data(DictLoader(thematic_dict))
         dict_affected = get_geoms_affected_by_grb_change(
             aligner=aligner,
@@ -96,7 +100,7 @@ class TestGrb(unittest.TestCase):
                 "MultiPolygon (((174184.09476602054201066 171899.68933439542888664, 174400.56834639035514556 171832.959863749332726, 174388.65236948925303295 171770.99678386366576888, 174182.10876987033407204 171836.13745758961886168, 174184.88916448061354458 171873.07698598300339654, 174184.09476602054201066 171899.68933439542888664)))"
             )
         }
-        aligner=Aligner()
+        aligner = Aligner()
         aligner.load_thematic_data(DictLoader(thematic_dict))
         dict_affected = get_geoms_affected_by_grb_change(
             aligner=aligner,
@@ -120,7 +124,7 @@ class TestGrb(unittest.TestCase):
                 "MultiPolygon (((174180.20077791667426936 171966.14649116666987538, 174415.60530965600628406 171940.9636807945498731, 174388.65236948925303295 171770.99678386366576888, 174182.10876987033407204 171836.13745758961886168, 174184.88916448061354458 171873.07698598300339654, 174180.20077791667426936 171966.14649116666987538)))"
             )
         }
-        aligner2=Aligner()
+        aligner2 = Aligner()
         aligner2.load_thematic_data(DictLoader(thematic_dict2))
         dict_affected = get_geoms_affected_by_grb_change(
             aligner=aligner2,
@@ -137,7 +141,7 @@ class TestGrb(unittest.TestCase):
                 "MultiPolygon (((174180.20077791667426936 171966.14649116666987538, 174415.60530965600628406 171940.9636807945498731, 174388.65236948925303295 171770.99678386366576888, 174182.10876987033407204 171836.13745758961886168, 174184.88916448061354458 171873.07698598300339654, 174180.20077791667426936 171966.14649116666987538)))"
             )
         }
-        aligner=Aligner()
+        aligner = Aligner()
         aligner.load_thematic_data(DictLoader(thematic_dict))
         dict_affected = get_geoms_affected_by_grb_change(
             aligner=aligner,
@@ -165,14 +169,18 @@ class TestGrb(unittest.TestCase):
         }
         base_aligner = Aligner()
         base_aligner.load_thematic_data(DictLoader(thematic_dict))
-        base_aligner.load_reference_data(GRBFiscalParcelLoader(aligner=base_aligner,year="2022", partition=1000))
+        base_aligner.load_reference_data(
+            GRBFiscalParcelLoader(aligner=base_aligner, year="2022", partition=1000)
+        )
         base_process_result = base_aligner.process_dict_thematic(relevant_distance=1)
         thematic_dict_formula = {}
         thematic_dict_result = {}
         for key in base_process_result:
             thematic_dict_result[key] = base_process_result[key]["result"]
-            thematic_dict_formula[key] = base_aligner.get_formula(thematic_dict_result[key])
-        aligner_result=Aligner()
+            thematic_dict_formula[key] = base_aligner.get_formula(
+                thematic_dict_result[key]
+            )
+        aligner_result = Aligner()
         aligner_result.load_thematic_data(DictLoader(thematic_dict_result))
         dict_affected = get_geoms_affected_by_grb_change(
             aligner=aligner_result,
@@ -182,17 +190,24 @@ class TestGrb(unittest.TestCase):
             one_by_one=False,
         )
 
-
         actual_aligner = Aligner()
         loader = DictLoader(dict_affected)
         actual_aligner.load_thematic_data(loader)
-        loader = GRBActualLoader(grb_type=GRBType.ADP, partition=0, aligner=actual_aligner)
+        loader = GRBActualLoader(
+            grb_type=GRBType.ADP, partition=0, aligner=actual_aligner
+        )
         actual_aligner.load_reference_data(loader)
         series = np.arange(0, 200, 10, dtype=int) / 100
         dict_series, dict_predicted, diffs_dict = actual_aligner.predictor(series)
 
-        dict_evaluated, prop_dictionary = evaluate(actual_aligner, dict_series, dict_predicted, thematic_dict_formula,
-                                                   threshold_area=5, threshold_percentage=1)
+        dict_evaluated, prop_dictionary = evaluate(
+            actual_aligner,
+            dict_series,
+            dict_predicted,
+            thematic_dict_formula,
+            threshold_area=5,
+            threshold_percentage=1,
+        )
 
         fc = get_series_geojson_dict(
             dict_evaluated,
@@ -202,4 +217,3 @@ class TestGrb(unittest.TestCase):
         )
 
         print(fc["result"])
-

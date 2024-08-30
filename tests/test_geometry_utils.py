@@ -11,7 +11,7 @@ from brdr.geometry_utils import (
     safe_intersection,
     safe_difference,
     safe_symmetric_difference,
-    grid_bounds,
+    grid_bounds, get_partitions,
 )
 
 
@@ -122,6 +122,18 @@ class TestSafeOperations(unittest.TestCase):
             polygon_a, polygon_b
         )  # GEOS exception is catched
         self.assertTrue(result.is_valid)
+
+    def test_get_partitions(self):
+        # Test partition function
+        delta = 2.0
+        sample_geom = Polygon([(0, 0), (0, 10), (10, 10), (10, 0)])
+        filtered_partitions = get_partitions(sample_geom, delta)
+
+        # Check if the result is a list of Polygon objects
+        assert isinstance(filtered_partitions, list)
+        for partition in filtered_partitions:
+            # assert partition is a Polygon object
+            assert isinstance(partition, Polygon)
 
 
 class TestGridBounds(unittest.TestCase):

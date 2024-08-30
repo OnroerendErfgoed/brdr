@@ -8,10 +8,10 @@ from shapely.geometry import Polygon
 from shapely.geometry import shape
 
 from brdr.aligner import Aligner
-from brdr.enums import OpenbaarDomeinStrategy, GRBType
+from brdr.enums import OpenbaarDomeinStrategy
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import grid_bounds
-from brdr.loader import GeoJsonLoader, GRBActualLoader
+from brdr.loader import GeoJsonLoader
 from brdr.typings import FeatureCollection
 from brdr.typings import ProcessResult
 
@@ -239,7 +239,7 @@ class TestAligner(unittest.TestCase):
             ],
         }
         thematic_loader = GeoJsonLoader(_input=geojson, id_property="theme_identifier")
-        aligner.dict_thematic = thematic_loader.load_data()
+        aligner.dict_thematic, properties, source = thematic_loader.load_data()
         assert aligner.dict_thematic == {"4": shape(geojson["features"][0]["geometry"])}
         self.assertGreater(len(aligner.dict_thematic), 0)
 
@@ -279,13 +279,14 @@ class TestAligner(unittest.TestCase):
 
     def test_fully_aligned_geojson_output(self):
         aligned_shape = from_wkt(
-            "MultiPolygon (((173463.11530961000244133 174423.83310307000647299, 173460.22633100001257844 174422.02316300000529736, 173455.24681099998997524 174429.98009100000490434, 173454.4299790000077337 174429.34482699999352917, 173452.06690700000035577 174432.43058700000983663, 173451.25743500000680797 174431.8672589999914635, 173448.74844299998949282 174434.96249100001296028, 173448.5809550000121817 174435.80485899999621324, 173455.39772300000186078 174441.47852299999794923, 173461.44169100001454353 174446.50898700000834651, 173472.15932299999985844 174429.49919500001124106, 173466.18524341000011191 174425.75641125999391079, 173466.18524347001221031 174425.75641117000486702, 173463.11530969000887126 174423.83310300001176074, 173463.11530961000244133 174423.83310307000647299)))")
+            "MultiPolygon (((173463.11530961000244133 174423.83310307000647299, 173460.22633100001257844 174422.02316300000529736, 173455.24681099998997524 174429.98009100000490434, 173454.4299790000077337 174429.34482699999352917, 173452.06690700000035577 174432.43058700000983663, 173451.25743500000680797 174431.8672589999914635, 173448.74844299998949282 174434.96249100001296028, 173448.5809550000121817 174435.80485899999621324, 173455.39772300000186078 174441.47852299999794923, 173461.44169100001454353 174446.50898700000834651, 173472.15932299999985844 174429.49919500001124106, 173466.18524341000011191 174425.75641125999391079, 173466.18524347001221031 174425.75641117000486702, 173463.11530969000887126 174423.83310300001176074, 173463.11530961000244133 174423.83310307000647299)))"
+        )
 
         self.sample_aligner.load_thematic_data_dict({"theme_id_1": aligned_shape})
         self.sample_aligner.load_reference_data_dict({"ref_id_1": aligned_shape})
         result = self.sample_aligner.process_dict_thematic()
         fcs = self.sample_aligner.get_results_as_geojson(formula=True)
-        assert fcs['result']['features'][0]['properties']['area']>0
-        assert fcs['result_diff']['features'][0]['properties']['area']==0
-        assert fcs['result_diff_min']['features'][0]['properties']['area'] == 0
-        assert fcs['result_diff_plus']['features'][0]['properties']['area'] == 0
+        assert fcs["result"]["features"][0]["properties"]["area"] > 0
+        assert fcs["result_diff"]["features"][0]["properties"]["area"] == 0
+        assert fcs["result_diff_min"]["features"][0]["properties"]["area"] == 0
+        assert fcs["result_diff_plus"]["features"][0]["properties"]["area"] == 0

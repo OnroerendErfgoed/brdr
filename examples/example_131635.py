@@ -1,6 +1,7 @@
 from brdr.aligner import Aligner
 from brdr.enums import GRBType
-from brdr.loader import DictLoader, GRBActualLoader
+from brdr.grb import GRBActualLoader
+from brdr.loader import DictLoader
 from brdr.utils import get_oe_dict_by_ids
 from examples import show_map, print_formula
 
