@@ -282,8 +282,11 @@ def evaluate(
             results = dict_series[dist][theme_id]
             actual_formula = actual_aligner.get_formula(results["result"])
             prop_dictionary[dist][theme_id]["formula"] = json.dumps(actual_formula)
+            base_formula = None
+            if theme_id in thematic_dict_formula:
+                base_formula = thematic_dict_formula[theme_id]
             equality, property = check_equality(
-                thematic_dict_formula[theme_id],
+                base_formula,
                 actual_formula,
                 threshold_area,
                 threshold_percentage,
@@ -321,32 +324,35 @@ def check_equality(
     # TODO: research naar aanduid_id 116448 (equality na 0.5m), 120194 (1m)
     # TODO: research and implementation of following ideas
     # TODO: refine equality comparison, make it more generic
-    # TODO: Make Enum for equality
     # ideas:
     # * If result_diff smaller than 0.x --> automatic update
     # * big polygons: If 'outer ring' has same formula (do net check inner side) --> automatic update
     # ** outer ring can be calculated: 1) negative buffer 2) original - buffered
 
+    if base_formula is None or actual_formula is None:
+        return False, Evaluation.NO_PREDICTION_5
     if (
         base_formula["reference_features"].keys()
         == actual_formula["reference_features"].keys()
     ):
         if base_formula["full"] and base_formula["full"]:
             return True, Evaluation.EQUALITY_FORMULA_GEOM_1
+
+        equal_reference_features = True
         for key in base_formula["reference_features"].keys():
             if (
                 (
                     base_formula["reference_features"][key]["full"]
                     == actual_formula["reference_features"][key]["full"]
                 )
-                and (
+                or (
                     abs(
                         base_formula["reference_features"][key]["area"]
                         - actual_formula["reference_features"][key]["area"]
                     )
-                    < threshold_area
+                    > threshold_area
                 )
-                and (
+                or (
                     (
                         abs(
                             base_formula["reference_features"][key]["area"]
@@ -355,10 +361,12 @@ def check_equality(
                         * 100
                         / base_formula["reference_features"][key]["area"]
                     )
-                    < threshold_percentage
+                    > threshold_percentage
                 )
             ):
-                return True, Evaluation.EQUALITY_FORMULA_2
+                equal_reference_features = False
+        if equal_reference_features:
+            return True, Evaluation.EQUALITY_FORMULA_2
     if base_formula["full"] and base_formula["full"]:
         return True, Evaluation.EQUALITY_GEOM_3
     return False, Evaluation.NO_PREDICTION_5

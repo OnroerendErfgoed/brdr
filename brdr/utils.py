@@ -557,6 +557,20 @@ def merge_dict_series(
     return dict_series_merged
 
 
+def merge_dict(dictionary: dict[str, BaseGeometry]) -> dict[str, BaseGeometry]:
+    """
+    Merges dict_series (dict_predicted) with  seperated IDs (MULTI_SINGLE_ID_SEPARATOR) to their original unique ID
+    """
+    out_dictionary = {}
+    for id_theme, item in dictionary.items():
+        id_theme_global = id_theme.split(MULTI_SINGLE_ID_SEPARATOR)[0]
+        if id_theme_global not in out_dictionary:
+            out_dictionary[id_theme_global] = [item]
+        else:
+            out_dictionary[id_theme_global].append(item)
+    return {k: make_valid(unary_union(v)) for k, v in out_dictionary.items()}
+
+
 def merge_process_results(
     result_dict: dict[str, ProcessResult]
 ) -> dict[str, ProcessResult]:

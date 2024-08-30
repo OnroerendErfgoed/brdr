@@ -61,10 +61,7 @@ actual_aligner.load_thematic_data(loader)
 loader = GRBActualLoader(grb_type=GRBType.ADP, partition=0, aligner=actual_aligner)
 actual_aligner.load_reference_data(loader)
 series = np.arange(0, 200, 10, dtype=int) / 100
-dict_series, dict_predicted, diffs_dict = actual_aligner.predictor(series)
-dict_series = merge_dict_series(dict_series)
-dict_predicted = merge_dict_series(dict_predicted)
-# diffs_dict=merge_diffs_dict(diffs_dict)
+dict_series, dict_predicted, diffs_dict = actual_aligner.predictor(series, merged=True)
 
 dict_evaluated, prop_dictionary = evaluate(
     actual_aligner,

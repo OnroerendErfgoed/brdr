@@ -41,7 +41,7 @@ from brdr.loader import GeoJsonUrlLoader
 from brdr.loader import Loader
 from brdr.logger import Logger
 from brdr.typings import ProcessResult
-from brdr.utils import diffs_from_dict_series
+from brdr.utils import diffs_from_dict_series, merge_dict_series, merge_dict
 from brdr.utils import geojson_from_dict
 from brdr.utils import get_breakpoints_zerostreak
 from brdr.utils import get_series_geojson_dict
@@ -300,6 +300,7 @@ class Aligner:
         relevant_distances=np.arange(0, 300, 10, dtype=int) / 100,
         od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
         threshold_overlap_percentage=50,
+        merged=False,
     ):
         """
         Predicts the 'most interesting' relevant distances for changes in thematic elements based on a distance series.
@@ -348,8 +349,12 @@ class Aligner:
             od_strategy=od_strategy,
             threshold_overlap_percentage=threshold_overlap_percentage,
         )
+        dict_thematic = self.dict_thematic
+        if merged:
+            dict_series = merge_dict_series(dict_series)
+            dict_thematic = merge_dict(self.dict_thematic)
 
-        diffs_dict = diffs_from_dict_series(dict_series, self.dict_thematic)
+        diffs_dict = diffs_from_dict_series(dict_series, dict_thematic)
 
         for theme_id, diffs in diffs_dict.items():
             if len(diffs) != len(relevant_distances):
