@@ -36,8 +36,8 @@ class TestExamples(unittest.TestCase):
         gbg_loader = GRBActualLoader(
             grb_type=GRBType.GBG, partition=1000, aligner=aligner
         )
-        dict_ref, dict_ref_properties = adp_loader.load_data()
-        dict_ref2, dict_ref_properties2 = gbg_loader.load_data()
+        dict_ref, dict_ref_properties_adp, source_adp = adp_loader.load_data()
+        dict_ref2, dict_ref_properties_gbg,source_gbg = gbg_loader.load_data()
         dict_ref.update(dict_ref2)  # combine 2 dictionaries
         # make a polygonized version of the reference data with non-overlapping polygons
         aligner.load_reference_data_dict(dict_ref)

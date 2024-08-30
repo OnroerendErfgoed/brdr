@@ -2,6 +2,7 @@ import json
 import logging
 import os
 from collections import defaultdict
+from datetime import datetime, date
 from typing import Iterable
 
 import numpy as np
@@ -17,7 +18,7 @@ from shapely import to_geojson
 from shapely import unary_union
 from shapely.geometry.base import BaseGeometry
 
-from brdr.constants import BUFFER_MULTIPLICATION_FACTOR
+from brdr.constants import BUFFER_MULTIPLICATION_FACTOR, GRB_VERSION_DATE
 from brdr.constants import CORR_DISTANCE
 from brdr.constants import DEFAULT_CRS
 from brdr.constants import THRESHOLD_CIRCLE_RATIO
@@ -46,6 +47,8 @@ from brdr.utils import get_breakpoints_zerostreak
 from brdr.utils import get_series_geojson_dict
 from brdr.utils import merge_process_results
 from brdr.utils import write_geojson
+
+date_format = "%Y-%m-%d"
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(message)s", datefmt="%d-%b-%y %H:%M:%S"
@@ -110,6 +113,8 @@ class Aligner:
         self.dict_thematic: dict[str, BaseGeometry] = {}
         # dictionary to store properties of the reference-features (optional)
         self.dict_thematic_properties: dict[str, dict] = {}
+        # Dict to store source-information of the thematic dictionary
+        self.dict_thematic_source: dict[str, str] = {}
         # dictionary to store all unioned thematic geometries
         self.thematic_union = None
 
@@ -121,6 +126,8 @@ class Aligner:
         self.dict_reference: dict[str, BaseGeometry] = {}
         # dictionary to store properties of the reference-features (optional)
         self.dict_reference_properties: dict[str, dict] = {}
+        # Dict to store source-information of the reference dictionary
+        self.dict_reference_source: dict[str, str] = {}
         # to save a unioned geometry of all reference polygons; needed for calculation in most OD-strategies
         self.reference_union = None
 
@@ -436,10 +443,14 @@ class Aligner:
                     with_geom is True).
         """
         dict_formula = {}
+        dict_formula["alignment_date"] = datetime.now().strftime(date_format)
+        dict_formula["reference_source"] = self.dict_reference_source
         dict_formula["full"] = True
-        dict_formula["versiondate"] = None
         dict_formula["reference_features"] = {}
+        dict_formula["last_version_date"] = None
+
         full_total = True
+        last_version_date = None
 
         ref_intersections = self.reference_items.take(
             self.reference_tree.query(geometry)
@@ -449,6 +460,21 @@ class Aligner:
             geom_intersection = make_valid(safe_intersection(geometry, geom_reference))
             if geom_intersection.is_empty or geom_intersection is None:
                 continue
+
+            # Add a last_version_date if available in properties
+            if (
+                key_ref in self.dict_reference_properties
+                and GRB_VERSION_DATE
+                in self.dict_reference_properties[key_ref][GRB_VERSION_DATE]
+            ):
+                version_date = datetime.strptime(
+                    self.dict_reference_properties[key_ref][GRB_VERSION_DATE][:10],
+                    date_format,
+                ).date()
+                if last_version_date is None and version_date is not None:
+                    last_version_date = version_date
+                if version_date is not None and version_date > last_version_date:
+                    last_version_date = version_date
             if equals(geom_intersection, geom_reference):
                 full = True
                 area = round(geom_reference.area, 2)
@@ -478,6 +504,8 @@ class Aligner:
                 "geometry": geom,
             }
         dict_formula["full"] = full_total
+        if last_version_date is not None:
+            dict_formula["versiondate"] = last_version_date.strftime(date_format)
         self.logger.feedback_debug(str(dict_formula))
         return dict_formula
 
@@ -945,11 +973,17 @@ class Aligner:
         return array
 
     def load_reference_data(self, loader: Loader):
-        self.dict_reference, self.dict_reference_properties = loader.load_data()
+        (
+            self.dict_reference,
+            self.dict_reference_properties,
+            self.dict_reference_source,
+        ) = loader.load_data()
         self._prepare_reference_data()
 
     def load_thematic_data(self, loader: Loader):
-        self.dict_thematic, self.dict_thematic_properties = loader.load_data()
+        self.dict_thematic, self.dict_thematic_properties, self.dict_thematic_source = (
+            loader.load_data()
+        )
 
     # Deprecated loader methods
     def load_thematic_data_geojson(self, thematic_input, name_thematic_id):

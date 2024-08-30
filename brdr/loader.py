@@ -12,9 +12,10 @@ class Loader(ABC):
     def __init__(self):
         self.data_dict: dict[str, BaseGeometry] = {}
         self.data_dict_properties: dict[str, dict] = {}
+        self.data_dict_source: dict[str, str] = {}
 
     def load_data(self):
-        return self.data_dict, self.data_dict_properties
+        return self.data_dict, self.data_dict_properties, self.data_dict_source
 
 
 class DictLoader(Loader):

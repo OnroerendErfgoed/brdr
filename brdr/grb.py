@@ -9,6 +9,10 @@ from brdr.constants import (
     GRB_FEATURE_URL,
     GRB_FISCAL_PARCELS_URL,
     MAX_REFERENCE_BUFFER,
+    GRB_VERSION_DATE,
+    GRB_PARCEL_ID,
+    GRB_BUILDING_ID,
+    GRB_KNW_ID,
 )
 from brdr.enums import GRBType, Evaluation
 from shapely import intersects, make_valid
@@ -172,7 +176,7 @@ def get_last_version_date(
     for c in collection["features"]:
         if intersects(geometry, shape(c["geometry"])):
             versiondate = datetime.strptime(
-                c["properties"]["VERSDATUM"], date_format
+                c["properties"][GRB_VERSION_DATE], date_format
             ).date()
             update_dates.append(versiondate)
 
@@ -202,11 +206,11 @@ def get_collection_grb_actual(
         + crs
     )
     if grb_type == GRBType.ADP:
-        name_reference_id = "CAPAKEY"
+        name_reference_id = GRB_PARCEL_ID
     elif grb_type == "gbg":
-        name_reference_id = "OIDN"
+        name_reference_id = GRB_BUILDING_ID
     elif grb_type == GRBType.KNW:
-        name_reference_id = "OIDN"
+        name_reference_id = GRB_KNW_ID
     else:
         logging.warning(
             f"type not implemented: {str(grb_type)} -->No reference-data loaded"
@@ -215,10 +219,12 @@ def get_collection_grb_actual(
 
     versiondate_filter = ""
     if date_start is not None:
-        versiondate_filter_start = "VERSDATUM>" + date_start.strftime(date_format)
+        versiondate_filter_start = (
+            GRB_VERSION_DATE + ">" + date_start.strftime(date_format)
+        )
         versiondate_filter = versiondate_filter_start
     if date_end is not None:
-        versiondate_filter_end = "VERSDATUM<" + date_end.strftime(date_format)
+        versiondate_filter_end = GRB_VERSION_DATE + "<" + date_end.strftime(date_format)
         versiondate_filter = versiondate_filter_end
     if not (date_start is None and date_end is None):
         versiondate_filter = versiondate_filter_start + " AND " + versiondate_filter_end
@@ -360,10 +366,11 @@ def check_equality(
 
 class GRBActualLoader(GeoJsonLoader):
     def __init__(self, grb_type: GRBType, aligner, partition: int = 1000):
+        super().__init__()
         self.aligner = aligner
         self.grb_type = grb_type
         self.part = partition
-        super().__init__()
+        self.data_dict_source["source"] = grb_type
 
     def load_data(self):
         if not self.aligner.dict_thematic:
@@ -379,16 +386,21 @@ class GRBActualLoader(GeoJsonLoader):
         )
         self.id_property = id_property
         self.input = dict(collection)
+        self.data_dict_source["version_date"] = datetime.now().strftime(date_format)
         self.aligner.logger.feedback_info(f"GRB downloaded: {self.grb_type}")
         return super().load_data()
 
 
 class GRBFiscalParcelLoader(GeoJsonLoader):
     def __init__(self, year: str, aligner, partition=1000):
+        super().__init__(_input=None, id_property=GRB_PARCEL_ID)
         self.aligner = aligner
         self.year = year
         self.part = partition
-        super().__init__(_input=None, id_property="CAPAKEY")
+        self.data_dict_source["source"] = "Adpf"
+        self.data_dict_source["version_date"] = datetime(int(year), 1, 1).strftime(
+            date_format
+        )
 
     def load_data(self):
         if not self.aligner.dict_thematic:

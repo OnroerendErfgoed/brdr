@@ -239,7 +239,7 @@ class TestAligner(unittest.TestCase):
             ],
         }
         thematic_loader = GeoJsonLoader(_input=geojson, id_property="theme_identifier")
-        aligner.dict_thematic, properties = thematic_loader.load_data()
+        aligner.dict_thematic, properties, source = thematic_loader.load_data()
         assert aligner.dict_thematic == {"4": shape(geojson["features"][0]["geometry"])}
         self.assertGreater(len(aligner.dict_thematic), 0)
 
