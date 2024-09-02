@@ -35,7 +35,9 @@ if __name__ == "__main__":
         date_start=None,
         date_end=None,
     )
-    dict_adp,dict_adp_properties = geojson_to_dicts(collection_adp, name_reference_id_adp)
+    dict_adp, dict_adp_properties = geojson_to_dicts(
+        collection_adp, name_reference_id_adp
+    )
 
     collection_gbg, name_reference_id_gbg = get_collection_grb_actual(
         aligner._get_thematic_union(),
@@ -44,7 +46,9 @@ if __name__ == "__main__":
         date_start=None,
         date_end=None,
     )
-    dict_gbg,dict_gbg_properties = geojson_to_dicts(collection_gbg, name_reference_id_gbg)
+    dict_gbg, dict_gbg_properties = geojson_to_dicts(
+        collection_gbg, name_reference_id_gbg
+    )
 
     dict_adp_gbg = dict_adp
     dict_adp_gbg.update(dict_gbg)  # combine 2 dictionaries

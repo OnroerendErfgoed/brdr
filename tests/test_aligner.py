@@ -155,7 +155,9 @@ class TestAligner(unittest.TestCase):
         }
         self.sample_aligner.load_thematic_data_dict(thematic_dict)
         # LOAD REFERENCE DICTIONARY
-        self.sample_aligner.load_reference_data_grb_actual(grb_type=GRBType.KNW, partition=1000)
+        self.sample_aligner.load_reference_data_grb_actual(
+            grb_type=GRBType.KNW, partition=1000
+        )
         self.sample_aligner.process_dict_thematic()
         self.assertGreaterEqual(len(self.sample_aligner.dict_reference), 0)
 

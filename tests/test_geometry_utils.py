@@ -11,7 +11,8 @@ from brdr.geometry_utils import (
     safe_intersection,
     safe_difference,
     safe_symmetric_difference,
-    grid_bounds, get_partitions,
+    grid_bounds,
+    get_partitions,
 )
 
 
