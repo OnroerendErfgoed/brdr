@@ -41,7 +41,7 @@ from brdr.loader import GeoJsonUrlLoader
 from brdr.loader import Loader
 from brdr.logger import Logger
 from brdr.typings import ProcessResult
-from brdr.utils import diffs_from_dict_series, merge_dict_series, merge_dict
+from brdr.utils import diffs_from_dict_series, merge_dict_series, merge_dict, multipolygons_to_singles
 from brdr.utils import geojson_from_dict
 from brdr.utils import get_breakpoints_zerostreak
 from brdr.utils import get_series_geojson_dict
@@ -144,9 +144,8 @@ class Aligner:
         # When loading data, CRS is expected to be a projected CRS with units in 'meter (m)'.
         # Default EPSG:31370 (Lambert72), alternative: EPSG:3812 (Lambert2008)
         self.CRS = crs
-
-        self.merged = True #this parameter is used to treat multipolygon as single polygons. So polygons with ID spliiter are seperately evaluated and merged on result.
-
+        # this parameter is used to treat multipolygon as single polygons. So polygons with ID spliiter are seperately evaluated and merged on result.
+        self.MULTI_AS_SINGLE_MODUS = True
         self.logger.feedback_info("Aligner initialized")
 
     def buffer_distance(self):
@@ -351,7 +350,7 @@ class Aligner:
             threshold_overlap_percentage=threshold_overlap_percentage,
         )
         dict_thematic = self.dict_thematic
-        if self.merged:
+        if self.MULTI_AS_SINGLE_MODUS:
             dict_series = merge_dict_series(dict_series)
             dict_thematic = merge_dict(self.dict_thematic)
 
@@ -533,7 +532,7 @@ class Aligner:
         Args:
             merged (bool, optional): Whether to merge the results for each thematic element. Defaults to True.
         """
-        if self.merged:
+        if self.MULTI_AS_SINGLE_MODUS:
             return merge_process_results(self.dict_result)
         return self.dict_result
 
@@ -546,7 +545,7 @@ class Aligner:
             merged (bool, optional): Whether to merge the results for each thematic element. Defaults to True.
         """
         results_dict = self.dict_result
-        if self.merged:
+        if self.MULTI_AS_SINGLE_MODUS:
             results_dict = merge_process_results(results_dict)
 
         return self.get_predictions_as_geojson(
@@ -998,11 +997,20 @@ class Aligner:
         self._prepare_reference_data()
 
     def load_thematic_data(self, loader: Loader):
-        self.dict_thematic, self.dict_thematic_properties, self.dict_thematic_source = (
+        dict_thematic, self.dict_thematic_properties, self.dict_thematic_source = (
             loader.load_data()
         )
+        if self.MULTI_AS_SINGLE_MODUS:
+            dict_thematic = multipolygons_to_singles(dict_thematic)
+            #TODO:Does these dicts has to be split when multi_to_single?
+            #dict_thematic_properties =
+            #dict_thematic_source =
+        self.dict_thematic = dict_thematic
+        #self.dict_thematic_properties = dict_thematic_properties
+        #self.dict_thematic_source = dict_thematic_source
 
-    # Deprecated loader methods
+
+        # Deprecated loader methods
     def load_thematic_data_geojson(self, thematic_input, name_thematic_id):
         logging.warning("deprecated method, use load_thematic_data instead")
         loader = GeoJsonLoader(thematic_input, name_thematic_id)

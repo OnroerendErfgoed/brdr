@@ -96,7 +96,7 @@ def get_geoms_affected_by_grb_change(
 
     """
     dict_thematic = aligner.dict_thematic
-    if aligner.merged:
+    if aligner.MULTI_AS_SINGLE_MODUS:
         dict_thematic=merge_dict(dict_thematic)
     crs = aligner.CRS
     affected_dict: dict[str, BaseGeometry] = {}
