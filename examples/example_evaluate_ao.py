@@ -1,11 +1,8 @@
 from datetime import date
 
 import numpy as np
-from fontTools.misc.py23 import xrange
-from shapely import from_wkt
 from brdr.aligner import Aligner
 from brdr.enums import GRBType
-from brdr.geometry_utils import get_bbox
 from brdr.grb import (
     get_geoms_affected_by_grb_change,
     evaluate,

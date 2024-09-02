@@ -12,7 +12,7 @@ from brdr.grb import (
     GRBActualLoader,
 )
 from brdr.loader import DictLoader
-from brdr.utils import get_series_geojson_dict
+from brdr.utils import get_series_geojson_dict, get_oe_dict_by_ids
 
 thematic_dict = {
     "theme_id_1": from_wkt(
@@ -20,6 +20,7 @@ thematic_dict = {
     )
 }
 bbox = get_bbox(thematic_dict["theme_id_1"])
+thematic_dict = get_oe_dict_by_ids([9946])
 base_aligner = Aligner()
 base_aligner.load_thematic_data(DictLoader(thematic_dict))
 base_year = "2022"

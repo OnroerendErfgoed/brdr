@@ -30,7 +30,7 @@ from brdr.utils import (
     get_collection,
     dict_series_by_keys,
     get_collection_by_partition,
-    geojson_to_dicts,
+    geojson_to_dicts, merge_dict,
 )
 
 log = logging.getLogger(__name__)
@@ -77,6 +77,7 @@ def get_geoms_affected_by_grb_change(
     date_end=date.today(),
     one_by_one=False,
     border_distance=0,
+    merged=False
 ):
     """
     Get a dictionary of thematic geometries that are affected bij GRB-changes in a specific timespan
@@ -96,6 +97,8 @@ def get_geoms_affected_by_grb_change(
 
     """
     dict_thematic = aligner.dict_thematic
+    if merged:
+        dict_thematic=merge_dict(dict_thematic)
     crs = aligner.CRS
     affected_dict: dict[str, BaseGeometry] = {}
     unchanged_dict: dict[str, BaseGeometry] = {}
