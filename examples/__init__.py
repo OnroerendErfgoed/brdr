@@ -84,7 +84,7 @@ def _make_map(ax, result_dict, thematic_dict, reference_dict):
         )
         # zoom map to saved extent
         ax.axis(axis_extent)
-    except Exception: # noqa
+    except Exception:  # noqa
         logging.error("make_map: Error while making map")
     return ax
 
@@ -104,7 +104,7 @@ def show_map(
     for dist in dict_results_by_distance:
         ax = plt.subplot(len_series_half, 2, i + 1)
         ax = _make_map(
-            ax, # noqa
+            ax,  # noqa
             dict_results_by_distance[dist],
             dict_thematic,
             dict_reference,
