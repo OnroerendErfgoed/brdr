@@ -320,7 +320,12 @@ def evaluate(
                 prop_dictionary[0][theme_id]["evaluation"] = Evaluation.NO_PREDICTION_5
                 continue
             dist_predicted_max = max(list(dict_predicted_keys[theme_id].keys()))
-            logging.debug("max predicted dist proposed for theme_id " + str(theme_id) + " : " + str(dist_predicted_max))
+            logging.debug(
+                "max predicted dist proposed for theme_id "
+                + str(theme_id)
+                + " : "
+                + str(dist_predicted_max)
+            )
             predicted_result = dict_predicted[dist_predicted_max][theme_id]
             dict_evaluated_result[dist_predicted_max][theme_id] = predicted_result
             prop_dictionary[dist_predicted_max][theme_id]["formula"] = json.dumps(
