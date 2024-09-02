@@ -13,7 +13,8 @@ from brdr.grb import (
 from brdr.loader import DictLoader
 from brdr.utils import get_series_geojson_dict, get_oe_dict_by_ids
 
-# dict_theme = get_oe_dict_by_ids([125610,148305,127615,122316,120153,124699,115489,120288,120387,124762,148143,116141])
+# dict_theme = get_oe_dict_by_ids([125610,148305,127615,122316,120153,124699,115489,
+# 120288,120387,124762,148143,116141])
 dict_theme = get_oe_dict_by_ids([10047, 10048, 10049, 10050, 10051, 10056])
 print(dict_theme)
 

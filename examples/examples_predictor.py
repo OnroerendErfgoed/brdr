@@ -10,12 +10,13 @@ from examples import show_map
 # Press the green button in the gutter to run the script.
 if __name__ == "__main__":
     """
-    example to use the predictor-function to automatically predict which resulting geometries are interesting to look at
-    (based on detection of breakpoints and relevant distances of 'no-change')
+    example to use the predictor-function to automatically predict which resulting
+    geometries are interesting to look at (based on detection of breakpoints and
+    relevant distances of 'no-change')
     """
-    ##Initiate a Aligner
+    # Initiate an Aligner
     aligner = Aligner()
-    ##Load thematic data & reference data
+    # Load thematic data & reference data
     loader = GeoJsonFileLoader(
         "../tests/testdata/test_wanted_changes.geojson", "theme_id"
     )

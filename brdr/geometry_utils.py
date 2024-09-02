@@ -86,8 +86,8 @@ def buffer_neg(geometry, buffer_value):
 
     Notes:
         -   The function uses the Shapely library for geometric operations.
-        -   Parameters like `quad_segs`, `join_style`, and `mitre_limit` are used for the
-            buffer.
+        -   Parameters like `quad_segs`, `join_style`, and `mitre_limit` are used for
+            the buffer.
 
     Example:
         >>> from shapely import Point
@@ -119,8 +119,8 @@ def buffer_pos(geometry, buffer_value):
 
     Notes:
         -   The function uses the Shapely library for geometric operations.
-        -   Parameters like `quad_segs`, `join_style`, and `mitre_limit` are used for the
-            buffer.
+        -   Parameters like `quad_segs`, `join_style`, and `mitre_limit` are used for
+            the buffer.
 
     Example:
         >>> from shapely import Point
@@ -184,7 +184,7 @@ def safe_union(geom_a: BaseGeometry, geom_b: BaseGeometry) -> BaseGeometry:
                 "union_error for geoms:" + geom_a.wkt + " and " + geom_b.wkt
             )
             geom = union(buffer(geom_a, 0.0000001), buffer(geom_b, 0.0000001))
-        except Exception:
+        except Exception:  # noqa
             logging.error("error: empty geometry returned")
             geom = Polygon()
 
@@ -195,8 +195,10 @@ def safe_intersection(geom_a: BaseGeometry, geom_b: BaseGeometry) -> BaseGeometr
     """
     Calculates the intersection of two geometries with error handling.
 
-    This function attempts to compute the intersection between two Shapely geometry objects (`geom_a` and `geom_b`).
-    It incorporates error handling to address potential exceptions that might arise due to topological inconsistencies
+    This function attempts to compute the intersection between two Shapely geometry
+    objects (`geom_a` and `geom_b`).
+    It incorporates error handling to address potential exceptions that might arise
+    due to topological inconsistencies
     in the geometries, such as non-noded intersections between linestrings.
 
     Args:
@@ -204,12 +206,15 @@ def safe_intersection(geom_a: BaseGeometry, geom_b: BaseGeometry) -> BaseGeometr
         geom_b (BaseGeometry): The second Shapely geometry object.
 
     Returns:
-        BaseGeometry: The intersection geometry as a Shapely object. It might be an empty Polygon if an error occurs during processing.
+        BaseGeometry: The intersection geometry as a Shapely object. It might be an
+        empty Polygon if an error occurs during processing.
 
     Logs:
         - If a `GEOSException` occurs:
-            - A warning message is logged with the WKT representations of both geometries.
-            - The function attempts to buffer both geometries by a small value (0.0000001) and then perform the intersection.
+            - A warning message is logged with the WKT representations of both
+                geometries.
+            - The function attempts to buffer both geometries by a small value
+                (0.0000001) and then perform the intersection.
         - If any other exception occurs:
             - An error message is logged indicating that an empty geometry is returned.
     """
@@ -224,7 +229,7 @@ def safe_intersection(geom_a: BaseGeometry, geom_b: BaseGeometry) -> BaseGeometr
                 "intersection_error for geoms:" + geom_a.wkt + " and " + geom_b.wkt
             )
             geom = intersection(buffer(geom_a, 0.0000001), buffer(geom_b, 0.0000001))
-        except Exception:
+        except Exception:  # noqa
             logging.error("error: empty geometry returned")
             geom = Polygon()
 
@@ -235,21 +240,26 @@ def safe_difference(geom_a, geom_b):
     """
     Calculates the difference between two geometries with error handling.
 
-    This function computes the difference between two Shapely geometry objects (`geom_a` and `geom_b`).
-    It incorporates error handling to address potential exceptions that might arise due to topological inconsistencies
-    in the geometries, similar to non-noded intersections between linestrings.
+    This function computes the difference between two Shapely geometry objects
+    (`geom_a` and `geom_b`). It incorporates error handling to address potential
+    exceptions that might arise due to topological inconsistencies in the
+    geometries, similar to non-noded intersections between linestrings.
 
     Args:
         geom_a (BaseGeometry): The first Shapely geometry object.
-        geom_b (BaseGeometry): The second Shapely geometry object to be subtracted from the first.
+        geom_b (BaseGeometry): The second Shapely geometry object to be subtracted from
+        the first.
 
     Returns:
-        BaseGeometry: The difference geometry as a Shapely object. It might be an empty Polygon if an error occurs during processing.
+        BaseGeometry: The difference geometry as a Shapely object. It might be an empty
+        Polygon if an error occurs during processing.
 
     Logs:
         - If a `GEOSException` occurs:
-            - A warning message is logged with the WKT representations of both geometries.
-            - The function attempts to buffer both geometries by a small value (0.0000001) and then perform the difference operation.
+            - A warning message is logged with the WKT representations of both
+                geometries.
+            - The function attempts to buffer both geometries by a small value
+                (0.0000001) and then perform the difference operation.
         - If any other exception occurs:
             - An error message is logged indicating that an empty geometry is returned.
     """
@@ -265,7 +275,7 @@ def safe_difference(geom_a, geom_b):
                 "difference_error for geoms:" + geom_a.wkt + " and " + geom_b.wkt
             )
             geom = difference(buffer(geom_a, 0.0000001), buffer(geom_b, 0.0000001))
-        except Exception:
+        except Exception:  # noqa
             logging.error("error: empty geometry returned")
             geom = Polygon()
 
@@ -276,21 +286,26 @@ def safe_symmetric_difference(geom_a, geom_b):
     """
     Calculates the symmetrical difference between two geometries with error handling.
 
-    This function computes the symmetrical difference between two Shapely geometry objects (`geom_a` and `geom_b`).
-    It incorporates error handling to address potential exceptions that might arise due to topological inconsistencies
-    in the geometries, similar to non-noded intersections between linestrings.
+    This function computes the symmetrical difference between two Shapely geometry
+    objects (`geom_a` and `geom_b`). It incorporates error handling to address
+    potential exceptions that might arise due to topological inconsistencies in
+    the geometries, similar to non-noded intersections between linestrings.
 
     Args:
         geom_a (BaseGeometry): The first Shapely geometry object.
-        geom_b (BaseGeometry): The second Shapely geometry object to be subtracted from the first.
+        geom_b (BaseGeometry): The second Shapely geometry object to be subtracted
+        from the first.
 
     Returns:
-        BaseGeometry: The symmetrical difference geometry as a Shapely object. It might be an empty Polygon if an error occurs during processing.
+        BaseGeometry: The symmetrical difference geometry as a Shapely object. It
+        might be an empty Polygon if an error occurs during processing.
 
     Logs:
         - If a `GEOSException` occurs:
-            - A warning message is logged with the WKT representations of both geometries.
-            - The function attempts to buffer both geometries by a small value (0.0000001) and then perform the difference operation.
+            - A warning message is logged with the WKT representations of both
+              geometries.
+            - The function attempts to buffer both geometries by a small value (
+              0.0000001) and then perform the difference operation.
         - If any other exception occurs:
             - An error message is logged indicating that an empty geometry is returned.
     """
@@ -310,7 +325,7 @@ def safe_symmetric_difference(geom_a, geom_b):
             geom = symmetric_difference(
                 buffer(geom_a, 0.0000001), buffer(geom_b, 0.0000001)
             )
-        except Exception:
+        except Exception:  # noqa
             logging.error("error: empty geometry returned")
             geom = Polygon()
 
@@ -319,10 +334,12 @@ def safe_symmetric_difference(geom_a, geom_b):
 
 def grid_bounds(geom: BaseGeometry, delta: float):
     """
-    Divides a geometric area (specified by `geom`) into a grid of rectangular partitions.
+    Divides a geometric area (specified by `geom`) into a grid of rectangular
+    partitions.
 
     Args:
-        geom (BaseGeometry): The geometric object representing the area to be partitioned.
+        geom (BaseGeometry): The geometric object representing the area to be
+            partitioned.
         delta (float): The desired distance between partitions.
 
     Returns:
@@ -359,7 +376,8 @@ def grid_bounds(geom: BaseGeometry, delta: float):
 def get_relevant_polygons_from_geom(geometry: BaseGeometry, buffer_distance: float):
     """
     Get only the relevant parts (polygon) from a geometry.
-    Points, Lines and Polygons smaller than relevant distance are excluded from the result
+    Points, Lines and Polygons smaller than relevant distance are excluded from the
+    result
     """
     if not geometry or geometry.is_empty:
         # If the input geometry is empty or None, do nothing.
@@ -460,8 +478,10 @@ def calculate_geom_by_intersection_and_reference(
                 buffer_distance,
             ),
         )
-        # when calculating for OD, we create a 'virtual parcel'. When calculating this virtual parcel, it is buffered to take outer boundaries into account.
-        # This results in a side-effect that there are extra non-logical parts included in the result. The function below tries to exclude these non-logical parts.
+        # when calculating for OD, we create a 'virtual parcel'. When calculating this
+        # virtual parcel, it is buffered to take outer boundaries into account.
+        # This results in a side effect that there are extra non-logical parts included
+        # in the result. The function below tries to exclude these non-logical parts.
         # see eo_id 206363 with relevant distance=0.2m and SNAP_ALL_SIDE
         if is_openbaar_domein:
             geom = get_relevant_polygons_from_geom(geom, buffer_distance)
@@ -472,7 +492,8 @@ def calculate_geom_by_intersection_and_reference(
     else:
         if is_openbaar_domein:
             geom = geom_relevant_intersection  # (=empty geometry)
-        # geom = snap_geom_to_reference (geom_intersection, geom_reference, relevant_distance)
+        # geom = snap_geom_to_reference (geom_intersection, geom_reference,
+        # relevant_distance)
         elif threshold_overlap_percentage < 0:
             # if we take a value of -1, the original border will be used
             geom = geom_intersection
@@ -538,7 +559,9 @@ def get_partitions(geom, delta):
         list: A filtered list of Polygon objects representing the partitions
             overlapping the original geometric object.
     """
-    # TODO: partitioning results in multiple squares, this can be improved by partitioning with a quadtree with rectangles? https://www.fundza.com/algorithmic/quadtree/index.html
+    # TODO: partitioning results in multiple squares, this can be improved by
+    #  partitioning with a quadtree with rectangles?
+    #  https://www.fundza.com/algorithmic/quadtree/index.html
     prepared_geom = prep(geom)
     partitions = grid_bounds(geom, delta)
     filtered_grid = list(filter(prepared_geom.intersects, partitions))

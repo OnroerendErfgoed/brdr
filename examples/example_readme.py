@@ -24,9 +24,3 @@ process_result = aligner.process_dict_thematic(relevant_distance=1)
 print("result: " + process_result["theme_id_1"]["result"].wkt)
 print("added area: " + process_result["theme_id_1"]["result_diff_plus"].wkt)
 print("removed area: " + process_result["theme_id_1"]["result_diff_min"].wkt)
-# SHOW RESULTING GEOMETRY AND CHANGES
-# from examples import show_map
-# show_map(
-#     {aligner.relevant_distance:(result, result_diff, result_diff_plus, result_diff_min, relevant_intersection, relevant_diff)},
-#     thematic_dict,
-#     reference_dict)

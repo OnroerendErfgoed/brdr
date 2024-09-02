@@ -34,7 +34,7 @@ class GeoJsonLoader(Loader):
         *,
         id_property: str = None,
         _input: FeatureCollection = None,
-        data_dict_properties=None,
+        # data_dict_properties=None, TODO?
     ):
         super().__init__()
         self.id_property = id_property

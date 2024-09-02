@@ -3,10 +3,10 @@ import logging
 import os
 from collections import defaultdict
 from datetime import datetime
-from math import pi
 from typing import Iterable
 
 import numpy as np
+from math import pi
 from shapely import GeometryCollection
 from shapely import Polygon
 from shapely import STRtree
@@ -18,9 +18,10 @@ from shapely import to_geojson
 from shapely import unary_union
 from shapely.geometry.base import BaseGeometry
 
-from brdr.constants import BUFFER_MULTIPLICATION_FACTOR, GRB_VERSION_DATE
+from brdr.constants import BUFFER_MULTIPLICATION_FACTOR
 from brdr.constants import CORR_DISTANCE
 from brdr.constants import DEFAULT_CRS
+from brdr.constants import GRB_VERSION_DATE
 from brdr.constants import THRESHOLD_CIRCLE_RATIO
 from brdr.enums import GRBType
 from brdr.enums import OpenbaarDomeinStrategy
@@ -41,16 +42,14 @@ from brdr.loader import GeoJsonUrlLoader
 from brdr.loader import Loader
 from brdr.logger import Logger
 from brdr.typings import ProcessResult
-from brdr.utils import (
-    diffs_from_dict_series,
-    merge_dict_series,
-    merge_dict,
-    multipolygons_to_singles,
-)
+from brdr.utils import diffs_from_dict_series
 from brdr.utils import geojson_from_dict
 from brdr.utils import get_breakpoints_zerostreak
 from brdr.utils import get_series_geojson_dict
+from brdr.utils import merge_dict
+from brdr.utils import merge_dict_series
 from brdr.utils import merge_process_results
+from brdr.utils import multipolygons_to_singles
 from brdr.utils import write_geojson
 
 date_format = "%Y-%m-%d"
@@ -66,7 +65,8 @@ logging.basicConfig(
 class Aligner:
     """
     This class is used to compare the thematic data with the reference data.
-    The reference data can be loaded in different ways, for example by using the GRB data.
+    The reference data can be loaded in different ways, for example by using the GRB
+    data.
     The thematic data can be loaded by using a geojson file.
     The class can be used to compare the thematic data with the reference data.
     """
@@ -96,7 +96,8 @@ class Aligner:
                 from which overlapping-percentage a reference-polygon has to be included
                 when there aren't relevant intersections or relevant differences
                 (default 50%)
-            od_strategy (int, optional): Determines how the algorithm deals with parts of the geometry that are not on the
+            od_strategy (int, optional): Determines how the algorithm deals with parts
+                of the geometry that are not on the
                 reference (default 1: SNAP_SINGLE_SIDE)
             crs (str, optional): Coordinate Reference System (CRS) of the data.
                 (default EPSG:31370)
@@ -125,7 +126,8 @@ class Aligner:
 
         # reference
 
-        # name of the identifier-field of the reference data (id has to be unique,f.e CAPAKEY for GRB-parcels)
+        # name of the identifier-field of the reference data (id has to be unique,f.e
+        # CAPAKEY for GRB-parcels)
         self.name_reference_id = "ref_identifier"
         # dictionary to store all reference geometries
         self.dict_reference: dict[str, BaseGeometry] = {}
@@ -133,7 +135,8 @@ class Aligner:
         self.dict_reference_properties: dict[str, dict] = {}
         # Dict to store source-information of the reference dictionary
         self.dict_reference_source: dict[str, str] = {}
-        # to save a unioned geometry of all reference polygons; needed for calculation in most OD-strategies
+        # to save a unioned geometry of all reference polygons; needed for calculation
+        # in most OD-strategies
         self.reference_union = None
 
         # results
@@ -146,10 +149,12 @@ class Aligner:
         # Coordinate reference system
         # thematic geometries and reference geometries are assumed to be in the same CRS
         # before loading into the Aligner. No CRS-transformation will be performed.
-        # When loading data, CRS is expected to be a projected CRS with units in 'meter (m)'.
+        # When loading data, CRS is expected to be a projected CRS with units in 'meter
+        # (m)'.
         # Default EPSG:31370 (Lambert72), alternative: EPSG:3812 (Lambert2008)
         self.CRS = crs
-        # this parameter is used to treat multipolygon as single polygons. So polygons with ID spliiter are seperately evaluated and merged on result.
+        # this parameter is used to treat multipolygon as single polygons. So polygons
+        # with ID splitter are separately evaluated and merged on result.
         self.multi_as_single_modus = True
         self.logger.feedback_info("Aligner initialized")
 
@@ -170,15 +175,16 @@ class Aligner:
             input_geometry (BaseGeometry): The input geometric object.
             relevant_distance
             od_strategy
-            threshold_overlap_percentage (int): The buffer distance (positive or negative).
+            threshold_overlap_percentage (int): The buffer distance (positive
+                or negative).
 
         Returns:
             ProcessResult : A dict containing the resulting geometries:
 
             *   result (BaseGeometry): The resulting output geometry
             *   result_diff (BaseGeometry): The resulting difference output geometry
-            *   result_diff_plus (BaseGeometry): The resulting positive difference output
-                geometry
+            *   result_diff_plus (BaseGeometry): The resulting positive difference
+                output geometry
             *   result_diff_min (BaseGeometry): The resulting negative difference output
                 geometry
             *   relevant_intersection (BaseGeometry): The relevant_intersection
@@ -280,7 +286,8 @@ class Aligner:
         Returns:
             dict: A dict containing processed data for each thematic key:
                 - result: Aligned thematic data.
-                - result_diff: global differences between thematic data and reference data.
+                - result_diff: global differences between thematic data and reference
+                  data.
                 - result_diff_plus: Positive differences.
                 - result_diff_min: Negative differences.
                 - relevant_intersection: relevant intersections.
@@ -308,42 +315,64 @@ class Aligner:
         threshold_overlap_percentage=50,
     ):
         """
-        Predicts the 'most interesting' relevant distances for changes in thematic elements based on a distance series.
+        Predicts the 'most interesting' relevant distances for changes in thematic
+        elements based on a distance series.
 
-        This function analyzes a set of thematic geometries (`self.dict_thematic`) to identify potentially
-        interesting distances where changes occur. It performs the following steps:
+        This function analyzes a set of thematic geometries (`self.dict_thematic`) to
+        identify potentially interesting distances where changes occur. It performs
+        the following steps:
 
         1. **Process Distance Series:**
-            - Calculates a series of results for different distances specified by `relevant_distances`.
-            - This calculation might involve functions like `self.process_series` (implementation details likely depend on your specific code).
+            - Calculates a series of results for different distances specified by
+              `relevant_distances`.
+            - This calculation might involve functions like `self.process_series`
+              (implementation details likely depend on your specific code).
 
         2. **Calculate Difference Metrics:**
-            - Analyzes the results from the distance series to compute difference metrics
-              between thematic elements at each distance (using `diffs_from_dict_series`).
+            - Analyzes the results from the distance series to compute difference
+              metrics between thematic elements at each distance (using
+              `diffs_from_dict_series`).
 
         3. **Identify Breakpoints and Zero-Streaks:**
-            - For each thematic geometry, it identifies potential "breakpoints" where the difference metric changes sign (from positive to negative or vice versa).
-            - It also identifies "zero-streaks" which are consecutive distances with a difference metric close to zero (potentially indicating minimal change).
+            - For each thematic geometry, it identifies potential "breakpoints" where
+              the difference metric changes sign (from positive to negative or vice
+              versa).
+            - It also identifies "zero-streaks" which are consecutive distances with a
+              difference metric close to zero (potentially indicating minimal change).
 
         4. **Predict Interesting Distances:**
-            - The function considers distances corresponding to breakpoints and zero-streaks as potentially interesting for further analysis.
-            - These distances are stored in a dictionary (`dict_predicted`) with the thematic element key as the outer key.
-            - Additionally, the corresponding results from the distance series for those distances are included.
+            - The function considers distances corresponding to breakpoints and
+              zero-streaks as potentially interesting for further analysis.
+            - These distances are stored in a dictionary (`dict_predicted`) with the
+              thematic element key as the outer key.
+            - Additionally, the corresponding results from the distance series for
+              those distances are included.
 
         5. **Filter Results:**
-            - The function might further filter the predicted results for each thematic element based on the element key (using `filter_resulting_series_by_key`).
+            - The function might further filter the predicted results for each thematic
+              element based on the element key (using `filter_resulting_series_by_key`).
 
         Args:
-            relevant_distances (np.ndarray, optional): A NumPy array of distances to be analyzed. Defaults to np.arange(0.1, 5.05, 0.1).
-            od_strategy (OpenbaarDomeinStrategy, optional): A strategy for handling open data in the processing (implementation specific). Defaults to OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE.
-            threshold_overlap_percentage (int, optional): A percentage threshold for considering full overlap in the processing (implementation specific). Defaults to 50.
+            relevant_distances (np.ndarray, optional): A NumPy array of distances to
+              be analyzed. Defaults to np.arange(0.1, 5.05, 0.1).
+            od_strategy (OpenbaarDomeinStrategy, optional): A strategy for handling
+              open data in the processing (implementation specific). Defaults to
+             OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE.
+            threshold_overlap_percentage (int, optional): A percentage threshold for
+              considering full overlap in the processing (implementation specific).
+             Defaults to 50.
 
         Returns:
-            dict: A dictionary containing predicted interesting distances for each thematic element.
+            dict: A dictionary containing predicted interesting distances for each
+            thematic element.
                 - Keys: Thematic element identifiers from `self.dict_thematic`.
-                - Values: Dictionaries with the following structure for each thematic element:
-                    - Keys: Distances identified as interesting (breakpoints or zero-streaks).
-                    - Values: dicts containing results (likely specific to your implementation) from the distance series for the corresponding distance.
+                - Values: Dictionaries with the following structure for each
+                   thematic element:
+                    - Keys: Distances identified as interesting (breakpoints or
+                    zero-streaks).
+                    - Values: dicts containing results (likely specific to
+                    your implementation) from the distance series for the
+                    corresponding distance.
 
         Logs:
             - Debug logs the thematic element key being processed.
@@ -364,7 +393,8 @@ class Aligner:
         for theme_id, diffs in diffs_dict.items():
             if len(diffs) != len(relevant_distances):
                 logging.warning(
-                    f"Number of computed diffs for thematic element {theme_id} does not match the number of relevant distances."
+                    f"Number of computed diffs for thematic element {theme_id} does "
+                    f"not match the number of relevant distances."
                 )
                 continue
             diff_values = list(diffs.values())
@@ -395,23 +425,26 @@ class Aligner:
         threshold_overlap_percentage=50,
     ) -> dict[float, dict[str, ProcessResult]]:
         """
-        Calculates the resulting dictionaries for thematic data based on a series of relevant
-            distances.
+        Calculates the resulting dictionaries for thematic data based on a series of
+            relevant distances.
 
         Args:
-            relevant_distances (Iterable[float]): A series of relevant distances (in meters) to
-                process
+            relevant_distances (Iterable[float]): A series of relevant distances
+                (in meters) to process
             od_strategy (int, optional): The strategy for overlap detection.
                 Defaults to 1.
             threshold_overlap_percentage (float, optional): The threshold percentage for
                 considering full overlap. Defaults to 50.
 
         Returns:
-            dict: A dictionary containing the resulting dictionaries for a series of relevant distances:
+            dict: A dictionary containing the resulting dictionaries for a series of
+                relevant distances:
 
                 {
-                    'relevant_distance_1': {theme_id_1: (ProcessResult), theme_id_2: (ProcessResult), ...},
-                    'relevant_distance_2': {theme_id_1: (ProcessResult), theme_id_2: (ProcessResult), ...},
+                    'relevant_distance_1': {theme_id_1: (ProcessResult), theme_id_2:
+                        (ProcessResult), ...},
+                    'relevant_distance_2': {theme_id_1: (ProcessResult), theme_id_2:
+                        (ProcessResult), ...},
                     ...
                 }
         """
@@ -452,13 +485,14 @@ class Aligner:
                 -   'geometry': GeoJSON representation of the intersection (if
                     with_geom is True).
         """
-        dict_formula = {}
-        dict_formula["alignment_date"] = datetime.now().strftime(date_format)
-        dict_formula["reference_source"] = self.dict_reference_source
-        dict_formula["full"] = True
-        dict_formula["reference_features"] = {}
-        dict_formula["reference_od"] = None
-        dict_formula["last_version_date"] = None
+        dict_formula = {
+            "alignment_date": datetime.now().strftime(date_format),
+            "reference_source": self.dict_reference_source,
+            "full": True,
+            "reference_features": {},
+            "reference_od": None,
+            "last_version_date": None,
+        }
 
         full_total = True
         last_version_date = None
@@ -533,9 +567,6 @@ class Aligner:
     def get_results_as_dict(self):
         """
         get a dict of the results
-
-        Args:
-            merged (bool, optional): Whether to merge the results for each thematic element. Defaults to True.
         """
         if self.multi_as_single_modus:
             return merge_process_results(self.dict_result)
@@ -546,8 +577,8 @@ class Aligner:
         convert the results to geojson feature collections
 
         Args:
-            formula (bool, optional): Whether to include formula-related information in the output. Defaults to False.
-            merged (bool, optional): Whether to merge the results for each thematic element. Defaults to True.
+            formula (bool, optional): Whether to include formula-related information
+                in the output. Defaults to False.
         """
         results_dict = self.dict_result
         if self.multi_as_single_modus:
@@ -560,7 +591,8 @@ class Aligner:
 
     def get_predictions_as_geojson(self, formula=False, series_dict=None):
         """
-        get a dictionary containing of the resulting geometries as geojson, based on the 'predicted' relevant distances.
+        get a dictionary containing of the resulting geometries as geojson, based on the
+            'predicted' relevant distances.
         Optional: The descriptive formula is added as an attribute to the result"""
 
         series_dict = series_dict or self.dict_predicted
@@ -594,19 +626,27 @@ class Aligner:
         """
         Exports analysis results as GeoJSON files.
 
-        This function exports 6 GeoJSON files containing the analysis results to the specified `path`.
+        This function exports 6 GeoJSON files containing the analysis results to the
+            specified `path`.
 
         Args:
             path (str): The path to the directory where the GeoJSON files will be saved.
-            formula (bool, optional): Whether to include formula-related information in the output. Defaults to True.
+            formula (bool, optional): Whether to include formula-related information
+                in the output. Defaults to True.
 
         Details of exported files:
-            - result.geojson: Contains the original thematic data from `self.dict_result`.
-            - result_diff.geojson: Contains the difference between the original and predicted data from `self.dict_result_diff`.
-            - result_diff_plus.geojson: Contains results for areas that are added (increased area).
-            - result_diff_min.geojson: Contains results for areas that are removed (decreased area).
-            - result_relevant_intersection.geojson: Contains the areas with relevant intersection that has to be included in the result.
-            - result_relevant_difference.geojson: Contains the areas with relevant difference that has to be excluded from the result.
+            - result.geojson: Contains the original thematic data from `
+              self.dict_result`.
+            - result_diff.geojson: Contains the difference between the original
+              and predicted data from `self.dict_result_diff`.
+            - result_diff_plus.geojson: Contains results for areas that are
+              added (increased area).
+            - result_diff_min.geojson: Contains results for areas that are
+              removed (decreased area).
+            - result_relevant_intersection.geojson: Contains the areas with
+              relevant intersection that has to be included in the result.
+            - result_relevant_difference.geojson: Contains the areas with
+              relevant difference that has to be excluded from the result.
         """
         fcs = self.get_results_as_geojson(formula)
         for name, fc in fcs.items():
@@ -619,12 +659,16 @@ class Aligner:
         It performs the following tasks:
 
         1. **Optimizes spatial queries:**
-            - Creates a Spatial Relationship Tree (STRtree) using `STRtree` for efficient spatial queries against the reference data in `self.dict_reference`.
-            - Converts the dictionary keys (reference identifiers) to a NumPy array for potential performance benefits in future operations.
+            - Creates a Spatial Relationship Tree (STRtree) using `STRtree` for
+              efficient spatial queries against the reference data in
+              `self.dict_reference`.
+            - Converts the dictionary keys (reference identifiers) to a NumPy array
+              for potential performance benefits in future operations.
 
         2. **Clears reference union:**
-            - Sets `self.reference_union` to `None`. This variable stores the combined geometry of all reference data,
-              and it's cleared here to indicate that it needs to be recalculated if requested later.
+            - Sets `self.reference_union` to `None`. This variable stores the combined
+              geometry of all reference data, and it's cleared here to indicate that
+              it needs to be recalculated if requested later.
 
         Returns:
             None
@@ -648,7 +692,8 @@ class Aligner:
         if self.od_strategy == OpenbaarDomeinStrategy.EXCLUDE:
             # Completely exclude everything that is not on the reference layer
             self.logger.feedback_debug("OD-strategy EXCLUDE")
-            # Remove from the thematic layer all parts that are not on the reference layer
+            # Remove from the thematic layer all parts that are not on the reference
+            # layer
             # !!this strategy adapts the input-geometry!!
             geometry = safe_intersection(geometry, self._get_reference_union())
         elif self.od_strategy == OpenbaarDomeinStrategy.AS_IS:
@@ -712,7 +757,8 @@ class Aligner:
             geom_theme_od_min_clipped_plus_buffered_clipped = self._od_full_area(
                 geometry
             )
-            # UNION the calculation of  OD-SNAP_ALL_SIDE with FULL AREA of OD-SNAP_FULL_AREA_SINGLE_SIDE
+            # UNION the calculation of  OD-SNAP_ALL_SIDE with FULL AREA of
+            # OD-SNAP_FULL_AREA_SINGLE_SIDE
             geom_thematic_od = safe_union(
                 geom_theme_od_min_clipped_plus_buffered_clipped, geom_thematic_od
             )
@@ -808,7 +854,8 @@ class Aligner:
 
     # def _snap_geom_to_reference(self, geom_input, geom_reference, relevant_distance):
     # """
-    # This feature does not work correctly with Shapely. This avoids polygons collapse if everything is taken together, which we do in some cases effectively want.
+    # This feature does not work correctly with Shapely. This avoids polygons collapse
+    # if everything is taken together, which we do in some cases effectively want.
     # """
     # return snap(geom_input, geom_reference, relevant_distance)
 
@@ -819,7 +866,7 @@ class Aligner:
             )
         return self.reference_union
 
-    def _get_thematic_union(self):
+    def get_thematic_union(self):
         if self.thematic_union is None:
             self.thematic_union = make_valid(
                 unary_union(list(self.dict_thematic.values()))
@@ -845,8 +892,8 @@ class Aligner:
 
             *   result (BaseGeometry): The resulting output geometry
             *   result_diff (BaseGeometry): The resulting difference output geometry
-            *   result_diff_plus (BaseGeometry): The resulting positive difference output
-                geometry
+            *   result_diff_plus (BaseGeometry): The resulting positive difference
+                output geometry
             *   result_diff_min (BaseGeometry): The resulting negative difference output
                 geometry
         """
@@ -857,8 +904,8 @@ class Aligner:
 
         if not (geom_thematic is None or geom_thematic.is_empty):
             # Correction for circles
-            # calculate ratio to see if it is a circle, and keep the original geometry if a
-            # circle: (Polsby-popper score)
+            # calculate ratio to see if it is a circle, and keep the original geometry
+            #  if a circle: (Polsby-popper score)
             if (
                 4 * pi * (geom_thematic.area / (geom_thematic.length**2))
                 > THRESHOLD_CIRCLE_RATIO
@@ -933,7 +980,8 @@ class Aligner:
         # create all resulting geometries
         geom_thematic_result = make_valid(unary_union(result))
 
-        # negative and positive buffer is added to the difference-calculations, to remove 'very small' differences (smaller than the correction distance)
+        # negative and positive buffer is added to the difference-calculations, to
+        # remove 'very small' differences (smaller than the correction distance)
         geom_result_diff = buffer_pos(
             buffer_neg(
                 safe_symmetric_difference(geom_thematic_result, geom_thematic),

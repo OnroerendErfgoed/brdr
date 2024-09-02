@@ -3,7 +3,8 @@ from brdr.enums import GRBType
 from brdr.grb import GRBActualLoader
 from brdr.loader import DictLoader
 from brdr.utils import get_oe_dict_by_ids
-from examples import show_map, print_formula
+from examples import print_formula
+from examples import show_map
 
 if __name__ == "__main__":
     # EXAMPLE for a thematic Polygon (aanduid_id 131635)
@@ -19,9 +20,8 @@ if __name__ == "__main__":
 
     # RESULTS
     rel_dist = 2
-    dict_results_by_distance = {}
+    dict_results_by_distance = {rel_dist: aligner.process_dict_thematic(rel_dist, 4)}
     # put resulting tuple in a dictionary
-    dict_results_by_distance[rel_dist] = aligner.process_dict_thematic(rel_dist, 4)
     aligner.export_results("output/", formula=True)
 
     show_map(dict_results_by_distance, aligner.dict_thematic, aligner.dict_reference)

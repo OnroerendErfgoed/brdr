@@ -1,17 +1,17 @@
 import logging
-from datetime import date, timedelta
+from datetime import date
+from datetime import timedelta
 
 import numpy as np
 
 from brdr.aligner import Aligner
 from brdr.enums import GRBType
-from brdr.grb import (
-    get_geoms_affected_by_grb_change,
-    evaluate,
-    GRBFiscalParcelLoader,
-    GRBActualLoader,
-)
-from brdr.loader import GeoJsonLoader, DictLoader
+from brdr.grb import GRBActualLoader
+from brdr.grb import GRBFiscalParcelLoader
+from brdr.grb import evaluate
+from brdr.grb import get_geoms_affected_by_grb_change
+from brdr.loader import DictLoader
+from brdr.loader import GeoJsonLoader
 from brdr.utils import get_oe_geojson_by_bbox
 
 # This code shows an example how the aligner can be used inside a flow of
@@ -27,26 +27,31 @@ counter_excluded = 0
 # =========
 crs = "EPSG:31370"
 limit = 10000
-bbox = "172800,170900,173000,171100"
+# bbox = "172800,170900,173000,171100"
 bbox = "172000,172000,174000,174000"
 # bbox = "170000,170000,175000,174900"
 # bbox = "100000,195000,105000,195900"
 # bbox = "150000,210000,155000,214900"
 # bbox = "173500,173500,174000,174000" # example "aanduid_id" = 34195
 base_year = "2022"
-base_correction = 2  # relevant distance that is used to align the original geometries to the reference-polygons of the base-year
-excluded_area = 10000  # geometries bigger than this, will be excluded
-series = [
-    0,
-    0.5,
-    1,
-    1.5,
-    2,
-]  # series of relevant distance that is used to check if we can auto-align the geometries to the actual reference-polygons to get an 'equal' formula
+# relevant distance that is used to align the original geometries to the
+# reference-polygons of the base-year
+base_correction = 2
+# geometries bigger than this, will be excluded
+excluded_area = 10000
+# series of relevant distance that is used to check if we can auto-align the geometries
+# to the actual reference-polygons to get an 'equal' formula
+# series = [
+#     0,
+#     0.5,
+#     1,
+#     1.5,
+#     2,
+# ]
 series = np.arange(0, 200, 10, dtype=int) / 100
 # BASE
 # =====
-# Initiate a Aligner to create a themeset that is base-referenced on a specific
+# Initiate an Aligner to create a themeset that is base-referenced on a specific
 # base_year
 base_aligner = Aligner()
 # Load the thematic data to evaluate
@@ -109,7 +114,7 @@ logging.info(
 # Initiate a Aligner to reference thematic features to the actual borders
 # ================================================================================
 
-# Initiate a Aligner to reference thematic features to the actual borders
+# Initiate an Aligner to reference thematic features to the actual borders
 actual_aligner = Aligner()
 loader = DictLoader(dict_affected)
 actual_aligner.load_thematic_data(loader)

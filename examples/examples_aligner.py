@@ -17,24 +17,29 @@ if __name__ == "__main__":
     # alternative reference poly
     # # Use GRB-gbg (buildings), gbg= gebouw aan de grond
     # x.load_reference_data_grb_actual('gbg')
-    ## Use local data
-    # x.load_reference_data_file("../tests/testdata/reference_leuven.geojson", 'capakey')
+
+    # Use local data
+    # x.load_reference_data_file(
+    # "../tests/testdata/reference_leuven.geojson", 'capakey'
+    # )
 
     # Example how to use the Aligner
     rel_dist = 10
-    dict_results_by_distance = {}
-    dict_results_by_distance[rel_dist] = aligner.process_dict_thematic(
-        relevant_distance=rel_dist,
-        od_strategy=OpenbaarDomeinStrategy.SNAP_FULL_AREA_SINGLE_SIDE,
-    )
+    dict_results_by_distance = {
+        rel_dist: aligner.process_dict_thematic(
+            relevant_distance=rel_dist,
+            od_strategy=OpenbaarDomeinStrategy.SNAP_FULL_AREA_SINGLE_SIDE,
+        )
+    }
     aligner.export_results("output/")
     show_map(dict_results_by_distance, aligner.dict_thematic, aligner.dict_reference)
 
     rel_dist = 6
-    dict_results_by_distance = {}
-    dict_results_by_distance[rel_dist] = aligner.process_dict_thematic(
-        relevant_distance=rel_dist, od_strategy=OpenbaarDomeinStrategy.SNAP_ALL_SIDE
-    )
+    dict_results_by_distance = {
+        rel_dist: aligner.process_dict_thematic(
+            relevant_distance=rel_dist, od_strategy=OpenbaarDomeinStrategy.SNAP_ALL_SIDE
+        )
+    }
     aligner.export_results("output/")
     show_map(dict_results_by_distance, aligner.dict_thematic, aligner.dict_reference)
     # for key in r:
@@ -47,13 +52,15 @@ if __name__ == "__main__":
     plot_series(series, resulting_areas)
 
     # Example how to use the Aligner with threshold_overlap_percentage=-1 (original
-    # border will be used for cases where relevant zones cannot be used for determination)
+    # border will be used for cases where relevant zones cannot be used for
+    # determination)
     rel_dist = 6
-    dict_results_by_distance = {}
-    dict_results_by_distance[rel_dist] = aligner.process_dict_thematic(
-        relevant_distance=rel_dist,
-        od_strategy=OpenbaarDomeinStrategy.SNAP_FULL_AREA_ALL_SIDE,
-        threshold_overlap_percentage=-1,
-    )
+    dict_results_by_distance = {
+        rel_dist: aligner.process_dict_thematic(
+            relevant_distance=rel_dist,
+            od_strategy=OpenbaarDomeinStrategy.SNAP_FULL_AREA_ALL_SIDE,
+            threshold_overlap_percentage=-1,
+        )
+    }
     aligner.export_results("output/")
     show_map(dict_results_by_distance, aligner.dict_thematic, aligner.dict_reference)

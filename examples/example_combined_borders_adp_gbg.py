@@ -29,7 +29,7 @@ if __name__ == "__main__":
     adploader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
     gbgloader = GRBActualLoader(grb_type=GRBType.GBG, partition=1000, aligner=aligner)
     collection_adp, name_reference_id_adp = get_collection_grb_actual(
-        aligner._get_thematic_union(),
+        aligner.get_thematic_union(),
         grb_type=GRBType.ADP,
         partition=1000,
         date_start=None,
@@ -40,7 +40,7 @@ if __name__ == "__main__":
     )
 
     collection_gbg, name_reference_id_gbg = get_collection_grb_actual(
-        aligner._get_thematic_union(),
+        aligner.get_thematic_union(),
         grb_type=GRBType.GBG,
         partition=1000,
         date_start=None,

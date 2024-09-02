@@ -6,7 +6,8 @@ from brdr.utils import get_oe_dict_by_ids, write_geojson, dict_series_by_keys
 from examples import show_map, plot_series
 
 if __name__ == "__main__":
-    # EXAMPLE to test the algorithm for erfgoedobject with relevant distance 0.2m and od_strategy SNAP_ALL_SIDE
+    # EXAMPLE to test the algorithm for erfgoedobject with relevant distance 0.2m and
+    # od_strategy SNAP_ALL_SIDE
 
     # Initiate brdr
     aligner = Aligner()
@@ -47,8 +48,7 @@ if __name__ == "__main__":
 
     dict_predicted = dict_series_by_keys(dict_predicted)
     for key in dict_predicted.keys():
-        diff = {}
-        diff[key] = diffs[key]
+        diff = {key: diffs[key]}
         plot_series(series, diff)
         show_map(
             dict_predicted[key],

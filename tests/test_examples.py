@@ -5,7 +5,8 @@ import numpy as np
 from brdr.aligner import Aligner
 from brdr.enums import GRBType
 from brdr.grb import GRBActualLoader
-from brdr.loader import DictLoader, GeoJsonLoader
+from brdr.loader import DictLoader
+from brdr.loader import GeoJsonLoader
 from brdr.utils import diffs_from_dict_series
 from brdr.utils import get_breakpoints_zerostreak
 from brdr.utils import get_oe_dict_by_ids
@@ -23,8 +24,7 @@ class TestExamples(unittest.TestCase):
         loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         aligner.load_reference_data(loader)
         rel_dist = 2
-        dict_results_by_distance = {}
-        dict_results_by_distance[rel_dist] = aligner.process_dict_thematic(rel_dist, 4)
+        aligner.process_dict_thematic(rel_dist, 4)
 
     def test_example_combined_borders_adp_gbg(self):
         aligner = Aligner()
@@ -192,7 +192,7 @@ class TestExamples(unittest.TestCase):
 
     def test_example_wanted_changes(self):
         aligner = Aligner()
-        ##Load thematic data & reference data
+        # Load thematic data & reference data
         dict_theme = get_oe_dict_by_ids([131635])
         aligner.load_thematic_data(DictLoader(dict_theme))
         aligner.load_reference_data(
@@ -201,8 +201,7 @@ class TestExamples(unittest.TestCase):
 
         # Example how to use the Aligner
         rel_dist = 2
-        dict_results_by_distance = {}
-        dict_results_by_distance[rel_dist] = aligner.process_dict_thematic(rel_dist, 4)
+        aligner.process_dict_thematic(rel_dist, 4)
 
         # Example how to use a series (for histogram)
         series = np.arange(0, 300, 10, dtype=int) / 100
@@ -217,12 +216,10 @@ class TestExamples(unittest.TestCase):
                     print(f"{extremum[0]:.2f}, {extremum[1]:.2f} ({extremum[2]})")
                 for st in zero_streak:
                     print(
-                        f"{st[0]:.2f} - {st[1]:.2f} -{st[2]:.2f} - {st[3]:.2f} - startextreme {st[4]:.2f} "
+                        f"{st[0]:.2f} - {st[1]:.2f} -{st[2]:.2f} - {st[3]:.2f}"
+                        f" - startextreme {st[4]:.2f} "
                     )
-                    dict_results_by_distance = {}
-                    dict_results_by_distance[st[0]] = aligner.process_dict_thematic(
-                        st[0], 4
-                    )
+                    aligner.process_dict_thematic(st[0], 4)
 
     def test_example_predictor(self):
         aligner = Aligner()
@@ -234,10 +231,12 @@ class TestExamples(unittest.TestCase):
         )  # gebruik de actuele adp-percelen adp= administratieve percelen
 
         series = np.arange(0, 300, 10, dtype=int) / 100
-        # predict which relevant distances are interesting to propose as resulting geometry
+        # predict which relevant distances are interesting to propose as resulting
+        # geometry
 
         _, dict_predicted, _ = aligner.predictor(
             relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
         )
         for key in dict_predicted.keys():
+            assert key in dict_predicted.keys()
             continue

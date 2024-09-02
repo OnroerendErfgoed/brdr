@@ -6,12 +6,13 @@ from shapely.geometry import Polygon
 
 from brdr.constants import MULTI_SINGLE_ID_SEPARATOR
 from brdr.typings import ProcessResult
-from brdr.utils import _filter_dict_by_key, merge_process_results
 from brdr.utils import diffs_from_dict_series
+from brdr.utils import filter_dict_by_key
 from brdr.utils import get_breakpoints_zerostreak
 from brdr.utils import get_collection
 from brdr.utils import get_oe_dict_by_ids
 from brdr.utils import get_oe_geojson_by_bbox
+from brdr.utils import merge_process_results
 from brdr.utils import multipolygons_to_singles
 from brdr.utils import polygonize_reference_data
 
@@ -19,7 +20,7 @@ from brdr.utils import polygonize_reference_data
 class TestUtils(unittest.TestCase):
     def setUp(self):
         # Create a sample geometry for testing
-        self.sample_series = series = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        self.sample_series = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
     def tearDown(self):
         pass
@@ -82,7 +83,8 @@ class TestUtils(unittest.TestCase):
             "ref2": Polygon([(1, 0), (3, 0), (3, 2), (1, 2)]),
         }
         result = polygonize_reference_data(data.copy())
-        # Assert expected number of features (might be more than original due to splitting)
+        # Assert expected number of features (might be more than original due to
+        # splitting)
         self.assertGreaterEqual(len(result), 2)
         # Assert new keys are used
         for key in result.keys():
@@ -114,17 +116,17 @@ class TestUtils(unittest.TestCase):
 
     def test_filter_dict_by_key_empty_dict(self):
         data = {}
-        result = _filter_dict_by_key(data, "key")
+        result = filter_dict_by_key(data, "key")
         self.assertEqual(result, {})
 
     def test_filter_dict_by_key_single_match(self):
         data = {"key1": "value1", "key2": "value2"}
-        result = _filter_dict_by_key(data, "key1")
+        result = filter_dict_by_key(data, "key1")
         self.assertEqual(result, {"key1": "value1"})
 
     def test_filter_dict_by_key_no_match(self):
         data = {"key1": "value1", "key2": "value2"}
-        result = _filter_dict_by_key(data, "key3")
+        result = filter_dict_by_key(data, "key3")
         self.assertEqual(result, {})
 
     def test_diffs_from_dict_series_complete(self):

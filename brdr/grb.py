@@ -1,37 +1,33 @@
 import json
 import logging
-from datetime import date, datetime
+from datetime import date
+from datetime import datetime
 
 from shapely import intersects
 from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
 
-from brdr.constants import (
-    DOWNLOAD_LIMIT,
-    DEFAULT_CRS,
-    GRB_FEATURE_URL,
-    GRB_FISCAL_PARCELS_URL,
-    MAX_REFERENCE_BUFFER,
-    GRB_VERSION_DATE,
-    GRB_PARCEL_ID,
-    GRB_BUILDING_ID,
-    GRB_KNW_ID,
-)
-from brdr.enums import GRBType, Evaluation
-from brdr.geometry_utils import (
-    features_by_geometric_operation,
-    create_donut,
-    get_bbox,
-    buffer_pos,
-)
+from brdr.constants import DEFAULT_CRS
+from brdr.constants import DOWNLOAD_LIMIT
+from brdr.constants import GRB_BUILDING_ID
+from brdr.constants import GRB_FEATURE_URL
+from brdr.constants import GRB_FISCAL_PARCELS_URL
+from brdr.constants import GRB_KNW_ID
+from brdr.constants import GRB_PARCEL_ID
+from brdr.constants import GRB_VERSION_DATE
+from brdr.constants import MAX_REFERENCE_BUFFER
+from brdr.enums import Evaluation
+from brdr.enums import GRBType
+from brdr.geometry_utils import buffer_pos
+from brdr.geometry_utils import create_donut
+from brdr.geometry_utils import features_by_geometric_operation
+from brdr.geometry_utils import get_bbox
 from brdr.loader import GeoJsonLoader
-from brdr.utils import (
-    get_collection,
-    dict_series_by_keys,
-    get_collection_by_partition,
-    geojson_to_dicts,
-    merge_dict,
-)
+from brdr.utils import dict_series_by_keys
+from brdr.utils import geojson_to_dicts
+from brdr.utils import get_collection
+from brdr.utils import get_collection_by_partition
+from brdr.utils import merge_dict
 
 log = logging.getLogger(__name__)
 date_format = "%Y-%m-%d"
@@ -46,13 +42,16 @@ def is_grb_changed(
     crs=DEFAULT_CRS,
 ):
     """
-       checks if a geometry is possibly affected by changes in the reference layer during a specified timespan
+       checks if a geometry is possibly affected by changes in the reference layer
+       during a specified timespan
     Args:
         geometry: Geometry to check on GRB-changes
         grb_type:  Type of GRB (parcels, buildings,artwork,...) to check
         date_start: Start of timespan to check if GRB-changes has occurred
         date_end: End of timespan to check if GRB-changes has occurred
-        border_distance: Distance that can be used to only check the 'border' of the geometry, so 'big' geometries with internal parcel-updates are not affected
+        border_distance: Distance that can be used to only check the 'border' of
+            the geometry, so 'big' geometries with internal parcel-updates are not
+             affected
         (Default:0, indicating that the full geometry is checked fot GRB-changes)
         crs: Coordinate reference system to use
 
@@ -79,18 +78,21 @@ def get_geoms_affected_by_grb_change(
     border_distance=0,
 ):
     """
-    Get a dictionary of thematic geometries that are affected bij GRB-changes in a specific timespan
+    Get a dictionary of thematic geometries that are affected bij GRB-changes in a
+    specific timespan
 
     Args:
-        dict_thematic: dictionary of thematic geometries
+        aligner: Aligner instance
         grb_type: Type of GRB: parcels, buildings,...
         date_start: start-date to check changes in GRB
         date_end: end-date to check changes in GRB
         one_by_one: parameter to choose the methodology to check changes:
             * True: Every thematic geometry is checked individually (loop)
-            * False: All GRB-parcels intersecting the thematic dictionary is checked at once
-        border_distance: Distance that can be used to only check the 'border' of the geometry, so 'big' geometries with internal parcel-updates are not affected
-        (Default:0, indicating that the full geometry is checked fot GRB-changes)
+            * False: All GRB-parcels intersecting the thematic dictionary is checked
+                at once
+        border_distance: Distance that can be used to only check the 'border' of  the
+            geometry, so 'big' geometries with internal parcel-updates are not affected
+            (Default:0, indicating that the full geometry is checked fot GRB-changes)
     Returns:
         dictionary of affected geometries
 
@@ -114,7 +116,7 @@ def get_geoms_affected_by_grb_change(
         return affected_dict, unchanged_dict
     else:
         # Temporal filter on VERDATUM
-        geometry = aligner._get_thematic_union()
+        geometry = aligner.get_thematic_union()
         coll_changed_grb, name_reference_id = get_collection_grb_actual(
             geometry,
             grb_type=grb_type,
@@ -154,14 +156,17 @@ def get_last_version_date(
     border_distance=0,
 ):
     """
-    Retrieves the date of the last version for a specific geographic area within  GRB (parcels, buildings,...)).
+    Retrieves the date of the last version for a specific geographic area within
+    GRB (parcels, buildings,...).
 
-    This function queries the GRB-API to find the most recent version-date (=last update of object)
-    for reference data of the specified `grb_type` (e.g., ADP, GBG, KNW) within the boundary of the provided `geometry`.
+    This function queries the GRB-API to find the most recent version-date (=last
+    update  of object) for reference data of the specified `grb_type` (e.g., ADP,
+    GBG, KNW) within the boundary of the provided `geometry`.
 
     Args:
     geometry (BaseGeometry): A Shapely geometry representing the area of interest.
-    grb_type (GRBType, optional): The type of GRB data to consider. Defaults to GRBType.ADP (administrative plots).
+    grb_type (GRBType, optional): The type of GRB data to consider.
+        Defaults to GRBType.ADP (administrative plots).
 
     Returns:
     str: The date of the last version for the specified GRB data type within the area,
@@ -225,6 +230,8 @@ def get_collection_grb_actual(
         return {}, None
 
     versiondate_filter = ""
+    versiondate_filter_start = ""
+    versiondate_filter_end = ""
     if date_start is not None:
         versiondate_filter_start = (
             GRB_VERSION_DATE + ">" + date_start.strftime(date_format)
@@ -267,11 +274,14 @@ def evaluate(
     thematic_dict_formula,
     threshold_area=5,
     threshold_percentage=1,
-    dict_unchanged={},
+    dict_unchanged=None,
 ):
     """
-    evaluate affected geometries and give attributes to evaluate and decide if new proposals can be used
+    evaluate affected geometries and give attributes to evaluate and decide if new
+    proposals can be used
     """
+    if dict_unchanged is None:
+        dict_unchanged = {}
     theme_ids = list(dict_series_by_keys(dict_series).keys())
     dict_evaluated_result = {}
     prop_dictionary = {}
@@ -295,7 +305,7 @@ def evaluate(
             base_formula = None
             if theme_id in thematic_dict_formula:
                 base_formula = thematic_dict_formula[theme_id]
-            equality, property = check_equality(
+            equality, _property = check_equality(
                 base_formula,
                 actual_formula,
                 threshold_area,
@@ -303,12 +313,13 @@ def evaluate(
             )
             if equality:
                 dict_evaluated_result[dist][theme_id] = dict_predicted[dist][theme_id]
-                prop_dictionary[dist][theme_id]["evaluation"] = property
+                prop_dictionary[dist][theme_id]["evaluation"] = _property
                 break
 
     dict_predicted_keys = dict_series_by_keys(dict_predicted)
     evaluated_theme_ids = list(dict_series_by_keys(dict_evaluated_result).keys())
-    # fill where no equality is found/ The biggest predicted distance is returned as proposal
+    # fill where no equality is found/ The biggest predicted distance is returned as
+    # proposal
     for theme_id in theme_ids:
         if theme_id not in evaluated_theme_ids:
             if len(dict_predicted_keys[theme_id].keys()) == 0:
@@ -356,7 +367,8 @@ def check_equality(
     # TODO: refine equality comparison, make it more generic
     # ideas:
     # * If result_diff smaller than 0.x --> automatic update
-    # * big polygons: If 'outer ring' has same formula (do net check inner side) --> automatic update
+    # * big polygons: If 'outer ring' has same formula (do net check inner side) -->
+    #   automatic update
     # ** outer ring can be calculated: 1) negative buffer 2) original - buffered
 
     if base_formula is None or actual_formula is None:
@@ -413,9 +425,7 @@ class GRBActualLoader(GeoJsonLoader):
     def load_data(self):
         if not self.aligner.dict_thematic:
             raise ValueError("Thematic data not loaded")
-        geom_union = buffer_pos(
-            self.aligner._get_thematic_union(), MAX_REFERENCE_BUFFER
-        )
+        geom_union = buffer_pos(self.aligner.get_thematic_union(), MAX_REFERENCE_BUFFER)
         collection, id_property = get_collection_grb_actual(
             grb_type=self.grb_type,
             geometry=geom_union,
@@ -443,9 +453,7 @@ class GRBFiscalParcelLoader(GeoJsonLoader):
     def load_data(self):
         if not self.aligner.dict_thematic:
             raise ValueError("Thematic data not loaded")
-        geom_union = buffer_pos(
-            self.aligner._get_thematic_union(), MAX_REFERENCE_BUFFER
-        )
+        geom_union = buffer_pos(self.aligner.get_thematic_union(), MAX_REFERENCE_BUFFER)
         collection = get_collection_grb_fiscal_parcels(
             year=self.year,
             geometry=geom_union,

@@ -1,8 +1,8 @@
 import logging
-from math import ceil
 
 import geopandas as gpd
 import matplotlib.pyplot as plt
+from math import ceil
 
 from brdr.typings import ProcessResult
 from brdr.utils import processresult_to_dicts
@@ -25,7 +25,8 @@ def _make_map(ax, result_dict, thematic_dict, reference_dict):
         results_diff_neg = dicts[2]
         if ax is None:
             ax = plt.subplot(1, 1, 1)
-        ax_result = gpd.GeoSeries(list(results.values())).plot(
+        # ax_result =
+        gpd.GeoSeries(list(results.values())).plot(
             ax=ax,
             alpha=0.5,
             color="none",
@@ -46,7 +47,8 @@ def _make_map(ax, result_dict, thematic_dict, reference_dict):
             label="theme",
             zorder=3,
         )
-        ax_diff_pos = gpd.GeoSeries(list(results_diff_pos.values())).plot(
+        # ax_diff_pos = (
+        gpd.GeoSeries(list(results_diff_pos.values())).plot(
             ax=ax,
             color="none",
             edgecolor="green",
@@ -56,7 +58,8 @@ def _make_map(ax, result_dict, thematic_dict, reference_dict):
             label="diff_plus",
             zorder=4,
         )
-        ax_diff_neg = gpd.GeoSeries(list(results_diff_neg.values())).plot(
+        # ax_diff_neg =
+        gpd.GeoSeries(list(results_diff_neg.values())).plot(
             ax=ax,
             color="none",
             edgecolor="red",
@@ -70,7 +73,8 @@ def _make_map(ax, result_dict, thematic_dict, reference_dict):
         axis_extent = list(ax_thematic_dict.viewLim.intervalx) + list(
             ax_thematic_dict.viewLim.intervaly
         )
-        ax_reference_dict = gpd.GeoSeries(list(reference_dict.values())).plot(
+        # ax_reference_dict =
+        gpd.GeoSeries(list(reference_dict.values())).plot(
             ax=ax,
             color="#FFF8C9",
             edgecolor="black",
@@ -80,7 +84,7 @@ def _make_map(ax, result_dict, thematic_dict, reference_dict):
         )
         # zoom map to saved extent
         ax.axis(axis_extent)
-    except:
+    except Exception: # noqa
         logging.error("make_map: Error while making map")
     return ax
 
@@ -100,7 +104,7 @@ def show_map(
     for dist in dict_results_by_distance:
         ax = plt.subplot(len_series_half, 2, i + 1)
         ax = _make_map(
-            ax,
+            ax, # noqa
             dict_results_by_distance[dist],
             dict_thematic,
             dict_reference,
