@@ -1,5 +1,5 @@
 from brdr.aligner import Aligner
-from brdr.enums import OpenbaarDomeinStrategy
+from brdr.enums import OpenbaarDomeinStrategy, GRBType
 from brdr.utils import diffs_from_dict_series
 from examples import plot_series
 from examples import show_map

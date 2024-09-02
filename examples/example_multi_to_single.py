@@ -1,4 +1,5 @@
 from brdr.aligner import Aligner
+from brdr.enums import GRBType
 from brdr.utils import get_oe_dict_by_ids
 from brdr.utils import multipolygons_to_singles
 from examples import show_map, print_formula

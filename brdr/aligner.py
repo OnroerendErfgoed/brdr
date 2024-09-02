@@ -145,6 +145,8 @@ class Aligner:
         # Default EPSG:31370 (Lambert72), alternative: EPSG:3812 (Lambert2008)
         self.CRS = crs
 
+        self.merged = True #this parameter is used to treat multipolygon as single polygons. So polygons with ID spliiter are seperately evaluated and merged on result.
+
         self.logger.feedback_info("Aligner initialized")
 
     def buffer_distance(self):
@@ -299,8 +301,7 @@ class Aligner:
         self,
         relevant_distances=np.arange(0, 300, 10, dtype=int) / 100,
         od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
-        threshold_overlap_percentage=50,
-        merged=False,
+        threshold_overlap_percentage=50
     ):
         """
         Predicts the 'most interesting' relevant distances for changes in thematic elements based on a distance series.
@@ -350,7 +351,7 @@ class Aligner:
             threshold_overlap_percentage=threshold_overlap_percentage,
         )
         dict_thematic = self.dict_thematic
-        if merged:
+        if self.merged:
             dict_series = merge_dict_series(dict_series)
             dict_thematic = merge_dict(self.dict_thematic)
 
@@ -525,18 +526,18 @@ class Aligner:
         self.logger.feedback_debug(str(dict_formula))
         return dict_formula
 
-    def get_results_as_dict(self, merged=True):
+    def get_results_as_dict(self):
         """
         get a dict of the results
 
         Args:
             merged (bool, optional): Whether to merge the results for each thematic element. Defaults to True.
         """
-        if merged:
+        if self.merged:
             return merge_process_results(self.dict_result)
         return self.dict_result
 
-    def get_results_as_geojson(self, formula=False, merged=True):
+    def get_results_as_geojson(self, formula=False):
         """
         convert the results to geojson feature collections
 
@@ -545,7 +546,7 @@ class Aligner:
             merged (bool, optional): Whether to merge the results for each thematic element. Defaults to True.
         """
         results_dict = self.dict_result
-        if merged:
+        if self.merged:
             results_dict = merge_process_results(results_dict)
 
         return self.get_predictions_as_geojson(

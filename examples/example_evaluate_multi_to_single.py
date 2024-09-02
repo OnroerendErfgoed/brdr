@@ -52,8 +52,7 @@ dict_affected,dict_unchanged = get_geoms_affected_by_grb_change(
     grb_type=GRBType.ADP,
     date_start=date(2022, 1, 1),
     date_end=date.today(),
-    one_by_one=False,
-    merged=True
+    one_by_one=False
 )
 # Align the possibly affected geometry on the actual GRB parcels (evaluation)
 
@@ -64,7 +63,7 @@ actual_aligner.load_thematic_data(loader)
 loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=actual_aligner)
 actual_aligner.load_reference_data(loader)
 series = np.arange(0, 200, 10, dtype=int) / 100
-dict_series, dict_predicted, diffs_dict = actual_aligner.predictor(series, merged=True)
+dict_series, dict_predicted, diffs_dict = actual_aligner.predictor(series)
 
 dict_evaluated, prop_dictionary = evaluate(
     actual_aligner,

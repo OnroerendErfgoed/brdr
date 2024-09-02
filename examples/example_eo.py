@@ -1,5 +1,6 @@
 import numpy as np
 from brdr.aligner import Aligner
+from brdr.enums import GRBType
 from brdr.utils import get_oe_dict_by_ids, write_geojson, dict_series_by_keys
 from examples import show_map, plot_series
 

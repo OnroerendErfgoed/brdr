@@ -1,6 +1,7 @@
 # Initiate brdr
 import tests
 from brdr.aligner import Aligner
+from brdr.enums import GRBType
 from brdr.utils import multipolygons_to_singles, write_geojson
 
 aligner0 = Aligner()
