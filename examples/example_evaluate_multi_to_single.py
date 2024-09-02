@@ -2,9 +2,9 @@ from datetime import date
 
 import numpy as np
 from shapely import from_wkt
+
 from brdr.aligner import Aligner
 from brdr.enums import GRBType
-from brdr.geometry_utils import get_bbox
 from brdr.grb import (
     get_geoms_affected_by_grb_change,
     evaluate,
@@ -16,7 +16,7 @@ from brdr.utils import (
     get_series_geojson_dict,
     multipolygons_to_singles,
     merge_process_results,
-    merge_dict_series, get_oe_dict_by_ids,
+    get_oe_dict_by_ids,
 )
 
 thematic_dict = {
@@ -47,12 +47,12 @@ thematic_dict_result = multipolygons_to_singles(thematic_dict_result)
 # Determine all features that are possibly changed during timespan
 base_aligner_result = Aligner()
 base_aligner_result.load_thematic_data(DictLoader(thematic_dict_result))
-dict_affected,dict_unchanged = get_geoms_affected_by_grb_change(
+dict_affected, dict_unchanged = get_geoms_affected_by_grb_change(
     base_aligner_result,
     grb_type=GRBType.ADP,
     date_start=date(2022, 1, 1),
     date_end=date.today(),
-    one_by_one=False
+    one_by_one=False,
 )
 # Align the possibly affected geometry on the actual GRB parcels (evaluation)
 
@@ -72,7 +72,7 @@ dict_evaluated, prop_dictionary = evaluate(
     thematic_dict_formula,
     threshold_area=5,
     threshold_percentage=1,
-    dict_unchanged=dict_unchanged
+    dict_unchanged=dict_unchanged,
 )
 fc = get_series_geojson_dict(
     dict_evaluated,

@@ -2,6 +2,7 @@ from datetime import date
 
 import numpy as np
 from shapely import from_wkt
+
 from brdr.aligner import Aligner
 from brdr.enums import GRBType
 from brdr.geometry_utils import get_bbox
@@ -35,7 +36,7 @@ for key in base_process_result:
     thematic_dict_formula[key] = base_aligner.get_formula(thematic_dict_result[key])
 base_aligner_result = Aligner()
 base_aligner_result.load_thematic_data(DictLoader(thematic_dict_result))
-dict_affected,dict_unchanged = get_geoms_affected_by_grb_change(
+dict_affected, dict_unchanged = get_geoms_affected_by_grb_change(
     base_aligner_result,
     grb_type=GRBType.ADP,
     date_start=date(2022, 1, 1),
@@ -63,7 +64,7 @@ dict_evaluated, prop_dictionary = evaluate(
     thematic_dict_formula,
     threshold_area=5,
     threshold_percentage=1,
-    dict_unchanged=dict_unchanged
+    dict_unchanged=dict_unchanged,
 )
 
 fc = get_series_geojson_dict(

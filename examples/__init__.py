@@ -3,6 +3,7 @@ from math import ceil
 
 import geopandas as gpd
 import matplotlib.pyplot as plt
+
 from brdr.typings import ProcessResult
 from brdr.utils import processresult_to_dicts
 

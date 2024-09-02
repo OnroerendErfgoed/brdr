@@ -1,6 +1,7 @@
 from datetime import date
 
 import numpy as np
+
 from brdr.aligner import Aligner
 from brdr.enums import GRBType
 from brdr.grb import (

@@ -2,7 +2,10 @@ import json
 import logging
 from datetime import date, datetime
 
+from shapely import intersects
+from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
+
 from brdr.constants import (
     DOWNLOAD_LIMIT,
     DEFAULT_CRS,
@@ -15,9 +18,6 @@ from brdr.constants import (
     GRB_KNW_ID,
 )
 from brdr.enums import GRBType, Evaluation
-from shapely import intersects, make_valid
-from shapely.geometry import shape
-
 from brdr.geometry_utils import (
     features_by_geometric_operation,
     create_donut,
@@ -25,7 +25,6 @@ from brdr.geometry_utils import (
     buffer_pos,
 )
 from brdr.loader import GeoJsonLoader
-from brdr.typings import ProcessResult
 from brdr.utils import (
     get_collection,
     dict_series_by_keys,

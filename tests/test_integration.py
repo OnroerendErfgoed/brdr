@@ -1,29 +1,17 @@
+import json
 import unittest
 
 import numpy as np
+from shapely import to_geojson
+from shapely.geometry import shape
 
-from brdr.aligner import Aligner
-from brdr.enums import GRBType
-from brdr.grb import GRBActualLoader
-from brdr.loader import DictLoader, GeoJsonLoader
-from brdr.utils import diffs_from_dict_series
-from brdr.utils import get_breakpoints_zerostreak
-from brdr.utils import get_oe_dict_by_ids
-from brdr.utils import multipolygons_to_singles
-
-import json
-
-import numpy as np
 from brdr.aligner import Aligner
 from brdr.enums import DiffMetric
 from brdr.enums import GRBType
 from brdr.enums import OpenbaarDomeinStrategy
 from brdr.grb import GRBActualLoader
 from brdr.loader import DictLoader
-from brdr.typings import GeoJSONGeometry
 from brdr.utils import diffs_from_dict_series
-from shapely import to_geojson
-from shapely.geometry import shape
 
 
 class TestExamples(unittest.TestCase):

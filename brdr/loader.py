@@ -1,9 +1,9 @@
 import json
 from abc import ABC
 
-
 import requests as requests
 from shapely.geometry.base import BaseGeometry
+
 from brdr.typings import FeatureCollection
 from brdr.utils import geojson_to_dicts
 

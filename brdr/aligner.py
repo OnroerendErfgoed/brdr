@@ -2,11 +2,11 @@ import json
 import logging
 import os
 from collections import defaultdict
-from datetime import datetime, date
+from datetime import datetime
+from math import pi
 from typing import Iterable
 
 import numpy as np
-from math import pi
 from shapely import GeometryCollection
 from shapely import Polygon
 from shapely import STRtree

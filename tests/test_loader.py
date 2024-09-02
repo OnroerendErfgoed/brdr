@@ -1,9 +1,5 @@
-import pytest
-from shapely import Polygon
-
 from brdr.aligner import Aligner
 from brdr.enums import GRBType
-from brdr.geometry_utils import get_partitions
 from brdr.grb import GRBActualLoader
 from brdr.loader import DictLoader
 from brdr.utils import get_oe_dict_by_ids
