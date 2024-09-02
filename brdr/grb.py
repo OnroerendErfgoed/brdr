@@ -25,6 +25,7 @@ from brdr.geometry_utils import (
     buffer_pos,
 )
 from brdr.loader import GeoJsonLoader
+from brdr.typings import ProcessResult
 from brdr.utils import (
     get_collection,
     dict_series_by_keys,
@@ -135,7 +136,7 @@ def get_geoms_affected_by_grb_change(
             predicate="intersects",
         )
         logging.info("Number of filtered features: " + str(len(thematic_intersections)))
-        for key,geom in dict_thematic.items():
+        for key, geom in dict_thematic.items():
             if key in thematic_intersections:
                 affected_dict[key] = geom
             else:
@@ -264,7 +265,7 @@ def evaluate(
     thematic_dict_formula,
     threshold_area=5,
     threshold_percentage=1,
-    dict_unchanged={}
+    dict_unchanged={},
 ):
     """
     evaluate affected geometries and give attributes to evaluate and decide if new proposals can be used
@@ -309,23 +310,30 @@ def evaluate(
     for theme_id in theme_ids:
         if theme_id not in evaluated_theme_ids:
             if len(dict_predicted_keys[theme_id].keys()) == 0:
-                dict_evaluated_result[0][theme_id] = dict_series[0][theme_id]
+                result = dict_series[0][theme_id]
+                dict_evaluated_result[0][theme_id] = result
+                prop_dictionary[0][theme_id]["formula"] = json.dumps(
+                    actual_aligner.get_formula(result["result"])
+                )
                 prop_dictionary[0][theme_id]["evaluation"] = Evaluation.NO_PREDICTION_5
                 continue
             smallest_predicted_dist = list(dict_predicted_keys[theme_id].keys())[0]
-            dict_evaluated_result[smallest_predicted_dist][theme_id] = dict_predicted[
-                smallest_predicted_dist
-            ][theme_id]
+            predicted_result = dict_predicted[smallest_predicted_dist][theme_id]
+            dict_evaluated_result[smallest_predicted_dist][theme_id] = predicted_result
+            prop_dictionary[smallest_predicted_dist][theme_id]["formula"] = json.dumps(
+                actual_aligner.get_formula(predicted_result["result"])
+            )
             prop_dictionary[smallest_predicted_dist][theme_id][
                 "evaluation"
             ] = Evaluation.TO_CHECK_4
 
     for theme_id, geom in dict_unchanged.items():
-        dict_evaluated_result[0][theme_id] = geom
-        prop_dictionary[0][theme_id][
-            "evaluation"
-        ] = Evaluation.NO_CHANGE_6
-
+        result = {"result": geom}
+        dict_evaluated_result[0][theme_id] = result
+        prop_dictionary[0][theme_id]["evaluation"] = Evaluation.NO_CHANGE_6
+        prop_dictionary[0][theme_id]["formula"] = json.dumps(
+            actual_aligner.get_formula(result["result"])
+        )
     return dict_evaluated_result, prop_dictionary
 
 
