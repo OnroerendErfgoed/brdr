@@ -35,8 +35,8 @@ bbox = "172000,172000,174000,174000"
 # bbox = "100000,195000,105000,195900"
 # bbox = "150000,210000,155000,214900"
 # bbox = "173500,173500,174000,174000" # example "aanduid_id" = 34195
-base_year = "2023"
-base_correction = 0.2  # relevant distance that is used to align the original geometries to the reference-polygons of the base-year
+base_year = "2022"
+base_correction = 2  # relevant distance that is used to align the original geometries to the reference-polygons of the base-year
 excluded_area = 10000  # geometries bigger than this, will be excluded
 series = [
     0,
@@ -45,7 +45,7 @@ series = [
     1.5,
     2,
 ]  # series of relevant distance that is used to check if we can auto-align the geometries to the actual reference-polygons to get an 'equal' formula
-
+series = np.arange(0, 200, 10, dtype=int) / 100
 # BASE
 # =====
 # Initiate a Aligner to create a themeset that is base-referenced on a specific
