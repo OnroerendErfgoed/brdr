@@ -308,7 +308,7 @@ def evaluate(
 
     dict_predicted_keys = dict_series_by_keys(dict_predicted)
     evaluated_theme_ids = list(dict_series_by_keys(dict_evaluated_result).keys())
-    # fill where no equality is found/ The smallest predicted distance is returned as proposal
+    # fill where no equality is found/ The biggest predicted distance is returned as proposal
     for theme_id in theme_ids:
         if theme_id not in evaluated_theme_ids:
             if len(dict_predicted_keys[theme_id].keys()) == 0:
@@ -319,13 +319,14 @@ def evaluate(
                 )
                 prop_dictionary[0][theme_id]["evaluation"] = Evaluation.NO_PREDICTION_5
                 continue
-            smallest_predicted_dist = list(dict_predicted_keys[theme_id].keys())[0]
-            predicted_result = dict_predicted[smallest_predicted_dist][theme_id]
-            dict_evaluated_result[smallest_predicted_dist][theme_id] = predicted_result
-            prop_dictionary[smallest_predicted_dist][theme_id]["formula"] = json.dumps(
+            dist_predicted_max = max(list(dict_predicted_keys[theme_id].keys()))
+            logging.debug("max predicted dist proposed for theme_id " + str(theme_id) + " : " + str(dist_predicted_max))
+            predicted_result = dict_predicted[dist_predicted_max][theme_id]
+            dict_evaluated_result[dist_predicted_max][theme_id] = predicted_result
+            prop_dictionary[dist_predicted_max][theme_id]["formula"] = json.dumps(
                 actual_aligner.get_formula(predicted_result["result"])
             )
-            prop_dictionary[smallest_predicted_dist][theme_id][
+            prop_dictionary[dist_predicted_max][theme_id][
                 "evaluation"
             ] = Evaluation.TO_CHECK_4
 
