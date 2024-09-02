@@ -6,13 +6,11 @@ from shapely import Polygon, from_wkt
 
 from brdr.aligner import Aligner
 from brdr.enums import GRBType
-from brdr.geometry_utils import get_bbox
 from brdr.grb import (
     get_last_version_date,
     is_grb_changed,
     get_geoms_affected_by_grb_change,
     evaluate,
-    get_collection_grb_fiscal_parcels,
     GRBActualLoader,
     GRBFiscalParcelLoader,
 )
@@ -74,7 +72,7 @@ class TestGrb(unittest.TestCase):
         }
         aligner = Aligner()
         aligner.load_thematic_data(DictLoader(thematic_dict))
-        dict_affected = get_geoms_affected_by_grb_change(
+        dict_affected, dict_unchanged = get_geoms_affected_by_grb_change(
             aligner=aligner,
             grb_type=GRBType.ADP,
             date_start=date.today() - timedelta(days=30),
@@ -84,7 +82,7 @@ class TestGrb(unittest.TestCase):
         )
         assert len(dict_affected.keys()) > 0
 
-        dict_affected = get_geoms_affected_by_grb_change(
+        dict_affected, dict_unchanged = get_geoms_affected_by_grb_change(
             aligner=aligner,
             grb_type=GRBType.ADP,
             date_start=date.today() - timedelta(days=30),
@@ -102,7 +100,7 @@ class TestGrb(unittest.TestCase):
         }
         aligner = Aligner()
         aligner.load_thematic_data(DictLoader(thematic_dict))
-        dict_affected = get_geoms_affected_by_grb_change(
+        dict_affected, dict_unchanged = get_geoms_affected_by_grb_change(
             aligner=aligner,
             grb_type=GRBType.ADP,
             date_start=date.today() - timedelta(days=1),
@@ -111,7 +109,7 @@ class TestGrb(unittest.TestCase):
         )
         assert len(dict_affected.keys()) == 0
 
-        dict_affected = get_geoms_affected_by_grb_change(
+        dict_affected, dict_unchanged = get_geoms_affected_by_grb_change(
             aligner=aligner,
             grb_type=GRBType.ADP,
             date_start=date.today() - timedelta(days=1000),
@@ -126,7 +124,7 @@ class TestGrb(unittest.TestCase):
         }
         aligner2 = Aligner()
         aligner2.load_thematic_data(DictLoader(thematic_dict2))
-        dict_affected = get_geoms_affected_by_grb_change(
+        dict_affected, dict_unchanged = get_geoms_affected_by_grb_change(
             aligner=aligner2,
             grb_type=GRBType.ADP,
             date_start=date.today() - timedelta(days=1000),
@@ -143,7 +141,7 @@ class TestGrb(unittest.TestCase):
         }
         aligner = Aligner()
         aligner.load_thematic_data(DictLoader(thematic_dict))
-        dict_affected = get_geoms_affected_by_grb_change(
+        dict_affected, dict_unchanged = get_geoms_affected_by_grb_change(
             aligner=aligner,
             grb_type=GRBType.ADP,
             date_start=date.today() - timedelta(days=1),
@@ -152,7 +150,7 @@ class TestGrb(unittest.TestCase):
         )
         assert len(dict_affected.keys()) == 0
 
-        dict_affected = get_geoms_affected_by_grb_change(
+        dict_affected, dict_unchanged = get_geoms_affected_by_grb_change(
             aligner=aligner,
             grb_type=GRBType.ADP,
             date_start=date.today() - timedelta(days=1000),
@@ -182,7 +180,7 @@ class TestGrb(unittest.TestCase):
             )
         aligner_result = Aligner()
         aligner_result.load_thematic_data(DictLoader(thematic_dict_result))
-        dict_affected = get_geoms_affected_by_grb_change(
+        dict_affected, dict_unchanged = get_geoms_affected_by_grb_change(
             aligner=aligner_result,
             grb_type=GRBType.ADP,
             date_start=date(2022, 1, 1),
@@ -194,7 +192,7 @@ class TestGrb(unittest.TestCase):
         loader = DictLoader(dict_affected)
         actual_aligner.load_thematic_data(loader)
         loader = GRBActualLoader(
-            grb_type=GRBType.ADP, partition=0, aligner=actual_aligner
+            grb_type=GRBType.ADP, partition=1000, aligner=actual_aligner
         )
         actual_aligner.load_reference_data(loader)
         series = np.arange(0, 200, 10, dtype=int) / 100

@@ -94,7 +94,7 @@ for key in base_process_result:
 
 base_aligner_result = Aligner()
 base_aligner_result.load_thematic_data(DictLoader(thematic_dict_result))
-dict_affected = get_geoms_affected_by_grb_change(
+dict_affected,dict_unchanged = get_geoms_affected_by_grb_change(
     aligner=base_aligner_result,
     grb_type=GRBType.ADP,
     date_start=date.today() - timedelta(days=365),
@@ -129,6 +129,7 @@ dict_evaluated_result, prop_dictionary = evaluate(
     thematic_dict_formula,
     threshold_area=5,
     threshold_percentage=1,
+    dict_unchanged=dict_unchanged
 )
 counter_equality = 0
 counter_equality_by_alignment = 0

@@ -45,7 +45,7 @@ for key in base_process_result:
 # Determine all features that are possibly changed during timespan
 base_aligner_result = Aligner()
 base_aligner_result.load_thematic_data(DictLoader(thematic_dict_result))
-dict_affected = get_geoms_affected_by_grb_change(
+dict_affected,dict_unchanged = get_geoms_affected_by_grb_change(
     base_aligner_result,
     grb_type=GRBType.ADP,
     date_start=date(2022, 1, 1),
@@ -58,7 +58,7 @@ dict_affected = multipolygons_to_singles(dict_affected)
 actual_aligner = Aligner()
 loader = DictLoader(dict_affected)
 actual_aligner.load_thematic_data(loader)
-loader = GRBActualLoader(grb_type=GRBType.ADP, partition=0, aligner=actual_aligner)
+loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=actual_aligner)
 actual_aligner.load_reference_data(loader)
 series = np.arange(0, 200, 10, dtype=int) / 100
 dict_series, dict_predicted, diffs_dict = actual_aligner.predictor(series, merged=True)
@@ -70,6 +70,7 @@ dict_evaluated, prop_dictionary = evaluate(
     thematic_dict_formula,
     threshold_area=5,
     threshold_percentage=1,
+    dict_unchanged=dict_unchanged
 )
 fc = get_series_geojson_dict(
     dict_evaluated,

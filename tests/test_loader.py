@@ -18,7 +18,7 @@ class TestExamples:
         dict_theme = get_oe_dict_by_ids([131635])
         thematic_loader = DictLoader(data_dict=dict_theme)
         reference_loader = GRBActualLoader(
-            grb_type=GRBType.ADP, aligner=aligner, partition=0
+            grb_type=GRBType.ADP, aligner=aligner, partition=1000
         )
 
         aligner.dict_thematic, props_thematic, thematic_source = (

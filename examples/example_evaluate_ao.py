@@ -12,16 +12,11 @@ from brdr.grb import (
     GRBActualLoader,
 )
 from brdr.loader import DictLoader
-from brdr.utils import get_series_geojson_dict
+from brdr.utils import get_series_geojson_dict, get_oe_dict_by_ids
 
-thematic_dict = {
-    "theme_id_1": from_wkt(
-        "MultiPolygon (((174180.20077791667426936 171966.14649116666987538, 174415.60530965600628406 171940.9636807945498731, 174388.65236948925303295 171770.99678386366576888, 174182.10876987033407204 171836.13745758961886168, 174184.88916448061354458 171873.07698598300339654, 174180.20077791667426936 171966.14649116666987538)))"
-    )
-}
-bbox = get_bbox(thematic_dict["theme_id_1"])
+dict_theme = get_oe_dict_by_ids([125610,148305,127615,122316,120153,124699,115489,120288,120387,124762,148143,116141])
 base_aligner = Aligner()
-base_aligner.load_thematic_data(DictLoader(thematic_dict))
+base_aligner.load_thematic_data(DictLoader(dict_theme))
 base_year = "2022"
 base_aligner.load_reference_data(
     GRBFiscalParcelLoader(year=base_year, aligner=base_aligner)

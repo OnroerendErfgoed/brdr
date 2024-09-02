@@ -96,16 +96,19 @@ def get_geoms_affected_by_grb_change(
     """
     dict_thematic = aligner.dict_thematic
     crs = aligner.CRS
+    affected_dict: dict[str, BaseGeometry] = {}
+    unchanged_dict: dict[str, BaseGeometry] = {}
     if border_distance > 0:
         for key in dict_thematic.keys():
             dict_thematic[key] = create_donut(dict_thematic[key], border_distance)
     if one_by_one:
-        affected_dict = {}
         for key in dict_thematic:
             geom = dict_thematic[key]
             if is_grb_changed(geom, grb_type, date_start, date_end):
                 affected_dict[key] = geom
-        return affected_dict
+            else:
+                unchanged_dict[key] = geom
+        return affected_dict, unchanged_dict
     else:
         # Temporal filter on VERDATUM
         geometry = aligner._get_thematic_union()
@@ -121,11 +124,9 @@ def get_geoms_affected_by_grb_change(
             coll_changed_grb, name_reference_id
         )
 
-        affected_dict: dict[str, BaseGeometry] = {}
-
         if len(dict_changed_grb) == 0:
             logging.info("No detected changes")
-            return affected_dict  # empty dict
+            return affected_dict, dict_thematic  # empty affected dict
         logging.info("Changed parcels in timespan: " + str(len(dict_changed_grb)))
         thematic_intersections = features_by_geometric_operation(
             list(dict_thematic.values()),
@@ -134,9 +135,12 @@ def get_geoms_affected_by_grb_change(
             predicate="intersects",
         )
         logging.info("Number of filtered features: " + str(len(thematic_intersections)))
-        for key in thematic_intersections:
-            affected_dict[key] = dict_thematic[key]
-    return affected_dict
+        for key,geom in dict_thematic.items():
+            if key in thematic_intersections:
+                affected_dict[key] = geom
+            else:
+                unchanged_dict[key] = geom
+    return affected_dict, unchanged_dict
 
 
 def get_last_version_date(
@@ -260,6 +264,7 @@ def evaluate(
     thematic_dict_formula,
     threshold_area=5,
     threshold_percentage=1,
+    dict_unchanged={}
 ):
     """
     evaluate affected geometries and give attributes to evaluate and decide if new proposals can be used
@@ -272,6 +277,8 @@ def evaluate(
         dict_evaluated_result[dist] = {}
         prop_dictionary[dist] = {}
         for theme_id in theme_ids:
+            prop_dictionary[dist][theme_id] = {}
+        for theme_id in dict_unchanged.keys():
             prop_dictionary[dist][theme_id] = {}
 
     equality = False
@@ -312,6 +319,13 @@ def evaluate(
             prop_dictionary[smallest_predicted_dist][theme_id][
                 "evaluation"
             ] = Evaluation.TO_CHECK_4
+
+    for theme_id, geom in dict_unchanged.items():
+        dict_evaluated_result[0][theme_id] = geom
+        prop_dictionary[0][theme_id][
+            "evaluation"
+        ] = Evaluation.NO_CHANGE_6
+
     return dict_evaluated_result, prop_dictionary
 
 
