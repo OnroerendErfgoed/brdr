@@ -1,5 +1,7 @@
 from brdr.aligner import Aligner
-from brdr.enums import OpenbaarDomeinStrategy
+from brdr.enums import OpenbaarDomeinStrategy, GRBType
+from brdr.grb import GRBActualLoader
+from brdr.loader import GeoJsonLoader
 from examples import show_map
 
 if __name__ == "__main__":
@@ -41,16 +43,18 @@ if __name__ == "__main__":
         ],
     }
 
-    aligner.load_thematic_data_geojson(thematic_json, "theme_identifier")
-    # gebruik de actuele adp-percelen adp= administratieve percelen
-    aligner.load_reference_data_grb_actual(grb_type="adp", partition=1000)
+    loader = GeoJsonLoader(_input=thematic_json, id_property="theme_identifier")
+    aligner.load_thematic_data(loader)
+    loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
+    aligner.load_reference_data(loader)
 
     # Example how to use the Aligner
     rel_dist = 6
-    dict_results_by_distance = {}
-    dict_results_by_distance[aligner.relevant_distance] = aligner.process_dict_thematic(
-        relevant_distance=rel_dist,
-        od_strategy=OpenbaarDomeinStrategy.SNAP_FULL_AREA_ALL_SIDE,
-    )
+    dict_results_by_distance = {
+        aligner.relevant_distance: aligner.process_dict_thematic(
+            relevant_distance=rel_dist,
+            od_strategy=OpenbaarDomeinStrategy.SNAP_FULL_AREA_ALL_SIDE,
+        )
+    }
     aligner.export_results("output/")
     show_map(dict_results_by_distance, aligner.dict_thematic, aligner.dict_reference)

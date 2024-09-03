@@ -1,20 +1,28 @@
 import numpy as np
 
 from brdr.aligner import Aligner
-from brdr.utils import get_oe_dict_by_ids
+from brdr.enums import GRBType
+from brdr.grb import GRBActualLoader
+from brdr.loader import DictLoader
+from brdr.utils import get_oe_dict_by_ids, dict_series_by_keys
 from examples import show_map, plot_series
 
 if __name__ == "__main__":
-    # EXAMPLE to test the algorithm for erfgoedobject with relevant distance 0.2m and od_strategy SNAP_ALL_SIDE
+    # EXAMPLE to test the algorithm for erfgoedobject with relevant distance 0.2m and
+    # od_strategy SNAP_ALL_SIDE
 
     # Initiate brdr
     aligner = Aligner()
     # Load thematic data & reference data
     # dict_theme = get_oe_dict_by_ids([206363], oetype='erfgoedobjecten')
     aanduidingsobjecten = range(1, 10)
-    dict_theme = get_oe_dict_by_ids(aanduidingsobjecten, oetype="aanduidingsobjecten")
-    aligner.load_thematic_data_dict(dict_theme)
-    aligner.load_reference_data_grb_actual(grb_type="adp", partition=1000)
+    dict_theme = get_oe_dict_by_ids(
+        aanduidingsobjecten, oetype="aanduidingsobjecten"
+    )  # noqa
+    loader = DictLoader(dict_theme)
+    aligner.load_thematic_data(loader)
+    loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
+    aligner.load_reference_data(loader)
 
     # RESULTS
     # rel_dist = 0.2
@@ -26,12 +34,12 @@ if __name__ == "__main__":
 
     series = np.arange(0, 500, 20, dtype=int) / 100
     # predict which relevant distances are interesting to propose as resulting geometry
-    dict_predicted, diffs = aligner.predictor(
+    dict_series, dict_predicted, diffs = aligner.predictor(
         relevant_distances=series, od_strategy=2, threshold_overlap_percentage=50
     )
+    dict_predicted = dict_series_by_keys(dict_predicted)
     for key in dict_predicted.keys():
-        diff = {}
-        diff[key] = diffs[key]
+        diff = {key: diffs[key]}
         plot_series(series, diff)
         show_map(
             dict_predicted[key],

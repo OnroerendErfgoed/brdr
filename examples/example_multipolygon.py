@@ -1,9 +1,8 @@
 # Initiate brdr
-import tests
 from brdr.aligner import Aligner
-from brdr.enums import OpenbaarDomeinStrategy
-from brdr.utils import multipolygons_to_singles, write_geojson
-from examples import show_map
+from brdr.enums import GRBType
+from brdr.utils import multipolygons_to_singles
+from brdr.utils import write_geojson
 
 aligner0 = Aligner()
 
@@ -21,7 +20,7 @@ aligner = Aligner()
 aligner.load_thematic_data_dict(
     aligner0.dict_thematic,
 )
-aligner.load_reference_data_grb_actual(grb_type="adp", partition=1000)
+aligner.load_reference_data_grb_actual(grb_type=GRBType.ADP, partition=1000)
 
 # Example how to use the Aligner
 # rel_dist = 2
@@ -32,8 +31,8 @@ aligner.load_reference_data_grb_actual(grb_type="adp", partition=1000)
 # )
 # aligner.export_results("output/")
 # show_map(dict_results_by_distance, aligner.dict_thematic, aligner.dict_reference)
-dict_predicted, diffs = aligner.predictor()
-fcs = aligner.get_predictions_as_geojson(formula=True)
+dict_series, dict_predicted, diffs = aligner.predictor()
+fcs = aligner.get_predictions_as_geojson(series_dict=dict_predicted, formula=True)
 aligner.export_results("output/")
-write_geojson("output/predicted.geojson", fcs[0])
-write_geojson("output/predicted_diff.geojson", fcs[1])
+write_geojson("output/predicted.geojson", fcs["result"])
+write_geojson("output/predicted_diff.geojson", fcs["result_diff"])

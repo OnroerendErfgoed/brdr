@@ -6,117 +6,90 @@ import requests
 from geojson import Feature
 from geojson import FeatureCollection
 from geojson import dump
-from shapely import GeometryCollection, Polygon, unary_union
+from shapely import GeometryCollection
 from shapely import make_valid
 from shapely import node
 from shapely import polygonize
+from shapely import unary_union
 from shapely.geometry import shape
+from shapely.geometry.base import BaseGeometry
 
-from brdr.constants import MULTI_SINGLE_ID_SEPARATOR
+from brdr.constants import MULTI_SINGLE_ID_SEPARATOR, DEFAULT_CRS, DOWNLOAD_LIMIT
+from brdr.enums import DiffMetric
+from brdr.geometry_utils import get_partitions, get_bbox
+from brdr.typings import ProcessResult
 
 
-def geojson_tuple_from_tuple(
-    my_tuple, crs, name_id, prop_dict=None, geom_attributes=True
+def get_series_geojson_dict(
+    series_dict: dict[float, dict[str, ProcessResult]],
+    crs: str,
+    id_field: str,
+    series_prop_dict: dict[float, dict[str, any]] = None,
+    geom_attributes=True,
 ):
     """
-    get a geojson-tuple (6 geojsons) for a tuple of results (results, result_diff, ...)
+    Convert a series of process results to a GeoJSON feature collections.
     """
-    feature_collections = []
-    for count, tup in enumerate(my_tuple):
-        feature_collections.append(
-            geojson_from_dict(
-                tup, crs, name_id, prop_dict=prop_dict, geom_attributes=geom_attributes
-            )
-        )
-    return tuple(feature_collections)
+    features_list_dict = {}
 
+    for relative_distance, results_dict in series_dict.items():
+        prop_dict = dict(series_prop_dict or {}).get(relative_distance, {})
+        for theme_id, process_result in results_dict.items():
+            properties = prop_dict.get(theme_id, {})
+            properties[id_field] = theme_id
+            properties["relevant_distance"] = relative_distance
 
-def geojson_tuple_from_series(
-    dict_series, crs, name_id, prop_dict=None, geom_attributes=True
-):
-    """
-    get a geojson-tuple (6 geojsons) for a dictionary of relevant distances() keys and resulting tuples (values)
-    """
-    features = [[], [], [], [], [], []]
-    for rel_dist in dict_series.keys():
-        my_tuple = dict_series[rel_dist]
-        prop_rel_dist = {"relevant_distance": rel_dist}
-        prop_dictionary = dict.fromkeys(my_tuple[0].keys(), prop_rel_dist)
-        if (
-            prop_dict is not None
-            and rel_dist in prop_dict
-            and prop_dict[rel_dist] is not None
-        ):
-            for key in prop_dictionary.keys():
-                prop_dictionary[key] = prop_dictionary[key] | prop_dict[rel_dist][key]
-        fcs = geojson_tuple_from_tuple(
-            my_tuple,
-            crs,
-            name_id,
-            prop_dict=prop_dictionary,
-            geom_attributes=geom_attributes,
-        )
-        for count, ft in enumerate(features):
-            ft.extend(fcs[count].features)
+            for results_type, geom in process_result.items():
+                if results_type not in features_list_dict:
+                    features_list_dict[results_type] = []
+
+                feature = feature_from_geom(geom, properties, geom_attributes)
+                features_list_dict[results_type].append(feature)
+
     crs_geojson = {"type": "name", "properties": {"name": crs}}
-    feature_collections = []
-    for ft in features:
-        feature_collections.append(FeatureCollection(ft, crs=crs_geojson))
-    return tuple(feature_collections)
+    return {
+        result_type: FeatureCollection(features, crs=crs_geojson)
+        for result_type, features in features_list_dict.items()
+    }
 
 
-def geojson_tuple_from_dict_theme(
-    dict_theme, crs, name_id, prop_dict=None, geom_attributes=True
-):
+def feature_from_geom(
+    geom: BaseGeometry,
+    properties: dict = None,
+    geom_attributes=True,
+) -> Feature:
     """
-    get a geojson-tuple (6 geojsons) for a dictionary of theme_ids (keys) and dictionary of relevant distance-results (values)
+    Convert a geometry to a GeoJSON feature.
+
+    Args:
+        geom (BaseGeometry): The geometry to convert.
+        properties (dict): The properties to include in the feature.
+        geom_attributes (bool): Whether to include geometry attributes (default True).
+
+    Returns:
+        Feature: The GeoJSON feature.
     """
-    features = [[], [], [], [], [], []]
-    for key in dict_theme.keys():
-        if prop_dict is not None and key in prop_dict:
-            prop_dictionary = prop_dict[key]
-        fcs = geojson_tuple_from_series(
-            dict_theme[key],
-            crs,
-            name_id,
-            prop_dict=prop_dictionary,
-            geom_attributes=geom_attributes,
-        )
-        for count, ft in enumerate(features):
-            ft.extend(fcs[count].features)
-    crs_geojson = {"type": "name", "properties": {"name": crs}}
-    feature_collections = []
-    for ft in features:
-        feature_collections.append(FeatureCollection(ft, crs=crs_geojson))
-    return tuple(feature_collections)
+
+    properties = dict(properties or {})
+    if geom_attributes:
+        area = geom.area
+        perimeter = geom.length
+        properties["area"] = area
+        properties["perimeter"] = perimeter
+        properties["shape_index"] = perimeter / area if area != 0 else -1
+    return Feature(geometry=geom, properties=properties)
 
 
-def geojson_from_dict(dictionary, crs, name_id, prop_dict=None, geom_attributes=True):
+def geojson_from_dict(dictionary, crs, id_field, prop_dict=None, geom_attributes=True):
     """
-    get a geojson (featurecollection) from a dictionary of ids(keys) and geometries (values)
+    get a geojson (featurecollection) from a dictionary of ids(keys) and geometries
+    (values)
     """
     features = []
-    for key in dictionary:
-        geom = dictionary[key]
-        properties = {name_id: key}
-        if prop_dict is not None and key in prop_dict:
-            properties = properties | prop_dict[key]
-        if geom_attributes:
-            area = geom.area
-            perimeter = geom.length
-            if geom.area != 0:
-                shape_index = perimeter / area
-            else:
-                shape_index = -1
-            properties["area"] = area
-            properties["perimeter"] = perimeter
-            properties["shape_index"] = shape_index
-        features.append(
-            Feature(
-                geometry=geom,
-                properties=properties,
-            )
-        )
+    for key, geom in dictionary.items():
+        properties = dict(prop_dict or {}).get(key, {})
+        properties[id_field] = key
+        features.append(feature_from_geom(geom, properties, geom_attributes))
     crs_geojson = {"type": "name", "properties": {"name": crs}}
     geojson = FeatureCollection(features, crs=crs_geojson)
     return geojson
@@ -131,25 +104,32 @@ def write_geojson(path_to_file, geojson):
 
 def multipolygons_to_singles(dict_geoms):
     """
-    Converts a dictionary of shapely-geometries to a dictionary containing only single polygons.
+    Converts a dictionary of shapely-geometries to a dictionary containing only single
+    polygons.
 
-    This function iterates through a dictionary where values are Shapely-geometries and performs the following:
+    This function iterates through a dictionary where values are Shapely-geometries
+    and performs the following:
 
     * **Polygons:** Preserves the key and geometry from the original dictionary.
-    * **MultiPolygons with one polygon:** Preserves the key and extracts the single polygon.
+    * **MultiPolygons with one polygon:** Preserves the key and extracts the single
+        polygon.
     * **MultiPolygons with multiple polygons:**
-        * Creates new keys for each polygon by appending a suffix (_index) to the original key.
-        * Assigns the individual polygons from the MultiPolygon to the newly created keys.
+        * Creates new keys for each polygon by appending a suffix (_index) to the
+            original key.
+        * Assigns the individual polygons from the MultiPolygon to the newly created
+            keys.
 
     Args:
-        dict_geoms (dict): A dictionary where keys are identifiers and values are GeoJSON geometries.
+        dict_geoms (dict): A dictionary where keys are identifiers and values are
+            GeoJSON geometries.
 
     Returns:
         dict: A new dictionary containing only single polygons (as Polygon geometries).
               Keys are created based on the logic described above.
 
     Notes:
-        * Geometries that are not Polygons or MultiPolygons are excluded with a warning message printed.
+        * Geometries that are not Polygons or MultiPolygons are excluded with a warning
+            message printed.
     """
     resulting_dict_geoms = {}
     for key in dict_geoms:
@@ -167,30 +147,38 @@ def multipolygons_to_singles(dict_geoms):
                 resulting_dict_geoms[new_key] = p
                 i = i + 1
         else:
-            print("geom excluded: " + str(geom))
+            logging.debug("geom excluded: " + str(geom) + " for key: " + str(key))
     return resulting_dict_geoms
 
 
 def polygonize_reference_data(dict_ref):
     """
-    Creates a new dictionary with non-overlapping polygons based on a reference data dictionary.
+    Creates a new dictionary with non-overlapping polygons based on a reference data
+    dictionary.
 
-    This function is designed to handle situations where the original reference data dictionary might contain:
+    This function is designed to handle situations where the original reference data
+    dictionary might contain:
 
-    * Overlapping polygons: It creates new, non-overlapping polygons by combining all reference borders.
-    * Multiple overlapping references: This function is useful when combining references like parcels and buildings that might overlap.
+    * Overlapping polygons: It creates new, non-overlapping polygons by combining all
+        reference borders.
+    * Multiple overlapping references: This function is useful when combining references
+        like parcels and buildings that might overlap.
 
-    **Important:** The original reference IDs are lost in the process of creating new non-overlapping polygons. New unique keys are assigned instead.
+    **Important:** The original reference IDs are lost in the process of creating new
+        non-overlapping polygons. New unique keys are assigned instead.
 
     Args:
-        dict_ref (dict): A dictionary where keys are identifiers and values are Shapely geometries (assumed to be Polygons or MultiPolygons).
+        dict_ref (dict): A dictionary where keys are identifiers and values are Shapely
+            geometries (assumed to be Polygons or MultiPolygons).
 
     Returns:
-        dict: A new dictionary containing non-overlapping polygons derived from the original reference data.
+        dict: A new dictionary containing non-overlapping polygons derived from the
+              original reference data.
               Keys are unique strings (reference IDs are lost).
 
     Notes:
-        * Geometries that are not Polygons or MultiPolygons are excluded with a warning message printed.
+        * Geometries that are not Polygons or MultiPolygons are excluded with a warning
+            message printed.
     """
     arr_ref = []
     for key in dict_ref:
@@ -211,22 +199,27 @@ def polygonize_reference_data(dict_ref):
 
 def get_oe_dict_by_ids(objectids, oetype="aanduidingsobjecten"):
     """
-    Fetches thematic data for a list of objectIDs from the Inventaris Onroerend Erfgoed API.
+    Fetches thematic data for a list of objectIDs from the Inventaris Onroerend Erfgoed
+    API.
 
-    This function retrieves information about designated heritage objects (erfgoedobjecten or aanduidingsobjecten)
-    from the Flemish Agency for Heritage (Inventaris Onroerend Erfgoed) based on a list of their IDs.
+    This function retrieves information about designated heritage objects
+    (erfgoedobjecten or aanduidingsobjecten) from the Flemish Agency for Heritage (
+    Inventaris Onroerend Erfgoed) based on a list of their IDs.
 
     Args:
-        objectids (list): A list of objectIDs of 'erfgoedobjecten' or 'aanduidingsobjecten'.
+        objectids (list): A list of objectIDs of 'erfgoedobjecten' or
+            'aanduidingsobjecten'.
         oetype (string): A string: 'aanduidingsobjecten' (default) or 'erfgoedobjecten'
 
     Returns:
-        dict: A dictionary where keys are objectIDs (as strings) and values are GeoJSON geometry objects.
-              If an erfgoedobject/aanduidingsobject is not found, a corresponding warning message will be logged
-              but it won't be included in the returned dictionary.
+        dict: A dictionary where keys are objectIDs (as strings) and values are
+              GeoJSON geometry objects. If an erfgoedobject/aanduidingsobject is not
+              found, a corresponding warning message will be logged, but it won't be\
+              included in the returned dictionary.
 
     Raises:
-        requests.exceptions.RequestException: If there is an error fetching data from the API.
+        requests.exceptions.RequestException: If there is an error fetching data from
+            the API.
     """
     dict_thematic = {}
     base_url = "https://inventaris.onroerenderfgoed.be/" + oetype + "/"
@@ -245,7 +238,8 @@ def get_oe_dict_by_ids(objectids, oetype="aanduidingsobjecten"):
 
 def get_oe_geojson_by_bbox(bbox, limit=1000):
     """
-    Fetches GeoJSON data for designated heritage objects (aanduidingsobjecten) within a bounding box.
+    Fetches GeoJSON data for designated heritage objects (aanduidingsobjecten) within
+    a bounding box.
 
     This function retrieves information about aanduidingsobjecten from the Flemish
     Mercator public WFS service using a bounding box (bbox) as a filter. The bbox should
@@ -287,9 +281,11 @@ def get_oe_geojson_by_bbox(bbox, limit=1000):
 
 def get_breakpoints_zerostreak(x, y):
     """
-    Determine the extremes and zero_streaks of a graph based on the derivative, and return:
+    Determine the extremes and zero_streaks of a graph based on the derivative, and
+    return:
     * the breakpoints: extremes (breakpoints) of graph where 'change' occurs
-    * the zero_streaks: ranges where the derivative is zero, ranges of relevant_distance where 'no-change' occurs
+    * the zero_streaks: ranges where the derivative is zero, ranges of relevant_distance
+        where 'no-change' occurs
 
     Parameters:
     x (numpy.ndarray): The x values of the graph.
@@ -319,13 +315,13 @@ def get_breakpoints_zerostreak(x, y):
     write_zero_streak = False
     last_extreme = 0
     for i in range(1, len(x)):
-        if round(derivative[i], 2) == 0:
+        if round(derivative[i], 2) == 0:  # noqa
             streak = streak + 1
-            if start_streak == None:
+            if start_streak is None:
                 start_streak = x[i - 1]
         elif streak != 0:
             write_zero_streak = True
-        if start_streak != None and (write_zero_streak or len(x) - 1 == i):
+        if start_streak is not None and (write_zero_streak or len(x) - 1 == i):
             end_streak = x[i - 1]
             if derivative[i] == 0:
                 end_streak = x[i]
@@ -339,7 +335,7 @@ def get_breakpoints_zerostreak(x, y):
             logging.debug("end_streak")
         if (
             i < len(x) - 1
-            and round(derivative[i], 2) > 0
+            and round(derivative[i], 2) > 0  # noqa
             and derivative[i - 1] <= derivative[i]
             and derivative[i] >= derivative[i + 1]
         ):
@@ -347,19 +343,21 @@ def get_breakpoints_zerostreak(x, y):
             extremes.append((x[i], derivative[i], "maximum"))
         if (
             i < len(x) - 1
-            and round(derivative[i], 2) < 0
+            and round(derivative[i], 2) < 0  # noqa
             and derivative[i - 1] >= derivative[i]
             and derivative[i] <= derivative[i + 1]
         ):
             last_extreme = derivative[i]
             extremes.append((x[i], derivative[i], "minimum"))
     for extremum in extremes:
-        logging.info(
-            f"breakpoints: relevant_distance:{extremum[0]:.2f}, extreme:{extremum[1]:.2f} ({extremum[2]})"
+        logging.debug(
+            f"breakpoints: relevant_distance:"
+            f"{extremum[0]:.2f}, extreme:{extremum[1]:.2f} ({extremum[2]})"
         )
     for st in zero_streaks:
-        logging.info(
-            f"zero_streaks: [{st[0]:.2f} - {st[1]:.2f}] - center:{st[2]:.2f} - counter:{st[3]:.2f} - min/max-extreme:{st[4]:.2f} "
+        logging.debug(
+            f"zero_streaks: [{st[0]:.2f} - {st[1]:.2f}] - center:{st[2]:.2f}"
+            f" - counter:{st[3]:.2f} - min/max-extreme:{st[4]:.2f} "
         )
     # plt.plot(series, afgeleide, label='afgeleide-' + str(key))
     return extremes, zero_streaks
@@ -386,76 +384,55 @@ def numerical_derivative(x, y):
     return derivative
 
 
-def _filter_dict_by_key(dictionary, filter_key):
+def filter_dict_by_key(dictionary, filter_key):
     """
     Filters a dictionary to only include keys matching a specific value.
 
-    This function creates a new dictionary containing entries from the original dictionary
-    where the key matches the provided `filter_key`.
+    This function creates a new dictionary containing entries from the original
+    dictionary where the key matches the provided `filter_key`.
 
     Args:
         dictionary (dict): The dictionary to filter.
         filter_key (str): The key value to filter by.
 
     Returns:
-        dict: A new dictionary containing only entries where the key matches the `filter_key`.
+        dict: A new dictionary containing only entries where the key matches the
+            `filter_key`.
     """
     return {key: dictionary[key] for key in dictionary.keys() if key == filter_key}
 
 
-def filter_resulting_series_by_key(resulting_series, filter_key):
+def diffs_from_dict_series(
+    dict_series: dict[float, dict[str, ProcessResult]],
+    dict_thematic: dict[str, BaseGeometry],
+    diff_metric: DiffMetric = DiffMetric.CHANGES_AREA,
+):
     """
-    Filters a dictionary of result tuples based on a specific key.
+    Calculates a dictionary containing difference metrics for thematic elements based on
+     a distance series.
 
-    This function iterates through a dictionary `resulting_series` where values are tuples containing six dictionaries.
-    The function creates a new dictionary `filtered_resulting_series` with the same structure. It iterates through each distance key (`dist`) in the original dictionary and performs the following:
-
-    1. **Filters each inner dictionary:** It uses the helper function `_filter_dict_by_key` to filter each of the six dictionaries within the result tuple at the current distance key. The filtering is based on the provided `filter_key`.
-    2. **Creates a new filtered tuple:** A new tuple is created with the filtered dictionaries.
-    3. **Adds the filtered tuple to the new dictionary:** The new filtered tuple is added to the `filtered_resulting_series` dictionary using the original distance key (`dist`).
-
-    **Important:** This function assumes the structure of the `resulting_series` dictionary and the existence of the helper function `_filter_dict_by_key`.
+    This function analyzes the changes in thematic elements (represented by
+    thematic_ids in `dict_thematic`) across different distances provided in the
+    `dict_series`. It calculates a difference metric for each thematic element at
+    each distance and returns a dictionary summarizing these differences.
 
     Args:
-        resulting_series (dict): A dictionary where keys are distances and values are tuples containing six dictionaries.
-        filter_key (str): The key value to filter the inner dictionaries by.
+        dict_series (dict): A dictionary where thematic_ids are distances and
+        values are tuples of two dictionaries.
+                             - The first dictionary in the tuple represents thematic
+                                element areas for a specific distance.
+                             - The second dictionary represents the difference in
+                                areas from the original thematic data for a specific
+                                distance.
+        dict_thematic (dict): A dictionary where thematic_ids are thematic element
+            identifiers and values are GeoJSON geometry objects representing the
+            original thematic data.
+       diff_metric (DiffMetric): The metric used to determine the difference between
+            the thematic and reference data.
 
     Returns:
-        dict: A new dictionary (`filtered_resulting_series`) with the same structure as the original one, but containing filtered inner dictionaries based on the `filter_key`.
-    """
-    filtered_resulting_series = {}
-    for dist in resulting_series:
-        result_tuple = resulting_series[dist]
-        filtered_tuple = (
-            _filter_dict_by_key(result_tuple[0], filter_key),
-            _filter_dict_by_key(result_tuple[1], filter_key),
-            _filter_dict_by_key(result_tuple[2], filter_key),
-            _filter_dict_by_key(result_tuple[3], filter_key),
-            _filter_dict_by_key(result_tuple[4], filter_key),
-            _filter_dict_by_key(result_tuple[5], filter_key),
-        )
-        filtered_resulting_series[dist] = filtered_tuple
-
-    return filtered_resulting_series
-
-
-def diffs_from_dict_series(dict_series, dict_thematic):
-    """
-    Calculates a dictionary containing difference metrics for thematic elements based on a distance series.
-
-    This function analyzes the changes in thematic elements (represented by keys in `dict_thematic`)
-    across different distances provided in the `dict_series`. It calculates a difference metric
-    for each thematic element at each distance and returns a dictionary summarizing these differences.
-
-    Args:
-        dict_series (dict): A dictionary where keys are distances and values are tuples of two dictionaries.
-                             - The first dictionary in the tuple represents thematic element areas for a specific distance.
-                             - The second dictionary represents the difference in areas from the original thematic data for a specific distance.
-        dict_thematic (dict): A dictionary where keys are thematic element identifiers and values are GeoJSON geometry objects
-                               representing the original thematic data.
-
-    Returns:
-        dict: A dictionary containing difference metrics for each thematic element (`key`) across different distances.
+        dict: A dictionary containing difference metrics for each thematic element
+        (`key`) across different distances.
              The structure is as follows:
              {
                 'thematic_key1': {
@@ -471,38 +448,55 @@ def diffs_from_dict_series(dict_series, dict_thematic):
                 ...
              }
 
-             - `difference_metric`: This value depends on the chosen calculation for thematic element change.
-               The docstring provides examples like area difference, percentage change, and absolute difference.
+             - `difference_metric`: This value depends on the chosen calculation for
+                thematic element change. The docstring provides examples like area
+                difference, percentage change, and absolute difference.
 
     Raises:
-        KeyError: If a thematic element key is missing from the results in `dict_series`.
+        KeyError: If a thematic element key is missing from the results in
+        `dict_series`.
     """
-    keys = dict_thematic.keys()
-    diffs = {}
-    for key in keys:
-        diffs[key] = {}
-    for (
-        rel_dist
-    ) in dict_series:  # all the relevant distances used to calculate the series
-        results = dict_series[rel_dist][0]
-        results_diff = dict_series[rel_dist][1]
-        for key in keys:
-            if key not in results.keys() and key not in results_diff.keys():
-                logging.info(
-                    "No diff calculated for theme_id " + str(key) + ": diff set to zero"
-                )
+    thematic_ids = dict_thematic.keys()
+
+    diffs = {thematic_id: {} for thematic_id in thematic_ids}
+
+    # all the relevant distances used to calculate the series
+    for rel_dist, results_dict in dict_series.items():
+
+        for thematic_id in thematic_ids:
+            result = results_dict.get(thematic_id, {}).get("result")
+            result_diff = results_dict.get(thematic_id, {}).get("result_diff")
+            # result_diff_plus = results_dict.get(thematic_id, {})\
+            # .get("result_diff_plus")
+            # result_diff_min = results_dict.get(thematic_id, {})\
+            # .get("result_diff_min")
+
+            diff = 0
+            if (
+                result_diff is None
+                or result_diff.is_empty
+                or result is None
+                or result.is_empty
+            ):
                 diff = 0
-            else:
-                # calculate the diffs you want to have
-                # diff = results_diff[key].area * 100 / results[key].area #percentage of change
-                diff = (
-                    results[key].area - dict_thematic[key].area
-                )  # difference (m²) between area of resulting geometry and original geometry
-                diff = round(diff, 1)  # round, so the detected changes are within 10cm²
-                # diff = abs(results[key].area - dict_thematic[key].area) #absolute difference (m²) between area of resulting geometry and original geometry
-                # diff = abs(results[key].area - dict_thematic[key].area)*100/dict_thematic[key].area #absolute difference (%) between area of resulting geometry and original geometry
-                # TODO: determine a good diff-value for determination
-            diffs[key][rel_dist] = diff
+            elif diff_metric == DiffMetric.TOTAL_AREA:
+                diff = result.area - dict_thematic[thematic_id].area
+            elif diff_metric == DiffMetric.TOTAL_PERCENTAGE:
+                diff = result.area - dict_thematic[thematic_id].area
+                diff = diff * 100 / result.area
+            elif diff_metric == DiffMetric.CHANGES_AREA:
+                # equals the symmetrical difference, so equal to
+                # result_diff_plus.area + result_diff_min.area
+                diff = result_diff.area
+                # diff = result_diff_plus.area + result_diff_min.area
+            elif diff_metric == DiffMetric.CHANGES_PERCENTAGE:
+                diff = result_diff.area
+                diff = diff * 100 / result.area
+
+            # round, so the detected changes are within 10cm² or 0.1%
+            diff = round(diff, 1)
+            diffs[thematic_id][rel_dist] = diff
+
     return diffs
 
 
@@ -510,16 +504,18 @@ def get_collection(ref_url, limit):
     """
     Fetches a collection of features from a paginated API endpoint.
 
-    This function retrieves a collection of features from a URL that supports pagination using a `startIndex` parameter.
-    It iteratively retrieves features in chunks of the specified `limit` until no more features are available.
+    This function retrieves a collection of features from a URL that supports
+    pagination using a `startIndex` parameter. It iteratively retrieves features in
+    chunks of the specified `limit` until no more features are available.
 
     Args:
         ref_url (str): The base URL of the API endpoint.
         limit (int): The maximum number of features to retrieve per request.
 
     Returns:
-        dict: A dictionary representing the complete GeoJSON feature collection. This might be truncated
-              if the total number of features exceeds the limitations of the API or server.
+        dict: A dictionary representing the complete GeoJSON feature collection.
+            This might be truncated if the total number of features exceeds the
+            limitations of the API or server.
 
     Logs:
         - Debug logs the URL being used for each request during pagination.
@@ -528,9 +524,9 @@ def get_collection(ref_url, limit):
     collection = {}
     while True:
         url = ref_url + "&startIndex=" + str(start_index)
-        logging.debug(url)
+        logging.debug("called url: " + url)
         json = requests.get(url).json()
-        feature_collection = json
+        feature_collection = dict(json)
         if (
             "features" not in feature_collection
             or len(feature_collection["features"]) == 0
@@ -540,45 +536,169 @@ def get_collection(ref_url, limit):
         if collection == {}:
             collection = feature_collection
         else:
-            collection["features"].extend(feature_collection["features"])
+            collection["features"].extend(feature_collection["features"])  # noqa
+        if len(feature_collection["features"]) < limit:
+            break
     return collection
 
 
-def merge_geometries_by_theme_id(dictionary):
+def geojson_to_dicts(collection, id_property):
+    data_dict = {}
+    data_dict_properties = {}
+    if collection is None or "features" not in collection:
+        return data_dict, data_dict_properties
+    for f in collection["features"]:
+        key = str(f["properties"][id_property])
+        geom = shape(f["geometry"])
+        data_dict[key] = make_valid(geom)
+        data_dict_properties[key] = f["properties"]
+    return data_dict, data_dict_properties
+
+
+def get_collection_by_partition(
+    url, geometry, partition=1000, limit=DOWNLOAD_LIMIT, crs=DEFAULT_CRS
+):
+    collection = {}
+    if geometry is None:
+        collection = get_collection(
+            _add_bbox_to_url(url=url, crs=crs, bbox=None), limit
+        )
+    elif partition < 1:
+        collection = get_collection(
+            _add_bbox_to_url(url=url, crs=crs, bbox=get_bbox(geometry)), limit
+        )
+    else:
+        geoms = get_partitions(geometry, partition)
+        for g in geoms:
+            coll = get_collection(
+                _add_bbox_to_url(url=url, crs=crs, bbox=get_bbox(g)), limit
+            )
+            if collection == {}:
+                collection = dict(coll)
+            elif "features" in collection and "features" in coll:
+                collection["features"].extend(coll["features"])
+    return collection
+
+
+def _add_bbox_to_url(url, crs=DEFAULT_CRS, bbox=None):
+    # Load the Base reference data
+    if bbox is not None:
+        url = url + "&bbox-crs=" + crs + "&bbox=" + bbox
+    return url
+
+
+def merge_dict_series(
+    dict_series: dict[float, dict[str, ProcessResult]]
+) -> dict[float, dict[str, ProcessResult]]:
+    """
+    Merges dict_series (dict_predicted) with  seperated IDs (MULTI_SINGLE_ID_SEPARATOR)
+     to their original unique ID
+    """
+    dict_series_merged = {}
+    for dist, item in dict_series.items():
+        dict_series_merged[dist] = merge_process_results(item)
+    return dict_series_merged
+
+
+def merge_dict(dictionary: dict[str, BaseGeometry]) -> dict[str, BaseGeometry]:
+    """
+    Merges dict_series (dict_predicted) with  seperated IDs (MULTI_SINGLE_ID_SEPARATOR)
+     to their original unique ID
+    """
+    out_dictionary = {}
+    for id_theme, item in dictionary.items():
+        id_theme_global = id_theme.split(MULTI_SINGLE_ID_SEPARATOR)[0]
+        if id_theme_global not in out_dictionary:
+            out_dictionary[id_theme_global] = [item]
+        else:
+            out_dictionary[id_theme_global].append(item)
+    return {k: make_valid(unary_union(v)) for k, v in out_dictionary.items()}
+
+
+def merge_process_results(
+    result_dict: dict[str, ProcessResult]
+) -> dict[str, ProcessResult]:
     """
     Merges geometries in a dictionary from multiple themes into a single theme.
 
-    Args: dictionary (dict): A dictionary where keys are theme IDs and values are
-        geometries (e.g., shapely Polygon objects).
+    Args: result_dict (dict): A dictionary where keys are theme IDs and values are
+        process results
 
     Returns: dict: A new dictionary with merged geometries, where keys are global
         theme IDs and values are merged geometries.
 
     """
-    dict_out = {}
-    for id_theme in dictionary:
+    grouped_results: dict[str, ProcessResult] = {}
+
+    for id_theme, process_result in result_dict.items():
         id_theme_global = id_theme.split(MULTI_SINGLE_ID_SEPARATOR)[0]
-        geom = dictionary[id_theme]
-        if geom.is_empty or geom is None:
-            continue
-        arr = [geom]
-        if id_theme_global not in dict_out:
-            dict_out[id_theme_global] = [Polygon()]
-        lst = dict_out[id_theme_global]
-        lst.extend(arr)
-        dict_out[id_theme_global] = lst
-    for id_theme_global in dict_out:
-        dict_out[id_theme_global] = unary_union(dict_out[id_theme_global])
-    return dict_out
+        if id_theme_global not in grouped_results:
+            grouped_results[id_theme_global] = process_result
+        else:
+            for key in process_result:
+                geom: BaseGeometry = process_result[key]  # noqa
+                if geom.is_empty or geom is None:
+                    continue
+                existing: BaseGeometry = grouped_results[id_theme_global][key]  # noqa
+                grouped_results[id_theme_global][key] = unary_union(  # noqa
+                    [existing, geom]
+                )
+
+    return grouped_results
 
 
-def geom_from_dict(dict, key):
+def processresult_to_dicts(dict_processresult):
     """
-    Get the geometry from a dictionary with geometries. If key not present,
-    an empty Polygon is returned
+    Transforms a dictionary with all ProcessResults to individual dictionaries of the
+    results
+    Args:
+        dict_processresult:
+
+    Returns:
+
     """
-    if key in dict:
-        geom = dict[key]
-    else:
-        geom = Polygon()
-    return geom
+    results = {}
+    results_diff = {}
+    results_diff_plus = {}
+    results_diff_min = {}
+    results_relevant_intersection = {}
+    results_relevant_diff = {}
+    for key in dict_processresult:
+        processresult = dict_processresult[key]
+        results[key] = processresult["result"]
+        results_diff[key] = processresult["result_diff"]
+        results_diff_plus[key] = processresult["result_diff_plus"]
+        results_diff_min[key] = processresult["result_diff_min"]
+        results_relevant_intersection[key] = processresult[
+            "result_relevant_intersection"
+        ]
+        results_relevant_diff[key] = processresult["result_relevant_diff"]
+
+    return (
+        results,
+        results_diff,
+        results_diff_plus,
+        results_diff_min,
+        results_relevant_intersection,
+        results_relevant_diff,
+    )
+
+
+def dict_series_by_keys(dict_series):
+    """
+    Transforms a dict_series into a dictionary with theme_id as keys, and a dictionary
+    with all predicted distances and their resulting geometry as a value.
+    Args:
+        dict_series: a dictionary result of the 'series/predictor'
+
+    Returns: dictionary with theme_id as keys, and a dictionary with all serial
+    distances and their resulting geometry as a value.
+
+    """
+    dict_series_keys = {}
+    for dist, res in dict_series.items():
+        for key in res.keys():
+            if key not in dict_series_keys.keys():
+                dict_series_keys[key] = {}
+            dict_series_keys[key][dist] = {key: res[key]}
+    return dict_series_keys

@@ -1,6 +1,6 @@
 [project]
 name = "brdr"
-version = "0.1.1"
+version = "0.2.0"
 description = "BRDR - a Python library to assist in realigning (multi-)polygons (OGC Simple Features) to reference borders "
 readme = { file = "README.md", content-type = "text/markdown" }
 license = { file = "LICENSE" }
@@ -44,6 +44,7 @@ dev = [
     "pip-tools==7.4.1",
     "pytest-cov==5.0.0",
     "pytest==8.1.1",
+    "responses==0.25.3",
     "toml==0.10.2",
     "types-requests==2.31.0.20240406",
 ]
