@@ -3,10 +3,10 @@ import logging
 import os
 from collections import defaultdict
 from datetime import datetime
+from math import pi
 from typing import Iterable
 
 import numpy as np
-from math import pi
 from shapely import GeometryCollection
 from shapely import Polygon
 from shapely import STRtree
@@ -49,7 +49,6 @@ from brdr.utils import get_series_geojson_dict
 from brdr.utils import merge_dict
 from brdr.utils import merge_dict_series
 from brdr.utils import merge_process_results
-from brdr.utils import multipolygons_to_singles
 from brdr.utils import write_geojson
 
 date_format = "%Y-%m-%d"
@@ -1050,15 +1049,15 @@ class Aligner:
         self._prepare_reference_data()
 
     def load_thematic_data(self, loader: Loader):
-        dict_thematic, self.dict_thematic_properties, self.dict_thematic_source = (
+        self.dict_thematic, self.dict_thematic_properties, self.dict_thematic_source = (
             loader.load_data()
         )
-        if self.multi_as_single_modus:
-            dict_thematic = multipolygons_to_singles(dict_thematic)
-            # TODO:Does these dicts has to be split when multi_to_single?
-            # dict_thematic_properties =
-            # dict_thematic_source =
-        self.dict_thematic = dict_thematic
+        # if self.multi_as_single_modus:
+        #     dict_thematic = multipolygons_to_singles(dict_thematic)
+        #     # TODO:Does these dicts has to be split when multi_to_single?
+        #     # dict_thematic_properties =
+        #     # dict_thematic_source =
+        # self.dict_thematic = dict_thematic
         # self.dict_thematic_properties = dict_thematic_properties
         # self.dict_thematic_source = dict_thematic_source
 
