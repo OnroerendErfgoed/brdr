@@ -42,7 +42,7 @@ from brdr.loader import GeoJsonUrlLoader
 from brdr.loader import Loader
 from brdr.logger import Logger
 from brdr.typings import ProcessResult
-from brdr.utils import diffs_from_dict_series
+from brdr.utils import diffs_from_dict_series, multipolygons_to_singles
 from brdr.utils import geojson_from_dict
 from brdr.utils import get_breakpoints_zerostreak
 from brdr.utils import get_series_geojson_dict
@@ -293,18 +293,24 @@ class Aligner:
                 - relevant_diff: relevant differences.
 
         """
-        self.dict_result = {}
-        for key in self.dict_thematic:
+        dict_result = {}
+        dict_thematic=self.dict_thematic
+        if self.multi_as_single_modus:
+            dict_thematic=multipolygons_to_singles(dict_thematic)
+        for key in dict_thematic:
             self.logger.feedback_info("thematic id to process: " + str(key))
             try:
-                self.dict_result[key] = self.process_geometry(
-                    self.dict_thematic[key],
+                dict_result[key] = self.process_geometry(
+                    dict_thematic[key],
                     relevant_distance,
                     od_strategy,
                     threshold_overlap_percentage,
                 )
             except ValueError as e:
                 self.logger.feedback_warning(str(e))
+        if self.multi_as_single_modus:
+            dict_result=merge_process_results(dict_result)
+        self.dict_result = dict_result
         return self.dict_result
 
     def predictor(
@@ -1052,14 +1058,6 @@ class Aligner:
         self.dict_thematic, self.dict_thematic_properties, self.dict_thematic_source = (
             loader.load_data()
         )
-        # if self.multi_as_single_modus:
-        #     dict_thematic = multipolygons_to_singles(dict_thematic)
-        #     # TODO:Does these dicts has to be split when multi_to_single?
-        #     # dict_thematic_properties =
-        #     # dict_thematic_source =
-        # self.dict_thematic = dict_thematic
-        # self.dict_thematic_properties = dict_thematic_properties
-        # self.dict_thematic_source = dict_thematic_source
 
         # Deprecated loader methods
 
