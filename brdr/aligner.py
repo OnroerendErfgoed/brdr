@@ -46,8 +46,6 @@ from brdr.utils import diffs_from_dict_series, multipolygons_to_singles
 from brdr.utils import geojson_from_dict
 from brdr.utils import get_breakpoints_zerostreak
 from brdr.utils import get_series_geojson_dict
-from brdr.utils import merge_dict
-from brdr.utils import merge_dict_series
 from brdr.utils import merge_process_results
 from brdr.utils import write_geojson
 
@@ -389,9 +387,9 @@ class Aligner:
             threshold_overlap_percentage=threshold_overlap_percentage,
         )
         dict_thematic = self.dict_thematic
-        if self.multi_as_single_modus:
-            dict_series = merge_dict_series(dict_series)
-            dict_thematic = merge_dict(self.dict_thematic)
+        # if self.multi_as_single_modus:
+        #     dict_series = merge_dict_series(dict_series)
+        #     dict_thematic = merge_dict(self.dict_thematic)
 
         diffs_dict = diffs_from_dict_series(dict_series, dict_thematic)
 
@@ -557,7 +555,7 @@ class Aligner:
             }
         dict_formula["full"] = full_total
         if last_version_date is not None:
-            dict_formula["versiondate"] = last_version_date.strftime(date_format)
+            dict_formula["last_version_date"] = last_version_date.strftime(date_format)
         geom_od = safe_difference(geometry, make_valid(unary_union(intersected)))
         if geom_od is not None:
             area_od = round(geom_od.area, 2)
@@ -573,8 +571,8 @@ class Aligner:
         """
         get a dict of the results
         """
-        if self.multi_as_single_modus:
-            return merge_process_results(self.dict_result)
+        # if self.multi_as_single_modus:
+        #     return merge_process_results(self.dict_result)
         return self.dict_result
 
     def get_results_as_geojson(self, formula=False):
@@ -586,8 +584,8 @@ class Aligner:
                 in the output. Defaults to False.
         """
         results_dict = self.dict_result
-        if self.multi_as_single_modus:
-            results_dict = merge_process_results(results_dict)
+        # if self.multi_as_single_modus:
+        #     results_dict = merge_process_results(results_dict)
 
         return self.get_predictions_as_geojson(
             formula,

@@ -16,6 +16,7 @@ from brdr.utils import get_series_geojson_dict, get_oe_dict_by_ids
 # dict_theme = get_oe_dict_by_ids([125610,148305,127615,122316,120153,124699,115489,
 # 120288,120387,124762,148143,116141])
 dict_theme = get_oe_dict_by_ids([10047, 10048, 10049, 10050, 10051, 10056])
+dict_theme = get_oe_dict_by_ids([120288])
 print(dict_theme)
 
 base_aligner = Aligner()
@@ -24,7 +25,7 @@ base_year = "2022"
 base_aligner.load_reference_data(
     GRBFiscalParcelLoader(year=base_year, aligner=base_aligner)
 )
-base_process_result = base_aligner.process_dict_thematic(relevant_distance=2)
+base_process_result = base_aligner.process_dict_thematic(relevant_distance=3)
 thematic_dict_formula = {}
 thematic_dict_result = {}
 for key in base_process_result:
@@ -48,10 +49,8 @@ loader = DictLoader(dict_affected)
 actual_aligner.load_thematic_data(loader)
 loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=actual_aligner)
 actual_aligner.load_reference_data(loader)
-series = np.arange(0, 200, 10, dtype=int) / 100
+series = np.arange(0, 300, 10, dtype=int) / 100
 dict_series, dict_predicted, diffs_dict = actual_aligner.predictor(series)
-
-# diffs_dict=merge_diffs_dict(diffs_dict)
 
 dict_evaluated, prop_dictionary = evaluate(
     actual_aligner,

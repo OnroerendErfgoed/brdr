@@ -27,7 +27,6 @@ from brdr.utils import dict_series_by_keys
 from brdr.utils import geojson_to_dicts
 from brdr.utils import get_collection
 from brdr.utils import get_collection_by_partition
-from brdr.utils import merge_dict
 
 log = logging.getLogger(__name__)
 date_format = "%Y-%m-%d"
@@ -98,8 +97,8 @@ def get_geoms_affected_by_grb_change(
 
     """
     dict_thematic = aligner.dict_thematic
-    if aligner.multi_as_single_modus:
-        dict_thematic = merge_dict(dict_thematic)
+    # if aligner.multi_as_single_modus:
+    #     dict_thematic = merge_dict(dict_thematic)
     crs = aligner.CRS
     affected_dict: dict[str, BaseGeometry] = {}
     unchanged_dict: dict[str, BaseGeometry] = {}
@@ -365,6 +364,7 @@ def check_equality(
     # TODO: research naar aanduid_id 116448 (equality na 0.5m), 120194 (1m)
     # TODO: research and implementation of following ideas
     # TODO: refine equality comparison, make it more generic
+    # TODO: Add control of OD to equality-comparison (see case aanduid_id 120288)
     # ideas:
     # * If result_diff smaller than 0.x --> automatic update
     # * big polygons: If 'outer ring' has same formula (do net check inner side) -->
@@ -373,9 +373,27 @@ def check_equality(
 
     if base_formula is None or actual_formula is None:
         return False, Evaluation.NO_PREDICTION_5
+    od_alike = False
+    if base_formula["reference_od"] is None and actual_formula["reference_od"] is None:
+        od_alike = True
+    elif base_formula["reference_od"] is None or actual_formula["reference_od"] is None:
+        od_alike = False
+    elif (
+                    (
+                        abs(
+                            base_formula["reference_od"]["area"]
+                            - actual_formula["reference_od"]["area"]
+                        )
+                        * 100
+                        / base_formula["reference_od"]["area"]
+                    )
+                    < threshold_percentage
+                ):
+        od_alike = True
+
     if (
         base_formula["reference_features"].keys()
-        == actual_formula["reference_features"].keys()
+        == actual_formula["reference_features"].keys() and od_alike
     ):
         if base_formula["full"] and base_formula["full"]:
             return True, Evaluation.EQUALITY_FORMULA_GEOM_1
@@ -409,7 +427,7 @@ def check_equality(
                 equal_reference_features = False
         if equal_reference_features:
             return True, Evaluation.EQUALITY_FORMULA_2
-    if base_formula["full"] and base_formula["full"]:
+    if base_formula["full"] and base_formula["full"] and od_alike:
         return True, Evaluation.EQUALITY_GEOM_3
     return False, Evaluation.NO_PREDICTION_5
 
