@@ -294,9 +294,9 @@ class Aligner:
 
         """
         dict_result = {}
-        dict_thematic=self.dict_thematic
+        dict_thematic = self.dict_thematic
         if self.multi_as_single_modus:
-            dict_thematic=multipolygons_to_singles(dict_thematic)
+            dict_thematic = multipolygons_to_singles(dict_thematic)
         for key in dict_thematic:
             self.logger.feedback_info("thematic id to process: " + str(key))
             try:
@@ -309,7 +309,7 @@ class Aligner:
             except ValueError as e:
                 self.logger.feedback_warning(str(e))
         if self.multi_as_single_modus:
-            dict_result=merge_process_results(dict_result)
+            dict_result = merge_process_results(dict_result)
         self.dict_result = dict_result
         return self.dict_result
 
