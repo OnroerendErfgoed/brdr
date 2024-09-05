@@ -296,7 +296,7 @@ class Aligner:
         if self.multi_as_single_modus:
             dict_thematic = multipolygons_to_singles(dict_thematic)
         for key in dict_thematic:
-            self.logger.feedback_info("thematic id to process: " + str(key))
+            self.logger.feedback_debug("thematic id to process: " + str(key))
             try:
                 dict_result[key] = self.process_geometry(
                     dict_thematic[key],
@@ -556,7 +556,13 @@ class Aligner:
         dict_formula["full"] = full_total
         if last_version_date is not None:
             dict_formula["last_version_date"] = last_version_date.strftime(date_format)
-        geom_od = safe_difference(geometry, make_valid(unary_union(intersected)))
+        geom_od = buffer_pos(
+            buffer_neg(
+                safe_difference(geometry, make_valid(unary_union(intersected))),
+                CORR_DISTANCE,
+            ),
+            CORR_DISTANCE,
+        )
         if geom_od is not None:
             area_od = round(geom_od.area, 2)
             if area_od > 0:

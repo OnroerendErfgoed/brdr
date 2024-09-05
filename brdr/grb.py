@@ -265,7 +265,6 @@ def get_collection_grb_fiscal_parcels(
         url, geometry=geometry, partition=partition, limit=limit, crs=crs
     )
 
-
 def evaluate(
     actual_aligner,
     dict_series,
@@ -293,18 +292,20 @@ def evaluate(
         for theme_id in dict_unchanged.keys():
             prop_dictionary[dist][theme_id] = {}
 
-    equality = False
-    for dist, dict_predicted_for_dist in dict_predicted.items():
-        if equality:
-            break
-        for theme_id in dict_predicted_for_dist.keys():
-            results = dict_series[dist][theme_id]
-            actual_formula = actual_aligner.get_formula(results["result"])
+    dict_predicted_keys = dict_series_by_keys(dict_predicted)
+
+    for theme_id, dist_dict in dict_predicted_keys.items():
+        equality = False
+        for dist in sorted(dist_dict.keys()):
+            if equality:
+                break
+            geomresult = dist_dict[dist][theme_id]["result"]
+            actual_formula = actual_aligner.get_formula(geomresult)
             prop_dictionary[dist][theme_id]["formula"] = json.dumps(actual_formula)
             base_formula = None
             if theme_id in thematic_dict_formula:
                 base_formula = thematic_dict_formula[theme_id]
-            equality, _property = check_equality(
+            equality, prop = check_equality(
                 base_formula,
                 actual_formula,
                 threshold_area,
@@ -312,10 +313,9 @@ def evaluate(
             )
             if equality:
                 dict_evaluated_result[dist][theme_id] = dict_predicted[dist][theme_id]
-                prop_dictionary[dist][theme_id]["evaluation"] = _property
+                prop_dictionary[dist][theme_id]["evaluation"] = prop
                 break
 
-    dict_predicted_keys = dict_series_by_keys(dict_predicted)
     evaluated_theme_ids = list(dict_series_by_keys(dict_evaluated_result).keys())
     # fill where no equality is found/ The biggest predicted distance is returned as
     # proposal
@@ -329,21 +329,16 @@ def evaluate(
                 )
                 prop_dictionary[0][theme_id]["evaluation"] = Evaluation.NO_PREDICTION_5
                 continue
-            dist_predicted_max = max(list(dict_predicted_keys[theme_id].keys()))
-            logging.debug(
-                "max predicted dist proposed for theme_id "
-                + str(theme_id)
-                + " : "
-                + str(dist_predicted_max)
-            )
-            predicted_result = dict_predicted[dist_predicted_max][theme_id]
-            dict_evaluated_result[dist_predicted_max][theme_id] = predicted_result
-            prop_dictionary[dist_predicted_max][theme_id]["formula"] = json.dumps(
-                actual_aligner.get_formula(predicted_result["result"])
-            )
-            prop_dictionary[dist_predicted_max][theme_id][
-                "evaluation"
-            ] = Evaluation.TO_CHECK_4
+            #Add all predicted features so they can be manually checked
+            for  dist in dict_predicted_keys[theme_id].keys():
+                predicted_resultset = dict_predicted[dist][theme_id]
+                dict_evaluated_result[dist][theme_id] = predicted_resultset
+                prop_dictionary[dist][theme_id]["formula"] = json.dumps(
+                    actual_aligner.get_formula(predicted_resultset["result"])
+                )
+                prop_dictionary[dist][theme_id][
+                    "evaluation"
+                ] = Evaluation.TO_CHECK_4
 
     for theme_id, geom in dict_unchanged.items():
         result = {"result": geom}
@@ -353,7 +348,6 @@ def evaluate(
             actual_aligner.get_formula(result["result"])
         )
     return dict_evaluated_result, prop_dictionary
-
 
 def check_equality(
     base_formula, actual_formula, threshold_area=5, threshold_percentage=1
