@@ -22,7 +22,7 @@ class Loader(ABC):
 
 class DictLoader(Loader):
     def __init__(self, data_dict: dict[str:BaseGeometry]):
-        #TODO: add dict_properties & dict_source?
+        # TODO: add dict_properties & dict_source?
         super().__init__()
         self.data_dict = data_dict
 
