@@ -610,6 +610,7 @@ def get_bbox(geometry):
     """
     return str(geometry.bounds).strip("()")
 
+
 def geojson_polygon_to_multipolygon(geojson):
     """
     Transforms a geojson: Checks if there are Polygon-features and transforms them into MultiPolygons, so all objects are of type 'MultiPolygon' (or null-geometry).
@@ -621,6 +622,8 @@ def geojson_polygon_to_multipolygon(geojson):
         if f["geometry"] is None:
             continue
         if f["geometry"]["type"] == "Polygon":
-            f["geometry"] = {"type": "MultiPolygon",
-                             "coordinates": [f["geometry"]["coordinates"]]}
+            f["geometry"] = {
+                "type": "MultiPolygon",
+                "coordinates": [f["geometry"]["coordinates"]],
+            }
     return geojson
