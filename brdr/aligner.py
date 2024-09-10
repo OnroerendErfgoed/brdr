@@ -51,10 +51,6 @@ from brdr.utils import write_geojson
 
 date_format = "%Y-%m-%d"
 
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(message)s", datefmt="%d-%b-%y %H:%M:%S"
-)
-
 
 ###################
 
