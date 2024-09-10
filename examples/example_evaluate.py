@@ -13,7 +13,6 @@ from brdr.loader import DictLoader, GeoJsonFileLoader
 from brdr.utils import get_series_geojson_dict
 
 
-
 def fid_to_geojson(geojson):
     fid = 1
     for f in geojson["features"]:

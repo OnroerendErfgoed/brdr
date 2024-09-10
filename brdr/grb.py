@@ -265,6 +265,7 @@ def get_collection_grb_fiscal_parcels(
         url, geometry=geometry, partition=partition, limit=limit, crs=crs
     )
 
+
 def evaluate(
     actual_aligner,
     dict_series,
@@ -329,16 +330,14 @@ def evaluate(
                 )
                 prop_dictionary[0][theme_id]["evaluation"] = Evaluation.NO_PREDICTION_5
                 continue
-            #Add all predicted features so they can be manually checked
-            for  dist in dict_predicted_keys[theme_id].keys():
+            # Add all predicted features so they can be manually checked
+            for dist in dict_predicted_keys[theme_id].keys():
                 predicted_resultset = dict_predicted[dist][theme_id]
                 dict_evaluated_result[dist][theme_id] = predicted_resultset
                 prop_dictionary[dist][theme_id]["formula"] = json.dumps(
                     actual_aligner.get_formula(predicted_resultset["result"])
                 )
-                prop_dictionary[dist][theme_id][
-                    "evaluation"
-                ] = Evaluation.TO_CHECK_4
+                prop_dictionary[dist][theme_id]["evaluation"] = Evaluation.TO_CHECK_4
 
     for theme_id, geom in dict_unchanged.items():
         result = {"result": geom}
@@ -348,6 +347,7 @@ def evaluate(
             actual_aligner.get_formula(result["result"])
         )
     return dict_evaluated_result, prop_dictionary
+
 
 def check_equality(
     base_formula, actual_formula, threshold_area=5, threshold_percentage=1
@@ -373,21 +373,19 @@ def check_equality(
     elif base_formula["reference_od"] is None or actual_formula["reference_od"] is None:
         od_alike = False
     elif (
-                    (
-                        abs(
-                            base_formula["reference_od"]["area"]
-                            - actual_formula["reference_od"]["area"]
-                        )
-                        * 100
-                        / base_formula["reference_od"]["area"]
-                    )
-                    < threshold_percentage
-                ):
+        abs(
+            base_formula["reference_od"]["area"]
+            - actual_formula["reference_od"]["area"]
+        )
+        * 100
+        / base_formula["reference_od"]["area"]
+    ) < threshold_percentage:
         od_alike = True
 
     if (
         base_formula["reference_features"].keys()
-        == actual_formula["reference_features"].keys() and od_alike
+        == actual_formula["reference_features"].keys()
+        and od_alike
     ):
         if base_formula["full"] and base_formula["full"]:
             return True, Evaluation.EQUALITY_FORMULA_GEOM_1
