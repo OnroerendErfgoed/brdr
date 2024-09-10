@@ -174,7 +174,8 @@ class TestExamples(unittest.TestCase):
         aligner0.load_thematic_data(
             GeoJsonLoader(_input=testdata, id_property="theme_identifier")
         )
-        dict_thematic = multipolygons_to_singles(aligner0.dict_thematic)
+        aligner0.multi_as_single_modus = True
+        dict_thematic = aligner0.dict_thematic
         aligner0.load_thematic_data(DictLoader(dict_thematic))
 
         # gebruik de actuele adp-percelen adp= administratieve percelen

@@ -609,3 +609,21 @@ def get_bbox(geometry):
     Get the BBOX (string) of a shapely geometry
     """
     return str(geometry.bounds).strip("()")
+
+
+def geojson_polygon_to_multipolygon(geojson):
+    """
+    Transforms a geojson: Checks if there are Polygon-features and transforms them into MultiPolygons, so all objects are of type 'MultiPolygon' (or null-geometry).
+    It is important that geometry-type is consitent (f.e. in QGIS) to show and style the geojson-layer
+    """
+    if geojson is None or "features" not in geojson or geojson["features"] is None:
+        return geojson
+    for f in geojson["features"]:
+        if f["geometry"] is None:
+            continue
+        if f["geometry"]["type"] == "Polygon":
+            f["geometry"] = {
+                "type": "MultiPolygon",
+                "coordinates": [f["geometry"]["coordinates"]],
+            }
+    return geojson

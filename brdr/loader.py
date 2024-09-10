@@ -2,6 +2,7 @@ import json
 from abc import ABC
 
 import requests as requests
+from shapely import make_valid
 from shapely.geometry.base import BaseGeometry
 
 from brdr.typings import FeatureCollection
@@ -15,11 +16,13 @@ class Loader(ABC):
         self.data_dict_source: dict[str, str] = {}
 
     def load_data(self):
+        self.data_dict = {x: make_valid(self.data_dict[x]) for x in self.data_dict}
         return self.data_dict, self.data_dict_properties, self.data_dict_source
 
 
 class DictLoader(Loader):
     def __init__(self, data_dict: dict[str:BaseGeometry]):
+        # TODO: add dict_properties & dict_source?
         super().__init__()
         self.data_dict = data_dict
 

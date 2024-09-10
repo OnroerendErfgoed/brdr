@@ -73,8 +73,9 @@ from brdr.utils import multipolygons_to_singles
 # }
 thematic_dict = get_oe_dict_by_ids([9946])
 # Align the multipolygon to the fiscal parcels 2022
-thematic_dict = multipolygons_to_singles(thematic_dict)
+# thematic_dict = multipolygons_to_singles(thematic_dict)
 base_aligner = Aligner()
+base_aligner.multi_as_single_modus = False
 base_aligner.load_thematic_data(DictLoader(thematic_dict))
 base_year = "2022"
 base_aligner.load_reference_data(
@@ -85,7 +86,7 @@ base_process_result = merge_process_results(base_process_result)
 thematic_dict_formula = {}
 thematic_dict_result = {}
 
-# Create a dictionary with resulting geometries (aligne Adpf2022) and a dictionary
+# Create a dictionary with resulting geometries (aligned on Adpf2022) and a dictionary
 # with the corresponding formula
 for key in base_process_result:
     thematic_dict_result[key] = base_process_result[key]["result"]
@@ -94,6 +95,7 @@ for key in base_process_result:
 thematic_dict_result = multipolygons_to_singles(thematic_dict_result)
 # Determine all features that are possibly changed during timespan
 base_aligner_result = Aligner()
+# base_aligner.multi_as_single_modus=False
 base_aligner_result.load_thematic_data(DictLoader(thematic_dict_result))
 dict_affected, dict_unchanged = get_geoms_affected_by_grb_change(
     base_aligner_result,
@@ -104,7 +106,7 @@ dict_affected, dict_unchanged = get_geoms_affected_by_grb_change(
 )
 # Align the possibly affected geometry on the actual GRB parcels (evaluation)
 
-dict_affected = multipolygons_to_singles(dict_affected)
+# dict_affected = multipolygons_to_singles(dict_affected)
 actual_aligner = Aligner()
 loader = DictLoader(dict_affected)
 actual_aligner.load_thematic_data(loader)
