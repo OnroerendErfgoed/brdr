@@ -920,7 +920,7 @@ class Aligner:
                 4 * pi * (geom_thematic.area / (geom_thematic.length**2))
                 > THRESHOLD_CIRCLE_RATIO
             ):
-                self.logger.feedback_warning(
+                self.logger.feedback_debug(
                     "Circle: -->resulting geometry = original geometry"
                 )
                 return {"result": geom_thematic}
