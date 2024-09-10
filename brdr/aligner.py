@@ -524,7 +524,12 @@ class Aligner:
                     last_version_date = version_date
                 if version_date is not None and version_date > last_version_date:
                     last_version_date = version_date
-            if equals(geom_intersection, geom_reference):
+
+            try:
+                equal = equals(geom_intersection, geom_reference)
+            except:
+                equal = False
+            if equal:
                 full = True
                 area = round(geom_reference.area, 2)
                 perc = 100

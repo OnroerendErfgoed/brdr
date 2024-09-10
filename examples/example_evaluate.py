@@ -12,6 +12,19 @@ from brdr.grb import get_geoms_affected_by_grb_change
 from brdr.loader import DictLoader, GeoJsonFileLoader
 from brdr.utils import get_series_geojson_dict
 
+
+
+def fid_to_geojson(geojson):
+    fid = 1
+    for f in geojson["features"]:
+        f["properties"]["fid"]=  str(fid)
+        fid = fid + 1
+        if f["geometry"]["type"] == "Polygon":
+            f["geometry"]={"type":"MultiPolygon",
+                           "coordinates": [f["geometry"]["coordinates"]]}
+
+
+    return geojson
 #
 # thematic_dict = {
 #     "theme_id_1": from_wkt(
@@ -137,5 +150,10 @@ print(fcs["result"])
 
 for feature in fc["result"]["features"]:
     print(feature["properties"][actual_aligner.name_thematic_id] + ": "+feature["properties"]["evaluation"])
+
+geojson = fid_to_geojson(fc["result"])
+
+
+print (geojson)
 
 
