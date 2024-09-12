@@ -17,6 +17,7 @@ from shapely import to_geojson
 from shapely import unary_union
 from shapely.geometry.base import BaseGeometry
 
+from brdr import __version__
 from brdr.constants import BUFFER_MULTIPLICATION_FACTOR
 from brdr.constants import CORR_DISTANCE
 from brdr.constants import DEFAULT_CRS
@@ -485,6 +486,7 @@ class Aligner:
         """
         dict_formula = {
             "alignment_date": datetime.now().strftime(date_format),
+            "brdr_version": str(__version__),
             "reference_source": self.dict_reference_source,
             "full": True,
             "reference_features": {},
