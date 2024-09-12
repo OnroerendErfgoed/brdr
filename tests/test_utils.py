@@ -5,13 +5,12 @@ from shapely import is_empty
 from shapely.geometry import Polygon
 
 from brdr.constants import MULTI_SINGLE_ID_SEPARATOR
+from brdr.oe import get_oe_dict_by_ids, OEType
 from brdr.typings import ProcessResult
 from brdr.utils import diffs_from_dict_series
 from brdr.utils import filter_dict_by_key
 from brdr.utils import get_breakpoints_zerostreak
 from brdr.utils import get_collection
-from brdr.utils import get_oe_dict_by_ids
-from brdr.utils import get_oe_geojson_by_bbox
 from brdr.utils import merge_process_results
 from brdr.utils import multipolygons_to_singles
 from brdr.utils import polygonize_reference_data
@@ -97,7 +96,7 @@ class TestUtils(unittest.TestCase):
 
     def test_get_oe_dict_by_ids_erfgoedobject(self):
         eo_id = 206363
-        dict_thematic = get_oe_dict_by_ids([eo_id], oetype="erfgoedobjecten")
+        dict_thematic = get_oe_dict_by_ids([eo_id], oetype=OEType.EO)
         self.assertFalse(is_empty(dict_thematic[str(eo_id)]))
 
     def test_get_oe_dict_by_ids_empty(self):
@@ -109,10 +108,10 @@ class TestUtils(unittest.TestCase):
         dict_thematic = get_oe_dict_by_ids([aanduid_id])
         self.assertEqual(dict_thematic, {})
 
-    def test_get_oe_geojson_by_bbox(self):
-        bbox = "172000,172000,174000,174000"
-        collection = get_oe_geojson_by_bbox(bbox)
-        self.assertEqual(collection["type"], "FeatureCollection")
+    # def test_get_oe_geojson_by_bbox(self):
+    #     bbox = "172000,172000,174000,174000"
+    #     collection = get_oe_geojson_by_bbox(bbox)
+    #     self.assertEqual(collection["type"], "FeatureCollection")
 
     def test_filter_dict_by_key_empty_dict(self):
         data = {}

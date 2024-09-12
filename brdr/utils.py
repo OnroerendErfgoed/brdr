@@ -197,87 +197,6 @@ def polygonize_reference_data(dict_ref):
     return dict_ref
 
 
-def get_oe_dict_by_ids(objectids, oetype="aanduidingsobjecten"):
-    """
-    Fetches thematic data for a list of objectIDs from the Inventaris Onroerend Erfgoed
-    API.
-
-    This function retrieves information about designated heritage objects
-    (erfgoedobjecten or aanduidingsobjecten) from the Flemish Agency for Heritage (
-    Inventaris Onroerend Erfgoed) based on a list of their IDs.
-
-    Args:
-        objectids (list): A list of objectIDs of 'erfgoedobjecten' or
-            'aanduidingsobjecten'.
-        oetype (string): A string: 'aanduidingsobjecten' (default) or 'erfgoedobjecten'
-
-    Returns:
-        dict: A dictionary where keys are objectIDs (as strings) and values are
-              GeoJSON geometry objects. If an erfgoedobject/aanduidingsobject is not
-              found, a corresponding warning message will be logged, but it won't be\
-              included in the returned dictionary.
-
-    Raises:
-        requests.exceptions.RequestException: If there is an error fetching data from
-            the API.
-    """
-    dict_thematic = {}
-    base_url = "https://inventaris.onroerenderfgoed.be/" + oetype + "/"
-    headers = {"Accept": "application/json"}
-    for a in objectids:
-        url = base_url + str(a)
-        response = requests.get(url, headers=headers).json()
-        if "id" in response.keys():
-            key = str(response["id"])
-            geom = shape(response["locatie"]["contour"])
-            dict_thematic[key] = geom
-        else:
-            logging.warning("object id " + str(a) + " not available in " + oetype)
-    return dict_thematic
-
-
-def get_oe_geojson_by_bbox(bbox, limit=1000):
-    """
-    Fetches GeoJSON data for designated heritage objects (aanduidingsobjecten) within
-    a bounding box.
-
-    This function retrieves information about aanduidingsobjecten from the Flemish
-    Mercator public WFS service using a bounding box (bbox) as a filter. The bbox should
-    be provided in the format "xmin,ymin,xmax,ymax" (EPSG:31370 projection).
-
-    Args:
-        bbox (str): A comma-separated string representing the bounding box in EPSG:31370
-                   projection (e.g., "100000,500000,200000,600000").
-        limit (int, optional): The maximum number of features to retrieve per request.
-                              Defaults to 1000.
-
-    Returns:
-        dict: A dictionary containing the retrieved GeoJSON feature collection. This
-              collection might be truncated if the total number of features exceeds
-              the specified limit.
-    """
-    theme_url = (
-        "https://www.mercator.vlaanderen.be/raadpleegdienstenmercatorpubliek/wfs?"
-        "SERVICE=WFS&REQUEST=GetFeature&VERSION=2.0.0&"
-        "TYPENAMES=ps:ps_aandobj&"
-        f"COUNT={str(limit)}&"
-        "SRSNAME=urn:ogc:def:crs:EPSG::31370&"
-        f"BBOX={bbox}&outputFormat=application/json"
-    )
-    start_index = 0
-    collection = {}
-    while True:
-        url = theme_url + "&startIndex=" + str(start_index)
-        feature_collection = requests.get(url).json()
-        if (
-            "features" not in feature_collection
-            or len(feature_collection["features"]) == 0
-        ):
-            break
-        start_index = start_index + limit
-        collection = collection | feature_collection
-    return collection
-
 
 def get_breakpoints_zerostreak(x, y):
     """
@@ -561,18 +480,16 @@ def get_collection_by_partition(
     collection = {}
     if geometry is None:
         collection = get_collection(
-            _add_bbox_to_url(url=url, crs=crs, bbox=None), limit
+            add_bbox_to_url(url=url, crs=crs, bbox=None), limit
         )
     elif partition < 1:
         collection = get_collection(
-            _add_bbox_to_url(url=url, crs=crs, bbox=get_bbox(geometry)), limit
+            add_bbox_to_url(url=url, crs=crs, bbox=get_bbox(geometry)), limit
         )
     else:
         geoms = get_partitions(geometry, partition)
         for g in geoms:
-            coll = get_collection(
-                _add_bbox_to_url(url=url, crs=crs, bbox=get_bbox(g)), limit
-            )
+            coll = get_collection(add_bbox_to_url(url=url, crs=crs, bbox=get_bbox(g)), limit)
             if collection == {}:
                 collection = dict(coll)
             elif "features" in collection and "features" in coll:
@@ -580,7 +497,7 @@ def get_collection_by_partition(
     return collection
 
 
-def _add_bbox_to_url(url, crs=DEFAULT_CRS, bbox=None):
+def add_bbox_to_url(url, crs=DEFAULT_CRS, bbox=None):
     # Load the Base reference data
     if bbox is not None:
         url = url + "&bbox-crs=" + crs + "&bbox=" + bbox

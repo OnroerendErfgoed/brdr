@@ -7,9 +7,9 @@ from brdr.enums import GRBType
 from brdr.grb import GRBActualLoader
 from brdr.loader import DictLoader
 from brdr.loader import GeoJsonLoader
+from brdr.oe import get_oe_dict_by_ids
 from brdr.utils import diffs_from_dict_series
 from brdr.utils import get_breakpoints_zerostreak
-from brdr.utils import get_oe_dict_by_ids
 from brdr.utils import multipolygons_to_singles
 
 
