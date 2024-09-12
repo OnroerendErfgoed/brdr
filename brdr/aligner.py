@@ -10,7 +10,6 @@ import numpy as np
 from shapely import GeometryCollection
 from shapely import Polygon
 from shapely import STRtree
-from shapely import equals
 from shapely import get_parts
 from shapely import make_valid
 from shapely import remove_repeated_points
@@ -25,7 +24,7 @@ from brdr.constants import GRB_VERSION_DATE
 from brdr.constants import THRESHOLD_CIRCLE_RATIO
 from brdr.enums import GRBType
 from brdr.enums import OpenbaarDomeinStrategy
-from brdr.geometry_utils import buffer_neg
+from brdr.geometry_utils import buffer_neg, safe_equals
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import buffer_pos
 from brdr.geometry_utils import calculate_geom_by_intersection_and_reference
@@ -521,11 +520,7 @@ class Aligner:
                 if version_date is not None and version_date > last_version_date:
                     last_version_date = version_date
 
-            try:
-                equal = equals(geom_intersection, geom_reference)
-            except:
-                equal = False
-            if equal:
+            if safe_equals(geom_intersection, geom_reference):
                 full = True
                 area = round(geom_reference.area, 2)
                 perc = 100

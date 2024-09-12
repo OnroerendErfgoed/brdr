@@ -1,7 +1,7 @@
 import logging
 
 import numpy as np
-from shapely import GEOSException
+from shapely import GEOSException, equals
 from shapely import GeometryCollection
 from shapely import Polygon
 from shapely import STRtree
@@ -189,6 +189,50 @@ def safe_union(geom_a: BaseGeometry, geom_b: BaseGeometry) -> BaseGeometry:
             geom = Polygon()
 
     return geom
+
+
+def safe_equals(geom_a, geom_b):
+    """
+    Checks equality between two geometries with error handling.
+
+    This function computes the equality between two Shapely geometry objects
+    (`geom_a` and `geom_b`). It incorporates error handling to address potential
+    exceptions that might arise due to topological inconsistencies in the
+    geometries, similar to non-noded intersections between linestrings.
+
+    Args:
+        geom_a (BaseGeometry): The first Shapely geometry object.
+        geom_b (BaseGeometry): The second Shapely geometry object
+
+    Returns:
+        Boolean: The equality between 2 Shapely-geometries
+
+    Logs:
+        - If a `GEOSException` occurs:
+            - A warning message is logged with the WKT representations of both
+                geometries.
+            - The function attempts to buffer both geometries by a small value
+                (0.0000001) and then perform the equality-operation.
+        - If any other exception occurs:
+            - An error message is logged indicating that False is returned.
+    """
+    # function to solve exceptional error: shapely.errors.GEOSException:
+    # TopologyException: found non-noded intersection between LINESTRING
+    # see: https://gis.stackexchange.com/questions/50399
+    try:
+        equal = equals(geom_a, geom_b)
+    except GEOSException:
+        logging.debug("equals_error")
+        try:
+            logging.warning(
+                "equals_error for geoms:" + geom_a.wkt + " and " + geom_b.wkt
+            )
+            equal = equals(buffer(geom_a, 0.0000001), buffer(geom_b, 0.0000001))
+        except Exception:  # noqa
+            logging.error("equals_error: False returned")
+            equal = False
+
+    return equal
 
 
 def safe_intersection(geom_a: BaseGeometry, geom_b: BaseGeometry) -> BaseGeometry:

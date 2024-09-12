@@ -16,6 +16,7 @@ if __name__ == "__main__":
     # Load thematic data & reference data
     # dict_theme = get_oe_dict_by_ids([206363], oetype='erfgoedobjecten')
     aanduidingsobjecten = range(1, 10)
+    aanduidingsobjecten =[117798,116800,117881]
     dict_theme = get_oe_dict_by_ids(
         aanduidingsobjecten, oetype="aanduidingsobjecten"
     )  # noqa
