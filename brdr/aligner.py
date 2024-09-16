@@ -18,12 +18,11 @@ from shapely import unary_union
 from shapely.geometry.base import BaseGeometry
 
 from brdr import __version__
-from brdr.constants import BUFFER_MULTIPLICATION_FACTOR
+from brdr.constants import BUFFER_MULTIPLICATION_FACTOR, LAST_VERSION_DATE
 from brdr.constants import CORR_DISTANCE
 from brdr.constants import DEFAULT_CRS
 from brdr.constants import GRB_VERSION_DATE
 from brdr.constants import THRESHOLD_CIRCLE_RATIO
-from brdr.enums import GRBType
 from brdr.enums import OpenbaarDomeinStrategy
 from brdr.geometry_utils import buffer_neg, safe_equals
 from brdr.geometry_utils import buffer_neg_pos
@@ -34,7 +33,6 @@ from brdr.geometry_utils import safe_difference
 from brdr.geometry_utils import safe_intersection
 from brdr.geometry_utils import safe_symmetric_difference
 from brdr.geometry_utils import safe_union
-from brdr.grb import GRBActualLoader
 from brdr.loader import DictLoader
 from brdr.loader import GeoJsonFileLoader
 from brdr.loader import GeoJsonLoader
@@ -491,7 +489,7 @@ class Aligner:
             "full": True,
             "reference_features": {},
             "reference_od": None,
-            "last_version_date": None,
+            LAST_VERSION_DATE: None,
         }
 
         full_total = True
@@ -553,7 +551,7 @@ class Aligner:
             }
         dict_formula["full"] = full_total
         if last_version_date is not None:
-            dict_formula["last_version_date"] = last_version_date.strftime(date_format)
+            dict_formula[LAST_VERSION_DATE] = last_version_date.strftime(date_format)
         geom_od = buffer_pos(
             buffer_neg(
                 safe_difference(geometry, make_valid(unary_union(intersected))),
@@ -1101,9 +1099,4 @@ class Aligner:
     def load_reference_data_url(self, url, name_reference_id):
         logging.warning("deprecated method, use load_reference_data instead")
         loader = GeoJsonUrlLoader(url, name_reference_id)
-        self.load_reference_data(loader)
-
-    def load_reference_data_grb_actual(self, *, grb_type=GRBType.ADP, partition=1000):
-        logging.warning("deprecated method, use load_reference_data instead")
-        loader = GRBActualLoader(grb_type=grb_type, partition=partition, aligner=self)
         self.load_reference_data(loader)

@@ -54,8 +54,9 @@ class TestExamples(unittest.TestCase):
         dict_theme = get_oe_dict_by_ids([110082])
         dict_theme = multipolygons_to_singles(dict_theme)
         aligner.load_thematic_data_dict(dict_theme)
-        aligner.load_reference_data_grb_actual(grb_type=GRBType.GBG, partition=1000)
-
+        aligner.load_reference_data(GRBActualLoader(aligner=aligner,
+            grb_type=GRBType.GBG, partition=1000)
+        )
         rel_dist = 5
         result_dict = aligner.process_dict_thematic(rel_dist, 4)
         for process_results in result_dict.values():
@@ -227,10 +228,9 @@ class TestExamples(unittest.TestCase):
         # Load thematic data & reference data
         dict_theme = get_oe_dict_by_ids([131635])
         aligner.load_thematic_data_dict(dict_theme)
-        aligner.load_reference_data_grb_actual(
-            grb_type=GRBType.ADP, partition=1000
-        )  # gebruik de actuele adp-percelen adp= administratieve percelen
-
+        aligner.load_reference_data(GRBActualLoader(aligner=aligner,
+            grb_type=GRBType.GBG, partition=1000)
+        )
         series = np.arange(0, 300, 10, dtype=int) / 100
         # predict which relevant distances are interesting to propose as resulting
         # geometry
