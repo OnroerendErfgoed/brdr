@@ -2,6 +2,7 @@ import json
 import logging
 from datetime import date
 from datetime import datetime
+from copy import deepcopy
 
 from shapely import intersects
 from shapely.geometry import shape
@@ -18,7 +19,7 @@ from brdr.constants import GRB_VERSION_DATE
 from brdr.constants import MAX_REFERENCE_BUFFER
 from brdr.enums import Evaluation
 from brdr.enums import GRBType
-from brdr.geometry_utils import buffer_pos
+from brdr.geometry_utils import buffer_pos, safe_intersection
 from brdr.geometry_utils import create_donut
 from brdr.geometry_utils import features_by_geometric_operation
 from brdr.geometry_utils import get_bbox
@@ -264,6 +265,70 @@ def get_collection_grb_fiscal_parcels(
     return get_collection_by_partition(
         url, geometry=geometry, partition=partition, limit=limit, crs=crs
     )
+def get_collection_grb_parcels_by_date(
+    geometry,
+    date,
+    partition=1000,
+    limit=DOWNLOAD_LIMIT,
+    crs=DEFAULT_CRS,
+):
+    collection_year_after = get_collection_grb_fiscal_parcels(
+        year=str(date.year),
+        geometry=geometry,
+        partition=partition,
+        crs=crs,
+    )
+    #Filter on specific date: delete all features > specific_date
+    #TODO: experimental loader; unclear if we have to use "year-1 & year" OR if we have to use "year & year + 1"
+    collection_year_after_filtered = deepcopy(collection_year_after)
+    logging.debug(len (collection_year_after_filtered["features"]))
+    if "features" in collection_year_after_filtered and len (collection_year_after_filtered["features"])>0:
+        removed_features =[]
+        for feature in collection_year_after_filtered["features"]:
+            versiondate = datetime.strptime(
+                feature["properties"][GRB_VERSION_DATE][:10], date_format
+            ).date()
+            if versiondate > date:
+                removed_features.append(feature)
+                collection_year_after_filtered["features"].remove(feature)
+    logging.debug(len(collection_year_after_filtered["features"]))
+    #if no features are removed, return the full collection of year_after
+    if len(removed_features)==0:
+        return collection_year_after
+    # if  features are removed, search for the features in year before
+    collection_year_before = get_collection_grb_fiscal_parcels(
+        year=str(date.year-1),
+        geometry=geometry,
+        partition=partition,
+        crs=crs,
+    )
+    kept_features = []
+    if "features" in collection_year_before and len(collection_year_before)>0:
+        for feature in collection_year_before["features"]:
+            for rf in removed_features:
+                geom_feature = shape(feature["geometry"])
+                geom_removed_feature= shape(rf["geometry"])
+                if intersects(geom_feature, geom_removed_feature):
+                    intersection =safe_intersection(geom_feature, geom_removed_feature)
+                    if intersection.area>1:
+                        if feature not in kept_features:
+                            kept_features.append(feature)
+
+
+        #search for intersection and check if it more than x%
+        #keep these features
+
+        #add them to
+
+    collection_specific_date = deepcopy(collection_year_after_filtered)
+    filtered_features = collection_year_after_filtered["features"]
+    specific_date_features = filtered_features + kept_features
+    logging.debug(len(specific_date_features))
+    collection_specific_date["features"]=specific_date_features
+
+
+
+    return collection_specific_date
 
 
 def evaluate(
@@ -473,3 +538,35 @@ class GRBFiscalParcelLoader(GeoJsonLoader):
         self.input = dict(collection)
         self.aligner.logger.feedback_info(f"Adpf downloaded for year: {self.year}")
         return super().load_data()
+
+class GRBSpecificDateParcelLoader(GeoJsonLoader):
+    def __init__(self, date, aligner, partition=1000):
+        logging.warning("experimental loader; use with care!!!")
+        try:
+            date = datetime.strptime(date, date_format
+            ).date()
+            if date.year>=datetime.now().year:
+                raise ValueError("The GRBSpecificDateParcelLoader can only be used for dates prior to the current year.")
+        except Exception:
+            raise ValueError("No valid date, please provide a date in the format: " + date_format)
+        super().__init__(_input=None, id_property=GRB_PARCEL_ID)
+        self.aligner = aligner
+        self.date = date
+        self.part = partition
+        self.data_dict_source["source"] = "Adp"
+        self.data_dict_source["version_date"] = date.strftime(date_format)
+
+    def load_data(self):
+        if not self.aligner.dict_thematic:
+            raise ValueError("Thematic data not loaded")
+        geom_union = buffer_pos(self.aligner.get_thematic_union(), MAX_REFERENCE_BUFFER)
+        collection= get_collection_grb_parcels_by_date(
+            date=self.date,
+            geometry=geom_union,
+            partition=self.part,
+            crs=self.aligner.CRS,
+        )
+        self.input = dict(collection)
+        self.aligner.logger.feedback_info(f"Parcels downloaded for specific date: {self.date.strftime(date_format)}")
+        return super().load_data()
+
