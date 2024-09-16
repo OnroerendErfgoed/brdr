@@ -1,14 +1,16 @@
 import json
 import logging
+from copy import deepcopy
 from datetime import date
 from datetime import datetime
-from copy import deepcopy
 
-from shapely import intersects
+import numpy as np
+from shapely import intersects, Polygon
 from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
 
-from brdr.constants import DEFAULT_CRS
+from brdr.aligner import Aligner
+from brdr.constants import DEFAULT_CRS, LAST_VERSION_DATE
 from brdr.constants import DOWNLOAD_LIMIT
 from brdr.constants import GRB_BUILDING_ID
 from brdr.constants import GRB_FEATURE_URL
@@ -23,8 +25,9 @@ from brdr.geometry_utils import buffer_pos, safe_intersection
 from brdr.geometry_utils import create_donut
 from brdr.geometry_utils import features_by_geometric_operation
 from brdr.geometry_utils import get_bbox
-from brdr.loader import GeoJsonLoader
-from brdr.utils import dict_series_by_keys
+from brdr.loader import GeoJsonLoader, DictLoader
+from brdr.logger import Logger
+from brdr.utils import dict_series_by_keys, get_series_geojson_dict
 from brdr.utils import geojson_to_dicts
 from brdr.utils import get_collection
 from brdr.utils import get_collection_by_partition
@@ -487,6 +490,84 @@ def check_equality(
     if base_formula["full"] and base_formula["full"] and od_alike:
         return True, Evaluation.EQUALITY_GEOM_3
     return False, Evaluation.NO_PREDICTION_5
+
+def update_to_actual_grb(featurecollection, id_theme_fieldname, formula_field="formula", max_distance_for_actualisation=2, feedback=None ):
+    """
+    Function to update a thematic featurecollection to the most actual version of GRB.
+    Important to notice that the featurecollection needs a 'formula' for the base-alignment.
+    """
+    logger = Logger(feedback)
+    # Load featurecollection into a shapely_dict:
+    dict_thematic = {}
+    dict_thematic_formula = {}
+
+    last_version_date = datetime.now().date()
+    for feature in featurecollection["features"]:
+
+        id_theme = feature["properties"][id_theme_fieldname]
+        try:
+            geom = shape(feature["geometry"])
+        except Exception:
+            geom = Polygon()
+        logger.feedback_debug("id theme: " + id_theme)
+        logger.feedback_debug ("geometry (wkt): " + geom.wkt)
+        dict_thematic[id_theme] = geom
+        try:
+            dict_thematic_formula[id_theme] = json.loads(feature["properties"][formula_field])
+            logger.feedback_debug ("formula: " +str(dict_thematic_formula[id_theme]))
+        except Exception:
+            raise Exception ("Formula -attribute-field (json) cannot be loaded")
+        try:
+            logger.feedback_debug(str(dict_thematic_formula[id_theme]))
+            if LAST_VERSION_DATE in dict_thematic_formula[id_theme] and dict_thematic_formula[id_theme][LAST_VERSION_DATE] is not None and dict_thematic_formula[id_theme][LAST_VERSION_DATE] != "":
+                str_lvd = dict_thematic_formula[id_theme][LAST_VERSION_DATE]
+                lvd = datetime.strptime(str_lvd, date_format).date()
+                if lvd < last_version_date:
+                    last_version_date = lvd
+        except:
+            raise Exception(f"Problem with {LAST_VERSION_DATE}")
+
+    # if feedback.isCanceled():
+    #     return {}
+    datetime_start = last_version_date
+    datetime_end = datetime.now().date()
+    #thematic_dict_result = dict(dict_thematic)
+    base_aligner_result = Aligner(feedback=feedback)
+    base_aligner_result.load_thematic_data(DictLoader(dict_thematic))
+    base_aligner_result.name_thematic_id = id_theme_fieldname
+
+    dict_affected, dict_unchanged = get_geoms_affected_by_grb_change(
+        base_aligner_result,
+        grb_type=GRBType.ADP,
+        date_start=datetime_start,
+        date_end=datetime_end,
+        one_by_one=False,
+    )
+    logger.feedback_info("Number of possible affected OE-thematic during timespan: " + str(len(dict_affected)))
+    if len(dict_affected) == 0:
+        logger.feedback_info("No change detected in referencelayer during timespan. Script is finished")
+        return {}
+    logger.feedback_debug(str(datetime_start))
+    logger.feedback_debug(str(formula_field))
+
+    # Initiate a Aligner to reference thematic features to the actual borders
+    actual_aligner = Aligner(feedback=feedback)
+    actual_aligner.load_thematic_data(DictLoader(dict_affected))
+    actual_aligner.load_reference_data(
+        GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=actual_aligner))
+
+    series = np.arange(0, max_distance_for_actualisation * 100, 10, dtype=int) / 100
+    dict_series, dict_predicted, diffs_dict = actual_aligner.predictor(series)
+    dict_evaluated, prop_dictionary = evaluate(actual_aligner, dict_series, dict_predicted, dict_thematic_formula,
+                                               threshold_area=5, threshold_percentage=1,
+                                               dict_unchanged=dict_unchanged)
+
+    return get_series_geojson_dict(
+        dict_evaluated,
+        crs=actual_aligner.CRS,
+        id_field=actual_aligner.name_thematic_id,
+        series_prop_dict=prop_dictionary,
+    )
 
 
 class GRBActualLoader(GeoJsonLoader):
