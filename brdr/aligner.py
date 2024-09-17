@@ -130,9 +130,9 @@ class Aligner:
         # results
 
         # output-dictionaries (when processing dict_thematic)
-        self.dict_result: dict[str, ProcessResult] = {}
+        self.dict_result: dict[str, dict[float, ProcessResult]]= {}
         # dictionary with the 'predicted' results, grouped by relevant distance
-        self.dict_predicted = dict[float, dict[str, ProcessResult]]
+        self.dict_predicted : dict[str, dict[float, ProcessResult]] ={}
 
         # Coordinate reference system
         # thematic geometries and reference geometries are assumed to be in the same CRS
@@ -152,7 +152,7 @@ class Aligner:
     def process_geometry(
         self,
         input_geometry: BaseGeometry,
-        relevant_distance=1,
+        relevant_distance:float=1,
         od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
         threshold_overlap_percentage=50,
     ) -> ProcessResult:
@@ -257,7 +257,7 @@ class Aligner:
         relevant_distance=1,
         od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
         threshold_overlap_percentage=50,
-    ) -> dict[str, ProcessResult]:
+    ) -> dict[str, dict[float, ProcessResult]]:
         """
         Aligns a thematic dictionary of geometries to the reference layer based on
         specified parameters. - method to align a thematic dictionary to the reference
@@ -282,24 +282,9 @@ class Aligner:
                 - relevant_diff: relevant differences.
 
         """
-        dict_result = {}
-        dict_thematic = self.dict_thematic
-        if self.multi_as_single_modus:
-            dict_thematic = multipolygons_to_singles(dict_thematic)
-        for key in dict_thematic:
-            self.logger.feedback_debug("thematic id to process: " + str(key))
-            try:
-                dict_result[key] = self.process_geometry(
-                    dict_thematic[key],
-                    relevant_distance,
-                    od_strategy,
-                    threshold_overlap_percentage,
-                )
-            except ValueError as e:
-                self.logger.feedback_warning(str(e))
-        if self.multi_as_single_modus:
-            dict_result = merge_process_results(dict_result)
-        self.dict_result = dict_result
+        self.dict_result = self.process_series(relevant_distances=[relevant_distance],
+        od_strategy=od_strategy,
+        threshold_overlap_percentage=threshold_overlap_percentage)
         return self.dict_result
 
     def predictor(
@@ -378,9 +363,6 @@ class Aligner:
             threshold_overlap_percentage=threshold_overlap_percentage,
         )
         dict_thematic = self.dict_thematic
-        # if self.multi_as_single_modus:
-        #     dict_series = merge_dict_series(dict_series)
-        #     dict_thematic = merge_dict(self.dict_thematic)
 
         diffs_dict = diffs_from_dict_series(dict_series, dict_thematic)
 
@@ -397,12 +379,12 @@ class Aligner:
             )
             logging.debug(str(theme_id))
             if len(zero_streaks) == 0:
-                dict_predicted[relevant_distances[0]][theme_id] = dict_series[
+                dict_predicted[theme_id][relevant_distances[0]] = dict_series[theme_id][
                     relevant_distances[0]
-                ][theme_id]
+                ]
                 logging.info("No zero-streaks found for: " + str(theme_id))
             for zs in zero_streaks:
-                dict_predicted[zs[0]][theme_id] = dict_series[zs[0]][theme_id]
+                dict_predicted[theme_id] [zs[0]]= dict_series[theme_id][zs[0]]
 
         self.dict_predicted = dict_predicted
 
@@ -417,7 +399,7 @@ class Aligner:
         relevant_distances: Iterable[float],
         od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
         threshold_overlap_percentage=50,
-    ) -> dict[float, dict[str, ProcessResult]]:
+    ) -> dict[str, dict[float, ProcessResult]]:
         """
         Calculates the resulting dictionaries for thematic data based on a series of
             relevant distances.
@@ -431,13 +413,12 @@ class Aligner:
                 considering full overlap. Defaults to 50.
 
         Returns:
-            dict: A dictionary containing the resulting dictionaries for a series of
-                relevant distances:
+            dict: A dictionary, for every thematic ID a dictionary with the results for all distances
 
                 {
-                    'relevant_distance_1': {theme_id_1: (ProcessResult), theme_id_2:
+                    'theme_id_1': {0: (ProcessResult), 0.1:
                         (ProcessResult), ...},
-                    'relevant_distance_2': {theme_id_1: (ProcessResult), theme_id_2:
+                    'theme_id_2': {0: (ProcessResult), 0.1:
                         (ProcessResult), ...},
                     ...
                 }
@@ -446,18 +427,36 @@ class Aligner:
         self.od_strategy = od_strategy
         self.threshold_overlap_percentage = threshold_overlap_percentage
         dict_series = {}
-        for s in relevant_distances:
-            self.logger.feedback_info(
-                "Processing series - relevant_distance (m):"
-                + str(s)
-                + " with ODStrategy "
-                + str(self.od_strategy)
-            )
-            dict_series[s] = self.process_dict_thematic(s, od_strategy)
+        dict_thematic = self.dict_thematic
+
+        if self.multi_as_single_modus:
+            dict_thematic = multipolygons_to_singles(dict_thematic)
+
+        for key,geometry in dict_thematic.items():
+            self.logger.feedback_info(f"thematic id {str(key)} processed with relevant distances (m) [{str(relevant_distances)}]")
+            dict_series[key] = {}
+            for relevant_distance in relevant_distances:
+                try:
+                    processed_result = self.process_geometry(
+                        geometry,
+                        relevant_distance,
+                        od_strategy,
+                        threshold_overlap_percentage,
+                    )
+                except ValueError as e:
+                    self.logger.feedback_warning(str(e))
+
+                dict_series[key][relevant_distance] =  processed_result
+
+        if self.multi_as_single_modus:
+            dict_series = merge_process_results(dict_series)
+
         self.logger.feedback_info(
             "End of processing series: " + str(relevant_distances)
         )
-        return dict_series
+        self.dict_result = dict_series
+
+        return self.dict_result
 
     def get_formula(self, geometry: BaseGeometry, with_geom=False):
         """
@@ -568,14 +567,6 @@ class Aligner:
         self.logger.feedback_debug(str(dict_formula))
         return dict_formula
 
-    def get_results_as_dict(self):
-        """
-        get a dict of the results
-        """
-        # if self.multi_as_single_modus:
-        #     return merge_process_results(self.dict_result)
-        return self.dict_result
-
     def get_results_as_geojson(self, formula=False):
         """
         convert the results to geojson feature collections
@@ -585,15 +576,11 @@ class Aligner:
                 in the output. Defaults to False.
         """
         results_dict = self.dict_result
-        # if self.multi_as_single_modus:
-        #     results_dict = merge_process_results(results_dict)
-
-        return self.get_predictions_as_geojson(
-            formula,
-            {self.relevant_distance: results_dict},
+        return self.get_series_as_geojson(
+            formula,self.dict_result,
         )
 
-    def get_predictions_as_geojson(self, formula=False, series_dict=None):
+    def get_series_as_geojson(self, formula=False, series_dict=None):
         """
         get a dictionary containing of the resulting geometries as geojson, based on the
             'predicted' relevant distances.
@@ -602,12 +589,12 @@ class Aligner:
         series_dict = series_dict or self.dict_predicted
         prop_dictionary = defaultdict(dict)
 
-        for relevant_distance, results_dict in series_dict.items():
-            for theme_id, process_results in results_dict.items():
+        for theme_id, results_dict in series_dict.items():
+            for relevant_distance, process_results in results_dict.items():
                 if formula:
                     result = process_results["result"]
                     formula = self.get_formula(result)
-                    prop_dictionary[relevant_distance][theme_id] = {
+                    prop_dictionary[theme_id][relevant_distance] = {
                         "formula": json.dumps(formula)
                     }
 

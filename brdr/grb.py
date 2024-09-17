@@ -27,10 +27,10 @@ from brdr.geometry_utils import features_by_geometric_operation
 from brdr.geometry_utils import get_bbox
 from brdr.loader import GeoJsonLoader, DictLoader
 from brdr.logger import Logger
-from brdr.utils import dict_series_by_keys, get_series_geojson_dict
 from brdr.utils import geojson_to_dicts
 from brdr.utils import get_collection
 from brdr.utils import get_collection_by_partition
+from brdr.utils import get_series_geojson_dict
 
 log = logging.getLogger(__name__)
 
@@ -350,28 +350,26 @@ def evaluate(
     """
     if dict_unchanged is None:
         dict_unchanged = {}
-    theme_ids = list(dict_series_by_keys(dict_series).keys())
+    theme_ids = list(dict_series.keys())
     dict_evaluated_result = {}
     prop_dictionary = {}
     # Fill the dictionary-structure with empty values
-    for dist in dict_series.keys():
-        dict_evaluated_result[dist] = {}
-        prop_dictionary[dist] = {}
-        for theme_id in theme_ids:
-            prop_dictionary[dist][theme_id] = {}
-        for theme_id in dict_unchanged.keys():
-            prop_dictionary[dist][theme_id] = {}
+    for theme_id in theme_ids:
+        dict_evaluated_result[theme_id] = {}
+        prop_dictionary[theme_id] = {}
+        for dist in dict_series[theme_id].keys():
+            prop_dictionary[theme_id][dist] = {}
+    for theme_id in dict_unchanged.keys():
+            prop_dictionary[theme_id] = {}
 
-    dict_predicted_keys = dict_series_by_keys(dict_predicted)
-
-    for theme_id, dist_dict in dict_predicted_keys.items():
+    for theme_id, dict_results in dict_predicted.items():
         equality = False
-        for dist in sorted(dist_dict.keys()):
+        for dist in sorted(dict_results.keys()):
             if equality:
                 break
-            geomresult = dist_dict[dist][theme_id]["result"]
+            geomresult = dict_results[dist]["result"]
             actual_formula = actual_aligner.get_formula(geomresult)
-            prop_dictionary[dist][theme_id]["formula"] = json.dumps(actual_formula)
+            prop_dictionary[theme_id][dist]["formula"] = json.dumps(actual_formula)
             base_formula = None
             if theme_id in thematic_dict_formula:
                 base_formula = thematic_dict_formula[theme_id]
@@ -382,39 +380,40 @@ def evaluate(
                 threshold_percentage,
             )
             if equality:
-                dict_evaluated_result[dist][theme_id] = dict_predicted[dist][theme_id]
-                prop_dictionary[dist][theme_id]["evaluation"] = prop
+                dict_evaluated_result[theme_id][dist] = dict_predicted[theme_id][dist]
+                prop_dictionary[theme_id][dist]["evaluation"] = prop
                 break
 
-    evaluated_theme_ids = list(dict_series_by_keys(dict_evaluated_result).keys())
+    evaluated_theme_ids = [theme_id for theme_id, value in dict_evaluated_result.items() if value != {}]
+
     # fill where no equality is found/ The biggest predicted distance is returned as
     # proposal
     for theme_id in theme_ids:
         if theme_id not in evaluated_theme_ids:
-            if len(dict_predicted_keys[theme_id].keys()) == 0:
-                result = dict_series[0][theme_id]
-                dict_evaluated_result[0][theme_id] = result
-                prop_dictionary[0][theme_id]["formula"] = json.dumps(
+            if len(dict_predicted[theme_id].keys()) == 0:
+                result = dict_series[theme_id][0]
+                dict_evaluated_result[theme_id][0] = result
+                prop_dictionary[theme_id][0]["formula"] = json.dumps(
                     actual_aligner.get_formula(result["result"])
                 )
-                prop_dictionary[0][theme_id]["evaluation"] = Evaluation.NO_PREDICTION_5
+                prop_dictionary[theme_id][0]["evaluation"] = Evaluation.NO_PREDICTION_5
                 continue
             # Add all predicted features so they can be manually checked
-            for dist in dict_predicted_keys[theme_id].keys():
-                predicted_resultset = dict_predicted[dist][theme_id]
-                dict_evaluated_result[dist][theme_id] = predicted_resultset
-                prop_dictionary[dist][theme_id]["formula"] = json.dumps(
+            for dist in dict_predicted[theme_id].keys():
+                predicted_resultset = dict_predicted[theme_id][dist]
+                dict_evaluated_result[theme_id][dist] = predicted_resultset
+                prop_dictionary[theme_id][dist]["formula"] = json.dumps(
                     actual_aligner.get_formula(predicted_resultset["result"])
                 )
-                prop_dictionary[dist][theme_id]["evaluation"] = Evaluation.TO_CHECK_4
+                prop_dictionary[theme_id][dist]["evaluation"] = Evaluation.TO_CHECK_4
 
     for theme_id, geom in dict_unchanged.items():
-        result = {"result": geom}
-        dict_evaluated_result[0][theme_id] = result
-        prop_dictionary[0][theme_id]["evaluation"] = Evaluation.NO_CHANGE_6
-        prop_dictionary[0][theme_id]["formula"] = json.dumps(
-            actual_aligner.get_formula(result["result"])
-        )
+        prop_dictionary[theme_id] = {0:
+             {"result": geom,
+              "evaluation": Evaluation.NO_CHANGE_6,
+              "formula": json.dumps(actual_aligner.get_formula(geom))
+              }
+         }
     return dict_evaluated_result, prop_dictionary
 
 

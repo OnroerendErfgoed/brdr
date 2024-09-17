@@ -26,7 +26,7 @@ aligner.load_reference_data(
 )
 
 dict_series, dict_predicted, diffs = aligner.predictor()
-fcs = aligner.get_predictions_as_geojson(series_dict=dict_predicted, formula=True)
+fcs = aligner.get_series_as_geojson(series_dict=dict_predicted, formula=True)
 aligner.export_results("output/")
 write_geojson("output/predicted.geojson", fcs["result"])
 write_geojson("output/predicted_diff.geojson", fcs["result_diff"])

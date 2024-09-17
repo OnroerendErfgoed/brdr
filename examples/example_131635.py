@@ -6,6 +6,7 @@ from examples import print_formula
 from examples import show_map
 
 if __name__ == "__main__":
+    #TODO
     # EXAMPLE for a thematic Polygon (aanduid_id 131635)
 
     # Initiate brdr
@@ -18,9 +19,9 @@ if __name__ == "__main__":
 
     # RESULTS
     rel_dist = 2
-    dict_results_by_distance = {rel_dist: aligner.process_dict_thematic(rel_dist, 4)}
+    dict_results = aligner.process_dict_thematic(rel_dist, 4)
     # put resulting tuple in a dictionary
     aligner.export_results("output/", formula=True)
 
-    show_map(dict_results_by_distance, aligner.dict_thematic, aligner.dict_reference)
-    print_formula(dict_results_by_distance, aligner)
+    show_map(dict_results, aligner.dict_thematic, aligner.dict_reference)
+    print_formula(dict_results, aligner)

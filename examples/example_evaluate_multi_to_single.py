@@ -11,7 +11,7 @@ from brdr.grb import get_geoms_affected_by_grb_change
 from brdr.loader import DictLoader
 from brdr.oe import OnroerendErfgoedLoader
 from brdr.utils import get_series_geojson_dict
-from brdr.utils import merge_process_results
+#from brdr.utils import merge_process_results
 
 multi_as_single_modus = False
 
@@ -25,15 +25,16 @@ base_year = "2022"
 base_aligner.load_reference_data(
     GRBFiscalParcelLoader(year=base_year, aligner=base_aligner)
 )
-base_process_result = base_aligner.process_dict_thematic(relevant_distance=2)
-base_process_result = merge_process_results(base_process_result)
+relevant_distance=2
+base_process_result = base_aligner.process_dict_thematic(relevant_distance=relevant_distance)
+#base_process_result = merge_process_results(base_process_result)
 thematic_dict_formula = {}
 thematic_dict_result = {}
 
 # Create a dictionary with resulting geometries (aligned on Adpf2022) and a dictionary
 # with the corresponding formula
 for key in base_process_result:
-    thematic_dict_result[key] = base_process_result[key]["result"]
+    thematic_dict_result[key] = base_process_result[key][relevant_distance]["result"]
     thematic_dict_formula[key] = base_aligner.get_formula(thematic_dict_result[key])
 
 # Determine all features that are possibly changed during timespan

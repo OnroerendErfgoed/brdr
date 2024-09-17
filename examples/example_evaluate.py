@@ -99,11 +99,12 @@ base_year = "2022"
 base_aligner.load_reference_data(
     GRBFiscalParcelLoader(year=base_year, aligner=base_aligner)
 )
-base_process_result = base_aligner.process_dict_thematic(relevant_distance=2)
+relevant_distance=2
+base_process_result = base_aligner.process_dict_thematic(relevant_distance=relevant_distance)
 thematic_dict_formula = {}
 thematic_dict_result = {}
 for key in base_process_result:
-    thematic_dict_result[key] = base_process_result[key]["result"]
+    thematic_dict_result[key] = base_process_result[key][relevant_distance]["result"]
     thematic_dict_formula[key] = base_aligner.get_formula(thematic_dict_result[key])
     print(key + ": " + thematic_dict_result[key].wkt)
     print(key + ": " + str(thematic_dict_formula[key]))
@@ -149,7 +150,7 @@ fc = get_series_geojson_dict(
     series_prop_dict=prop_dictionary,
 )
 print(fc["result"])
-fcs = actual_aligner.get_predictions_as_geojson(formula=True)
+fcs = actual_aligner.get_series_as_geojson(formula=True)
 print(fcs["result"])
 
 for feature in fc["result"]["features"]:

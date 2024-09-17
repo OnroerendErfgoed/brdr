@@ -20,11 +20,11 @@ aligner.load_reference_data(
 )
 
 rel_dist = 20
-dict_results_by_distance = {rel_dist: aligner.process_dict_thematic(rel_dist, 4)}
+dict_results = aligner.process_dict_thematic(rel_dist, 4)
 aligner.export_results("output/")
-show_map(dict_results_by_distance, aligner.dict_thematic, aligner.dict_reference)
+show_map(dict_results, aligner.dict_thematic, aligner.dict_reference)
 
-print_formula(dict_results_by_distance, aligner)
+print_formula(dict_results, aligner)
 
 # WITH MULTI_TO_SINGLE
 
@@ -40,8 +40,8 @@ aligner.load_reference_data(
 )
 
 rel_dist = 20
-dict_results_by_distance = {rel_dist: aligner.process_dict_thematic(rel_dist, 4)}
+dict_results = aligner.process_dict_thematic(rel_dist, 4)
 aligner.export_results("output/")
-show_map(dict_results_by_distance, aligner.dict_thematic, aligner.dict_reference)
+show_map(dict_results, aligner.dict_thematic, aligner.dict_reference)
 
-print_formula(dict_results_by_distance, aligner)
+print_formula(dict_results, aligner)

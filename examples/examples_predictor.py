@@ -4,7 +4,6 @@ from brdr.aligner import Aligner
 from brdr.enums import GRBType
 from brdr.grb import GRBActualLoader
 from brdr.loader import GeoJsonFileLoader
-from brdr.utils import dict_series_by_keys
 from examples import show_map
 
 # Press the green button in the gutter to run the script.
@@ -29,7 +28,6 @@ if __name__ == "__main__":
     dict_series, dict_predicted, diffs = aligner.predictor(
         relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
     )
-    dict_predicted = dict_series_by_keys(dict_predicted)
     for key in dict_predicted:
         show_map(
             dict_predicted[key],

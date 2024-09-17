@@ -2,6 +2,7 @@ import numpy as np
 
 from brdr.aligner import Aligner
 from brdr.enums import GRBType
+from brdr.grb import GRBActualLoader
 from brdr.utils import diffs_from_dict_series
 from examples import plot_series
 
@@ -14,8 +15,8 @@ if __name__ == "__main__":
     aligner_x.load_thematic_data_file(
         "../tests/testdata/test_parcel_vs_building.geojson", "theme_id"
     )
-    aligner_x.load_reference_data_grb_actual(
-        grb_type=GRBType.ADP, partition=1000
+    aligner_x.load_reference_data(GRBActualLoader
+                                  (grb_type=GRBType.ADP, partition=1000,aligner=aligner_x)
     )  # gebruik de actuele adp-percelen adp= administratieve percelen
 
     aligner_y = Aligner()
@@ -23,8 +24,8 @@ if __name__ == "__main__":
     aligner_y.load_thematic_data_file(
         "../tests/testdata/test_parcel_vs_building.geojson", "theme_id"
     )
-    aligner_y.load_reference_data_grb_actual(
-        grb_type=GRBType.GBG, partition=1000
+    aligner_y.load_reference_data(GRBActualLoader
+                                  (grb_type=GRBType.GBG, partition=1000,aligner=aligner_y)
     )  # gebruik de actuele adp-percelen adp= administratieve percelen
 
     # Example how to use a series (for histogram)
