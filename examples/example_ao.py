@@ -3,8 +3,8 @@ import numpy as np
 from brdr.aligner import Aligner
 from brdr.enums import GRBType
 from brdr.grb import GRBActualLoader
-from brdr.loader import DictLoader
-from brdr.utils import get_oe_dict_by_ids, dict_series_by_keys
+from brdr.oe import OnroerendErfgoedLoader
+from brdr.utils import dict_series_by_keys
 from examples import show_map, plot_series
 
 if __name__ == "__main__":
@@ -14,13 +14,10 @@ if __name__ == "__main__":
     # Initiate brdr
     aligner = Aligner()
     # Load thematic data & reference data
-    # dict_theme = get_oe_dict_by_ids([206363], oetype='erfgoedobjecten')
     aanduidingsobjecten = range(1, 10)
     aanduidingsobjecten =[117798,116800,117881]
-    dict_theme = get_oe_dict_by_ids(
-        aanduidingsobjecten, oetype="aanduidingsobjecten"
-    )  # noqa
-    loader = DictLoader(dict_theme)
+
+    loader = OnroerendErfgoedLoader(aanduidingsobjecten)
     aligner.load_thematic_data(loader)
     loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
     aligner.load_reference_data(loader)

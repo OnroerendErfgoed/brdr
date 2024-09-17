@@ -10,7 +10,7 @@ from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
 
 from brdr.aligner import Aligner
-from brdr.constants import DEFAULT_CRS, LAST_VERSION_DATE
+from brdr.constants import DEFAULT_CRS, LAST_VERSION_DATE, DATE_FORMAT, VERSION_DATE
 from brdr.constants import DOWNLOAD_LIMIT
 from brdr.constants import GRB_BUILDING_ID
 from brdr.constants import GRB_FEATURE_URL
@@ -33,7 +33,8 @@ from brdr.utils import get_collection
 from brdr.utils import get_collection_by_partition
 
 log = logging.getLogger(__name__)
-date_format = "%Y-%m-%d"
+
+datetime_format_TZ = "%Y-%m-%dT%H:%M:%SZ"
 
 
 def is_grb_changed(
@@ -191,7 +192,7 @@ def get_last_version_date(
     for c in collection["features"]:
         if intersects(geometry, shape(c["geometry"])):
             versiondate = datetime.strptime(
-                c["properties"][GRB_VERSION_DATE], date_format
+                c["properties"][GRB_VERSION_DATE], DATE_FORMAT
             ).date()
             update_dates.append(versiondate)
 
@@ -237,11 +238,11 @@ def get_collection_grb_actual(
     versiondate_filter_end = ""
     if date_start is not None:
         versiondate_filter_start = (
-            GRB_VERSION_DATE + ">" + date_start.strftime(date_format)
+            GRB_VERSION_DATE + ">" + date_start.strftime(DATE_FORMAT)
         )
         versiondate_filter = versiondate_filter_start
     if date_end is not None:
-        versiondate_filter_end = GRB_VERSION_DATE + "<" + date_end.strftime(date_format)
+        versiondate_filter_end = GRB_VERSION_DATE + "<" + date_end.strftime(DATE_FORMAT)
         versiondate_filter = versiondate_filter_end
     if not (date_start is None and date_end is None):
         versiondate_filter = versiondate_filter_start + " AND " + versiondate_filter_end
@@ -289,7 +290,7 @@ def get_collection_grb_parcels_by_date(
         removed_features =[]
         for feature in collection_year_after_filtered["features"]:
             versiondate = datetime.strptime(
-                feature["properties"][GRB_VERSION_DATE][:10], date_format
+                feature["properties"][GRB_VERSION_DATE][:10], DATE_FORMAT
             ).date()
             if versiondate > date:
                 removed_features.append(feature)
@@ -521,7 +522,7 @@ def update_to_actual_grb(featurecollection, id_theme_fieldname, formula_field="f
             logger.feedback_debug(str(dict_thematic_formula[id_theme]))
             if LAST_VERSION_DATE in dict_thematic_formula[id_theme] and dict_thematic_formula[id_theme][LAST_VERSION_DATE] is not None and dict_thematic_formula[id_theme][LAST_VERSION_DATE] != "":
                 str_lvd = dict_thematic_formula[id_theme][LAST_VERSION_DATE]
-                lvd = datetime.strptime(str_lvd, date_format).date()
+                lvd = datetime.strptime(str_lvd, DATE_FORMAT).date()
                 if lvd < last_version_date:
                     last_version_date = lvd
         except:
@@ -577,6 +578,7 @@ class GRBActualLoader(GeoJsonLoader):
         self.grb_type = grb_type
         self.part = partition
         self.data_dict_source["source"] = grb_type.value
+        self.versiondate_info= {"name": GRB_VERSION_DATE,"format": DATE_FORMAT}
 
     def load_data(self):
         if not self.aligner.dict_thematic:
@@ -590,7 +592,7 @@ class GRBActualLoader(GeoJsonLoader):
         )
         self.id_property = id_property
         self.input = dict(collection)
-        self.data_dict_source["version_date"] = datetime.now().strftime(date_format)
+        self.data_dict_source[VERSION_DATE] = datetime.now().strftime(DATE_FORMAT)
         self.aligner.logger.feedback_info(f"GRB downloaded: {self.grb_type}")
         return super().load_data()
 
@@ -602,9 +604,10 @@ class GRBFiscalParcelLoader(GeoJsonLoader):
         self.year = year
         self.part = partition
         self.data_dict_source["source"] = "Adpf"
-        self.data_dict_source["version_date"] = datetime(int(year), 1, 1).strftime(
-            date_format
+        self.data_dict_source[VERSION_DATE] = datetime(int(year), 1, 1).strftime(
+            DATE_FORMAT
         )
+        self.versiondate_info= {"name": GRB_VERSION_DATE,"format": datetime_format_TZ}
 
     def load_data(self):
         if not self.aligner.dict_thematic:
@@ -624,18 +627,19 @@ class GRBSpecificDateParcelLoader(GeoJsonLoader):
     def __init__(self, date, aligner, partition=1000):
         logging.warning("experimental loader; use with care!!!")
         try:
-            date = datetime.strptime(date, date_format
-            ).date()
+            date = datetime.strptime(date, DATE_FORMAT
+                                     ).date()
             if date.year>=datetime.now().year:
                 raise ValueError("The GRBSpecificDateParcelLoader can only be used for dates prior to the current year.")
         except Exception:
-            raise ValueError("No valid date, please provide a date in the format: " + date_format)
+            raise ValueError("No valid date, please provide a date in the format: " + DATE_FORMAT)
         super().__init__(_input=None, id_property=GRB_PARCEL_ID)
         self.aligner = aligner
         self.date = date
         self.part = partition
         self.data_dict_source["source"] = "Adp"
-        self.data_dict_source["version_date"] = date.strftime(date_format)
+        self.data_dict_source[VERSION_DATE] = date.strftime(DATE_FORMAT)
+        self.versiondate_info= {"name": GRB_VERSION_DATE,"format": datetime_format_TZ}
 
     def load_data(self):
         if not self.aligner.dict_thematic:
@@ -648,6 +652,6 @@ class GRBSpecificDateParcelLoader(GeoJsonLoader):
             crs=self.aligner.CRS,
         )
         self.input = dict(collection)
-        self.aligner.logger.feedback_info(f"Parcels downloaded for specific date: {self.date.strftime(date_format)}")
+        self.aligner.logger.feedback_info(f"Parcels downloaded for specific date: {self.date.strftime(DATE_FORMAT)}")
         return super().load_data()
 

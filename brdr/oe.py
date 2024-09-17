@@ -6,13 +6,12 @@ import requests
 from shapely import box
 from shapely.geometry import shape
 
-from brdr.constants import DOWNLOAD_LIMIT, DEFAULT_CRS
+from brdr.constants import DOWNLOAD_LIMIT, DEFAULT_CRS, DATE_FORMAT, VERSION_DATE
 from brdr.loader import GeoJsonLoader
 from brdr.logger import LOGGER
 from brdr.utils import get_collection_by_partition
 
 log = logging.getLogger(__name__)
-date_format = "%Y-%m-%d"
 
 
 class OEType(str, Enum):
@@ -154,7 +153,7 @@ class OnroerendErfgoedLoader(GeoJsonLoader):
         )
         self.id_property = id_property
         self.input = dict(collection)
-        self.data_dict_source["version_date"] = datetime.now().strftime(date_format)
+        self.data_dict_source[VERSION_DATE] = datetime.now().strftime(DATE_FORMAT)
         LOGGER.debug(f"OnroerendErfgoed-objects downloaded")
         return super().load_data()
 
