@@ -43,7 +43,7 @@ def get_series_geojson_dict(
                 if results_type not in features_list_dict:
                     features_list_dict[results_type] = []
 
-                feature = feature_from_geom(geom, properties, geom_attributes)
+                feature = _feature_from_geom(geom, properties, geom_attributes)
                 features_list_dict[results_type].append(feature)
 
     crs_geojson = {"type": "name", "properties": {"name": crs}}
@@ -53,7 +53,7 @@ def get_series_geojson_dict(
     }
 
 
-def feature_from_geom(
+def _feature_from_geom(
     geom: BaseGeometry,
     properties: dict = None,
     geom_attributes=True,
@@ -89,7 +89,7 @@ def geojson_from_dict(dictionary, crs, id_field, prop_dict=None, geom_attributes
     for key, geom in dictionary.items():
         properties = dict(prop_dict or {}).get(key, {})
         properties[id_field] = key
-        features.append(feature_from_geom(geom, properties, geom_attributes))
+        features.append(_feature_from_geom(geom, properties, geom_attributes))
     crs_geojson = {"type": "name", "properties": {"name": crs}}
     geojson = FeatureCollection(features, crs=crs_geojson)
     return geojson
@@ -222,7 +222,7 @@ def get_breakpoints_zerostreak(x, y):
         * counter of #relevant_distances where zero-streak holds on
         * extreme value for zero_streak
     """
-    derivative = numerical_derivative(x, y)
+    derivative = _numerical_derivative(x, y)
     # plt.plot(x, y, label="y")
     # plt.plot( x, derivative, label="derivative")
     # plt.legend()
@@ -282,7 +282,7 @@ def get_breakpoints_zerostreak(x, y):
     return extremes, zero_streaks
 
 
-def numerical_derivative(x, y):
+def _numerical_derivative(x, y):
     """
     Calculate the numerical derivative of a graph.
 
@@ -303,22 +303,22 @@ def numerical_derivative(x, y):
     return derivative
 
 
-def filter_dict_by_key(dictionary, filter_key):
-    """
-    Filters a dictionary to only include keys matching a specific value.
-
-    This function creates a new dictionary containing entries from the original
-    dictionary where the key matches the provided `filter_key`.
-
-    Args:
-        dictionary (dict): The dictionary to filter.
-        filter_key (str): The key value to filter by.
-
-    Returns:
-        dict: A new dictionary containing only entries where the key matches the
-            `filter_key`.
-    """
-    return {key: dictionary[key] for key in dictionary.keys() if key == filter_key}
+# def filter_dict_by_key(dictionary, filter_key):
+#     """
+#     Filters a dictionary to only include keys matching a specific value.
+#
+#     This function creates a new dictionary containing entries from the original
+#     dictionary where the key matches the provided `filter_key`.
+#
+#     Args:
+#         dictionary (dict): The dictionary to filter.
+#         filter_key (str): The key value to filter by.
+#
+#     Returns:
+#         dict: A new dictionary containing only entries where the key matches the
+#             `filter_key`.
+#     """
+#     return {key: dictionary[key] for key in dictionary.keys() if key == filter_key}
 
 
 def diffs_from_dict_series(
@@ -480,16 +480,16 @@ def get_collection_by_partition(
     collection = {}
     if geometry is None:
         collection = get_collection(
-            add_bbox_to_url(url=url, crs=crs, bbox=None), limit
+            _add_bbox_to_url(url=url, crs=crs, bbox=None), limit
         )
     elif partition < 1:
         collection = get_collection(
-            add_bbox_to_url(url=url, crs=crs, bbox=get_bbox(geometry)), limit
+            _add_bbox_to_url(url=url, crs=crs, bbox=get_bbox(geometry)), limit
         )
     else:
         geoms = get_partitions(geometry, partition)
         for g in geoms:
-            coll = get_collection(add_bbox_to_url(url=url, crs=crs, bbox=get_bbox(g)), limit)
+            coll = get_collection(_add_bbox_to_url(url=url, crs=crs, bbox=get_bbox(g)), limit)
             if collection == {}:
                 collection = dict(coll)
             elif "features" in collection and "features" in coll:
@@ -497,39 +497,39 @@ def get_collection_by_partition(
     return collection
 
 
-def add_bbox_to_url(url, crs=DEFAULT_CRS, bbox=None):
+def _add_bbox_to_url(url, crs=DEFAULT_CRS, bbox=None):
     # Load the Base reference data
     if bbox is not None:
         url = url + "&bbox-crs=" + crs + "&bbox=" + bbox
     return url
 
 
-def merge_dict_series(
-    dict_series: dict[float, dict[str, ProcessResult]]
-) -> dict[float, dict[str, ProcessResult]]:
-    """
-    Merges dict_series (dict_predicted) with  seperated IDs (MULTI_SINGLE_ID_SEPARATOR)
-     to their original unique ID
-    """
-    dict_series_merged = {}
-    for dist, item in dict_series.items():
-        dict_series_merged[dist] = merge_process_results(item)
-    return dict_series_merged
+# def merge_dict_series(
+#     dict_series: dict[float, dict[str, ProcessResult]]
+# ) -> dict[float, dict[str, ProcessResult]]:
+#     """
+#     Merges dict_series (dict_predicted) with  seperated IDs (MULTI_SINGLE_ID_SEPARATOR)
+#      to their original unique ID
+#     """
+#     dict_series_merged = {}
+#     for dist, item in dict_series.items():
+#         dict_series_merged[dist] = merge_process_results(item)
+#     return dict_series_merged
 
 
-def merge_dict(dictionary: dict[str, BaseGeometry]) -> dict[str, BaseGeometry]:
-    """
-    Merges dict_series (dict_predicted) with  seperated IDs (MULTI_SINGLE_ID_SEPARATOR)
-     to their original unique ID
-    """
-    out_dictionary = {}
-    for id_theme, item in dictionary.items():
-        id_theme_global = id_theme.split(MULTI_SINGLE_ID_SEPARATOR)[0]
-        if id_theme_global not in out_dictionary:
-            out_dictionary[id_theme_global] = [item]
-        else:
-            out_dictionary[id_theme_global].append(item)
-    return {k: make_valid(unary_union(v)) for k, v in out_dictionary.items()}
+# def merge_dict(dictionary: dict[str, BaseGeometry]) -> dict[str, BaseGeometry]:
+#     """
+#     Merges dict_series (dict_predicted) with  seperated IDs (MULTI_SINGLE_ID_SEPARATOR)
+#      to their original unique ID
+#     """
+#     out_dictionary = {}
+#     for id_theme, item in dictionary.items():
+#         id_theme_global = id_theme.split(MULTI_SINGLE_ID_SEPARATOR)[0]
+#         if id_theme_global not in out_dictionary:
+#             out_dictionary[id_theme_global] = [item]
+#         else:
+#             out_dictionary[id_theme_global].append(item)
+#     return {k: make_valid(unary_union(v)) for k, v in out_dictionary.items()}
 
 
 def merge_process_results(
@@ -563,42 +563,6 @@ def merge_process_results(
 
     return grouped_results
 
-
-def processresult_to_dicts(dict_processresult):
-    """
-    Transforms a dictionary with all ProcessResults to individual dictionaries of the
-    results
-    Args:
-        dict_processresult:
-
-    Returns:
-
-    """
-    results = {}
-    results_diff = {}
-    results_diff_plus = {}
-    results_diff_min = {}
-    results_relevant_intersection = {}
-    results_relevant_diff = {}
-    for key in dict_processresult:
-        processresult = dict_processresult[key]
-        results[key] = processresult["result"]
-        results_diff[key] = processresult["result_diff"]
-        results_diff_plus[key] = processresult["result_diff_plus"]
-        results_diff_min[key] = processresult["result_diff_min"]
-        results_relevant_intersection[key] = processresult[
-            "result_relevant_intersection"
-        ]
-        results_relevant_diff[key] = processresult["result_relevant_diff"]
-
-    return (
-        results,
-        results_diff,
-        results_diff_plus,
-        results_diff_min,
-        results_relevant_intersection,
-        results_relevant_diff,
-    )
 
 
 def dict_series_by_keys(dict_series):

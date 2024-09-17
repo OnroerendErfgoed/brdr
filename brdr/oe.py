@@ -51,6 +51,7 @@ def get_oe_dict_by_ids(objectids, oetype=OEType.AO):
             the API.
     """
     logging.warning("deprecated method, use OnroerendErfgoedLoader instead")
+    # TODO remove function
     dict_thematic = {}
     if oetype==OEType.AO:
         typename = "aanduidingsobjecten"

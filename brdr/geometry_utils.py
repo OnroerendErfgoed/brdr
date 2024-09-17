@@ -376,7 +376,7 @@ def safe_symmetric_difference(geom_a, geom_b):
     return geom
 
 
-def grid_bounds(geom: BaseGeometry, delta: float):
+def _grid_bounds(geom: BaseGeometry, delta: float):
     """
     Divides a geometric area (specified by `geom`) into a grid of rectangular
     partitions.
@@ -417,7 +417,7 @@ def grid_bounds(geom: BaseGeometry, delta: float):
     return grid
 
 
-def get_relevant_polygons_from_geom(geometry: BaseGeometry, buffer_distance: float):
+def _get_relevant_polygons_from_geom(geometry: BaseGeometry, buffer_distance: float):
     """
     Get only the relevant parts (polygon) from a geometry.
     Points, Lines and Polygons smaller than relevant distance are excluded from the
@@ -528,7 +528,7 @@ def calculate_geom_by_intersection_and_reference(
         # in the result. The function below tries to exclude these non-logical parts.
         # see eo_id 206363 with relevant distance=0.2m and SNAP_ALL_SIDE
         if is_openbaar_domein:
-            geom = get_relevant_polygons_from_geom(geom, buffer_distance)
+            geom = _get_relevant_polygons_from_geom(geom, buffer_distance)
     elif not geom_relevant_intersection.is_empty and geom_relevant_difference.is_empty:
         geom = geom_reference
     elif geom_relevant_intersection.is_empty and not geom_relevant_difference.is_empty:
@@ -607,7 +607,7 @@ def get_partitions(geom, delta):
     #  partitioning with a quadtree with rectangles?
     #  https://www.fundza.com/algorithmic/quadtree/index.html
     prepared_geom = prep(geom)
-    partitions = grid_bounds(geom, delta)
+    partitions = _grid_bounds(geom, delta)
     filtered_grid = list(filter(prepared_geom.intersects, partitions))
     return filtered_grid
 
@@ -657,9 +657,11 @@ def get_bbox(geometry):
 
 def geojson_polygon_to_multipolygon(geojson):
     """
+    #TODO: add an example/test so it is clear this function is used (inside brdrQ)
     Transforms a geojson: Checks if there are Polygon-features and transforms them into MultiPolygons, so all objects are of type 'MultiPolygon' (or null-geometry).
     It is important that geometry-type is consitent (f.e. in QGIS) to show and style the geojson-layer
     """
+
     if geojson is None or "features" not in geojson or geojson["features"] is None:
         return geojson
     for f in geojson["features"]:

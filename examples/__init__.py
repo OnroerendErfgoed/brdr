@@ -5,7 +5,6 @@ import geopandas as gpd
 import matplotlib.pyplot as plt
 
 from brdr.typings import ProcessResult
-from brdr.utils import processresult_to_dicts
 
 
 def _make_map(ax, result_dict, thematic_dict, reference_dict):
@@ -19,7 +18,7 @@ def _make_map(ax, result_dict, thematic_dict, reference_dict):
     , so it can be used in matplotlib
     """
     try:
-        dicts = processresult_to_dicts(result_dict)
+        dicts = _processresult_to_dicts(result_dict)
         results = dicts[0]
         results_diff_pos = dicts[1]
         results_diff_neg = dicts[2]
@@ -150,3 +149,39 @@ def plot_series(
     plt.legend()
     plt.show()
     return
+
+def _processresult_to_dicts(dict_processresult):
+    """
+    Transforms a dictionary with all ProcessResults to individual dictionaries of the
+    results
+    Args:
+        dict_processresult:
+
+    Returns:
+
+    """
+    results = {}
+    results_diff = {}
+    results_diff_plus = {}
+    results_diff_min = {}
+    results_relevant_intersection = {}
+    results_relevant_diff = {}
+    for key in dict_processresult:
+        processresult = dict_processresult[key]
+        results[key] = processresult["result"]
+        results_diff[key] = processresult["result_diff"]
+        results_diff_plus[key] = processresult["result_diff_plus"]
+        results_diff_min[key] = processresult["result_diff_min"]
+        results_relevant_intersection[key] = processresult[
+            "result_relevant_intersection"
+        ]
+        results_relevant_diff[key] = processresult["result_relevant_diff"]
+
+    return (
+        results,
+        results_diff,
+        results_diff_plus,
+        results_diff_min,
+        results_relevant_intersection,
+        results_relevant_diff,
+    )

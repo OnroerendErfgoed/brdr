@@ -8,7 +8,7 @@ from brdr.geometry_utils import buffer_neg
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import buffer_pos
 from brdr.geometry_utils import get_partitions
-from brdr.geometry_utils import grid_bounds
+from brdr.geometry_utils import _grid_bounds
 from brdr.geometry_utils import safe_difference
 from brdr.geometry_utils import safe_intersection
 from brdr.geometry_utils import safe_symmetric_difference
@@ -3952,17 +3952,17 @@ class TestGridBounds(unittest.TestCase):
     def test_grid_bounds_empty_polygon(self):
         """Tests grid_bounds with an empty polygon."""
         polygon = Polygon()
-        result = grid_bounds(polygon, 1.0)
+        result = _grid_bounds(polygon, 1.0)
         self.assertEqual(result, polygon)
 
     def test_grid_bounds_small_grid(self):
         """Tests grid_bounds with a small area not requiring grid division."""
         polygon = Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
-        result = grid_bounds(polygon, 2.0)
+        result = _grid_bounds(polygon, 2.0)
         self.assertEqual(len(result), 1)
 
     def test_grid_bounds_grid_division(self):
         """Tests grid_bounds with an area requiring grid"""
         polygon = Polygon([(0, 0), (0, 5), (5, 5), (5, 0), (0, 0)])
-        result = grid_bounds(polygon, 1.0)
+        result = _grid_bounds(polygon, 1.0)
         self.assertEqual(len(result), 25)

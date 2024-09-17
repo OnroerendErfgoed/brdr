@@ -11,7 +11,7 @@ from brdr.aligner import Aligner
 from brdr.enums import GRBType
 from brdr.enums import OpenbaarDomeinStrategy
 from brdr.geometry_utils import buffer_neg_pos
-from brdr.geometry_utils import grid_bounds
+from brdr.geometry_utils import _grid_bounds
 from brdr.grb import GRBActualLoader
 from brdr.loader import GeoJsonLoader
 from brdr.typings import FeatureCollection
@@ -32,7 +32,7 @@ class TestAligner(unittest.TestCase):
     def test_grid_bounds_1(self):
         # Test _grid_bounds function
         delta = 1.0
-        grid_partitions = grid_bounds(self.sample_geom, delta)
+        grid_partitions = _grid_bounds(self.sample_geom, delta)
 
         # Check if the result is a list of Polygon objects
         self.assertIsInstance(grid_partitions, list)
@@ -44,7 +44,7 @@ class TestAligner(unittest.TestCase):
     def test_grid_bounds_2(self):
         # Test _grid_bounds function
         delta = 2.0
-        grid_partitions = grid_bounds(self.sample_geom, delta)
+        grid_partitions = _grid_bounds(self.sample_geom, delta)
 
         # Check if the result is a list of Polygon objects
         self.assertIsInstance(grid_partitions, list)
