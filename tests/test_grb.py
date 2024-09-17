@@ -175,6 +175,7 @@ class TestGrb(unittest.TestCase):
         assert len(dict_affected.keys()) > 0
 
     def test_evaluate(self):
+        #TODO
         thematic_dict = {
             "theme_id_1": from_wkt(
                 "MultiPolygon (((174180.20077791667426936 171966.14649116666987538, "
@@ -190,11 +191,12 @@ class TestGrb(unittest.TestCase):
         base_aligner.load_reference_data(
             GRBFiscalParcelLoader(aligner=base_aligner, year="2022", partition=1000)
         )
-        base_process_result = base_aligner.process_dict_thematic(relevant_distance=1)
+        relevant_distance=1
+        base_process_result = base_aligner.process_dict_thematic(relevant_distance=relevant_distance)
         thematic_dict_formula = {}
         thematic_dict_result = {}
         for key in base_process_result:
-            thematic_dict_result[key] = base_process_result[key]["result"]
+            thematic_dict_result[key] = base_process_result[key][relevant_distance]["result"]
             thematic_dict_formula[key] = base_aligner.get_formula(
                 thematic_dict_result[key]
             )
@@ -265,10 +267,3 @@ class TestGrb(unittest.TestCase):
         #Print results
         for feature in featurecollection["result"]["features"]:
             assert isinstance(feature["properties"]["evaluation"],Evaluation)
-        #     print(
-        #         feature["properties"][name_thematic_id]
-        #         + ": "
-        #         + feature["properties"]["evaluation"]
-        #     )
-        # geojson = featurecollection["result"]
-        # print(geojson)

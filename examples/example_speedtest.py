@@ -5,6 +5,7 @@ from brdr.loader import GeoJsonFileLoader
 
 # Initiate brdr
 aligner = Aligner(relevant_distance=2)
+aligner.multi_as_single_modus=True
 # Load local thematic data and reference data
 # loader = GeoJsonFileLoader(
 #     "../tests/testdata/theme.geojson", "theme_identifier"
@@ -17,12 +18,12 @@ loader = GeoJsonFileLoader("../tests/testdata/reference_leuven.geojson", "capake
 aligner.load_reference_data(loader)
 
 times=[]
-for iter in range(1, 11):
+for iter in range(1, 3):
     starttime= datetime.now()
 
     # Example how to use the Aligner
     aligner.predictor()
-    fcs = aligner.get_predictions_as_geojson(formula=True)
+    fcs = aligner.get_series_as_geojson(formula=True)
     endtime=datetime.now()
     seconds = (endtime-starttime).total_seconds()
     times.append(seconds)
@@ -42,3 +43,11 @@ print ("Stdv: " + str(statistics.stdev(times)))
 # Mean: 27.9915248
 # Median: 24.193207
 # Stdv: 11.28891821173264
+
+# #AFTER refactoring
+# duration: [21.313991, 16.558168, 16.590126, 18.111118, 16.872433, 17.928071, 18.32295, 17.87116, 19.516652, 16.729241]
+# Min: 16.558168
+# Max: 21.313991
+# Mean: 17.981391
+# Median: 17.8996155
+# Stdv: 1.504459449440969

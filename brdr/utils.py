@@ -21,10 +21,10 @@ from brdr.typings import ProcessResult
 
 
 def get_series_geojson_dict(
-    series_dict: dict[float, dict[str, ProcessResult]],
+    series_dict: dict[str, dict[float, ProcessResult]],
     crs: str,
     id_field: str,
-    series_prop_dict: dict[float, dict[str, any]] = None,
+    series_prop_dict: dict[str, dict[float, any]] = None,
     geom_attributes=True,
 ):
     """
@@ -32,10 +32,10 @@ def get_series_geojson_dict(
     """
     features_list_dict = {}
 
-    for relative_distance, results_dict in series_dict.items():
-        prop_dict = dict(series_prop_dict or {}).get(relative_distance, {})
-        for theme_id, process_result in results_dict.items():
-            properties = prop_dict.get(theme_id, {})
+    for theme_id, results_dict in series_dict.items():
+        prop_dict = dict(series_prop_dict or {}).get(theme_id, {})
+        for relative_distance, process_result in results_dict.items():
+            properties = prop_dict.get(relative_distance, {})
             properties[id_field] = theme_id
             properties["relevant_distance"] = relative_distance
 
@@ -322,7 +322,7 @@ def _numerical_derivative(x, y):
 
 
 def diffs_from_dict_series(
-    dict_series: dict[float, dict[str, ProcessResult]],
+    dict_series: dict[str, dict[float, ProcessResult]],
     dict_thematic: dict[str, BaseGeometry],
     diff_metric: DiffMetric = DiffMetric.CHANGES_AREA,
 ):
@@ -375,16 +375,14 @@ def diffs_from_dict_series(
         KeyError: If a thematic element key is missing from the results in
         `dict_series`.
     """
-    thematic_ids = dict_thematic.keys()
-
-    diffs = {thematic_id: {} for thematic_id in thematic_ids}
-
+    diffs = {}
     # all the relevant distances used to calculate the series
-    for rel_dist, results_dict in dict_series.items():
+    for thematic_id, results_dict in dict_series.items():
+        diffs[thematic_id] = {}
 
-        for thematic_id in thematic_ids:
-            result = results_dict.get(thematic_id, {}).get("result")
-            result_diff = results_dict.get(thematic_id, {}).get("result_diff")
+        for rel_dist in results_dict:
+            result = results_dict.get(rel_dist, {}).get("result")
+            result_diff = results_dict.get(rel_dist, {}).get("result_diff")
             # result_diff_plus = results_dict.get(thematic_id, {})\
             # .get("result_diff_plus")
             # result_diff_min = results_dict.get(thematic_id, {})\
@@ -533,9 +531,10 @@ def _add_bbox_to_url(url, crs=DEFAULT_CRS, bbox=None):
 
 
 def merge_process_results(
-    result_dict: dict[str, ProcessResult]
-) -> dict[str, ProcessResult]:
+    result_dict: dict[str, dict[float, ProcessResult]]
+) -> dict[str, dict[float, ProcessResult]]:
     """
+    #TODO: function can be optimised. At the moment it is unioned element by element. Possible to collect the elements and union at the end
     Merges geometries in a dictionary from multiple themes into a single theme.
 
     Args: result_dict (dict): A dictionary where keys are theme IDs and values are
@@ -547,39 +546,39 @@ def merge_process_results(
     """
     grouped_results: dict[str, ProcessResult] = {}
 
-    for id_theme, process_result in result_dict.items():
+    for id_theme, dict_results in result_dict.items():
         id_theme_global = id_theme.split(MULTI_SINGLE_ID_SEPARATOR)[0]
         if id_theme_global not in grouped_results:
-            grouped_results[id_theme_global] = process_result
+            grouped_results[id_theme_global] = dict_results
         else:
-            for key in process_result:
-                geom: BaseGeometry = process_result[key]  # noqa
-                if geom.is_empty or geom is None:
-                    continue
-                existing: BaseGeometry = grouped_results[id_theme_global][key]  # noqa
-                grouped_results[id_theme_global][key] = unary_union(  # noqa
-                    [existing, geom]
-                )
-
+            for rel_dist,process_result in dict_results.items():
+                for key in process_result:
+                    geom: BaseGeometry = process_result[key]  # noqa
+                    if geom.is_empty or geom is None:
+                        continue
+                    existing: BaseGeometry = grouped_results[id_theme_global][rel_dist][key]  # noqa
+                    grouped_results[id_theme_global][rel_dist][key] = unary_union(  # noqa
+                        [existing, geom]
+                    )
     return grouped_results
 
 
 
-def dict_series_by_keys(dict_series):
-    """
-    Transforms a dict_series into a dictionary with theme_id as keys, and a dictionary
-    with all predicted distances and their resulting geometry as a value.
-    Args:
-        dict_series: a dictionary result of the 'series/predictor'
-
-    Returns: dictionary with theme_id as keys, and a dictionary with all serial
-    distances and their resulting geometry as a value.
-
-    """
-    dict_series_keys = {}
-    for dist, res in dict_series.items():
-        for key in res.keys():
-            if key not in dict_series_keys.keys():
-                dict_series_keys[key] = {}
-            dict_series_keys[key][dist] = {key: res[key]}
-    return dict_series_keys
+# def dict_series_by_keys(dict_series):
+#     """
+#     Transforms a dict_series into a dictionary with theme_id as keys, and a dictionary
+#     with all predicted distances and their resulting geometry as a value.
+#     Args:
+#         dict_series: a dictionary result of the 'series/predictor'
+#
+#     Returns: dictionary with theme_id as keys, and a dictionary with all serial
+#     distances and their resulting geometry as a value.
+#
+#     """
+#     dict_series_keys = {}
+#     for dist, res in dict_series.items():
+#         for key in res.keys():
+#             if key not in dict_series_keys.keys():
+#                 dict_series_keys[key] = {}
+#             dict_series_keys[key][dist] = {key: res[key]}
+#     return dict_series_keys

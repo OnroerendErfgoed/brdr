@@ -7,10 +7,9 @@ from brdr.enums import GRBType
 from brdr.grb import GRBActualLoader
 from brdr.loader import DictLoader
 from brdr.loader import GeoJsonLoader
-from brdr.oe import get_oe_dict_by_ids
+from brdr.oe import get_oe_dict_by_ids, OnroerendErfgoedLoader
 from brdr.utils import diffs_from_dict_series
 from brdr.utils import get_breakpoints_zerostreak
-from brdr.utils import multipolygons_to_singles
 
 
 class TestExamples(unittest.TestCase):
@@ -27,9 +26,10 @@ class TestExamples(unittest.TestCase):
         aligner.process_dict_thematic(rel_dist, 4)
 
     def test_example_combined_borders_adp_gbg(self):
+
         aligner = Aligner()
-        dict_theme = get_oe_dict_by_ids([131635])
-        aligner.load_thematic_data_dict(dict_theme)
+        loader = OnroerendErfgoedLoader([131635])
+        aligner.load_thematic_data(loader)
         adp_loader = GRBActualLoader(
             grb_type=GRBType.ADP, partition=1000, aligner=aligner
         )
@@ -45,22 +45,7 @@ class TestExamples(unittest.TestCase):
         rel_dist = 2
         result_dict = aligner.process_dict_thematic(rel_dist, 4)
         for process_results in result_dict.values():
-            aligner.get_formula(process_results["result"])
-
-    def test_example_multi_to_single(self):
-        aligner = Aligner()
-        # Load thematic data & reference data
-        # Get a specific feature of OE that exists out of a Multipolygon
-        dict_theme = get_oe_dict_by_ids([110082])
-        dict_theme = multipolygons_to_singles(dict_theme)
-        aligner.load_thematic_data_dict(dict_theme)
-        aligner.load_reference_data(GRBActualLoader(aligner=aligner,
-            grb_type=GRBType.GBG, partition=1000)
-        )
-        rel_dist = 5
-        result_dict = aligner.process_dict_thematic(rel_dist, 4)
-        for process_results in result_dict.values():
-            aligner.get_formula(process_results["result"])
+            aligner.get_formula(process_results[rel_dist]["result"])
 
     def test_example_multipolygon(self):
         aligner0 = Aligner()
@@ -189,7 +174,7 @@ class TestExamples(unittest.TestCase):
         _, dict_predicted, _ = aligner.predictor()
 
         self.assertGreater(len(dict_predicted), 0)
-        fcs = aligner.get_predictions_as_geojson(formula=True)
+        fcs = aligner.get_series_as_geojson(formula=True)
         self.assertEqual(len(fcs), 6)
 
     def test_example_wanted_changes(self):

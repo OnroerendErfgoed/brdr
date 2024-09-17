@@ -4,7 +4,7 @@ from brdr.aligner import Aligner
 from brdr.enums import GRBType
 from brdr.grb import GRBActualLoader
 from brdr.oe import OnroerendErfgoedLoader, OEType
-from brdr.utils import write_geojson, dict_series_by_keys
+from brdr.utils import write_geojson
 from examples import show_map, plot_series
 
 if __name__ == "__main__":
@@ -36,16 +36,15 @@ if __name__ == "__main__":
     dict_series, dict_predicted, diffs = aligner.predictor(
         relevant_distances=series, od_strategy=2, threshold_overlap_percentage=50
     )
-    fcs = aligner.get_predictions_as_geojson(series_dict=dict_predicted)
+    fcs = aligner.get_series_as_geojson(series_dict=dict_predicted)
     write_geojson("output/predicted.geojson", fcs["result"])
     write_geojson("output/predicted_diff.geojson", fcs["result_diff"])
 
-    dict_predicted = dict_series_by_keys(dict_predicted)
     for key in dict_predicted.keys():
         diff = {key: diffs[key]}
         plot_series(series, diff)
         show_map(
-            dict_predicted[key],
+            dict_predicted,
             {key: aligner.dict_thematic[key]},
             aligner.dict_reference,
         )

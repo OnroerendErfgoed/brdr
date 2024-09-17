@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from brdr.typings import ProcessResult
 
 
-def _make_map(ax, result_dict, thematic_dict, reference_dict):
+def _make_map(ax, processresult, thematic_dict, reference_dict):
     """
     Fills an ax with a map:
      * reference_dict
@@ -18,7 +18,7 @@ def _make_map(ax, result_dict, thematic_dict, reference_dict):
     , so it can be used in matplotlib
     """
     try:
-        dicts = _processresult_to_dicts(result_dict)
+        dicts = _processresult_to_dicts(processresult)
         results = dicts[0]
         results_diff_pos = dicts[1]
         results_diff_neg = dicts[2]
@@ -89,13 +89,19 @@ def _make_map(ax, result_dict, thematic_dict, reference_dict):
 
 
 def show_map(
-    dict_results_by_distance: dict[float, dict[str, ProcessResult]],
+    dict_results: dict[str, dict[float, ProcessResult]],
     dict_thematic,
     dict_reference,
 ):
     """
     Show results on a map
     """
+    dict_results_by_distance = {}
+    for theme_id, dist_result in dict_results.items():
+        for rel_dist, processresults in dist_result.items():
+            dict_results_by_distance[rel_dist]={}
+            dict_results_by_distance[rel_dist][theme_id] = processresults
+
     len_series = len(dict_results_by_distance.keys())
     i = 0
     # Plot data in subplots
@@ -116,18 +122,18 @@ def show_map(
     plt.show()
 
 
-def print_formula(dict_results_by_distance, aligner):
-    for rel_dist in dict_results_by_distance:
-        for key in dict_results_by_distance[rel_dist]:
+def print_formula(dict_results, aligner):
+    for theme_id, dist_results in dict_results.items():
+        for rel_dist,processresults in dist_results.items():
             print(
                 "--------Formula for ID  "
-                + str(key)
+                + str(theme_id)
                 + " with relevant distance "
                 + str(rel_dist)
                 + "--------------"
             )
             print(
-                aligner.get_formula(dict_results_by_distance[rel_dist][key]["result"])
+                aligner.get_formula(processresults["result"])
             )
     return
 
@@ -150,12 +156,12 @@ def plot_series(
     plt.show()
     return
 
-def _processresult_to_dicts(dict_processresult):
+def _processresult_to_dicts(processresult):
     """
     Transforms a dictionary with all ProcessResults to individual dictionaries of the
     results
     Args:
-        dict_processresult:
+        processresult:
 
     Returns:
 
@@ -166,8 +172,8 @@ def _processresult_to_dicts(dict_processresult):
     results_diff_min = {}
     results_relevant_intersection = {}
     results_relevant_diff = {}
-    for key in dict_processresult:
-        processresult = dict_processresult[key]
+    for key in processresult:
+        processresult = processresult[key]
         results[key] = processresult["result"]
         results_diff[key] = processresult["result_diff"]
         results_diff_plus[key] = processresult["result_diff_plus"]

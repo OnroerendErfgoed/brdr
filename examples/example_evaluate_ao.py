@@ -23,11 +23,12 @@ base_year = "2022"
 base_aligner.load_reference_data(
     GRBFiscalParcelLoader(year=base_year, aligner=base_aligner)
 )
-base_process_result = base_aligner.process_dict_thematic(relevant_distance=3)
+relevant_distance=3
+base_process_result = base_aligner.process_dict_thematic(relevant_distance=relevant_distance)
 thematic_dict_formula = {}
 thematic_dict_result = {}
 for key in base_process_result:
-    thematic_dict_result[key] = base_process_result[key]["result"]
+    thematic_dict_result[key] = base_process_result[key][relevant_distance]["result"]
     thematic_dict_formula[key] = base_aligner.get_formula(thematic_dict_result[key])
 base_aligner_result = Aligner()
 base_aligner_result.load_thematic_data(DictLoader(thematic_dict_result))
