@@ -11,8 +11,7 @@ from brdr.grb import GRBFiscalParcelLoader
 from brdr.grb import evaluate
 from brdr.grb import get_geoms_affected_by_grb_change
 from brdr.loader import DictLoader
-from brdr.loader import GeoJsonLoader
-from brdr.utils import get_oe_geojson_by_bbox
+from brdr.oe import OnroerendErfgoedLoader
 
 # This code shows an example how the aligner can be used inside a flow of
 # parcel change detection:
@@ -28,7 +27,7 @@ counter_excluded = 0
 crs = "EPSG:31370"
 limit = 10000
 # bbox = "172800,170900,173000,171100"
-bbox = "172000,172000,174000,174000"
+bbox = [172000,172000,174000,174000]
 # bbox = "170000,170000,175000,174900"
 # bbox = "100000,195000,105000,195900"
 # bbox = "150000,210000,155000,214900"
@@ -41,13 +40,6 @@ base_correction = 2
 excluded_area = 10000
 # series of relevant distance that is used to check if we can auto-align the geometries
 # to the actual reference-polygons to get an 'equal' formula
-# series = [
-#     0,
-#     0.5,
-#     1,
-#     1.5,
-#     2,
-# ]
 series = np.arange(0, 200, 10, dtype=int) / 100
 # BASE
 # =====
@@ -55,8 +47,7 @@ series = np.arange(0, 200, 10, dtype=int) / 100
 # base_year
 base_aligner = Aligner()
 # Load the thematic data to evaluate
-loader = GeoJsonLoader(_input=get_oe_geojson_by_bbox(bbox), id_property="aanduid_id")
-# loader = DictLoader(get_oe_dict_by_ids(['554','1573','124023','1873','1782','1324']))
+loader = OnroerendErfgoedLoader(bbox=bbox)
 base_aligner.load_thematic_data(loader)
 
 logging.info(

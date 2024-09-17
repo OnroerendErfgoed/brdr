@@ -18,13 +18,12 @@ from shapely import unary_union
 from shapely.geometry.base import BaseGeometry
 
 from brdr import __version__
-from brdr.constants import BUFFER_MULTIPLICATION_FACTOR, LAST_VERSION_DATE
+from brdr.constants import BUFFER_MULTIPLICATION_FACTOR, LAST_VERSION_DATE, VERSION_DATE, DATE_FORMAT
 from brdr.constants import CORR_DISTANCE
 from brdr.constants import DEFAULT_CRS
-from brdr.constants import GRB_VERSION_DATE
 from brdr.constants import THRESHOLD_CIRCLE_RATIO
 from brdr.enums import OpenbaarDomeinStrategy
-from brdr.geometry_utils import buffer_neg, safe_equals
+from brdr.geometry_utils import buffer_neg
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import buffer_pos
 from brdr.geometry_utils import calculate_geom_by_intersection_and_reference
@@ -46,8 +45,6 @@ from brdr.utils import get_breakpoints_zerostreak
 from brdr.utils import get_series_geojson_dict
 from brdr.utils import merge_process_results
 from brdr.utils import write_geojson
-
-date_format = "%Y-%m-%d"
 
 
 ###################
@@ -483,13 +480,12 @@ class Aligner:
                     with_geom is True).
         """
         dict_formula = {
-            "alignment_date": datetime.now().strftime(date_format),
+            "alignment_date": datetime.now().strftime(DATE_FORMAT),
             "brdr_version": str(__version__),
             "reference_source": self.dict_reference_source,
             "full": True,
             "reference_features": {},
-            "reference_od": None,
-            LAST_VERSION_DATE: None,
+            "reference_od": None
         }
 
         full_total = True
@@ -501,57 +497,59 @@ class Aligner:
         intersected = []
         for key_ref in ref_intersections:
             geom = None
+            version_date = None
             geom_reference = self.dict_reference[key_ref]
             geom_intersection = make_valid(safe_intersection(geometry, geom_reference))
             if geom_intersection.is_empty or geom_intersection is None:
                 continue
             intersected.append(geom_intersection)
+
+            perc = round(geom_intersection.area * 100 / geom_reference.area, 2)
+            if perc < 0.01:
+                continue
             # Add a last_version_date if available in properties
             if (
                 key_ref in self.dict_reference_properties
-                and GRB_VERSION_DATE in self.dict_reference_properties[key_ref]
+                and VERSION_DATE in self.dict_reference_properties[key_ref]
             ):
-                version_date = datetime.strptime(
-                    self.dict_reference_properties[key_ref][GRB_VERSION_DATE][:10],
-                    date_format,
-                ).date()
+                version_date = self.dict_reference_properties[key_ref][VERSION_DATE]
                 if last_version_date is None and version_date is not None:
                     last_version_date = version_date
                 if version_date is not None and version_date > last_version_date:
                     last_version_date = version_date
 
-            if safe_equals(geom_intersection, geom_reference):
-                full = True
-                area = round(geom_reference.area, 2)
-                perc = 100
-                if with_geom:
-                    geom = to_geojson(geom_reference)
-            else:
-                perc = round(geom_intersection.area * 100 / geom_reference.area, 2)
-                if perc < 0.01:
-                    continue
-                elif perc > 99.99:
+            # if safe_equals(geom_intersection, geom_reference):
+            #     full = True
+            #     area = round(geom_reference.area, 2)
+            #     perc = 100
+            #     if with_geom:
+            #         geom = geom_reference
+            if perc > 99.99:
                     full = True
                     area = round(geom_reference.area, 2)
                     perc = 100
                     if with_geom:
-                        geom = to_geojson(geom_reference)
-                else:
-                    full = False
-                    full_total = False
-                    area = round(geom_intersection.area, 2)
-                    if with_geom:
-                        geom = to_geojson(geom_intersection)
+                        geom = geom_reference
+            else:
+                full = False
+                full_total = False
+                area = round(geom_intersection.area, 2)
+                if with_geom:
+                    geom = geom_intersection
 
             dict_formula["reference_features"][key_ref] = {
                 "full": full,
                 "area": area,
-                "percentage": perc,
-                "geometry": geom,
+                "percentage": perc
             }
+            if version_date is not None:
+                dict_formula["reference_features"][key_ref][VERSION_DATE] = version_date.strftime(DATE_FORMAT)
+            if with_geom:
+                dict_formula["reference_features"][key_ref]["geometry"] = to_geojson(geom)
+
         dict_formula["full"] = full_total
         if last_version_date is not None:
-            dict_formula[LAST_VERSION_DATE] = last_version_date.strftime(date_format)
+            dict_formula[LAST_VERSION_DATE] = last_version_date.strftime(DATE_FORMAT)
         geom_od = buffer_pos(
             buffer_neg(
                 safe_difference(geometry, make_valid(unary_union(intersected))),
@@ -563,9 +561,10 @@ class Aligner:
             area_od = round(geom_od.area, 2)
             if area_od > 0:
                 dict_formula["reference_od"] = {
-                    "area": area_od,
-                    "geometry": to_geojson(geom_od),
+                    "area": area_od
                 }
+                if with_geom:
+                    dict_formula["reference_od"]["geometry"] = to_geojson(geom_od)
         self.logger.feedback_debug(str(dict_formula))
         return dict_formula
 
@@ -1050,7 +1049,7 @@ class Aligner:
         (
             self.dict_reference,
             self.dict_reference_properties,
-            self.dict_reference_source,
+            self.dict_reference_source
         ) = loader.load_data()
         self._prepare_reference_data()
 

@@ -2,7 +2,9 @@ import numpy as np
 
 from brdr.aligner import Aligner
 from brdr.enums import GRBType
-from brdr.utils import get_oe_dict_by_ids, write_geojson, dict_series_by_keys
+from brdr.grb import GRBActualLoader
+from brdr.oe import OnroerendErfgoedLoader, OEType
+from brdr.utils import write_geojson, dict_series_by_keys
 from examples import show_map, plot_series
 
 if __name__ == "__main__":
@@ -25,17 +27,9 @@ if __name__ == "__main__":
         # 206368,
         206786
     ]
-    dict_theme = get_oe_dict_by_ids(erfgoedobjecten, oetype="erfgoedobjecten")
-    aligner.load_thematic_data_dict(dict_theme)
-    aligner.load_reference_data_grb_actual(grb_type=GRBType.ADP, partition=1000)
-
-    # RESULTS
-    # rel_dist = 0.2
-    # dict_results_by_distance = {}
-    # #put resulting tuple in a dictionary
-    # dict_results_by_distance[rel_dist] = aligner.process_dict_thematic(rel_dist,2)
-    # aligner.export_results("output/")
-    # show_map(dict_results_by_distance, aligner.dict_thematic, aligner.dict_reference)
+    loader = OnroerendErfgoedLoader(objectids=erfgoedobjecten, oetype=OEType.EO)
+    aligner.load_thematic_data(loader)
+    aligner.load_reference_data(GRBActualLoader(aligner=aligner,grb_type=GRBType.ADP))
 
     series = np.arange(0, 200, 20, dtype=int) / 100
     # predict which relevant distances are interesting to propose as resulting geometry
