@@ -21,13 +21,14 @@ class Loader(ABC):
 
 
 class DictLoader(Loader):
-    def __init__(self, data_dict: dict[str:BaseGeometry]):
-        # TODO: add dict_properties & dict_source?
+    def __init__(self, data_dict: dict[str:BaseGeometry],data_dict_properties: dict[str:str] = {},data_dict_source: dict[str:str]= {
+        }):
         super().__init__()
         self.data_dict = data_dict
+        self.data_dict_properties = data_dict_properties
+        self.data_dict_source = data_dict_source
 
     def load_data(self):
-        # self._prepare_reference_data()
         return super().load_data()
 
 
@@ -36,8 +37,7 @@ class GeoJsonLoader(Loader):
         self,
         *,
         id_property: str = None,
-        _input: FeatureCollection = None,
-        # data_dict_properties=None, TODO?
+        _input: FeatureCollection = None
     ):
         super().__init__()
         self.id_property = id_property
