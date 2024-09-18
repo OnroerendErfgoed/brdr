@@ -30,7 +30,7 @@ if __name__ == "__main__":
     )
     for key in dict_predicted:
         show_map(
-            dict_predicted[key],
+            {key:dict_predicted[key]},
             {key: aligner.dict_thematic[key]},
             aligner.dict_reference,
         )

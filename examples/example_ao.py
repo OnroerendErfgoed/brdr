@@ -29,7 +29,7 @@ if __name__ == "__main__":
         diff = {key: diffs[key]}
         plot_series(series, diff)
         show_map(
-            dict_predicted,
+            {key: dict_predicted[key]},
             {key: aligner.dict_thematic[key]},
             aligner.dict_reference,
         )
