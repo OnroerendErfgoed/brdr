@@ -1,3 +1,4 @@
+import os
 import unittest
 
 import numpy as np
@@ -12,8 +13,8 @@ from brdr.enums import OpenbaarDomeinStrategy
 from brdr.geometry_utils import _grid_bounds
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.grb import GRBActualLoader
-from brdr.loader import GeoJsonLoader
-from brdr.typings import FeatureCollection
+from brdr.loader import GeoJsonLoader, DictLoader
+from brdr.typings import FeatureCollection, ProcessResult
 
 
 class TestAligner(unittest.TestCase):
@@ -49,29 +50,28 @@ class TestAligner(unittest.TestCase):
         for partition in grid_partitions:
             self.assertIsInstance(partition, Polygon)
 
-    # def test_export_results(self):
-    #     #TODO
-    #     aligner = Aligner()
-    #     aligner.load_thematic_data_dict(
-    #         {"theme_id_1": from_wkt("POLYGON ((0 0, 0 9, 5 10, 10 0, 0 0))")}
-    #     )
-    #     aligner.load_reference_data_dict(
-    #         {"ref_id_1": from_wkt("POLYGON ((0 1, 0 10,8 10,10 1,0 1))")}
-    #     )
-    #     aligner.process_dict_thematic()
-    #     path = "./tmp/"
-    #     aligner.export_results(path=path)
-    #     filenames = [f"{k}.geojson" for k in ProcessResult.__annotations__]
-    #     for file_name in os.listdir(path):
-    #         os.remove(path + file_name)
-    #         assert file_name in filenames
-    #     os.rmdir(path)
+    def test_export_results(self):
+        aligner = Aligner()
+        aligner.load_thematic_data(DictLoader
+                                   ({"theme_id_1": from_wkt("POLYGON ((0 0, 0 9, 5 10, 10 0, 0 0))")}
+        ))
+        aligner.load_reference_data(DictLoader(
+            {"ref_id_1": from_wkt("POLYGON ((0 1, 0 10,8 10,10 1,0 1))")}
+        ))
+        aligner.process_dict_thematic()
+        path = "./tmp/"
+        aligner.export_results(path=path)
+        filenames = [f"{k}.geojson" for k in ProcessResult.__annotations__]
+        for file_name in os.listdir(path):
+            os.remove(path + file_name)
+            assert file_name in filenames
+        os.rmdir(path)
 
     def test_get_formula_full_intersection(self):
         # Test when intersection equals reference geometry
         key = "a"
         ref_dict = {key: self.sample_geom}
-        self.sample_aligner.load_reference_data_dict(ref_dict)
+        self.sample_aligner.load_reference_data(DictLoader(ref_dict))
         res = self.sample_aligner.get_formula(self.sample_geom, with_geom=True)
         self.assertTrue(res["full"])
         result = res["reference_features"][key]
@@ -82,7 +82,7 @@ class TestAligner(unittest.TestCase):
         # Test when intersection is partial
         key = "a"
         ref_dict = {key: self.sample_geom.buffer(0.5)}
-        self.sample_aligner.load_reference_data_dict(ref_dict)
+        self.sample_aligner.load_reference_data(DictLoader(ref_dict))
         res = self.sample_aligner.get_formula(self.sample_geom, with_geom=True)
         self.assertFalse(res["full"])
         result = res["reference_features"][key]
@@ -94,7 +94,7 @@ class TestAligner(unittest.TestCase):
         # Test if processed geometry is equal to reference geometry
         key_ref = "a"
         ref_dict = {key_ref: self.sample_geom}
-        self.sample_aligner.load_reference_data_dict(ref_dict)
+        self.sample_aligner.load_reference_data(DictLoader(ref_dict))
         process_result = self.sample_aligner.process_geometry(
             self.sample_geom.buffer(0.5)
         )
@@ -111,9 +111,9 @@ class TestAligner(unittest.TestCase):
         # ADD A REFERENCE POLYGON TO REFERENCE DICTIONARY
         reference_dict = {"ref_id": from_wkt("POLYGON ((0 1, 0 10,8 10,10 1,0 1))")}
         # LOAD THEMATIC DICTIONARY
-        self.sample_aligner.load_thematic_data_dict(thematic_dict)
+        self.sample_aligner.load_thematic_data(DictLoader(thematic_dict))
         # LOAD REFERENCE DICTIONARY
-        self.sample_aligner.load_reference_data_dict(reference_dict)
+        self.sample_aligner.load_reference_data(DictLoader(reference_dict))
         series = np.arange(0, 300, 10, dtype=int) / 100
         # predict which relevant distances are interesting to propose as resulting
         # geometry
@@ -134,7 +134,7 @@ class TestAligner(unittest.TestCase):
                 "174184.09476602054201066 171899.68933439542888664)))"
             )
         }
-        self.sample_aligner.load_thematic_data_dict(thematic_dict)
+        self.sample_aligner.load_thematic_data(DictLoader(thematic_dict))
         # LOAD REFERENCE DICTIONARY
         self.sample_aligner.load_reference_data(GRBActualLoader(aligner=self.sample_aligner,
             grb_type=GRBType.ADP, partition=1000)
@@ -152,7 +152,7 @@ class TestAligner(unittest.TestCase):
                 "174184.09476602054201066 171899.68933439542888664)))"
             )
         }
-        self.sample_aligner.load_thematic_data_dict(thematic_dict)
+        self.sample_aligner.load_thematic_data(DictLoader(thematic_dict))
         # LOAD REFERENCE DICTIONARY
         self.sample_aligner.load_reference_data(GRBActualLoader(aligner=self.sample_aligner,
             grb_type=GRBType.GBG, partition=1000)
@@ -170,7 +170,7 @@ class TestAligner(unittest.TestCase):
                 "174184.09476602054201066 171899.68933439542888664)))"
             )
         }
-        self.sample_aligner.load_thematic_data_dict(thematic_dict)
+        self.sample_aligner.load_thematic_data(DictLoader(thematic_dict))
         # LOAD REFERENCE DICTIONARY
         self.sample_aligner.load_reference_data(GRBActualLoader(aligner=self.sample_aligner,
             grb_type=GRBType.KNW, partition=1000)
@@ -186,9 +186,9 @@ class TestAligner(unittest.TestCase):
         # ADD A REFERENCE POLYGON TO REFERENCE DICTIONARY
         reference_dict = {"ref_id_1": from_wkt("POLYGON ((0 1, 0 10,8 10,10 1,0 1))")}
         # LOAD THEMATIC DICTIONARY
-        self.sample_aligner.load_thematic_data_dict(thematic_dict)
+        self.sample_aligner.load_thematic_data(DictLoader(thematic_dict))
         # LOAD REFERENCE DICTIONARY
-        self.sample_aligner.load_reference_data_dict(reference_dict)
+        self.sample_aligner.load_reference_data(DictLoader(reference_dict))
         relevant_distance = 1
         for od_strategy in OpenbaarDomeinStrategy:
             process_result = self.sample_aligner.process_dict_thematic(
@@ -214,7 +214,7 @@ class TestAligner(unittest.TestCase):
                 "174400.07184735251939856 170963.78864862219779752)))"
             )
         }
-        self.sample_aligner.load_thematic_data_dict(thematic_dict)
+        self.sample_aligner.load_thematic_data(DictLoader(thematic_dict))
         # LOAD REFERENCE DICTIONARY
         self.sample_aligner.load_reference_data(GRBActualLoader(aligner=self.sample_aligner,
             grb_type=GRBType.GBG, partition=1000)
@@ -226,7 +226,7 @@ class TestAligner(unittest.TestCase):
         #TODO
         geometry = Point(0, 0).buffer(3)
         thematic_dict = {"key": geometry}
-        self.sample_aligner.load_thematic_data_dict(thematic_dict)
+        self.sample_aligner.load_thematic_data(DictLoader(thematic_dict))
         # LOAD REFERENCE DICTIONARY
         self.sample_aligner.load_reference_data(GRBActualLoader(aligner=self.sample_aligner,
             grb_type=GRBType.GBG, partition=1000)
@@ -272,38 +272,24 @@ class TestAligner(unittest.TestCase):
         }
         thematic_loader = GeoJsonLoader(_input=geojson, id_property="theme_identifier")
         aligner.dict_thematic, properties, source = thematic_loader.load_data()
-        #TODO
         assert aligner.dict_thematic == {"4": shape(geojson["features"][0]["geometry"])}
         self.assertGreater(len(aligner.dict_thematic), 0)
 
-    # def test_get_results_as_dict(self):
-    #     self.sample_aligner.load_thematic_data_dict(
-    #         {
-    #             "theme_id_1": from_wkt("POLYGON ((0 0, 0 9, 5 10, 10 0, 0 0))"),
-    #             "theme_id_2": from_wkt("POLYGON ((0 0, 0 9, 5 10, 10 0, 0 0))"),
-    #         }
-    #     )
-    #     self.sample_aligner.load_reference_data_dict(
-    #         {"ref_id_1": from_wkt("POLYGON ((0 1, 0 10,8 10,10 1,0 1))")}
-    #     )
-    #     self.sample_aligner.process_dict_thematic()
-    #     result = self.sample_aligner.get_results_as_dict()
-    #     assert len(result) == 2
-
     def test_get_reference_as_geojson(self):
-        self.sample_aligner.load_thematic_data_dict(
-            {"theme_id_1": from_wkt("POLYGON ((0 0, 0 9, 5 10, 10 0, 0 0))")}
-        )
-        self.sample_aligner.load_reference_data_dict(
-            {"ref_id_1": from_wkt("POLYGON ((0 1, 0 10,8 10,10 1,0 1))")}
+        self.sample_aligner.load_thematic_data(DictLoader
+                                               ({"theme_id_1": from_wkt("POLYGON ((0 0, 0 9, 5 10, 10 0, 0 0))")}
+        ))
+        self.sample_aligner.load_reference_data(DictLoader(
+            {"ref_id_1": from_wkt("POLYGON ((0 1, 0 10,8 10,10 1,0 1))")})
         )
         self.sample_aligner.process_dict_thematic()
         self.sample_aligner.get_reference_as_geojson()
 
     def test_fully_aligned_input(self):
         aligned_shape = from_wkt("POLYGON ((0 0, 0 9, 5 10, 10 0, 0 0))")
-        self.sample_aligner.load_thematic_data_dict({"theme_id_1": aligned_shape})
-        self.sample_aligner.load_reference_data_dict({"ref_id_1": aligned_shape})
+        loader = DictLoader({"theme_id_1": aligned_shape})
+        self.sample_aligner.load_thematic_data(DictLoader({"theme_id_1": aligned_shape}))
+        self.sample_aligner.load_reference_data(DictLoader({"ref_id_1": aligned_shape}))
         relevant_distance = 1
         result = self.sample_aligner.process_dict_thematic(relevant_distance=relevant_distance)
         assert result["theme_id_1"][relevant_distance].get("result") == aligned_shape
@@ -330,8 +316,8 @@ class TestAligner(unittest.TestCase):
             "173463.11530961000244133 174423.83310307000647299)))"
         )
 
-        self.sample_aligner.load_thematic_data_dict({"theme_id_1": aligned_shape})
-        self.sample_aligner.load_reference_data_dict({"ref_id_1": aligned_shape})
+        self.sample_aligner.load_thematic_data(DictLoader({"theme_id_1": aligned_shape}))
+        self.sample_aligner.load_reference_data(DictLoader({"ref_id_1": aligned_shape}))
         self.sample_aligner.process_dict_thematic()
         fcs = self.sample_aligner.get_results_as_geojson(formula=True)
         assert fcs["result"]["features"][0]["properties"]["area"] > 0

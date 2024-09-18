@@ -1,7 +1,7 @@
 from brdr.aligner import Aligner
 from brdr.enums import GRBType
 from brdr.grb import get_collection_grb_actual, GRBActualLoader
-from brdr.loader import GeoJsonFileLoader
+from brdr.loader import GeoJsonFileLoader, DictLoader
 from brdr.utils import polygonize_reference_data, geojson_to_dicts
 from examples import show_map, print_formula
 
@@ -54,7 +54,7 @@ if __name__ == "__main__":
     dict_adp_gbg.update(dict_gbg)  # combine 2 dictionaries
     # make a polygonized version of the reference data with non-overlapping polygons
     dict_ref = polygonize_reference_data(dict_adp_gbg)
-    aligner.load_reference_data_dict(dict_ref)
+    aligner.load_reference_data(DictLoader(dict_ref))
 
     rel_dist = 2
     dict_results = aligner.process_dict_thematic(rel_dist, 4)

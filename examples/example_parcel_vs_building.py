@@ -3,6 +3,7 @@ import numpy as np
 from brdr.aligner import Aligner
 from brdr.enums import GRBType
 from brdr.grb import GRBActualLoader
+from brdr.loader import GeoJsonFileLoader
 from brdr.utils import diffs_from_dict_series
 from examples import plot_series
 
@@ -12,18 +13,18 @@ if __name__ == "__main__":
     # Initiate brdr
     aligner_x = Aligner()
     # Load thematic data & reference data (parcels)
-    aligner_x.load_thematic_data_file(
+    aligner_x.load_thematic_data(GeoJsonFileLoader(
         "../tests/testdata/test_parcel_vs_building.geojson", "theme_id"
-    )
+    ))
     aligner_x.load_reference_data(GRBActualLoader
                                   (grb_type=GRBType.ADP, partition=1000,aligner=aligner_x)
     )  # gebruik de actuele adp-percelen adp= administratieve percelen
 
     aligner_y = Aligner()
     # Load thematic data & reference data (buildings)
-    aligner_y.load_thematic_data_file(
+    aligner_y.load_thematic_data(GeoJsonFileLoader(
         "../tests/testdata/test_parcel_vs_building.geojson", "theme_id"
-    )
+    ))
     aligner_y.load_reference_data(GRBActualLoader
                                   (grb_type=GRBType.GBG, partition=1000,aligner=aligner_y)
     )  # gebruik de actuele adp-percelen adp= administratieve percelen

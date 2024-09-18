@@ -5,6 +5,7 @@ import time
 import numpy as np
 
 from brdr.aligner import Aligner
+from brdr.loader import GeoJsonFileLoader
 
 # Code to create stats.csv
 
@@ -16,8 +17,8 @@ array_relevant_distance = np.arange(0, 500, 10, dtype=int) / 100
 print(array_relevant_distance)
 
 x = Aligner()
-x.load_thematic_data_file("../tests/testdata/theme_leuven.geojson", "aanduid_id")
-x.load_reference_data_file("../tests/testdata/reference_leuven.geojson", "capakey")
+x.load_thematic_data(GeoJsonFileLoader("../tests/testdata/theme_leuven.geojson", "aanduid_id"))
+x.load_reference_data(GeoJsonFileLoader("../tests/testdata/reference_leuven.geojson", "capakey"))
 with open("../tests/output/stats" + time + ".csv", "w", newline="") as csvfile:
     writer = csv.writer(
         csvfile, delimiter=";"

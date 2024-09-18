@@ -18,7 +18,8 @@ from shapely import unary_union
 from shapely.geometry.base import BaseGeometry
 
 from brdr import __version__
-from brdr.constants import BUFFER_MULTIPLICATION_FACTOR, LAST_VERSION_DATE, VERSION_DATE, DATE_FORMAT
+from brdr.constants import BUFFER_MULTIPLICATION_FACTOR, LAST_VERSION_DATE, VERSION_DATE, DATE_FORMAT, \
+    THRESHOLD_EXCLUSION_PERCENTAGE, THRESHOLD_EXCLUSION_AREA
 from brdr.constants import CORR_DISTANCE
 from brdr.constants import DEFAULT_CRS
 from brdr.constants import THRESHOLD_CIRCLE_RATIO
@@ -26,16 +27,11 @@ from brdr.enums import OpenbaarDomeinStrategy
 from brdr.geometry_utils import buffer_neg
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import buffer_pos
-from brdr.geometry_utils import calculate_geom_by_intersection_and_reference
 from brdr.geometry_utils import fill_and_remove_gaps
 from brdr.geometry_utils import safe_difference
 from brdr.geometry_utils import safe_intersection
 from brdr.geometry_utils import safe_symmetric_difference
 from brdr.geometry_utils import safe_union
-from brdr.loader import DictLoader
-from brdr.loader import GeoJsonFileLoader
-from brdr.loader import GeoJsonLoader
-from brdr.loader import GeoJsonUrlLoader
 from brdr.loader import Loader
 from brdr.logger import Logger
 from brdr.typings import ProcessResult
@@ -149,6 +145,19 @@ class Aligner:
     def buffer_distance(self):
         return self.relevant_distance / 2
 
+    def load_reference_data(self, loader: Loader):
+        (
+            self.dict_reference,
+            self.dict_reference_properties,
+            self.dict_reference_source
+        ) = loader.load_data()
+        self._prepare_reference_data()
+
+    def load_thematic_data(self, loader: Loader):
+        self.dict_thematic, self.dict_thematic_properties, self.dict_thematic_source = (
+            loader.load_data()
+        )
+
     def process_geometry(
         self,
         input_geometry: BaseGeometry,
@@ -214,7 +223,7 @@ class Aligner:
                 geom,
                 relevant_intersection,
                 relevant_diff,
-            ) = calculate_geom_by_intersection_and_reference(
+            ) = _calculate_geom_by_intersection_and_reference(
                 geom_intersection,
                 geom_reference,
                 False,
@@ -222,11 +231,11 @@ class Aligner:
                 self.threshold_overlap_percentage,
             )
             self.logger.feedback_debug("intersection calculated")
-            preresult = self.add_multi_polygons_from_geom_to_array(geom, preresult)
-            relevant_intersection_array = self.add_multi_polygons_from_geom_to_array(
+            preresult = self._add_multi_polygons_from_geom_to_array(geom, preresult)
+            relevant_intersection_array = self._add_multi_polygons_from_geom_to_array(
                 relevant_intersection, relevant_intersection_array
             )
-            relevant_diff_array = self.add_multi_polygons_from_geom_to_array(
+            relevant_diff_array = self._add_multi_polygons_from_geom_to_array(
                 relevant_diff, relevant_diff_array
             )
         # UNION INTERMEDIATE LAYERS
@@ -575,18 +584,29 @@ class Aligner:
             formula (bool, optional): Whether to include formula-related information
                 in the output. Defaults to False.
         """
-        results_dict = self.dict_result
         return self.get_series_as_geojson(
             formula,self.dict_result,
         )
 
+    def get_predictions_as_geojson(self, formula=False):
+        """
+        convert the predictions to geojson feature collections
+
+        Args:
+            formula (bool, optional): Whether to include formula-related information
+                in the output. Defaults to False.
+        """
+        return self.get_series_as_geojson(
+            formula,self.dict_predicted,
+        )
+
     def get_series_as_geojson(self, formula=False, series_dict=None):
         """
-        get a dictionary containing of the resulting geometries as geojson, based on the
-            'predicted' relevant distances.
+        get a geojson of  a dictionary containing the resulting geometries for all
+            'serial' relevant distances. If no dict_series is given, the dict_result returned.
         Optional: The descriptive formula is added as an attribute to the result"""
 
-        series_dict = series_dict or self.dict_predicted
+        series_dict = series_dict or self.dict_result
         prop_dictionary = defaultdict(dict)
 
         for theme_id, results_dict in series_dict.items():
@@ -612,6 +632,17 @@ class Aligner:
         return geojson_from_dict(
             self.dict_reference, self.CRS, self.name_reference_id, geom_attributes=False
         )
+    def export_predictions(self, path, formula=True):
+        """
+        Exports 'predicted' results as GeoJSON files.
+
+        This function exports 6 GeoJSON files containing the 'predicted' results to the
+            specified `path`.
+        """
+        fcs = self.get_predictions_as_geojson(formula)
+        for name, fc in fcs.items():
+            write_geojson(os.path.join(path, name + "_predictions.geojson"), fc)
+
 
     def export_results(self, path, formula=True):
         """
@@ -642,6 +673,14 @@ class Aligner:
         fcs = self.get_results_as_geojson(formula)
         for name, fc in fcs.items():
             write_geojson(os.path.join(path, name + ".geojson"), fc)
+
+    def get_thematic_union(self):
+        if self.thematic_union is None:
+            self.thematic_union = make_valid(
+                unary_union(list(self.dict_thematic.values()))
+            )
+        return self.thematic_union
+
 
     def _prepare_reference_data(self):
         """
@@ -778,7 +817,7 @@ class Aligner:
             pass
 
         # ADD THEMATIC_OD
-        preresult = self.add_multi_polygons_from_geom_to_array(geom_thematic_od, [])
+        preresult = self._add_multi_polygons_from_geom_to_array(geom_thematic_od, [])
         return (
             geometry,
             preresult,
@@ -828,27 +867,21 @@ class Aligner:
                 geom_thematic_od,
                 geom_relevant_intersection,
                 geom_relevant_diff,
-            ) = calculate_geom_by_intersection_and_reference(
+            ) = _calculate_geom_by_intersection_and_reference(
                 geom_intersection,
                 geom_reference,
                 True,
                 self.relevant_distance / 2,
                 self.threshold_overlap_percentage,
             )
-            relevant_intersection_array = self.add_multi_polygons_from_geom_to_array(
+            relevant_intersection_array = self._add_multi_polygons_from_geom_to_array(
                 geom_relevant_intersection, []
             )
-            relevant_difference_array = self.add_multi_polygons_from_geom_to_array(
+            relevant_difference_array = self._add_multi_polygons_from_geom_to_array(
                 geom_relevant_diff, []
             )
         return geom_thematic_od, relevant_difference_array, relevant_intersection_array
 
-    # def _snap_geom_to_reference(self, geom_input, geom_reference, relevant_distance):
-    # """
-    # This feature does not work correctly with Shapely. This avoids polygons collapse
-    # if everything is taken together, which we do in some cases effectively want.
-    # """
-    # return snap(geom_input, geom_reference, relevant_distance)
 
     def _get_reference_union(self):
         if self.reference_union is None:
@@ -857,12 +890,6 @@ class Aligner:
             )
         return self.reference_union
 
-    def get_thematic_union(self):
-        if self.thematic_union is None:
-            self.thematic_union = make_valid(
-                unary_union(list(self.dict_thematic.values()))
-            )
-        return self.thematic_union
 
     def _postprocess_preresult(self, preresult, geom_thematic) -> ProcessResult:
         """
@@ -1005,7 +1032,7 @@ class Aligner:
         }
 
     @staticmethod
-    def add_multi_polygons_from_geom_to_array(geom: BaseGeometry, array):
+    def _add_multi_polygons_from_geom_to_array(geom: BaseGeometry, array):
         """
         Append valid polygons and multipolygons extracted from a given geometry to an
         existing array.
@@ -1032,57 +1059,133 @@ class Aligner:
                     array.append(g)
         return array
 
-    def load_reference_data(self, loader: Loader):
-        (
-            self.dict_reference,
-            self.dict_reference_properties,
-            self.dict_reference_source
-        ) = loader.load_data()
-        self._prepare_reference_data()
+@staticmethod
+def _calculate_geom_by_intersection_and_reference(
+    geom_intersection: BaseGeometry,
+    geom_reference: BaseGeometry,
+    is_openbaar_domein,
+    buffer_distance,
+    threshold_overlap_percentage,
+    threshold_exclusion_percentage=THRESHOLD_EXCLUSION_PERCENTAGE,
+    threshold_exclusion_area=THRESHOLD_EXCLUSION_AREA,
+):
+    """
+    Calculates the geometry based on intersection and reference geometries.
 
-    def load_thematic_data(self, loader: Loader):
-        self.dict_thematic, self.dict_thematic_properties, self.dict_thematic_source = (
-            loader.load_data()
+    Args:
+        geom_intersection (BaseGeometry): The intersection geometry.
+        geom_reference (BaseGeometry): The reference geometry.
+        is_openbaar_domein (bool): A flag indicating whether it's a public domain
+            (area not covered with reference polygon).
+        threshold_exclusion_percentage (int): The threshold exclusion percentage.
+        threshold_exclusion_area (int): The threshold exclusion area.
+        buffer_distance (float): The buffer distance.
+        threshold_overlap_percentage (int): The threshold overlap percentage.
+
+    Returns:
+        tuple: A tuple containing the resulting geometries:
+
+        *   geom: BaseGeometry or None: The resulting geometry or None if conditions
+            are not met.
+        *   geom_relevant_intersection: BaseGeometry or None: The relevant
+            intersection.
+        *   geom_relevant_difference: BaseGeometry or None: The relevant difference.
+
+    Notes:
+        -   If the reference geometry area is 0, the overlap is set to 100%.
+        -   If the overlap is less than relevant_OVERLAP_PERCENTAGE or the
+            intersection area is less than relevant_OVERLAP_AREA, None is returned.
+        -   Otherwise, the relevant intersection and difference geometries are
+            calculated.
+        -   If both relevant intersection and difference are non-empty, the final
+            geometry is obtained by applying safe intersection and buffering.
+        -   If only relevant intersection is non-empty, the result is the reference
+            geometry.
+        -   If only relevant difference is non-empty, the result is None.
+    """
+
+    if geom_reference.area == 0:
+        overlap = 100
+
+    else:
+        overlap = geom_intersection.area * 100 / geom_reference.area
+
+    if (
+        overlap < threshold_exclusion_percentage
+        or geom_intersection.area < threshold_exclusion_area
+    ):
+        return Polygon(), Polygon(), Polygon()
+
+    geom_difference = safe_difference(geom_reference, geom_intersection)
+    geom_relevant_intersection = buffer_neg(geom_intersection, buffer_distance)
+    geom_relevant_difference = buffer_neg(geom_difference, buffer_distance)
+    if (
+        not geom_relevant_intersection.is_empty
+        and not geom_relevant_difference.is_empty
+    ):
+        # relevant intersection and relevant difference
+        geom_x = safe_intersection(
+            geom_reference,
+            safe_difference(
+                geom_reference,
+                safe_intersection(
+                    geom_difference,
+                    buffer_neg_pos(geom_difference, buffer_distance),
+                ),
+            ),
         )
+        geom = safe_intersection(
+            geom_x,
+            buffer_pos(
+                buffer_neg_pos(geom_x, buffer_distance),
+                buffer_distance,
+            ),
+        )
+        # when calculating for OD, we create a 'virtual parcel'. When calculating this
+        # virtual parcel, it is buffered to take outer boundaries into account.
+        # This results in a side effect that there are extra non-logical parts included
+        # in the result. The function below tries to exclude these non-logical parts.
+        # see eo_id 206363 with relevant distance=0.2m and SNAP_ALL_SIDE
+        if is_openbaar_domein:
+            geom = _get_relevant_polygons_from_geom(geom, buffer_distance)
+    elif not geom_relevant_intersection.is_empty and geom_relevant_difference.is_empty:
+        geom = geom_reference
+    elif geom_relevant_intersection.is_empty and not geom_relevant_difference.is_empty:
+        geom = geom_relevant_intersection  # (=empty geometry)
+    else:
+        if is_openbaar_domein:
+            geom = geom_relevant_intersection  # (=empty geometry)
+        # geom = snap_geom_to_reference (geom_intersection, geom_reference,
+        # relevant_distance)
+        elif threshold_overlap_percentage < 0:
+            # if we take a value of -1, the original border will be used
+            geom = geom_intersection
+        elif overlap > threshold_overlap_percentage:
+            geom = geom_reference
+        else:
+            geom = geom_relevant_intersection  # (=empty geometry)
+    return geom, geom_relevant_intersection, geom_relevant_difference
 
-        # Deprecated loader methods
-
-    def load_thematic_data_geojson(self, thematic_input, name_thematic_id):
-        logging.warning("deprecated method, use load_thematic_data instead")
-        loader = GeoJsonLoader(thematic_input, name_thematic_id)
-        self.load_thematic_data(loader)
-
-    def load_thematic_data_file(self, path_to_file, name_thematic_id):
-        logging.warning("deprecated method, use load_thematic_data instead")
-        loader = GeoJsonFileLoader(path_to_file, name_thematic_id)
-        self.load_thematic_data(loader)
-
-    def load_thematic_data_dict(self, dict_theme):
-        logging.warning("deprecated method, use load_thematic_data instead")
-        loader = DictLoader(dict_theme)
-        self.load_thematic_data(loader)
-
-    def load_thematic_data_url(self, url, name_thematic_id):
-        logging.warning("deprecated method, use load_thematic_data instead")
-        loader = GeoJsonUrlLoader(url, name_thematic_id)
-        self.load_thematic_data(loader)
-
-    def load_reference_data_dict(self, dict_ref):
-        logging.warning("deprecated method, use load_reference_data instead")
-        loader = DictLoader(dict_ref)
-        self.load_reference_data(loader)
-
-    def load_reference_data_geojson(self, reference_input, name_reference_id):
-        logging.warning("deprecated method, use load_reference_data instead")
-        loader = GeoJsonLoader(_input=reference_input, id_property=name_reference_id)
-        self.load_reference_data(loader)
-
-    def load_reference_data_file(self, path_to_file, name_reference_id):
-        logging.warning("deprecated method, use load_reference_data instead")
-        loader = GeoJsonFileLoader(path_to_file, name_reference_id)
-        self.load_reference_data(loader)
-
-    def load_reference_data_url(self, url, name_reference_id):
-        logging.warning("deprecated method, use load_reference_data instead")
-        loader = GeoJsonUrlLoader(url, name_reference_id)
-        self.load_reference_data(loader)
+@staticmethod
+def _get_relevant_polygons_from_geom(geometry: BaseGeometry, buffer_distance: float):
+    """
+    Get only the relevant parts (polygon) from a geometry.
+    Points, Lines and Polygons smaller than relevant distance are excluded from the
+    result
+    """
+    if not geometry or geometry.is_empty:
+        # If the input geometry is empty or None, do nothing.
+        return geometry
+    else:
+        geometry = make_valid(unary_union(geometry))
+        # Create a GeometryCollection from the input geometry.
+        geometry_collection = GeometryCollection(geometry)
+        array = []
+        for g in geometry_collection.geoms:
+            # Ensure each sub-geometry is valid.
+            g = make_valid(g)
+            if str(g.geom_type) in ["Polygon", "MultiPolygon"]:
+                relevant_geom = buffer_neg(g, buffer_distance)
+                if relevant_geom is not None and not relevant_geom.is_empty:
+                    array.append(g)
+    return make_valid(unary_union(array))

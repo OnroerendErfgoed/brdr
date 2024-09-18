@@ -2,7 +2,7 @@
 from brdr.aligner import Aligner
 from brdr.enums import GRBType
 from brdr.grb import GRBActualLoader
-from brdr.loader import DictLoader
+from brdr.loader import DictLoader, GeoJsonFileLoader
 from brdr.utils import multipolygons_to_singles
 from brdr.utils import write_geojson
 
@@ -10,12 +10,14 @@ aligner0 = Aligner()
 
 # Load thematic data
 
-aligner0.load_thematic_data_file(
+aligner0.load_thematic_data(GeoJsonFileLoader(
     "../tests/testdata/multipolygon.geojson", "theme_identifier"
-)
+))
 aligner0.dict_thematic = multipolygons_to_singles(aligner0.dict_thematic)
-aligner0.load_thematic_data_dict(
-    aligner0.dict_thematic,
+aligner0.load_thematic_data(
+    DictLoader(
+        aligner0.dict_thematic,
+    )
 )
 # gebruik de actuele adp-percelen adp= administratieve percelen
 aligner = Aligner()
