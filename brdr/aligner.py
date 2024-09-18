@@ -773,7 +773,7 @@ class Aligner:
             prop_dictionary[theme_id] = {0:
                                              {"result": geom,
                                               "evaluation": Evaluation.NO_CHANGE_6,
-                                              "formula": json.dumps(actual_aligner.get_formula(geom))
+                                              "formula": json.dumps(self.get_formula(geom))
                                               }
                                          }
         return dict_evaluated_result, prop_dictionary
