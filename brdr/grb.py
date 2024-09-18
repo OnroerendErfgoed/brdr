@@ -9,7 +9,7 @@ from shapely import intersects, Polygon
 from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
 
-from brdr.aligner import Aligner, evaluate
+from brdr.aligner import Aligner
 from brdr.constants import DEFAULT_CRS, LAST_VERSION_DATE, DATE_FORMAT, VERSION_DATE
 from brdr.constants import DOWNLOAD_LIMIT
 from brdr.constants import GRB_BUILDING_ID
@@ -393,8 +393,8 @@ def update_to_actual_grb(featurecollection, id_theme_fieldname, formula_field="f
         GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=actual_aligner))
 
     series = np.arange(0, max_distance_for_actualisation * 100, 10, dtype=int) / 100
-    dict_series, dict_predicted, diffs_dict = actual_aligner.predictor(series)
-    dict_evaluated, prop_dictionary = evaluate(actual_aligner, dict_series, dict_predicted, dict_thematic_formula,
+    #actual_aligner.predictor(series)
+    dict_evaluated, prop_dictionary = actual_aligner.evaluate(series=series,thematic_dict_formula=dict_thematic_formula,
                                                threshold_area=5, threshold_percentage=1,
                                                dict_unchanged=dict_unchanged)
 

@@ -1,22 +1,17 @@
 import unittest
 from datetime import date, timedelta
 
-import numpy as np
 from shapely import Polygon, from_wkt
 
-from brdr.aligner import Aligner, evaluate
+from brdr.aligner import Aligner
 from brdr.enums import GRBType, Evaluation
 from brdr.grb import (
     get_last_version_date,
     is_grb_changed,
     get_geoms_affected_by_grb_change,
-    GRBActualLoader,
-    GRBFiscalParcelLoader, GRBSpecificDateParcelLoader, update_to_actual_grb,
+    GRBSpecificDateParcelLoader, update_to_actual_grb,
 )
 from brdr.loader import DictLoader
-from brdr.utils import (
-    get_series_geojson_dict,
-)
 
 
 class TestGrb(unittest.TestCase):
@@ -173,69 +168,6 @@ class TestGrb(unittest.TestCase):
         )
         assert len(dict_affected.keys()) > 0
 
-    def test_evaluate(self):
-        #TODO
-        thematic_dict = {
-            "theme_id_1": from_wkt(
-                "MultiPolygon (((174180.20077791667426936 171966.14649116666987538, "
-                "174415.60530965600628406 171940.9636807945498731, "
-                "174388.65236948925303295 171770.99678386366576888, "
-                "174182.10876987033407204 171836.13745758961886168, "
-                "174184.88916448061354458 171873.07698598300339654, "
-                "174180.20077791667426936 171966.14649116666987538)))"
-            )
-        }
-        base_aligner = Aligner()
-        base_aligner.load_thematic_data(DictLoader(thematic_dict))
-        base_aligner.load_reference_data(
-            GRBFiscalParcelLoader(aligner=base_aligner, year="2022", partition=1000)
-        )
-        relevant_distance=1
-        base_process_result = base_aligner.process_dict_thematic(relevant_distance=relevant_distance)
-        thematic_dict_formula = {}
-        thematic_dict_result = {}
-        for key in base_process_result:
-            thematic_dict_result[key] = base_process_result[key][relevant_distance]["result"]
-            thematic_dict_formula[key] = base_aligner.get_formula(
-                thematic_dict_result[key]
-            )
-        aligner_result = Aligner()
-        aligner_result.load_thematic_data(DictLoader(thematic_dict_result))
-        dict_affected, dict_unchanged = get_geoms_affected_by_grb_change(
-            aligner=aligner_result,
-            grb_type=GRBType.ADP,
-            date_start=date(2022, 1, 1),
-            date_end=date.today(),
-            one_by_one=False,
-        )
-
-        actual_aligner = Aligner()
-        loader = DictLoader(dict_affected)
-        actual_aligner.load_thematic_data(loader)
-        loader = GRBActualLoader(
-            grb_type=GRBType.ADP, partition=1000, aligner=actual_aligner
-        )
-        actual_aligner.load_reference_data(loader)
-        series = np.arange(0, 200, 10, dtype=int) / 100
-        dict_series, dict_predicted, diffs_dict = actual_aligner.predictor(series)
-
-        dict_evaluated, prop_dictionary = evaluate(
-            actual_aligner,
-            dict_series,
-            dict_predicted,
-            thematic_dict_formula,
-            threshold_area=5,
-            threshold_percentage=1,
-        )
-
-        fc = get_series_geojson_dict(
-            dict_evaluated,
-            crs=actual_aligner.CRS,
-            id_field=actual_aligner.name_thematic_id,
-            series_prop_dict=prop_dictionary,
-        )
-
-        print(fc["result"])
 
 
     def test_grbspecificdateparcelloader(self):

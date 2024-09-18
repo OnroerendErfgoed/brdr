@@ -2,7 +2,7 @@ from datetime import date
 
 import numpy as np
 
-from brdr.aligner import Aligner, evaluate
+from brdr.aligner import Aligner
 from brdr.enums import GRBType
 from brdr.grb import GRBActualLoader
 from brdr.grb import GRBFiscalParcelLoader
@@ -11,12 +11,9 @@ from brdr.loader import DictLoader
 from brdr.oe import OnroerendErfgoedLoader
 from brdr.utils import get_series_geojson_dict
 
-# from brdr.utils import merge_process_results
-
 multi_as_single_modus = False
 
 # Align the multipolygon to the fiscal parcels 2022
-
 base_aligner = Aligner()
 base_aligner.multi_as_single_modus = multi_as_single_modus
 loader = OnroerendErfgoedLoader([9946])
@@ -29,7 +26,6 @@ relevant_distance = 2
 base_process_result = base_aligner.process_dict_thematic(
     relevant_distance=relevant_distance
 )
-# base_process_result = merge_process_results(base_process_result)
 thematic_dict_formula = {}
 thematic_dict_result = {}
 
@@ -60,13 +56,9 @@ actual_aligner.load_thematic_data(loader)
 loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=actual_aligner)
 actual_aligner.load_reference_data(loader)
 series = np.arange(0, 200, 10, dtype=int) / 100
-dict_series, dict_predicted, diffs_dict = actual_aligner.predictor(series)
 
-dict_evaluated, prop_dictionary = evaluate(
-    actual_aligner,
-    dict_series,
-    dict_predicted,
-    thematic_dict_formula,
+dict_evaluated, prop_dictionary = actual_aligner.evaluate(series=series,
+    thematic_dict_formula=thematic_dict_formula,
     threshold_area=5,
     threshold_percentage=1,
     dict_unchanged=dict_unchanged,

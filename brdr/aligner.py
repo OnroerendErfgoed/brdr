@@ -698,6 +698,85 @@ class Aligner:
             )
         return self.thematic_union
 
+    def evaluate(
+            self,series,
+            thematic_dict_formula,
+            threshold_area=5,
+            threshold_percentage=1,
+            dict_unchanged=None,
+    ):
+        """
+        evaluate affected geometries and give attributes to evaluate and decide if new
+        proposals can be used
+        """
+        dict_series,dict_predicted,diffs = self.predictor(series)
+        if dict_unchanged is None:
+            dict_unchanged = {}
+        theme_ids = list(dict_series.keys())
+        dict_evaluated_result = {}
+        prop_dictionary = {}
+        # Fill the dictionary-structure with empty values
+        for theme_id in theme_ids:
+            dict_evaluated_result[theme_id] = {}
+            prop_dictionary[theme_id] = {}
+            for dist in dict_series[theme_id].keys():
+                prop_dictionary[theme_id][dist] = {}
+        for theme_id in dict_unchanged.keys():
+            prop_dictionary[theme_id] = {}
+
+        for theme_id, dict_results in dict_predicted.items():
+            equality = False
+            for dist in sorted(dict_results.keys()):
+                if equality:
+                    break
+                geomresult = dict_results[dist]["result"]
+                actual_formula = self.get_formula(geomresult)
+                prop_dictionary[theme_id][dist]["formula"] = json.dumps(actual_formula)
+                base_formula = None
+                if theme_id in thematic_dict_formula:
+                    base_formula = thematic_dict_formula[theme_id]
+                equality, prop = _check_equality(
+                    base_formula,
+                    actual_formula,
+                    threshold_area,
+                    threshold_percentage,
+                )
+                if equality:
+                    dict_evaluated_result[theme_id][dist] = dict_predicted[theme_id][dist]
+                    prop_dictionary[theme_id][dist]["evaluation"] = prop
+                    break
+
+        evaluated_theme_ids = [theme_id for theme_id, value in dict_evaluated_result.items() if value != {}]
+
+        # fill where no equality is found/ The biggest predicted distance is returned as
+        # proposal
+        for theme_id in theme_ids:
+            if theme_id not in evaluated_theme_ids:
+                if len(dict_predicted[theme_id].keys()) == 0:
+                    result = dict_series[theme_id][0]
+                    dict_evaluated_result[theme_id][0] = result
+                    prop_dictionary[theme_id][0]["formula"] = json.dumps(
+                        self.get_formula(result["result"])
+                    )
+                    prop_dictionary[theme_id][0]["evaluation"] = Evaluation.NO_PREDICTION_5
+                    continue
+                # Add all predicted features so they can be manually checked
+                for dist in dict_predicted[theme_id].keys():
+                    predicted_resultset = dict_predicted[theme_id][dist]
+                    dict_evaluated_result[theme_id][dist] = predicted_resultset
+                    prop_dictionary[theme_id][dist]["formula"] = json.dumps(
+                        self.get_formula(predicted_resultset["result"])
+                    )
+                    prop_dictionary[theme_id][dist]["evaluation"] = Evaluation.TO_CHECK_4
+
+        for theme_id, geom in dict_unchanged.items():
+            prop_dictionary[theme_id] = {0:
+                                             {"result": geom,
+                                              "evaluation": Evaluation.NO_CHANGE_6,
+                                              "formula": json.dumps(actual_aligner.get_formula(geom))
+                                              }
+                                         }
+        return dict_evaluated_result, prop_dictionary
 
     def _prepare_reference_data(self):
         """
@@ -1220,89 +1299,6 @@ def _equal_geom_in_array(geom,geom_array):
             return True
     return False
 
-
-
-@staticmethod
-def evaluate(
-    actual_aligner,
-    dict_series,
-    dict_predicted,
-    thematic_dict_formula,
-    threshold_area=5,
-    threshold_percentage=1,
-    dict_unchanged=None,
-):
-    """
-    evaluate affected geometries and give attributes to evaluate and decide if new
-    proposals can be used
-    """
-    if dict_unchanged is None:
-        dict_unchanged = {}
-    theme_ids = list(dict_series.keys())
-    dict_evaluated_result = {}
-    prop_dictionary = {}
-    # Fill the dictionary-structure with empty values
-    for theme_id in theme_ids:
-        dict_evaluated_result[theme_id] = {}
-        prop_dictionary[theme_id] = {}
-        for dist in dict_series[theme_id].keys():
-            prop_dictionary[theme_id][dist] = {}
-    for theme_id in dict_unchanged.keys():
-            prop_dictionary[theme_id] = {}
-
-    for theme_id, dict_results in dict_predicted.items():
-        equality = False
-        for dist in sorted(dict_results.keys()):
-            if equality:
-                break
-            geomresult = dict_results[dist]["result"]
-            actual_formula = actual_aligner.get_formula(geomresult)
-            prop_dictionary[theme_id][dist]["formula"] = json.dumps(actual_formula)
-            base_formula = None
-            if theme_id in thematic_dict_formula:
-                base_formula = thematic_dict_formula[theme_id]
-            equality, prop = _check_equality(
-                base_formula,
-                actual_formula,
-                threshold_area,
-                threshold_percentage,
-            )
-            if equality:
-                dict_evaluated_result[theme_id][dist] = dict_predicted[theme_id][dist]
-                prop_dictionary[theme_id][dist]["evaluation"] = prop
-                break
-
-    evaluated_theme_ids = [theme_id for theme_id, value in dict_evaluated_result.items() if value != {}]
-
-    # fill where no equality is found/ The biggest predicted distance is returned as
-    # proposal
-    for theme_id in theme_ids:
-        if theme_id not in evaluated_theme_ids:
-            if len(dict_predicted[theme_id].keys()) == 0:
-                result = dict_series[theme_id][0]
-                dict_evaluated_result[theme_id][0] = result
-                prop_dictionary[theme_id][0]["formula"] = json.dumps(
-                    actual_aligner.get_formula(result["result"])
-                )
-                prop_dictionary[theme_id][0]["evaluation"] = Evaluation.NO_PREDICTION_5
-                continue
-            # Add all predicted features so they can be manually checked
-            for dist in dict_predicted[theme_id].keys():
-                predicted_resultset = dict_predicted[theme_id][dist]
-                dict_evaluated_result[theme_id][dist] = predicted_resultset
-                prop_dictionary[theme_id][dist]["formula"] = json.dumps(
-                    actual_aligner.get_formula(predicted_resultset["result"])
-                )
-                prop_dictionary[theme_id][dist]["evaluation"] = Evaluation.TO_CHECK_4
-
-    for theme_id, geom in dict_unchanged.items():
-        prop_dictionary[theme_id] = {0:
-             {"result": geom,
-              "evaluation": Evaluation.NO_CHANGE_6,
-              "formula": json.dumps(actual_aligner.get_formula(geom))
-              }
-         }
-    return dict_evaluated_result, prop_dictionary
 
 @staticmethod
 def _check_equality(

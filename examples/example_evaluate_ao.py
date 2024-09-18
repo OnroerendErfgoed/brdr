@@ -2,7 +2,7 @@ from datetime import date
 
 import numpy as np
 
-from brdr.aligner import Aligner, evaluate
+from brdr.aligner import Aligner
 from brdr.enums import GRBType
 from brdr.grb import (
     get_geoms_affected_by_grb_change,
@@ -14,8 +14,6 @@ from brdr.oe import OnroerendErfgoedLoader
 from brdr.utils import get_series_geojson_dict
 
 base_aligner = Aligner()
-# = OnroerendErfgoedLoader([125610,148305,127615,122316,120153,124699,115489,120288,120387,124762,148143,116141])
-# loader = OnroerendErfgoedLoader([10047, 10048, 10049, 10050, 10051, 10056])
 loader = OnroerendErfgoedLoader([120288])
 base_aligner.load_thematic_data(loader)
 base_year = "2022"
@@ -50,13 +48,9 @@ actual_aligner.load_thematic_data(loader)
 loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=actual_aligner)
 actual_aligner.load_reference_data(loader)
 series = np.arange(0, 300, 10, dtype=int) / 100
-dict_series, dict_predicted, diffs_dict = actual_aligner.predictor(series)
 
-dict_evaluated, prop_dictionary = evaluate(
-    actual_aligner,
-    dict_series,
-    dict_predicted,
-    thematic_dict_formula,
+dict_evaluated, prop_dictionary = actual_aligner.evaluate(series=series,
+    thematic_dict_formula=thematic_dict_formula,
     threshold_area=5,
     threshold_percentage=1,
     dict_unchanged=dict_unchanged,

@@ -490,9 +490,7 @@ def fill_and_remove_gaps(input_geometry, buffer_value):
             and empty_buffered_exterior_polygon
             and not exterior_polygon.is_empty
         ):
-            cleaned_geometry = safe_difference(
-                cleaned_geometry, exterior_polygon
-            )
+            cleaned_geometry = safe_difference(cleaned_geometry, exterior_polygon)
         num_interior_rings = get_num_interior_rings(part)
         if num_interior_rings > 0:
             ix = 0
@@ -504,9 +502,7 @@ def fill_and_remove_gaps(input_geometry, buffer_value):
                     interior_polygon, buffer_value
                 ).is_empty
                 if empty_buffered_interior_ring:
-                    cleaned_geometry = safe_union(
-                        cleaned_geometry, interior_polygon
-                    )
+                    cleaned_geometry = safe_union(cleaned_geometry, interior_polygon)
                 ix = ix + 1
         ix_part = ix_part + 1
     return cleaned_geometry
