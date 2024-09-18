@@ -1,10 +1,10 @@
 import json
 from abc import ABC
+from datetime import datetime
 
 import requests as requests
 from shapely import make_valid
 from shapely.geometry.base import BaseGeometry
-from win32ctypes.pywin32.pywintypes import datetime
 
 from brdr.constants import DATE_FORMAT
 from brdr.constants import VERSION_DATE
