@@ -8,6 +8,7 @@ from brdr.constants import MULTI_SINGLE_ID_SEPARATOR
 from brdr.oe import get_oe_dict_by_ids
 from brdr.typings import ProcessResult
 from brdr.utils import diffs_from_dict_series
+
 # from brdr.utils import filter_dict_by_key
 from brdr.utils import get_breakpoints_zerostreak
 from brdr.utils import get_collection
@@ -131,18 +132,19 @@ class TestUtils(unittest.TestCase):
             "theme_id2": Polygon([(5, 5), (15, 5), (15, 15), (5, 15)]),
         }
         dict_series = {
-
-                "theme_id1": {10:{
+            "theme_id1": {
+                10: {
                     "result": Polygon([(0, 0), (8, 0), (8, 8), (0, 8)]),
                     "result_diff": Polygon([(2, 2), (6, 2), (6, 6), (2, 6)]),
-                              }
-                },
-                "theme_id2": {10:{
+                }
+            },
+            "theme_id2": {
+                10: {
                     "result": Polygon([(7, 7), (13, 7), (13, 13), (7, 13)]),
                     "result_diff": Polygon([(9, 9), (11, 9), (11, 11), (9, 11)]),
                 }
-                },
-            }
+            },
+        }
         expected_diffs = {"theme_id1": {10: 16.0}, "theme_id2": {10: 4.0}}
 
         assert expected_diffs == diffs_from_dict_series(
@@ -166,10 +168,17 @@ class TestUtils(unittest.TestCase):
     def test_merge_process_results(self):
         key_1 = "key" + MULTI_SINGLE_ID_SEPARATOR + "1"
         key_2 = "key" + MULTI_SINGLE_ID_SEPARATOR + "2"
+        key_3 = "key_3"
         process_result_1 = ProcessResult()
         process_result_1["result"] = Polygon([(0, 0), (10, 0), (10, 10), (0, 10)])
         process_result_2 = ProcessResult()
         process_result_2["result"] = Polygon([(0, 0), (8, 0), (8, 8), (0, 8)])
-        testdict = {key_1: {0:process_result_1}, key_2: {0:process_result_2}}
+        process_result_3 = ProcessResult()
+        process_result_3["result"] = Polygon([(0, 0), (8, 0), (8, 8), (0, 8)])
+        testdict = {
+            key_1: {0: process_result_1},
+            key_2: {0: process_result_2},
+            key_3: {0: process_result_3},
+        }
         merged_testdict = merge_process_results(testdict)
-        assert len(merged_testdict.keys()) == 1
+        assert len(merged_testdict.keys()) == 2

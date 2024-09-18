@@ -483,8 +483,7 @@ def merge_process_results(
     result_dict: dict[str, dict[float, ProcessResult]]
 ) -> dict[str, dict[float, ProcessResult]]:
     """
-    #TODO: function can be optimised. At the moment it is unioned element by element. Possible to collect the elements and union at the end
-    Merges geometries in a dictionary from multiple themes into a single theme.
+     Merges geometries in a dictionary from multiple themes into a single theme.
 
     Args: result_dict (dict): A dictionary where keys are theme IDs and values are
         process results
@@ -493,7 +492,7 @@ def merge_process_results(
         theme IDs and values are merged geometries.
 
     """
-    grouped_results: dict[str, ProcessResult] = {}
+    grouped_results: dict[str, dict[float, ProcessResult]] = {}
 
     for id_theme, dict_results in result_dict.items():
         id_theme_global = id_theme.split(MULTI_SINGLE_ID_SEPARATOR)[0]

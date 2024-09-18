@@ -13,7 +13,7 @@ if __name__ == "__main__":
     # Initiate brdr
     aligner = Aligner()
     # Load thematic data & reference data
-    aanduidingsobjecten =[117798,116800,117881]
+    aanduidingsobjecten = [117798, 116800, 117881]
 
     loader = OnroerendErfgoedLoader(aanduidingsobjecten)
     aligner.load_thematic_data(loader)

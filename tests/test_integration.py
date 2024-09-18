@@ -61,17 +61,17 @@ class TestExamples(unittest.TestCase):
         )
 
         dict_diffs = dict_diffs["input_id"]
-        serial_dict ={}
-        dict_results=dict_series["input_id"]
-        for rel_dist,process_results in dict_results.items():
-            serial_dict[rel_dist]={
+        serial_dict = {}
+        dict_results = dict_series["input_id"]
+        for rel_dist, process_results in dict_results.items():
+            serial_dict[rel_dist] = {
                 "result": json.loads(to_geojson(dict_results[rel_dist]["result"])),
                 "result_diff_min": json.loads(
                     to_geojson(dict_results[rel_dist]["result_diff_min"])
                 ),
-            "result_diff_plus": json.loads(
-                to_geojson(dict_results[rel_dist]["result_diff_plus"])
-            ),
+                "result_diff_plus": json.loads(
+                    to_geojson(dict_results[rel_dist]["result_diff_plus"])
+                ),
             }
 
         return {

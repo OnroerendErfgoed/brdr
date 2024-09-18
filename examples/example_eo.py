@@ -29,7 +29,7 @@ if __name__ == "__main__":
     ]
     loader = OnroerendErfgoedLoader(objectids=erfgoedobjecten, oetype=OEType.EO)
     aligner.load_thematic_data(loader)
-    aligner.load_reference_data(GRBActualLoader(aligner=aligner,grb_type=GRBType.ADP))
+    aligner.load_reference_data(GRBActualLoader(aligner=aligner, grb_type=GRBType.ADP))
 
     series = np.arange(0, 200, 20, dtype=int) / 100
     # predict which relevant distances are interesting to propose as resulting geometry

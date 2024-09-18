@@ -213,8 +213,8 @@ class TestExamples(unittest.TestCase):
         # Load thematic data & reference data
         dict_theme = get_oe_dict_by_ids([131635])
         aligner.load_thematic_data(DictLoader(dict_theme))
-        aligner.load_reference_data(GRBActualLoader(aligner=aligner,
-            grb_type=GRBType.GBG, partition=1000)
+        aligner.load_reference_data(
+            GRBActualLoader(aligner=aligner, grb_type=GRBType.GBG, partition=1000)
         )
         series = np.arange(0, 300, 10, dtype=int) / 100
         # predict which relevant distances are interesting to propose as resulting

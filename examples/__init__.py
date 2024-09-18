@@ -99,7 +99,7 @@ def show_map(
     dict_results_by_distance = {}
     for theme_id, dist_result in dict_results.items():
         for rel_dist, processresults in dist_result.items():
-            dict_results_by_distance[rel_dist]={}
+            dict_results_by_distance[rel_dist] = {}
             dict_results_by_distance[rel_dist][theme_id] = processresults
 
     len_series = len(dict_results_by_distance.keys())
@@ -124,7 +124,7 @@ def show_map(
 
 def print_formula(dict_results, aligner):
     for theme_id, dist_results in dict_results.items():
-        for rel_dist,processresults in dist_results.items():
+        for rel_dist, processresults in dist_results.items():
             print(
                 "--------Formula for ID  "
                 + str(theme_id)
@@ -132,9 +132,7 @@ def print_formula(dict_results, aligner):
                 + str(rel_dist)
                 + "--------------"
             )
-            print(
-                aligner.get_formula(processresults["result"])
-            )
+            print(aligner.get_formula(processresults["result"]))
     return
 
 
@@ -155,6 +153,7 @@ def plot_series(
     plt.legend()
     plt.show()
     return
+
 
 def _processresult_to_dicts(processresult):
     """
