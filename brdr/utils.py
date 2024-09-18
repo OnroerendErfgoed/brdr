@@ -302,25 +302,6 @@ def _numerical_derivative(x, y):
 
     return derivative
 
-
-# def filter_dict_by_key(dictionary, filter_key):
-#     """
-#     Filters a dictionary to only include keys matching a specific value.
-#
-#     This function creates a new dictionary containing entries from the original
-#     dictionary where the key matches the provided `filter_key`.
-#
-#     Args:
-#         dictionary (dict): The dictionary to filter.
-#         filter_key (str): The key value to filter by.
-#
-#     Returns:
-#         dict: A new dictionary containing only entries where the key matches the
-#             `filter_key`.
-#     """
-#     return {key: dictionary[key] for key in dictionary.keys() if key == filter_key}
-
-
 def diffs_from_dict_series(
     dict_series: dict[str, dict[float, ProcessResult]],
     dict_thematic: dict[str, BaseGeometry],
@@ -383,10 +364,6 @@ def diffs_from_dict_series(
         for rel_dist in results_dict:
             result = results_dict.get(rel_dist, {}).get("result")
             result_diff = results_dict.get(rel_dist, {}).get("result_diff")
-            # result_diff_plus = results_dict.get(thematic_id, {})\
-            # .get("result_diff_plus")
-            # result_diff_min = results_dict.get(thematic_id, {})\
-            # .get("result_diff_min")
 
             diff = 0
             if (
@@ -502,34 +479,6 @@ def _add_bbox_to_url(url, crs=DEFAULT_CRS, bbox=None):
     return url
 
 
-# def merge_dict_series(
-#     dict_series: dict[float, dict[str, ProcessResult]]
-# ) -> dict[float, dict[str, ProcessResult]]:
-#     """
-#     Merges dict_series (dict_predicted) with  seperated IDs (MULTI_SINGLE_ID_SEPARATOR)
-#      to their original unique ID
-#     """
-#     dict_series_merged = {}
-#     for dist, item in dict_series.items():
-#         dict_series_merged[dist] = merge_process_results(item)
-#     return dict_series_merged
-
-
-# def merge_dict(dictionary: dict[str, BaseGeometry]) -> dict[str, BaseGeometry]:
-#     """
-#     Merges dict_series (dict_predicted) with  seperated IDs (MULTI_SINGLE_ID_SEPARATOR)
-#      to their original unique ID
-#     """
-#     out_dictionary = {}
-#     for id_theme, item in dictionary.items():
-#         id_theme_global = id_theme.split(MULTI_SINGLE_ID_SEPARATOR)[0]
-#         if id_theme_global not in out_dictionary:
-#             out_dictionary[id_theme_global] = [item]
-#         else:
-#             out_dictionary[id_theme_global].append(item)
-#     return {k: make_valid(unary_union(v)) for k, v in out_dictionary.items()}
-
-
 def merge_process_results(
     result_dict: dict[str, dict[float, ProcessResult]]
 ) -> dict[str, dict[float, ProcessResult]]:
@@ -561,24 +510,3 @@ def merge_process_results(
                         [existing, geom]
                     )
     return grouped_results
-
-
-
-# def dict_series_by_keys(dict_series):
-#     """
-#     Transforms a dict_series into a dictionary with theme_id as keys, and a dictionary
-#     with all predicted distances and their resulting geometry as a value.
-#     Args:
-#         dict_series: a dictionary result of the 'series/predictor'
-#
-#     Returns: dictionary with theme_id as keys, and a dictionary with all serial
-#     distances and their resulting geometry as a value.
-#
-#     """
-#     dict_series_keys = {}
-#     for dist, res in dict_series.items():
-#         for key in res.keys():
-#             if key not in dict_series_keys.keys():
-#                 dict_series_keys[key] = {}
-#             dict_series_keys[key][dist] = {key: res[key]}
-#     return dict_series_keys

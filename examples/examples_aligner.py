@@ -1,5 +1,7 @@
 from brdr.aligner import Aligner
 from brdr.enums import OpenbaarDomeinStrategy, GRBType
+from brdr.grb import GRBActualLoader
+from brdr.loader import GeoJsonFileLoader
 from brdr.utils import diffs_from_dict_series
 from examples import plot_series
 from examples import show_map
@@ -8,40 +10,29 @@ if __name__ == "__main__":
     # Initiate brdr
     aligner = Aligner()
     # Load thematic data
-    aligner.load_thematic_data_file(
+    aligner.load_thematic_data(GeoJsonFileLoader(
         "../tests/testdata/themelayer_referenced.geojson", "id_theme"
-    )
+    ))
 
     # Use GRB adp-parcels as reference polygons adp= administratieve percelen
-    aligner.load_reference_data_grb_actual(grb_type=GRBType.ADP, partition=1000)
-    # alternative reference poly
-    # # Use GRB-gbg (buildings), gbg= gebouw aan de grond
-    # x.load_reference_data_grb_actual('gbg')
-
-    # Use local data
-    # x.load_reference_data_file(
-    # "../tests/testdata/reference_leuven.geojson", 'capakey'
-    # )
+    aligner.load_reference_data(GRBActualLoader(grb_type=GRBType.ADP, partition=1000,aligner=aligner))
 
     # Example how to use the Aligner
     rel_dist = 10
-    dict_results_by_distance = {
-        rel_dist: aligner.process_dict_thematic(
+    dict_results = aligner.process_dict_thematic(
             relevant_distance=rel_dist,
             od_strategy=OpenbaarDomeinStrategy.SNAP_FULL_AREA_SINGLE_SIDE,
         )
-    }
     aligner.export_results("output/")
-    show_map(dict_results_by_distance, aligner.dict_thematic, aligner.dict_reference)
+    show_map(dict_results, aligner.dict_thematic, aligner.dict_reference)
 
     rel_dist = 6
-    dict_results_by_distance = {
-        rel_dist: aligner.process_dict_thematic(
+    dict_results = aligner.process_dict_thematic(
             relevant_distance=rel_dist, od_strategy=OpenbaarDomeinStrategy.SNAP_ALL_SIDE
         )
-    }
+
     aligner.export_results("output/")
-    show_map(dict_results_by_distance, aligner.dict_thematic, aligner.dict_reference)
+    show_map(dict_results, aligner.dict_thematic, aligner.dict_reference)
     # for key in r:
     #     x.get_formula(r[key])
 

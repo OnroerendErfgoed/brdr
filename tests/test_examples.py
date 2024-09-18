@@ -40,7 +40,7 @@ class TestExamples(unittest.TestCase):
         dict_ref2, dict_ref_properties_gbg, source_gbg = gbg_loader.load_data()
         dict_ref.update(dict_ref2)  # combine 2 dictionaries
         # make a polygonized version of the reference data with non-overlapping polygons
-        aligner.load_reference_data_dict(dict_ref)
+        aligner.load_reference_data(DictLoader(dict_ref))
 
         rel_dist = 2
         result_dict = aligner.process_dict_thematic(rel_dist, 4)
@@ -212,7 +212,7 @@ class TestExamples(unittest.TestCase):
         aligner = Aligner()
         # Load thematic data & reference data
         dict_theme = get_oe_dict_by_ids([131635])
-        aligner.load_thematic_data_dict(dict_theme)
+        aligner.load_thematic_data(DictLoader(dict_theme))
         aligner.load_reference_data(GRBActualLoader(aligner=aligner,
             grb_type=GRBType.GBG, partition=1000)
         )
