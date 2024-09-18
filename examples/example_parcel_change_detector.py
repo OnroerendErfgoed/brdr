@@ -81,7 +81,7 @@ thematic_dict_result = {}
 i = 0
 for key in base_process_result:
     i = i + 1
-    thematic_dict_result[key] = base_process_result[key]["result"]
+    thematic_dict_result[key] = base_process_result[key][base_correction]["result"]
     thematic_dict_formula[key] = base_aligner.get_formula(thematic_dict_result[key])
     if i > 500:
         break
@@ -130,8 +130,8 @@ counter_equality_by_alignment = 0
 counter_difference = 0
 for theme_id in dict_affected:
     for dist in series:
-        if "evaluation" in prop_dictionary[dist][theme_id].keys():
-            ev = prop_dictionary[dist][theme_id]["evaluation"]
+        if "evaluation" in prop_dictionary[theme_id][dist].keys():
+            ev = prop_dictionary[theme_id][dist]["evaluation"]
             if ev.startswith("equal") and dist == 0:
                 counter_equality = counter_equality + 1
             elif ev.startswith("equal") and dist > 0:
@@ -140,7 +140,7 @@ for theme_id in dict_affected:
                 counter_difference = counter_difference + 1
             break
 
-logging.info(
+print(
     "Features: "
     + str(len(dict_affected))
     + "//Equality: "

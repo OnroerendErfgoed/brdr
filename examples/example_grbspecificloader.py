@@ -12,5 +12,5 @@ thematic_dict = {
 }
 loader = DictLoader(thematic_dict)
 aligner.load_thematic_data(loader)
-loader = GRBSpecificDateParcelLoader(date="2023-07-03", aligner=aligner)
+loader = GRBSpecificDateParcelLoader(date="2023-05-03", aligner=aligner)
 aligner.load_reference_data(loader)
