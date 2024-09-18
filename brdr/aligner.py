@@ -612,13 +612,13 @@ class Aligner:
         for theme_id, results_dict in series_dict.items():
             nr_calculations = len(results_dict)
             for relevant_distance, process_results in results_dict.items():
+                prop_dictionary[theme_id][relevant_distance] = {
+                    "nr_calculations": nr_calculations
+                }
                 if formula:
                     result = process_results["result"]
                     formula = self.get_formula(result)
-                    prop_dictionary[theme_id][relevant_distance] = {
-                        "formula": json.dumps(formula),
-                        "nr_calculations": nr_calculations
-                    }
+                    prop_dictionary[theme_id][relevant_distance]["formula"] =json.dumps(formula)
 
         return get_series_geojson_dict(
             series_dict,
