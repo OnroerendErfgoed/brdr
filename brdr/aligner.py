@@ -24,7 +24,7 @@ from brdr.constants import CORR_DISTANCE
 from brdr.constants import DEFAULT_CRS
 from brdr.constants import THRESHOLD_CIRCLE_RATIO
 from brdr.enums import OpenbaarDomeinStrategy
-from brdr.geometry_utils import buffer_neg
+from brdr.geometry_utils import buffer_neg, safe_equals
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import buffer_pos
 from brdr.geometry_utils import fill_and_remove_gaps
@@ -33,7 +33,7 @@ from brdr.geometry_utils import safe_intersection
 from brdr.geometry_utils import safe_symmetric_difference
 from brdr.geometry_utils import safe_union
 from brdr.loader import Loader
-from brdr.logger import Logger
+from brdr.logger import Logger, LOGGER
 from brdr.typings import ProcessResult
 from brdr.utils import diffs_from_dict_series, multipolygons_to_singles
 from brdr.utils import geojson_from_dict
@@ -395,13 +395,39 @@ class Aligner:
             for zs in zero_streaks:
                 dict_predicted[theme_id] [zs[0]]= dict_series[theme_id][zs[0]]
 
-        self.dict_predicted = dict_predicted
+        #Check if the predicted reldists are unique (and remove duplicated predictions
+        dict_predicted_unique = defaultdict(dict)
+        for theme_id,dist_results in dict_predicted.items():
+            dict_predicted_unique[theme_id] = {}
+            predicted_geoms_for_theme_id = []
+            for rel_dist, processresults in dist_results.items():
+                predicted_geom = processresults["result"]
+                if not self._equal_geom_in_array(predicted_geom,predicted_geoms_for_theme_id):
+                    dict_predicted_unique[theme_id][rel_dist] = processresults
+                    predicted_geoms_for_theme_id.append(processresults["result"])
+                else:
+                    self.logger.feedback_info(f"Duplicate prediction found for key {theme_id} at distance {rel_dist}: Prediction excluded")
+
+        self.dict_predicted = dict_predicted_unique
 
         return (
             dict_series,
-            dict_predicted,
+            self.dict_predicted,
             diffs_dict,
         )
+
+    @staticmethod
+    def _equal_geom_in_array(geom,geom_array):
+        """
+        Check if a predicted geometry is equal to other predicted geometries in a list.
+        Equality is defined as there is the symmetrical difference is smaller than the CORRECTION DISTANCE
+        Returns True if one of the elements is equal, otherwise False
+        """
+        for g in geom_array:
+            #if safe_equals(geom,g):
+            if buffer_neg(safe_symmetric_difference(geom, g),CORR_DISTANCE).is_empty:
+                return True
+        return False
 
     def process_series(
         self,
@@ -610,13 +636,15 @@ class Aligner:
         prop_dictionary = defaultdict(dict)
 
         for theme_id, results_dict in series_dict.items():
+            nr_calculations = len(results_dict)
             for relevant_distance, process_results in results_dict.items():
+                prop_dictionary[theme_id][relevant_distance] = {
+                    "nr_calculations": nr_calculations
+                }
                 if formula:
                     result = process_results["result"]
                     formula = self.get_formula(result)
-                    prop_dictionary[theme_id][relevant_distance] = {
-                        "formula": json.dumps(formula)
-                    }
+                    prop_dictionary[theme_id][relevant_distance]["formula"] =json.dumps(formula)
 
         return get_series_geojson_dict(
             series_dict,

@@ -14,11 +14,10 @@ if __name__ == "__main__":
     aligner.load_reference_data(loader)
     # Example how to use the Aligner
     rel_dist = 1
-    dict_results_by_distance = {
-        aligner.relevant_distance: aligner.process_dict_thematic(
+    dict_results = aligner.process_dict_thematic(
             relevant_distance=rel_dist,
             od_strategy=OpenbaarDomeinStrategy.SNAP_FULL_AREA_ALL_SIDE,
         )
-    }
+
     aligner.export_results("output/")
-    # show_map(dict_results_by_distance, aligner.dict_thematic, aligner.dict_reference)
+    #show_map(dict_results, aligner.dict_thematic, aligner.dict_reference)

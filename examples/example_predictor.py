@@ -28,9 +28,11 @@ if __name__ == "__main__":
     dict_series, dict_predicted, diffs = aligner.predictor(
         relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
     )
-    for key in dict_predicted:
-        show_map(
-            dict_predicted[key],
-            {key: aligner.dict_thematic[key]},
-            aligner.dict_reference,
-        )
+    fcs = aligner.get_predictions_as_geojson(formula=False)
+    print(fcs["result"])
+    # for key in dict_predicted:
+    #     show_map(
+    #         {key:dict_predicted[key]},
+    #         {key: aligner.dict_thematic[key]},
+    #         aligner.dict_reference,
+    #     )

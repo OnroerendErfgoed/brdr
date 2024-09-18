@@ -46,12 +46,11 @@ if __name__ == "__main__":
     # border will be used for cases where relevant zones cannot be used for
     # determination)
     rel_dist = 6
-    dict_results_by_distance = {
-        rel_dist: aligner.process_dict_thematic(
+    dict_results = aligner.process_dict_thematic(
             relevant_distance=rel_dist,
             od_strategy=OpenbaarDomeinStrategy.SNAP_FULL_AREA_ALL_SIDE,
             threshold_overlap_percentage=-1,
         )
-    }
+
     aligner.export_results("output/")
-    show_map(dict_results_by_distance, aligner.dict_thematic, aligner.dict_reference)
+    show_map(dict_results, aligner.dict_thematic, aligner.dict_reference)
