@@ -4,13 +4,12 @@ from datetime import date, timedelta
 import numpy as np
 from shapely import Polygon, from_wkt
 
-from brdr.aligner import Aligner
+from brdr.aligner import Aligner, evaluate
 from brdr.enums import GRBType, Evaluation
 from brdr.grb import (
     get_last_version_date,
     is_grb_changed,
     get_geoms_affected_by_grb_change,
-    evaluate,
     GRBActualLoader,
     GRBFiscalParcelLoader, GRBSpecificDateParcelLoader, update_to_actual_grb,
 )

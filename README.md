@@ -60,6 +60,7 @@ The figure below shows:
       for 'predicted' interesting
       relevant distances (predictor)
     * aligner.get_formula(): Calculating a descriptive formula of a thematic boundary based on a reference layer
+    * evaluate(): Evaluates a thematic dictionary on equality with another version and adds a 'evaluation'-property
 
 * Exporters:
     * aligner.get_results_as_geojson(): Returns a collection of geojson-dictionaries with the results (resulting
@@ -81,7 +82,6 @@ Besides the generic functionalities, a range of Flanders-specific functionalitie
     * grb.get_geoms_affected_by_grb_change(): get thematic geometries that are possibly affected by GRB-changes during a
       specific timespan
     * grb.update_to_actual_grb(): aligns the boundaries of thematic features to the actual GRB-boundaries
-    * grb.evaluate(): Evaluates a thematic dictionary on equality with a newer version and adds a 'evaluation'-property
 
 ### Possible application fields
 

@@ -9,7 +9,7 @@ from shapely import intersects, Polygon
 from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
 
-from brdr.aligner import Aligner
+from brdr.aligner import Aligner, evaluate
 from brdr.constants import DEFAULT_CRS, LAST_VERSION_DATE, DATE_FORMAT, VERSION_DATE
 from brdr.constants import DOWNLOAD_LIMIT
 from brdr.constants import GRB_BUILDING_ID
@@ -19,7 +19,6 @@ from brdr.constants import GRB_KNW_ID
 from brdr.constants import GRB_PARCEL_ID
 from brdr.constants import GRB_VERSION_DATE
 from brdr.constants import MAX_REFERENCE_BUFFER
-from brdr.enums import Evaluation
 from brdr.enums import GRBType
 from brdr.geometry_utils import buffer_pos, safe_intersection
 from brdr.geometry_utils import create_donut
@@ -330,166 +329,7 @@ def get_collection_grb_parcels_by_date(
     logging.debug(len(specific_date_features))
     collection_specific_date["features"]=specific_date_features
 
-
-
     return collection_specific_date
-
-
-def evaluate(
-    actual_aligner,
-    dict_series,
-    dict_predicted,
-    thematic_dict_formula,
-    threshold_area=5,
-    threshold_percentage=1,
-    dict_unchanged=None,
-):
-    """
-    evaluate affected geometries and give attributes to evaluate and decide if new
-    proposals can be used
-    """
-    if dict_unchanged is None:
-        dict_unchanged = {}
-    theme_ids = list(dict_series.keys())
-    dict_evaluated_result = {}
-    prop_dictionary = {}
-    # Fill the dictionary-structure with empty values
-    for theme_id in theme_ids:
-        dict_evaluated_result[theme_id] = {}
-        prop_dictionary[theme_id] = {}
-        for dist in dict_series[theme_id].keys():
-            prop_dictionary[theme_id][dist] = {}
-    for theme_id in dict_unchanged.keys():
-            prop_dictionary[theme_id] = {}
-
-    for theme_id, dict_results in dict_predicted.items():
-        equality = False
-        for dist in sorted(dict_results.keys()):
-            if equality:
-                break
-            geomresult = dict_results[dist]["result"]
-            actual_formula = actual_aligner.get_formula(geomresult)
-            prop_dictionary[theme_id][dist]["formula"] = json.dumps(actual_formula)
-            base_formula = None
-            if theme_id in thematic_dict_formula:
-                base_formula = thematic_dict_formula[theme_id]
-            equality, prop = check_equality(
-                base_formula,
-                actual_formula,
-                threshold_area,
-                threshold_percentage,
-            )
-            if equality:
-                dict_evaluated_result[theme_id][dist] = dict_predicted[theme_id][dist]
-                prop_dictionary[theme_id][dist]["evaluation"] = prop
-                break
-
-    evaluated_theme_ids = [theme_id for theme_id, value in dict_evaluated_result.items() if value != {}]
-
-    # fill where no equality is found/ The biggest predicted distance is returned as
-    # proposal
-    for theme_id in theme_ids:
-        if theme_id not in evaluated_theme_ids:
-            if len(dict_predicted[theme_id].keys()) == 0:
-                result = dict_series[theme_id][0]
-                dict_evaluated_result[theme_id][0] = result
-                prop_dictionary[theme_id][0]["formula"] = json.dumps(
-                    actual_aligner.get_formula(result["result"])
-                )
-                prop_dictionary[theme_id][0]["evaluation"] = Evaluation.NO_PREDICTION_5
-                continue
-            # Add all predicted features so they can be manually checked
-            for dist in dict_predicted[theme_id].keys():
-                predicted_resultset = dict_predicted[theme_id][dist]
-                dict_evaluated_result[theme_id][dist] = predicted_resultset
-                prop_dictionary[theme_id][dist]["formula"] = json.dumps(
-                    actual_aligner.get_formula(predicted_resultset["result"])
-                )
-                prop_dictionary[theme_id][dist]["evaluation"] = Evaluation.TO_CHECK_4
-
-    for theme_id, geom in dict_unchanged.items():
-        prop_dictionary[theme_id] = {0:
-             {"result": geom,
-              "evaluation": Evaluation.NO_CHANGE_6,
-              "formula": json.dumps(actual_aligner.get_formula(geom))
-              }
-         }
-    return dict_evaluated_result, prop_dictionary
-
-
-def check_equality(
-    base_formula, actual_formula, threshold_area=5, threshold_percentage=1
-):
-    """
-    function that checks if 2 formulas are equal (determined by business-logic)
-    """
-    # TODO: research naar aanduid_id 116448 (equality na 0.5m), 120194 (1m)
-    # TODO: research and implementation of following ideas
-    # TODO: refine equality comparison, make it more generic
-    # TODO: Add control of OD to equality-comparison (see case aanduid_id 120288)
-    # ideas:
-    # * If result_diff smaller than 0.x --> automatic update
-    # * big polygons: If 'outer ring' has same formula (do net check inner side) -->
-    #   automatic update
-    # ** outer ring can be calculated: 1) negative buffer 2) original - buffered
-
-    if base_formula is None or actual_formula is None:
-        return False, Evaluation.NO_PREDICTION_5
-    od_alike = False
-    if base_formula["reference_od"] is None and actual_formula["reference_od"] is None:
-        od_alike = True
-    elif base_formula["reference_od"] is None or actual_formula["reference_od"] is None:
-        od_alike = False
-    elif (
-        abs(
-            base_formula["reference_od"]["area"]
-            - actual_formula["reference_od"]["area"]
-        )
-        * 100
-        / base_formula["reference_od"]["area"]
-    ) < threshold_percentage:
-        od_alike = True
-
-    if (
-        base_formula["reference_features"].keys()
-        == actual_formula["reference_features"].keys()
-        and od_alike
-    ):
-        if base_formula["full"] and base_formula["full"]:
-            return True, Evaluation.EQUALITY_FORMULA_GEOM_1
-
-        equal_reference_features = True
-        for key in base_formula["reference_features"].keys():
-            if (
-                (
-                    base_formula["reference_features"][key]["full"]
-                    == actual_formula["reference_features"][key]["full"]
-                )
-                or (
-                    abs(
-                        base_formula["reference_features"][key]["area"]
-                        - actual_formula["reference_features"][key]["area"]
-                    )
-                    > threshold_area
-                )
-                or (
-                    (
-                        abs(
-                            base_formula["reference_features"][key]["area"]
-                            - actual_formula["reference_features"][key]["area"]
-                        )
-                        * 100
-                        / base_formula["reference_features"][key]["area"]
-                    )
-                    > threshold_percentage
-                )
-            ):
-                equal_reference_features = False
-        if equal_reference_features:
-            return True, Evaluation.EQUALITY_FORMULA_2
-    if base_formula["full"] and base_formula["full"] and od_alike:
-        return True, Evaluation.EQUALITY_GEOM_3
-    return False, Evaluation.NO_PREDICTION_5
 
 def update_to_actual_grb(featurecollection, id_theme_fieldname, formula_field="formula", max_distance_for_actualisation=2, feedback=None ):
     """
@@ -503,7 +343,6 @@ def update_to_actual_grb(featurecollection, id_theme_fieldname, formula_field="f
 
     last_version_date = datetime.now().date()
     for feature in featurecollection["features"]:
-
         id_theme = feature["properties"][id_theme_fieldname]
         try:
             geom = shape(feature["geometry"])
@@ -527,11 +366,8 @@ def update_to_actual_grb(featurecollection, id_theme_fieldname, formula_field="f
         except:
             raise Exception(f"Problem with {LAST_VERSION_DATE}")
 
-    # if feedback.isCanceled():
-    #     return {}
     datetime_start = last_version_date
     datetime_end = datetime.now().date()
-    #thematic_dict_result = dict(dict_thematic)
     base_aligner_result = Aligner(feedback=feedback)
     base_aligner_result.load_thematic_data(DictLoader(dict_thematic))
     base_aligner_result.name_thematic_id = id_theme_fieldname

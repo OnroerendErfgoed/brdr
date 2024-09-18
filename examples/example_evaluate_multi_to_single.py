@@ -2,11 +2,10 @@ from datetime import date
 
 import numpy as np
 
-from brdr.aligner import Aligner
+from brdr.aligner import Aligner, evaluate
 from brdr.enums import GRBType
 from brdr.grb import GRBActualLoader
 from brdr.grb import GRBFiscalParcelLoader
-from brdr.grb import evaluate
 from brdr.grb import get_geoms_affected_by_grb_change
 from brdr.loader import DictLoader
 from brdr.oe import OnroerendErfgoedLoader

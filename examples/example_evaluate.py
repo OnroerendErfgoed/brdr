@@ -7,10 +7,11 @@ from brdr.aligner import Aligner
 from brdr.enums import GRBType
 from brdr.grb import GRBActualLoader
 from brdr.grb import GRBFiscalParcelLoader
-from brdr.grb import evaluate
+from brdr.aligner import evaluate
 from brdr.grb import get_geoms_affected_by_grb_change
 from brdr.loader import DictLoader, GeoJsonFileLoader
 from brdr.utils import get_series_geojson_dict
+
 
 
 def fid_to_geojson(geojson):

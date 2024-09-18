@@ -2,11 +2,10 @@ from datetime import date
 
 import numpy as np
 
-from brdr.aligner import Aligner
+from brdr.aligner import Aligner, evaluate
 from brdr.enums import GRBType
 from brdr.grb import (
     get_geoms_affected_by_grb_change,
-    evaluate,
     GRBFiscalParcelLoader,
     GRBActualLoader,
 )
