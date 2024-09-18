@@ -19,9 +19,15 @@ reference_dict = {"ref_id_1": geom_from_wkt("POLYGON ((0 1, 0 10,8 10,10 1,0 1))
 loader = DictLoader(reference_dict)
 aligner.load_reference_data(loader)
 # EXECUTE THE ALIGNMENT
-relevant_distance=1
+relevant_distance = 1
 process_result = aligner.process_dict_thematic(relevant_distance=relevant_distance)
 # PRINT RESULTS IN WKT
 print("result: " + process_result["theme_id_1"][relevant_distance]["result"].wkt)
-print("added area: " + process_result["theme_id_1"][relevant_distance]["result_diff_plus"].wkt)
-print("removed area: " + process_result["theme_id_1"][relevant_distance]["result_diff_min"].wkt)
+print(
+    "added area: "
+    + process_result["theme_id_1"][relevant_distance]["result_diff_plus"].wkt
+)
+print(
+    "removed area: "
+    + process_result["theme_id_1"][relevant_distance]["result_diff_min"].wkt
+)

@@ -10,9 +10,9 @@ aligner0 = Aligner()
 
 # Load thematic data
 
-aligner0.load_thematic_data(GeoJsonFileLoader(
-    "../tests/testdata/multipolygon.geojson", "theme_identifier"
-))
+aligner0.load_thematic_data(
+    GeoJsonFileLoader("../tests/testdata/multipolygon.geojson", "theme_identifier")
+)
 aligner0.dict_thematic = multipolygons_to_singles(aligner0.dict_thematic)
 aligner0.load_thematic_data(
     DictLoader(

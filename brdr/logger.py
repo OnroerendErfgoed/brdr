@@ -11,6 +11,7 @@ formatter = logging.Formatter(
 handler.setFormatter(formatter)
 LOGGER.addHandler(handler)
 
+
 class Logger:
     def __init__(self, feedback=None):
         self.feedback = feedback

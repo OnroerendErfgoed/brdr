@@ -43,16 +43,45 @@ The figure below shows:
 
 ### Functionalities
 
-`brdr` provides a variety of side-functionalities to assist in aligning boundaries, including:
+`brdr` provides a variety of functionalities in the Aligner-class to assist in aligning boundaries, including:
 
-* Loading thematic data ((Multi-)Polygons): as a dict, geojson or Web Feature Service (WFS-url)
-* Loading reference data ((Multi-)Polygons): as a dict, geojson or Web Feature Service (WFS-url)
-* (Flanders-specific) Download reference data from GRB-Flanders
-* Align thematic boundaries to reference boundaries with a specific relevant distance (process_dict_thematic)
-* Align thematic boundaries to reference boundaries with a series of specified relevant distances (process_series)
-* Make use of a 'predictor'-function that aligns thematic boundaries to reference boundaries for 'predicted' interesting
-  relevant distances (predictor)
-* Calculating a descriptive formulation of a thematic boundary based on a reference layer
+* Loaders:
+    * aligner.load_thematic_data():Loading thematic data ((Multi-)Polygons) as a dictionary (DictLoader) or geojson (
+      GeoJsonFileLoader,GeoJsonUrlLoader)
+    * aligner.load_reference_data():Loading reference data ((Multi-)Polygons) as a dictionary (DictLoader) or geojson (
+      GeoJsonFileLoader,GeoJsonUrlLoader)
+
+* Processors:
+    * aligner.process_dict_thematic(): Align thematic boundaries to reference boundaries with a specific relevant
+      distance
+    * aligner.process_series(): Align thematic boundaries to reference boundaries with a series of specified relevant
+      distances (process_series)
+    * aligner.predictor(): Make use of a 'predictor'-function that aligns thematic boundaries to reference boundaries
+      for 'predicted' interesting
+      relevant distances (predictor)
+    * aligner.get_formula(): Calculating a descriptive formula of a thematic boundary based on a reference layer
+
+* Exporters:
+    * aligner.get_results_as_geojson(): Returns a collection of geojson-dictionaries with the results (resulting
+      geometry, differences,...)
+    * aligner.get_predictions_as_geojson(): Returns a collection of geojson-dictionaries with the predictions (resulting
+      geometry, differences,...)
+    * aligner.get_series_as_geojson(): Returns a collection of geojson-dictionaries for a given resulting series (
+      resulting geometry, differences,...)
+    * aligner.get_reference_as_geojson(): Returns a geojson-featurecollection with all the reference-geometries
+    * aligner.export_predictions(): Exports the predicted geojson-files to a specified path
+    * aligner.export_results(): Exports the resuling geojson-files to a specified path
+
+Besides the generic functionalities, a range of Flanders-specific functionalities are provided:
+
+* Loaders:
+    * GRBActualLoader: Loading actual GRB (parcels, buildings)
+    * GRBFiscalParcelLoader: Loading fiscal GRB-parcels of a specific year
+* Processors:
+    * grb.get_geoms_affected_by_grb_change(): get thematic geometries that are possibly affected by GRB-changes during a
+      specific timespan
+    * grb.update_to_actual_grb(): aligns the boundaries of thematic features to the actual GRB-boundaries
+    * grb.evaluate(): Evaluates a thematic dictionary on equality with a newer version and adds a 'evaluation'-property
 
 ### Possible application fields
 
@@ -64,7 +93,7 @@ The figure below shows:
       resulting geometries
     * ...
 * Data-Analysis: Investigate the pattern in deviation and change between thematic and reference boundaries
-* Update-detection: Investigate the descriptive formulation before and after alignment to check for (automatic)
+* Update-detection: Investigate the descriptive formula before and after alignment to check for (automatic)
   alignment of geodata
 * ...
 
@@ -108,17 +137,18 @@ reference_dict = {"ref_id_1": geom_from_wkt("POLYGON ((0 1, 0 10,8 10,10 1,0 1))
 loader = DictLoader(reference_dict)
 aligner.load_reference_data(loader)
 # EXECUTE THE ALIGNMENT
-process_result = aligner.process_dict_thematic(relevant_distance=1)
+relevant_distance = 1
+process_result = aligner.process_dict_thematic(relevant_distance=relevant_distance)
 # PRINT RESULTS IN WKT
-print("result: " + process_result["theme_id_1"]["result"].wkt)
-print("added area: " + process_result["theme_id_1"]["result_diff_plus"].wkt)
-print("removed area: " + process_result["theme_id_1"]["result_diff_min"].wkt)
-# SHOW RESULTING GEOMETRY AND CHANGES
-# from examples import show_map
-# show_map(
-#     {aligner.relevant_distance:(result, result_diff, result_diff_plus, result_diff_min, relevant_intersection, relevant_diff)},
-#     thematic_dict,
-#     reference_dict)
+print("result: " + process_result["theme_id_1"][relevant_distance]["result"].wkt)
+print(
+    "added area: "
+    + process_result["theme_id_1"][relevant_distance]["result_diff_plus"].wkt
+)
+print(
+    "removed area: "
+    + process_result["theme_id_1"][relevant_distance]["result_diff_min"].wkt
+)
 ```
 
 The resulting figure shows:
@@ -205,7 +235,10 @@ pip-compile $PIP_COMPILE_ARGS -o requirements-dev.txt --all-extras
 ### tests
 
 ```python
-python -m pytest --cov=brdr tests/ --cov-report term-missing
+python - m
+pytest - -cov = brdr
+tests / --cov - report
+term - missing
 ```
 
 ## Motivation & citation

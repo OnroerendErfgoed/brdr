@@ -4,11 +4,11 @@ from shapely import from_wkt
 from shapely.geometry import Point
 from shapely.geometry import Polygon
 
+from brdr.geometry_utils import _grid_bounds
 from brdr.geometry_utils import buffer_neg
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import buffer_pos
 from brdr.geometry_utils import get_partitions
-from brdr.geometry_utils import _grid_bounds
 from brdr.geometry_utils import safe_difference
 from brdr.geometry_utils import safe_intersection
 from brdr.geometry_utils import safe_symmetric_difference

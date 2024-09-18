@@ -10,26 +10,28 @@ if __name__ == "__main__":
     # Initiate brdr
     aligner = Aligner()
     # Load thematic data
-    aligner.load_thematic_data(GeoJsonFileLoader(
-        "../tests/testdata/themelayer_referenced.geojson", "id_theme"
-    ))
+    aligner.load_thematic_data(
+        GeoJsonFileLoader("../tests/testdata/themelayer_referenced.geojson", "id_theme")
+    )
 
     # Use GRB adp-parcels as reference polygons adp= administratieve percelen
-    aligner.load_reference_data(GRBActualLoader(grb_type=GRBType.ADP, partition=1000,aligner=aligner))
+    aligner.load_reference_data(
+        GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
+    )
 
     # Example how to use the Aligner
     rel_dist = 10
     dict_results = aligner.process_dict_thematic(
-            relevant_distance=rel_dist,
-            od_strategy=OpenbaarDomeinStrategy.SNAP_FULL_AREA_SINGLE_SIDE,
-        )
+        relevant_distance=rel_dist,
+        od_strategy=OpenbaarDomeinStrategy.SNAP_FULL_AREA_SINGLE_SIDE,
+    )
     aligner.export_results("output/")
     show_map(dict_results, aligner.dict_thematic, aligner.dict_reference)
 
     rel_dist = 6
     dict_results = aligner.process_dict_thematic(
-            relevant_distance=rel_dist, od_strategy=OpenbaarDomeinStrategy.SNAP_ALL_SIDE
-        )
+        relevant_distance=rel_dist, od_strategy=OpenbaarDomeinStrategy.SNAP_ALL_SIDE
+    )
 
     aligner.export_results("output/")
     show_map(dict_results, aligner.dict_thematic, aligner.dict_reference)
@@ -47,10 +49,10 @@ if __name__ == "__main__":
     # determination)
     rel_dist = 6
     dict_results = aligner.process_dict_thematic(
-            relevant_distance=rel_dist,
-            od_strategy=OpenbaarDomeinStrategy.SNAP_FULL_AREA_ALL_SIDE,
-            threshold_overlap_percentage=-1,
-        )
+        relevant_distance=rel_dist,
+        od_strategy=OpenbaarDomeinStrategy.SNAP_FULL_AREA_ALL_SIDE,
+        threshold_overlap_percentage=-1,
+    )
 
     aligner.export_results("output/")
     show_map(dict_results, aligner.dict_thematic, aligner.dict_reference)

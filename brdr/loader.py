@@ -29,9 +29,11 @@ class Loader(ABC):
                         self.versiondate_info["format"],
                     )
                 except:
-                    #Catch, to try extracting only the date with default -date format if specific format does not work
+                    # Catch, to try extracting only the date with default -date format if specific format does not work
                     self.data_dict_properties[key][VERSION_DATE] = datetime.strptime(
-                        self.data_dict_properties[key][self.versiondate_info["name"]][:10],
+                        self.data_dict_properties[key][self.versiondate_info["name"]][
+                            :10
+                        ],
                         DATE_FORMAT,
                     )
 

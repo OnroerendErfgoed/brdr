@@ -6,7 +6,7 @@ from examples import print_formula
 from examples import show_map
 
 if __name__ == "__main__":
-    #TODO
+    # TODO
     # EXAMPLE for a thematic Polygon (aanduid_id 131635)
 
     # Initiate brdr

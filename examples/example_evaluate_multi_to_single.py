@@ -11,6 +11,7 @@ from brdr.grb import get_geoms_affected_by_grb_change
 from brdr.loader import DictLoader
 from brdr.oe import OnroerendErfgoedLoader
 from brdr.utils import get_series_geojson_dict
+
 #from brdr.utils import merge_process_results
 
 multi_as_single_modus = False

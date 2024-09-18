@@ -1,5 +1,6 @@
 import statistics
 from datetime import datetime
+
 from brdr.aligner import Aligner
 from brdr.loader import GeoJsonFileLoader
 

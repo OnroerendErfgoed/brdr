@@ -24,7 +24,7 @@ from brdr.constants import CORR_DISTANCE
 from brdr.constants import DEFAULT_CRS
 from brdr.constants import THRESHOLD_CIRCLE_RATIO
 from brdr.enums import OpenbaarDomeinStrategy
-from brdr.geometry_utils import buffer_neg, safe_equals
+from brdr.geometry_utils import buffer_neg
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import buffer_pos
 from brdr.geometry_utils import fill_and_remove_gaps
@@ -33,7 +33,7 @@ from brdr.geometry_utils import safe_intersection
 from brdr.geometry_utils import safe_symmetric_difference
 from brdr.geometry_utils import safe_union
 from brdr.loader import Loader
-from brdr.logger import Logger, LOGGER
+from brdr.logger import Logger
 from brdr.typings import ProcessResult
 from brdr.utils import diffs_from_dict_series, multipolygons_to_singles
 from brdr.utils import geojson_from_dict
@@ -402,7 +402,7 @@ class Aligner:
             predicted_geoms_for_theme_id = []
             for rel_dist, processresults in dist_results.items():
                 predicted_geom = processresults["result"]
-                if not self._equal_geom_in_array(predicted_geom,predicted_geoms_for_theme_id):
+                if not _equal_geom_in_array(predicted_geom,predicted_geoms_for_theme_id):
                     dict_predicted_unique[theme_id][rel_dist] = processresults
                     predicted_geoms_for_theme_id.append(processresults["result"])
                 else:
@@ -416,18 +416,7 @@ class Aligner:
             diffs_dict,
         )
 
-    @staticmethod
-    def _equal_geom_in_array(geom,geom_array):
-        """
-        Check if a predicted geometry is equal to other predicted geometries in a list.
-        Equality is defined as there is the symmetrical difference is smaller than the CORRECTION DISTANCE
-        Returns True if one of the elements is equal, otherwise False
-        """
-        for g in geom_array:
-            #if safe_equals(geom,g):
-            if buffer_neg(safe_symmetric_difference(geom, g),CORR_DISTANCE).is_empty:
-                return True
-        return False
+
 
     def process_series(
         self,
@@ -1217,3 +1206,16 @@ def _get_relevant_polygons_from_geom(geometry: BaseGeometry, buffer_distance: fl
                 if relevant_geom is not None and not relevant_geom.is_empty:
                     array.append(g)
     return make_valid(unary_union(array))
+
+@staticmethod
+def _equal_geom_in_array(geom,geom_array):
+    """
+    Check if a predicted geometry is equal to other predicted geometries in a list.
+    Equality is defined as there is the symmetrical difference is smaller than the CORRECTION DISTANCE
+    Returns True if one of the elements is equal, otherwise False
+    """
+    for g in geom_array:
+        #if safe_equals(geom,g):
+        if buffer_neg(safe_symmetric_difference(geom, g),CORR_DISTANCE).is_empty:
+            return True
+    return False

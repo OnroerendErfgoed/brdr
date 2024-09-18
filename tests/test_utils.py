@@ -5,10 +5,10 @@ from shapely import is_empty
 from shapely.geometry import Polygon
 
 from brdr.constants import MULTI_SINGLE_ID_SEPARATOR
-from brdr.oe import get_oe_dict_by_ids, OEType
+from brdr.oe import get_oe_dict_by_ids
 from brdr.typings import ProcessResult
 from brdr.utils import diffs_from_dict_series
-#from brdr.utils import filter_dict_by_key
+# from brdr.utils import filter_dict_by_key
 from brdr.utils import get_breakpoints_zerostreak
 from brdr.utils import get_collection
 from brdr.utils import merge_process_results
