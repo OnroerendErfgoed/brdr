@@ -41,6 +41,7 @@ MULTI_SINGLE_ID_SEPARATOR = "*$*"
 
 FORMULA_FIELD_NAME = "brdr_formula"
 EVALUATION_FIELD_NAME = "brdr_evaluation"
+NR_CALCULATION_FIELD_NAME = "brdr_nr_calculations"
 RELEVANT_DISTANCE_FIELD_NAME = "brdr_relevant_distance"
 LAST_VERSION_DATE = "last_version_date"
 VERSION_DATE = "version_date"

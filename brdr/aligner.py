@@ -702,15 +702,11 @@ class Aligner:
         prop_dictionary = defaultdict(dict)
 
         for theme_id, results_dict in dict_series.items():
-            nr_calculations = len(results_dict)
             for relevant_distance, process_results in results_dict.items():
-                prop_dictionary[theme_id][relevant_distance] = {
-                    "nr_calculations": nr_calculations
-                }
                 if formula:
                     result = process_results["result"]
                     formula = self.get_brdr_formula(result)
-                    prop_dictionary[theme_id][relevant_distance][FORMULA_FIELD_NAME] =json.dumps(formula)
+                    prop_dictionary[theme_id][relevant_distance] ={FORMULA_FIELD_NAME:json.dumps(formula)}
 
         return get_series_geojson_dict(
             dict_series,

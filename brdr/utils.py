@@ -14,7 +14,8 @@ from shapely import unary_union
 from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
 
-from brdr.constants import MULTI_SINGLE_ID_SEPARATOR, DEFAULT_CRS, DOWNLOAD_LIMIT, RELEVANT_DISTANCE_FIELD_NAME
+from brdr.constants import MULTI_SINGLE_ID_SEPARATOR, DEFAULT_CRS, DOWNLOAD_LIMIT, RELEVANT_DISTANCE_FIELD_NAME, \
+    NR_CALCULATION_FIELD_NAME
 from brdr.enums import DiffMetric
 from brdr.geometry_utils import get_partitions, get_bbox
 from brdr.typings import ProcessResult
@@ -33,10 +34,12 @@ def get_series_geojson_dict(
     features_list_dict = {}
 
     for theme_id, results_dict in series_dict.items():
+        nr_calculations = len(results_dict)
         prop_dict = dict(series_prop_dict or {}).get(theme_id, {})
         for relative_distance, process_result in results_dict.items():
             properties = prop_dict.get(relative_distance, {})
             properties[id_field] = theme_id
+            properties[NR_CALCULATION_FIELD_NAME] = nr_calculations
             properties[RELEVANT_DISTANCE_FIELD_NAME] = relative_distance
 
             for results_type, geom in process_result.items():
