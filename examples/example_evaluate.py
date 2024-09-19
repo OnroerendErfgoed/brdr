@@ -4,88 +4,13 @@ import numpy as np
 from shapely import from_wkt
 
 from brdr.aligner import Aligner
+from brdr.constants import FORMULA_FIELD_NAME, EVALUATION_FIELD_NAME
 from brdr.enums import GRBType
 from brdr.grb import GRBActualLoader
 from brdr.grb import GRBFiscalParcelLoader
-from brdr.grb import evaluate
 from brdr.grb import get_geoms_affected_by_grb_change
 from brdr.loader import DictLoader, GeoJsonFileLoader
 from brdr.utils import get_series_geojson_dict
-
-
-def fid_to_geojson(geojson):
-    fid = 1
-    for f in geojson["features"]:
-        f["properties"]["fid"] = str(fid)
-        fid = fid + 1
-        if f["geometry"]["type"] == "Polygon":
-            f["geometry"] = {
-                "type": "MultiPolygon",
-                "coordinates": [f["geometry"]["coordinates"]],
-            }
-
-    return geojson
-
-
-#
-# thematic_dict = {
-#     "theme_id_1": from_wkt(
-#         "MultiPolygon (((174180.20077791667426936 171966.14649116666987538, "
-# "174415.60530965600628406 171940.9636807945498731, "
-# "174388.65236948925303295 171770.99678386366576888, "
-# "174182.10876987033407204 171836.13745758961886168, "
-# "174184.88916448061354458 171873.07698598300339654, "
-# "174180.20077791667426936 171966.14649116666987538)))"
-#     )
-# }
-
-# thematic_dict = {
-#     "theme_id_1": from_wkt(
-#         "MultiPolygon (((173463.11530961000244133 174423.83310307000647299, "
-# "173460.22633100001257844 174422.02316300000529736, "
-# "173455.24681099998997524 174429.98009100000490434, "
-# "173454.4299790000077337 174429.34482699999352917, "
-# "173452.06690700000035577 174432.43058700000983663, "
-# "173451.25743500000680797 174431.8672589999914635, "
-# "173448.74844299998949282 174434.96249100001296028, "
-# "173448.5809550000121817 174435.80485899999621324, "
-# "173454.82841871041455306 174442.46780387416947633, "
-# "173461.44169100001454353 174446.50898700000834651, "
-# "173472.15932299999985844 174429.49919500001124106, "
-# "173466.18524341000011191 174425.75641125999391079, "
-# "173466.9701960513193626 174424.8217541387421079, "
-# "173462.59915620859828778 174424.8217541387421079, "
-# "173463.11530961000244133 174423.83310307000647299)))"
-#     )
-# }
-# Polygon ((173455.24681099998997524 174429.9801549999974668, "
-# "173454.4299790000077337 174429.34482699999352917, "
-# "173452.06690700000035577 174432.43058700000983663, "
-# "173451.25743500000680797 174431.8672589999914635, "
-# "173448.74844299998949282 174434.96249100001296028, "
-# "173448.5809550000121817 174435.80485899999621324, "
-# "173455.39772300000186078 174441.47852299999794923, "
-# "173461.44169100001454353 174446.50898700000834651, "
-# "173472.15932299999985844 174429.49919500001124106, "
-# "173466.18524300001445226 174425.75641100000939332, "
-# "173460.22633100001257844 174422.02316300000529736, "
-# "173455.24681099998997524 174429.9801549999974668))"
-
-# MultiPolygon (((173463.11530961000244133 174423.83310307000647299, "
-# "173460.22633100001257844 174422.02316300000529736, "
-# "173455.24681099998997524 174429.98009100000490434, "
-# "173454.4299790000077337 174429.34482699999352917, "
-# "173452.06690700000035577 174432.43058700000983663, "
-# "173451.25743500000680797 174431.8672589999914635, "
-# "173448.74844299998949282 174434.96249100001296028, "
-# "173448.5809550000121817 174435.80485899999621324, "
-# "173454.82841871041455306 174442.46780387416947633, "
-# "173461.44169100001454353 174446.50898700000834651, "
-# "173472.15932299999985844 174429.49919500001124106, "
-# "173466.18524341000011191 174425.75641125999391079, "
-# "173466.9701960513193626 174424.8217541387421079, "
-# "173462.59915620859828778 174424.8217541387421079, "
-# "173463.11530961000244133 174423.83310307000647299)))"
 
 thematic_dict = {
     "theme_id_1": from_wkt(
@@ -99,12 +24,15 @@ base_year = "2022"
 base_aligner.load_reference_data(
     GRBFiscalParcelLoader(year=base_year, aligner=base_aligner)
 )
-base_process_result = base_aligner.process_dict_thematic(relevant_distance=2)
+relevant_distance = 2
+base_process_result = base_aligner.process(relevant_distance=relevant_distance)
 thematic_dict_formula = {}
 thematic_dict_result = {}
 for key in base_process_result:
-    thematic_dict_result[key] = base_process_result[key]["result"]
-    thematic_dict_formula[key] = base_aligner.get_formula(thematic_dict_result[key])
+    thematic_dict_result[key] = base_process_result[key][relevant_distance]["result"]
+    thematic_dict_formula[key] = {
+        FORMULA_FIELD_NAME: base_aligner.get_brdr_formula(thematic_dict_result[key])
+    }
     print(key + ": " + thematic_dict_result[key].wkt)
     print(key + ": " + str(thematic_dict_formula[key]))
 base_aligner_result = Aligner()
@@ -123,20 +51,15 @@ for key, value in dict_affected.items():
     print(key + ": " + value.wkt)
 actual_aligner = Aligner()
 loader = DictLoader(dict_affected)
-actual_aligner.load_thematic_data(DictLoader(dict_affected))
+actual_aligner.load_thematic_data(
+    DictLoader(data_dict=dict_affected, data_dict_properties=thematic_dict_formula)
+)
 actual_aligner.load_reference_data(
     GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=actual_aligner)
 )
-series = np.arange(0, 200, 10, dtype=int) / 100
-dict_series, dict_predicted, diffs_dict = actual_aligner.predictor(series)
-
-# diffs_dict=merge_diffs_dict(diffs_dict)
-
-dict_evaluated, prop_dictionary = evaluate(
-    actual_aligner,
-    dict_series,
-    dict_predicted,
-    thematic_dict_formula,
+actual_aligner.relevant_distances = np.arange(0, 200, 10, dtype=int) / 100
+dict_evaluated, prop_dictionary = actual_aligner.compare(
+    # thematic_dict_formula=thematic_dict_formula,
     threshold_area=5,
     threshold_percentage=1,
     dict_unchanged=dict_unchanged,
@@ -149,17 +72,12 @@ fc = get_series_geojson_dict(
     series_prop_dict=prop_dictionary,
 )
 print(fc["result"])
-fcs = actual_aligner.get_predictions_as_geojson(formula=True)
+fcs = actual_aligner.get_results_as_geojson(formula=True)
 print(fcs["result"])
 
 for feature in fc["result"]["features"]:
     print(
         feature["properties"][actual_aligner.name_thematic_id]
         + ": "
-        + feature["properties"]["evaluation"]
+        + feature["properties"][EVALUATION_FIELD_NAME]
     )
-
-geojson = fid_to_geojson(fc["result"])
-
-
-print(geojson)

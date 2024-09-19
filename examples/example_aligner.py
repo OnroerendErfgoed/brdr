@@ -50,11 +50,9 @@ if __name__ == "__main__":
 
     # Example how to use the Aligner
     rel_dist = 6
-    dict_results_by_distance = {
-        aligner.relevant_distance: aligner.process_dict_thematic(
-            relevant_distance=rel_dist,
-            od_strategy=OpenbaarDomeinStrategy.SNAP_FULL_AREA_ALL_SIDE,
-        )
-    }
-    aligner.export_results("output/")
-    show_map(dict_results_by_distance, aligner.dict_thematic, aligner.dict_reference)
+    dict_results = aligner.process(
+        relevant_distance=rel_dist,
+        od_strategy=OpenbaarDomeinStrategy.SNAP_FULL_AREA_ALL_SIDE,
+    )
+    aligner.save_results("output/")
+    show_map(dict_results, aligner.dict_thematic, aligner.dict_reference)

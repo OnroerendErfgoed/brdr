@@ -43,16 +43,37 @@ The figure below shows:
 
 ### Functionalities
 
-`brdr` provides a variety of side-functionalities to assist in aligning boundaries, including:
+`brdr` provides a variety of functionalities in the Aligner-class to assist in aligning boundaries, including:
 
-* Loading thematic data ((Multi-)Polygons): as a dict, geojson or Web Feature Service (WFS-url)
-* Loading reference data ((Multi-)Polygons): as a dict, geojson or Web Feature Service (WFS-url)
-* (Flanders-specific) Download reference data from GRB-Flanders
-* Align thematic boundaries to reference boundaries with a specific relevant distance (process_dict_thematic)
-* Align thematic boundaries to reference boundaries with a series of specified relevant distances (process_series)
-* Make use of a 'predictor'-function that aligns thematic boundaries to reference boundaries for 'predicted' interesting
-  relevant distances (predictor)
-* Calculating a descriptive formulation of a thematic boundary based on a reference layer
+* Loaders:
+    * aligner.load_thematic_data():Loading thematic data ((Multi-)Polygons) as a dictionary (DictLoader) or geojson (
+      GeoJsonFileLoader,GeoJsonUrlLoader)
+    * aligner.load_reference_data():Loading reference data ((Multi-)Polygons) as a dictionary (DictLoader) or geojson (
+      GeoJsonFileLoader,GeoJsonUrlLoader)
+
+* Processors:
+    * aligner.process(): Align thematic boundaries to reference boundaries with a specific relevant
+      distance or a range of relevant distances
+    * aligner.predictor(): Searches all 'stable' (=predicted) processresults in a range of relevant distances
+    * aligner.get_brdr_formula(): Calculating a descriptive formula of a thematic boundary based on a reference layer
+    * compare(): Compares input geometries with another version and adds a EVALUATION_FIELD_NAME
+* Exporters:
+    * aligner.get_results_as_geojson(): Returns a collection of geojson-dictionaries with the processresults (resulting
+      geometry, differences,...): This can be used for all processresults or only the 'predicted' results
+    * aligner.get_input_as_geojson(): Returns a geojson-featurecollection from input-dictionaries (thematic or
+      reference)
+    * aligner.save_results(): Exports the resuling geojson-files to a specified path:This can be used for all
+      processresults or only the 'predicted' results
+
+Besides the generic functionalities, a range of Flanders-specific functionalities are provided:
+
+* Loaders:
+    * GRBActualLoader: Loading actual GRB (parcels, buildings)
+    * GRBFiscalParcelLoader: Loading fiscal GRB-parcels of a specific year
+* Processors:
+    * grb.get_geoms_affected_by_grb_change(): get thematic geometries that are possibly affected by GRB-changes during a
+      specific timespan
+    * grb.update_to_actual_grb(): aligns the boundaries of thematic features to the actual GRB-boundaries
 
 ### Possible application fields
 
@@ -64,7 +85,7 @@ The figure below shows:
       resulting geometries
     * ...
 * Data-Analysis: Investigate the pattern in deviation and change between thematic and reference boundaries
-* Update-detection: Investigate the descriptive formulation before and after alignment to check for (automatic)
+* Update-detection: Investigate the descriptive formula before and after alignment to check for (automatic)
   alignment of geodata
 * ...
 
@@ -94,9 +115,6 @@ from brdr.loader import DictLoader
 
 # CREATE AN ALIGNER
 aligner = Aligner(
-    relevant_distance=1,
-    od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
-    threshold_overlap_percentage=50,
     crs="EPSG:31370",
 )
 # ADD A THEMATIC POLYGON TO THEMATIC DICTIONARY and LOAD into Aligner
@@ -108,17 +126,22 @@ reference_dict = {"ref_id_1": geom_from_wkt("POLYGON ((0 1, 0 10,8 10,10 1,0 1))
 loader = DictLoader(reference_dict)
 aligner.load_reference_data(loader)
 # EXECUTE THE ALIGNMENT
-process_result = aligner.process_dict_thematic(relevant_distance=1)
+relevant_distance = 1
+process_result = aligner.process(
+    relevant_distance=relevant_distance,
+    od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
+    threshold_overlap_percentage=50,
+)
 # PRINT RESULTS IN WKT
-print("result: " + process_result["theme_id_1"]["result"].wkt)
-print("added area: " + process_result["theme_id_1"]["result_diff_plus"].wkt)
-print("removed area: " + process_result["theme_id_1"]["result_diff_min"].wkt)
-# SHOW RESULTING GEOMETRY AND CHANGES
-# from examples import show_map
-# show_map(
-#     {aligner.relevant_distance:(result, result_diff, result_diff_plus, result_diff_min, relevant_intersection, relevant_diff)},
-#     thematic_dict,
-#     reference_dict)
+print("result: " + process_result["theme_id_1"][relevant_distance]["result"].wkt)
+print(
+    "added area: "
+    + process_result["theme_id_1"][relevant_distance]["result_diff_plus"].wkt
+)
+print(
+    "removed area: "
+    + process_result["theme_id_1"][relevant_distance]["result_diff_min"].wkt
+)
 ```
 
 The resulting figure shows:
@@ -205,7 +228,10 @@ pip-compile $PIP_COMPILE_ARGS -o requirements-dev.txt --all-extras
 ### tests
 
 ```python
-python -m pytest --cov=brdr tests/ --cov-report term-missing
+python - m
+pytest - -cov = brdr
+tests / --cov - report
+term - missing
 ```
 
 ## Motivation & citation

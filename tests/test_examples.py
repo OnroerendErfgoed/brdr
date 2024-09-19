@@ -7,10 +7,9 @@ from brdr.enums import GRBType
 from brdr.grb import GRBActualLoader
 from brdr.loader import DictLoader
 from brdr.loader import GeoJsonLoader
+from brdr.oe import get_oe_dict_by_ids, OnroerendErfgoedLoader
 from brdr.utils import diffs_from_dict_series
 from brdr.utils import get_breakpoints_zerostreak
-from brdr.utils import get_oe_dict_by_ids
-from brdr.utils import multipolygons_to_singles
 
 
 class TestExamples(unittest.TestCase):
@@ -24,12 +23,12 @@ class TestExamples(unittest.TestCase):
         loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         aligner.load_reference_data(loader)
         rel_dist = 2
-        aligner.process_dict_thematic(rel_dist, 4)
+        aligner.process(relevant_distance=rel_dist, od_strategy=4)
 
     def test_example_combined_borders_adp_gbg(self):
         aligner = Aligner()
-        dict_theme = get_oe_dict_by_ids([131635])
-        aligner.load_thematic_data_dict(dict_theme)
+        loader = OnroerendErfgoedLoader([131635])
+        aligner.load_thematic_data(loader)
         adp_loader = GRBActualLoader(
             grb_type=GRBType.ADP, partition=1000, aligner=aligner
         )
@@ -40,26 +39,12 @@ class TestExamples(unittest.TestCase):
         dict_ref2, dict_ref_properties_gbg, source_gbg = gbg_loader.load_data()
         dict_ref.update(dict_ref2)  # combine 2 dictionaries
         # make a polygonized version of the reference data with non-overlapping polygons
-        aligner.load_reference_data_dict(dict_ref)
+        aligner.load_reference_data(DictLoader(dict_ref))
 
         rel_dist = 2
-        result_dict = aligner.process_dict_thematic(rel_dist, 4)
+        result_dict = aligner.process(relevant_distance=rel_dist, od_strategy=4)
         for process_results in result_dict.values():
-            aligner.get_formula(process_results["result"])
-
-    def test_example_multi_to_single(self):
-        aligner = Aligner()
-        # Load thematic data & reference data
-        # Get a specific feature of OE that exists out of a Multipolygon
-        dict_theme = get_oe_dict_by_ids([110082])
-        dict_theme = multipolygons_to_singles(dict_theme)
-        aligner.load_thematic_data_dict(dict_theme)
-        aligner.load_reference_data_grb_actual(grb_type=GRBType.GBG, partition=1000)
-
-        rel_dist = 5
-        result_dict = aligner.process_dict_thematic(rel_dist, 4)
-        for process_results in result_dict.values():
-            aligner.get_formula(process_results["result"])
+            aligner.get_brdr_formula(process_results[rel_dist]["result"])
 
     def test_example_multipolygon(self):
         aligner0 = Aligner()
@@ -185,10 +170,10 @@ class TestExamples(unittest.TestCase):
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         )
 
-        _, dict_predicted, _ = aligner.predictor()
+        _, dict_predictions, _ = aligner.predictor()
 
-        self.assertGreater(len(dict_predicted), 0)
-        fcs = aligner.get_predictions_as_geojson(formula=True)
+        self.assertGreater(len(dict_predictions), 0)
+        fcs = aligner.get_results_as_geojson(formula=True)
         self.assertEqual(len(fcs), 6)
 
     def test_example_wanted_changes(self):
@@ -202,11 +187,11 @@ class TestExamples(unittest.TestCase):
 
         # Example how to use the Aligner
         rel_dist = 2
-        aligner.process_dict_thematic(rel_dist, 4)
+        aligner.process(relevant_distance=rel_dist, od_strategy=4)
 
         # Example how to use a series (for histogram)
         series = np.arange(0, 300, 10, dtype=int) / 100
-        dict_series = aligner.process_series(series, 4, 50)
+        dict_series = aligner.process(series, 4, 50)
         resulting_areas = diffs_from_dict_series(dict_series, aligner.dict_thematic)
         for key in resulting_areas:
             if len(resulting_areas[key]) == len(series):
@@ -220,24 +205,23 @@ class TestExamples(unittest.TestCase):
                         f"{st[0]:.2f} - {st[1]:.2f} -{st[2]:.2f} - {st[3]:.2f}"
                         f" - startextreme {st[4]:.2f} "
                     )
-                    aligner.process_dict_thematic(st[0], 4)
+                    aligner.process(relevant_distance=st[0], od_strategy=4)
 
     def test_example_predictor(self):
         aligner = Aligner()
         # Load thematic data & reference data
         dict_theme = get_oe_dict_by_ids([131635])
-        aligner.load_thematic_data_dict(dict_theme)
-        aligner.load_reference_data_grb_actual(
-            grb_type=GRBType.ADP, partition=1000
-        )  # gebruik de actuele adp-percelen adp= administratieve percelen
-
+        aligner.load_thematic_data(DictLoader(dict_theme))
+        aligner.load_reference_data(
+            GRBActualLoader(aligner=aligner, grb_type=GRBType.GBG, partition=1000)
+        )
         series = np.arange(0, 300, 10, dtype=int) / 100
         # predict which relevant distances are interesting to propose as resulting
         # geometry
 
-        _, dict_predicted, _ = aligner.predictor(
+        _, dict_predictions, _ = aligner.predictor(
             relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
         )
-        for key in dict_predicted.keys():
-            assert key in dict_predicted.keys()
+        for key in dict_predictions.keys():
+            assert key in dict_predictions.keys()
             continue

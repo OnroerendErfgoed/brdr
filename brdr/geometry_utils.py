@@ -1,8 +1,7 @@
 import logging
 
 import numpy as np
-from shapely import GEOSException
-from shapely import GeometryCollection
+from shapely import GEOSException, equals
 from shapely import Polygon
 from shapely import STRtree
 from shapely import buffer
@@ -14,19 +13,15 @@ from shapely import get_num_interior_rings
 from shapely import get_parts
 from shapely import intersection
 from shapely import is_empty
-from shapely import make_valid
 from shapely import polygons
 from shapely import symmetric_difference
 from shapely import to_wkt
-from shapely import unary_union
 from shapely import union
 from shapely.geometry.base import BaseGeometry
 from shapely.prepared import prep
 
 from brdr.constants import MITRE_LIMIT
 from brdr.constants import QUAD_SEGMENTS
-from brdr.constants import THRESHOLD_EXCLUSION_AREA
-from brdr.constants import THRESHOLD_EXCLUSION_PERCENTAGE
 
 
 def buffer_neg_pos(geometry, buffer_value):
@@ -191,6 +186,50 @@ def safe_union(geom_a: BaseGeometry, geom_b: BaseGeometry) -> BaseGeometry:
     return geom
 
 
+def safe_equals(geom_a, geom_b):
+    """
+    Checks equality between two geometries with error handling.
+
+    This function computes the equality between two Shapely geometry objects
+    (`geom_a` and `geom_b`). It incorporates error handling to address potential
+    exceptions that might arise due to topological inconsistencies in the
+    geometries, similar to non-noded intersections between linestrings.
+
+    Args:
+        geom_a (BaseGeometry): The first Shapely geometry object.
+        geom_b (BaseGeometry): The second Shapely geometry object
+
+    Returns:
+        Boolean: The equality between 2 Shapely-geometries
+
+    Logs:
+        - If a `GEOSException` occurs:
+            - A warning message is logged with the WKT representations of both
+                geometries.
+            - The function attempts to buffer both geometries by a small value
+                (0.0000001) and then perform the equality-operation.
+        - If any other exception occurs:
+            - An error message is logged indicating that False is returned.
+    """
+    # function to solve exceptional error: shapely.errors.GEOSException:
+    # TopologyException: found non-noded intersection between LINESTRING
+    # see: https://gis.stackexchange.com/questions/50399
+    try:
+        equal = equals(geom_a, geom_b)
+    except GEOSException:
+        logging.debug("equals_error")
+        try:
+            logging.warning(
+                "equals_error for geoms:" + geom_a.wkt + " and " + geom_b.wkt
+            )
+            equal = equals(buffer(geom_a, 0.0000001), buffer(geom_b, 0.0000001))
+        except Exception:  # noqa
+            logging.error("equals_error: False returned")
+            equal = False
+
+    return equal
+
+
 def safe_intersection(geom_a: BaseGeometry, geom_b: BaseGeometry) -> BaseGeometry:
     """
     Calculates the intersection of two geometries with error handling.
@@ -332,7 +371,7 @@ def safe_symmetric_difference(geom_a, geom_b):
     return geom
 
 
-def grid_bounds(geom: BaseGeometry, delta: float):
+def _grid_bounds(geom: BaseGeometry, delta: float):
     """
     Divides a geometric area (specified by `geom`) into a grid of rectangular
     partitions.
@@ -371,137 +410,6 @@ def grid_bounds(geom: BaseGeometry, delta: float):
             )
             grid.append(poly_ij)
     return grid
-
-
-def get_relevant_polygons_from_geom(geometry: BaseGeometry, buffer_distance: float):
-    """
-    Get only the relevant parts (polygon) from a geometry.
-    Points, Lines and Polygons smaller than relevant distance are excluded from the
-    result
-    """
-    if not geometry or geometry.is_empty:
-        # If the input geometry is empty or None, do nothing.
-        return geometry
-    else:
-        geometry = make_valid(unary_union(geometry))
-        # Create a GeometryCollection from the input geometry.
-        geometry_collection = GeometryCollection(geometry)
-        array = []
-        for g in geometry_collection.geoms:
-            # Ensure each sub-geometry is valid.
-            g = make_valid(g)
-            if str(g.geom_type) in ["Polygon", "MultiPolygon"]:
-                relevant_geom = buffer_neg(g, buffer_distance)
-                if relevant_geom is not None and not relevant_geom.is_empty:
-                    array.append(g)
-    return make_valid(unary_union(array))
-
-
-def calculate_geom_by_intersection_and_reference(
-    geom_intersection: BaseGeometry,
-    geom_reference: BaseGeometry,
-    is_openbaar_domein,
-    buffer_distance,
-    threshold_overlap_percentage,
-    threshold_exclusion_percentage=THRESHOLD_EXCLUSION_PERCENTAGE,
-    threshold_exclusion_area=THRESHOLD_EXCLUSION_AREA,
-):
-    """
-    Calculates the geometry based on intersection and reference geometries.
-
-    Args:
-        geom_intersection (BaseGeometry): The intersection geometry.
-        geom_reference (BaseGeometry): The reference geometry.
-        is_openbaar_domein (bool): A flag indicating whether it's a public domain
-            (area not covered with reference polygon).
-        threshold_exclusion_percentage (int): The threshold exclusion percentage.
-        threshold_exclusion_area (int): The threshold exclusion area.
-        buffer_distance (float): The buffer distance.
-        threshold_overlap_percentage (int): The threshold overlap percentage.
-
-    Returns:
-        tuple: A tuple containing the resulting geometries:
-
-        *   geom: BaseGeometry or None: The resulting geometry or None if conditions
-            are not met.
-        *   geom_relevant_intersection: BaseGeometry or None: The relevant
-            intersection.
-        *   geom_relevant_difference: BaseGeometry or None: The relevant difference.
-
-    Notes:
-        -   If the reference geometry area is 0, the overlap is set to 100%.
-        -   If the overlap is less than relevant_OVERLAP_PERCENTAGE or the
-            intersection area is less than relevant_OVERLAP_AREA, None is returned.
-        -   Otherwise, the relevant intersection and difference geometries are
-            calculated.
-        -   If both relevant intersection and difference are non-empty, the final
-            geometry is obtained by applying safe intersection and buffering.
-        -   If only relevant intersection is non-empty, the result is the reference
-            geometry.
-        -   If only relevant difference is non-empty, the result is None.
-    """
-
-    if geom_reference.area == 0:
-        overlap = 100
-
-    else:
-        overlap = geom_intersection.area * 100 / geom_reference.area
-
-    if (
-        overlap < threshold_exclusion_percentage
-        or geom_intersection.area < threshold_exclusion_area
-    ):
-        return Polygon(), Polygon(), Polygon()
-
-    geom_difference = safe_difference(geom_reference, geom_intersection)
-    geom_relevant_intersection = buffer_neg(geom_intersection, buffer_distance)
-    geom_relevant_difference = buffer_neg(geom_difference, buffer_distance)
-    if (
-        not geom_relevant_intersection.is_empty
-        and not geom_relevant_difference.is_empty
-    ):
-        # relevant intersection and relevant difference
-        geom_x = safe_intersection(
-            geom_reference,
-            safe_difference(
-                geom_reference,
-                safe_intersection(
-                    geom_difference,
-                    buffer_neg_pos(geom_difference, buffer_distance),
-                ),
-            ),
-        )
-        geom = safe_intersection(
-            geom_x,
-            buffer_pos(
-                buffer_neg_pos(geom_x, buffer_distance),
-                buffer_distance,
-            ),
-        )
-        # when calculating for OD, we create a 'virtual parcel'. When calculating this
-        # virtual parcel, it is buffered to take outer boundaries into account.
-        # This results in a side effect that there are extra non-logical parts included
-        # in the result. The function below tries to exclude these non-logical parts.
-        # see eo_id 206363 with relevant distance=0.2m and SNAP_ALL_SIDE
-        if is_openbaar_domein:
-            geom = get_relevant_polygons_from_geom(geom, buffer_distance)
-    elif not geom_relevant_intersection.is_empty and geom_relevant_difference.is_empty:
-        geom = geom_reference
-    elif geom_relevant_intersection.is_empty and not geom_relevant_difference.is_empty:
-        geom = geom_relevant_intersection  # (=empty geometry)
-    else:
-        if is_openbaar_domein:
-            geom = geom_relevant_intersection  # (=empty geometry)
-        # geom = snap_geom_to_reference (geom_intersection, geom_reference,
-        # relevant_distance)
-        elif threshold_overlap_percentage < 0:
-            # if we take a value of -1, the original border will be used
-            geom = geom_intersection
-        elif overlap > threshold_overlap_percentage:
-            geom = geom_reference
-        else:
-            geom = geom_relevant_intersection  # (=empty geometry)
-    return geom, geom_relevant_intersection, geom_relevant_difference
 
 
 def geom_from_wkt(wkt_string):
@@ -563,15 +471,15 @@ def get_partitions(geom, delta):
     #  partitioning with a quadtree with rectangles?
     #  https://www.fundza.com/algorithmic/quadtree/index.html
     prepared_geom = prep(geom)
-    partitions = grid_bounds(geom, delta)
+    partitions = _grid_bounds(geom, delta)
     filtered_grid = list(filter(prepared_geom.intersects, partitions))
     return filtered_grid
 
 
-def fill_and_remove_gaps(geom_thematic_preresult, buffer_value):
-    geom_thematic_cleaned_holes = geom_thematic_preresult
+def fill_and_remove_gaps(input_geometry, buffer_value):
+    cleaned_geometry = input_geometry
     ix_part = 1
-    for part in get_parts(geom_thematic_preresult):
+    for part in get_parts(input_geometry):
         exterior_ring = get_exterior_ring(part)
         exterior_polygon = polygons([exterior_ring])[0]
         empty_buffered_exterior_polygon = buffer_neg(
@@ -582,9 +490,7 @@ def fill_and_remove_gaps(geom_thematic_preresult, buffer_value):
             and empty_buffered_exterior_polygon
             and not exterior_polygon.is_empty
         ):
-            geom_thematic_cleaned_holes = safe_difference(
-                geom_thematic_cleaned_holes, exterior_polygon
-            )
+            cleaned_geometry = safe_difference(cleaned_geometry, exterior_polygon)
         num_interior_rings = get_num_interior_rings(part)
         if num_interior_rings > 0:
             ix = 0
@@ -596,12 +502,10 @@ def fill_and_remove_gaps(geom_thematic_preresult, buffer_value):
                     interior_polygon, buffer_value
                 ).is_empty
                 if empty_buffered_interior_ring:
-                    geom_thematic_cleaned_holes = safe_union(
-                        geom_thematic_cleaned_holes, interior_polygon
-                    )
+                    cleaned_geometry = safe_union(cleaned_geometry, interior_polygon)
                 ix = ix + 1
         ix_part = ix_part + 1
-    return geom_thematic_cleaned_holes
+    return cleaned_geometry
 
 
 def get_bbox(geometry):
@@ -613,9 +517,11 @@ def get_bbox(geometry):
 
 def geojson_polygon_to_multipolygon(geojson):
     """
+    #TODO: add an example/test so it is clear this function is used (inside brdrQ)
     Transforms a geojson: Checks if there are Polygon-features and transforms them into MultiPolygons, so all objects are of type 'MultiPolygon' (or null-geometry).
     It is important that geometry-type is consitent (f.e. in QGIS) to show and style the geojson-layer
     """
+
     if geojson is None or "features" not in geojson or geojson["features"] is None:
         return geojson
     for f in geojson["features"]:

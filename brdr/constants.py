@@ -39,6 +39,14 @@ DEFAULT_CRS = "EPSG:31370"  # BelgianLambert72
 MULTI_SINGLE_ID_SEPARATOR = "*$*"
 
 
+FORMULA_FIELD_NAME = "brdr_formula"
+EVALUATION_FIELD_NAME = "brdr_evaluation"
+NR_CALCULATION_FIELD_NAME = "brdr_nr_calculations"
+RELEVANT_DISTANCE_FIELD_NAME = "brdr_relevant_distance"
+LAST_VERSION_DATE = "last_version_date"
+VERSION_DATE = "version_date"
+
+DATE_FORMAT = "%Y-%m-%d"
 # GRB_CONSTANTS
 # URL of the OGC feature API of actual GRB to extract collections
 GRB_FEATURE_URL = "https://geo.api.vlaanderen.be/GRB/ogc/features/collections"

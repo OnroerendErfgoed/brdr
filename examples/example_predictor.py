@@ -1,11 +1,9 @@
 import numpy as np
 
 from brdr.aligner import Aligner
-from brdr.enums import GRBType
+from brdr.enums import GRBType, AlignerResultType
 from brdr.grb import GRBActualLoader
 from brdr.loader import GeoJsonFileLoader
-from brdr.utils import dict_series_by_keys
-from examples import show_map
 
 # Press the green button in the gutter to run the script.
 if __name__ == "__main__":
@@ -26,13 +24,16 @@ if __name__ == "__main__":
 
     series = np.arange(0, 300, 10, dtype=int) / 100
     # predict which relevant distances are interesting to propose as resulting geometry
-    dict_series, dict_predicted, diffs = aligner.predictor(
+    dict_series, dict_predictions, diffs = aligner.predictor(
         relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
     )
-    dict_predicted = dict_series_by_keys(dict_predicted)
-    for key in dict_predicted:
-        show_map(
-            dict_predicted[key],
-            {key: aligner.dict_thematic[key]},
-            aligner.dict_reference,
-        )
+    fcs = aligner.get_results_as_geojson(
+        resulttype=AlignerResultType.PREDICTIONS, formula=False
+    )
+    print(fcs["result"])
+    # for key in dict_predictions:
+    #     show_map(
+    #         {key:dict_predictions[key]},
+    #         {key: aligner.dict_thematic[key]},
+    #         aligner.dict_reference,
+    #     )

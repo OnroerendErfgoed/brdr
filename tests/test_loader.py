@@ -1,8 +1,8 @@
 from brdr.aligner import Aligner
 from brdr.enums import GRBType
 from brdr.grb import GRBActualLoader
-from brdr.loader import DictLoader
-from brdr.utils import get_oe_dict_by_ids
+from brdr.loader import DictLoader, GeoJsonUrlLoader
+from brdr.oe import get_oe_dict_by_ids
 
 
 class TestExamples:
@@ -26,7 +26,7 @@ class TestExamples:
         assert aligner.dict_reference is not None
 
 
-def test_load_thematic_data_url(requests_mock, haspengouw_geojson):
+def test_load_thematic_data_by_url(requests_mock, haspengouw_geojson):
     requests_mock.add(
         requests_mock.GET,
         "https://mock.com/haspengouw.geojson",
@@ -34,7 +34,9 @@ def test_load_thematic_data_url(requests_mock, haspengouw_geojson):
         status=200,
     )
     aligner = Aligner()
-    aligner.load_thematic_data_url("https://mock.com/haspengouw.geojson", "Id")
+    aligner.load_thematic_data(
+        GeoJsonUrlLoader("https://mock.com/haspengouw.geojson", "Id")
+    )
     assert aligner.dict_thematic is not None
 
 
@@ -47,6 +49,8 @@ def test_load_reference_data_url(requests_mock, haspengouw_geojson):
     )
     aligner = Aligner()
 
-    aligner.load_reference_data_url("https://mock.com/haspengouw.geojson", "Id")
+    aligner.load_reference_data(
+        GeoJsonUrlLoader("https://mock.com/haspengouw.geojson", "Id")
+    )
 
     assert aligner.dict_reference is not None

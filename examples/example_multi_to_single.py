@@ -1,46 +1,47 @@
 from brdr.aligner import Aligner
 from brdr.enums import GRBType
-from brdr.utils import get_oe_dict_by_ids
-from brdr.utils import multipolygons_to_singles
-from examples import print_formula
+from brdr.grb import GRBActualLoader
+from brdr.oe import OnroerendErfgoedLoader
+from examples import print_brdr_formula
 from examples import show_map
 
-# example to Change a dictionary form multipolygon to single before executing the
-# aligner. Can be used on the thematic dictionary as the reference dictionary
+# EXAMPLE of "multi_as_single_modus"
 
+# Initiate brdr
+aligner = Aligner()
+# WITHOUT MULTI_TO_SINGLE
+aligner.multi_as_single_modus = False
+# Load thematic data & reference data
+# Get a specific feature of OE that exists out of a Multipolygon
+loader = OnroerendErfgoedLoader([110082])
+aligner.load_thematic_data(loader)
+aligner.load_reference_data(
+    GRBActualLoader(aligner=aligner, grb_type=GRBType.GBG, partition=1000)
+)
 
-if __name__ == "__main__":
-    # EXAMPLE for a thematic MultiPolygon
-    dict_theme = get_oe_dict_by_ids([110082])
+rel_dist = 20
+dict_results = aligner.process(relevant_distance=rel_dist, od_strategy=4)
+aligner.save_results("output/")
+show_map(dict_results, aligner.dict_thematic, aligner.dict_reference)
 
-    # WITHOUT MULTI_TO_SINGLE
-    # Initiate brdr
-    aligner = Aligner()
-    # Load thematic data & reference data
-    # Get a specific feature of OE that exists out of a Multipolygon
+print_brdr_formula(dict_results, aligner)
 
-    aligner.load_thematic_data_dict(dict_theme)
-    aligner.load_reference_data_grb_actual(grb_type=GRBType.GBG, partition=1000)
+# WITH MULTI_TO_SINGLE
 
-    rel_dist = 2
-    dict_results_by_distance = {rel_dist: aligner.process_dict_thematic(rel_dist, 4)}
-    aligner.export_results("output/")
-    show_map(dict_results_by_distance, aligner.dict_thematic, aligner.dict_reference)
+# Initiate brdr
+aligner = Aligner()
+aligner.multi_as_single_modus = True
+# Load thematic data & reference data
+# Get a specific feature of OE that exists out of a Multipolygon
+loader = OnroerendErfgoedLoader([110082])
+aligner.load_thematic_data(loader)
+aligner.load_reference_data(
+    GRBActualLoader(aligner=aligner, grb_type=GRBType.GBG, partition=1000)
+)
 
-    print_formula(dict_results_by_distance, aligner)
+rel_dist = 20
+dict_results = aligner.process(relevant_distance=rel_dist, od_strategy=4)
+aligner.save_results("output/")
+show_map(dict_results, aligner.dict_thematic, aligner.dict_reference)
 
-    # WITH MULTI_TO_SINGLE
-    # Initiate brdr
-    aligner = Aligner()
-    # Load thematic data & reference data
-    # Get a specific feature of OE that exists out of a Multipolygon
-    dict_theme = multipolygons_to_singles(dict_theme)
-    aligner.load_thematic_data_dict(dict_theme)
-    aligner.load_reference_data_grb_actual(grb_type=GRBType.GBG, partition=1000)
-
-    rel_dist = 5
-    dict_results_by_distance = {rel_dist: aligner.process_dict_thematic(rel_dist, 4)}
-    aligner.export_results("output/")
-    show_map(dict_results_by_distance, aligner.dict_thematic, aligner.dict_reference)
-
-    print_formula(dict_results_by_distance, aligner)
+print_brdr_formula(dict_results, aligner)

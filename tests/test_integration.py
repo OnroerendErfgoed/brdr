@@ -46,7 +46,7 @@ class TestExamples(unittest.TestCase):
 
         geometry = shape(contour)
 
-        aligner.load_thematic_data(DictLoader({"input": geometry}))
+        aligner.load_thematic_data(DictLoader({"input_id": geometry}))
         aligner.load_reference_data(
             GRBActualLoader(
                 grb_type=referentielaag_type, partition=1000, aligner=aligner
@@ -55,26 +55,26 @@ class TestExamples(unittest.TestCase):
 
         series = np.arange(0, 61, 1, dtype=float) / 10
 
-        dict_series = aligner.process_series(series, openbaardomein_strategy, 50)
+        dict_series = aligner.process(series, openbaardomein_strategy, 50)
         dict_diffs = diffs_from_dict_series(
             dict_series, aligner.dict_thematic, DiffMetric.CHANGES_AREA
         )
 
-        dict_diffs = dict_diffs["input"]
-        dict_series = {
-            rel_dist: {
-                "result": json.loads(to_geojson(dict_results["input"]["result"])),
+        dict_diffs = dict_diffs["input_id"]
+        serial_dict = {}
+        dict_results = dict_series["input_id"]
+        for rel_dist, process_results in dict_results.items():
+            serial_dict[rel_dist] = {
+                "result": json.loads(to_geojson(dict_results[rel_dist]["result"])),
                 "result_diff_min": json.loads(
-                    to_geojson(dict_results["input"]["result_diff_min"])
+                    to_geojson(dict_results[rel_dist]["result_diff_min"])
                 ),
                 "result_diff_plus": json.loads(
-                    to_geojson(dict_results["input"]["result_diff_plus"])
+                    to_geojson(dict_results[rel_dist]["result_diff_plus"])
                 ),
             }
-            for rel_dist, dict_results in dict_series.items()
-        }
 
         return {
-            "series": dict_series,
+            "series": serial_dict,
             "diffs": dict_diffs,
         }

@@ -1,13 +1,22 @@
 import json
 import logging
+from copy import deepcopy
 from datetime import date
 from datetime import datetime
 
-from shapely import intersects
+import numpy as np
+from shapely import intersects, Polygon
 from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
 
-from brdr.constants import DEFAULT_CRS
+from brdr.aligner import Aligner
+from brdr.constants import (
+    DEFAULT_CRS,
+    LAST_VERSION_DATE,
+    DATE_FORMAT,
+    VERSION_DATE,
+    FORMULA_FIELD_NAME,
+)
 from brdr.constants import DOWNLOAD_LIMIT
 from brdr.constants import GRB_BUILDING_ID
 from brdr.constants import GRB_FEATURE_URL
@@ -16,20 +25,21 @@ from brdr.constants import GRB_KNW_ID
 from brdr.constants import GRB_PARCEL_ID
 from brdr.constants import GRB_VERSION_DATE
 from brdr.constants import MAX_REFERENCE_BUFFER
-from brdr.enums import Evaluation
 from brdr.enums import GRBType
-from brdr.geometry_utils import buffer_pos
+from brdr.geometry_utils import buffer_pos, safe_intersection
 from brdr.geometry_utils import create_donut
 from brdr.geometry_utils import features_by_geometric_operation
 from brdr.geometry_utils import get_bbox
-from brdr.loader import GeoJsonLoader
-from brdr.utils import dict_series_by_keys
+from brdr.loader import GeoJsonLoader, DictLoader
+from brdr.logger import Logger
 from brdr.utils import geojson_to_dicts
 from brdr.utils import get_collection
 from brdr.utils import get_collection_by_partition
+from brdr.utils import get_series_geojson_dict
 
 log = logging.getLogger(__name__)
-date_format = "%Y-%m-%d"
+
+datetime_format_TZ = "%Y-%m-%dT%H:%M:%SZ"
 
 
 def is_grb_changed(
@@ -187,7 +197,7 @@ def get_last_version_date(
     for c in collection["features"]:
         if intersects(geometry, shape(c["geometry"])):
             versiondate = datetime.strptime(
-                c["properties"][GRB_VERSION_DATE], date_format
+                c["properties"][GRB_VERSION_DATE], DATE_FORMAT
             ).date()
             update_dates.append(versiondate)
 
@@ -233,11 +243,11 @@ def get_collection_grb_actual(
     versiondate_filter_end = ""
     if date_start is not None:
         versiondate_filter_start = (
-            GRB_VERSION_DATE + ">" + date_start.strftime(date_format)
+            GRB_VERSION_DATE + ">" + date_start.strftime(DATE_FORMAT)
         )
         versiondate_filter = versiondate_filter_start
     if date_end is not None:
-        versiondate_filter_end = GRB_VERSION_DATE + "<" + date_end.strftime(date_format)
+        versiondate_filter_end = GRB_VERSION_DATE + "<" + date_end.strftime(DATE_FORMAT)
         versiondate_filter = versiondate_filter_end
     if not (date_start is None and date_end is None):
         versiondate_filter = versiondate_filter_start + " AND " + versiondate_filter_end
@@ -266,162 +276,170 @@ def get_collection_grb_fiscal_parcels(
     )
 
 
-def evaluate(
-    actual_aligner,
-    dict_series,
-    dict_predicted,
-    thematic_dict_formula,
-    threshold_area=5,
-    threshold_percentage=1,
-    dict_unchanged=None,
+def get_collection_grb_parcels_by_date(
+    geometry,
+    date,
+    partition=1000,
+    limit=DOWNLOAD_LIMIT,
+    crs=DEFAULT_CRS,
 ):
-    """
-    evaluate affected geometries and give attributes to evaluate and decide if new
-    proposals can be used
-    """
-    if dict_unchanged is None:
-        dict_unchanged = {}
-    theme_ids = list(dict_series_by_keys(dict_series).keys())
-    dict_evaluated_result = {}
-    prop_dictionary = {}
-    # Fill the dictionary-structure with empty values
-    for dist in dict_series.keys():
-        dict_evaluated_result[dist] = {}
-        prop_dictionary[dist] = {}
-        for theme_id in theme_ids:
-            prop_dictionary[dist][theme_id] = {}
-        for theme_id in dict_unchanged.keys():
-            prop_dictionary[dist][theme_id] = {}
-
-    dict_predicted_keys = dict_series_by_keys(dict_predicted)
-
-    for theme_id, dist_dict in dict_predicted_keys.items():
-        equality = False
-        for dist in sorted(dist_dict.keys()):
-            if equality:
-                break
-            geomresult = dist_dict[dist][theme_id]["result"]
-            actual_formula = actual_aligner.get_formula(geomresult)
-            prop_dictionary[dist][theme_id]["formula"] = json.dumps(actual_formula)
-            base_formula = None
-            if theme_id in thematic_dict_formula:
-                base_formula = thematic_dict_formula[theme_id]
-            equality, prop = check_equality(
-                base_formula,
-                actual_formula,
-                threshold_area,
-                threshold_percentage,
-            )
-            if equality:
-                dict_evaluated_result[dist][theme_id] = dict_predicted[dist][theme_id]
-                prop_dictionary[dist][theme_id]["evaluation"] = prop
-                break
-
-    evaluated_theme_ids = list(dict_series_by_keys(dict_evaluated_result).keys())
-    # fill where no equality is found/ The biggest predicted distance is returned as
-    # proposal
-    for theme_id in theme_ids:
-        if theme_id not in evaluated_theme_ids:
-            if len(dict_predicted_keys[theme_id].keys()) == 0:
-                result = dict_series[0][theme_id]
-                dict_evaluated_result[0][theme_id] = result
-                prop_dictionary[0][theme_id]["formula"] = json.dumps(
-                    actual_aligner.get_formula(result["result"])
-                )
-                prop_dictionary[0][theme_id]["evaluation"] = Evaluation.NO_PREDICTION_5
-                continue
-            # Add all predicted features so they can be manually checked
-            for dist in dict_predicted_keys[theme_id].keys():
-                predicted_resultset = dict_predicted[dist][theme_id]
-                dict_evaluated_result[dist][theme_id] = predicted_resultset
-                prop_dictionary[dist][theme_id]["formula"] = json.dumps(
-                    actual_aligner.get_formula(predicted_resultset["result"])
-                )
-                prop_dictionary[dist][theme_id]["evaluation"] = Evaluation.TO_CHECK_4
-
-    for theme_id, geom in dict_unchanged.items():
-        result = {"result": geom}
-        dict_evaluated_result[0][theme_id] = result
-        prop_dictionary[0][theme_id]["evaluation"] = Evaluation.NO_CHANGE_6
-        prop_dictionary[0][theme_id]["formula"] = json.dumps(
-            actual_aligner.get_formula(result["result"])
-        )
-    return dict_evaluated_result, prop_dictionary
-
-
-def check_equality(
-    base_formula, actual_formula, threshold_area=5, threshold_percentage=1
-):
-    """
-    function that checks if 2 formulas are equal (determined by business-logic)
-    """
-    # TODO: research naar aanduid_id 116448 (equality na 0.5m), 120194 (1m)
-    # TODO: research and implementation of following ideas
-    # TODO: refine equality comparison, make it more generic
-    # TODO: Add control of OD to equality-comparison (see case aanduid_id 120288)
-    # ideas:
-    # * If result_diff smaller than 0.x --> automatic update
-    # * big polygons: If 'outer ring' has same formula (do net check inner side) -->
-    #   automatic update
-    # ** outer ring can be calculated: 1) negative buffer 2) original - buffered
-
-    if base_formula is None or actual_formula is None:
-        return False, Evaluation.NO_PREDICTION_5
-    od_alike = False
-    if base_formula["reference_od"] is None and actual_formula["reference_od"] is None:
-        od_alike = True
-    elif base_formula["reference_od"] is None or actual_formula["reference_od"] is None:
-        od_alike = False
-    elif (
-        abs(
-            base_formula["reference_od"]["area"]
-            - actual_formula["reference_od"]["area"]
-        )
-        * 100
-        / base_formula["reference_od"]["area"]
-    ) < threshold_percentage:
-        od_alike = True
-
+    collection_year_after = get_collection_grb_fiscal_parcels(
+        year=str(date.year),
+        geometry=geometry,
+        partition=partition,
+        crs=crs,
+    )
+    # Filter on specific date: delete all features > specific_date
+    # TODO: experimental loader; unclear if we have to use "year-1 & year" OR if we have to use "year & year + 1"
+    collection_year_after_filtered = deepcopy(collection_year_after)
+    logging.debug(len(collection_year_after_filtered["features"]))
     if (
-        base_formula["reference_features"].keys()
-        == actual_formula["reference_features"].keys()
-        and od_alike
+        "features" in collection_year_after_filtered
+        and len(collection_year_after_filtered["features"]) > 0
     ):
-        if base_formula["full"] and base_formula["full"]:
-            return True, Evaluation.EQUALITY_FORMULA_GEOM_1
+        removed_features = []
+        for feature in collection_year_after_filtered["features"]:
+            versiondate = datetime.strptime(
+                feature["properties"][GRB_VERSION_DATE][:10], DATE_FORMAT
+            ).date()
+            if versiondate > date:
+                removed_features.append(feature)
+                collection_year_after_filtered["features"].remove(feature)
+    logging.debug(len(collection_year_after_filtered["features"]))
+    # if no features are removed, return the full collection of year_after
+    if len(removed_features) == 0:
+        return collection_year_after
+    # if  features are removed, search for the features in year before
+    collection_year_before = get_collection_grb_fiscal_parcels(
+        year=str(date.year - 1),
+        geometry=geometry,
+        partition=partition,
+        crs=crs,
+    )
+    kept_features = []
+    if "features" in collection_year_before and len(collection_year_before) > 0:
+        for feature in collection_year_before["features"]:
+            for rf in removed_features:
+                geom_feature = shape(feature["geometry"])
+                geom_removed_feature = shape(rf["geometry"])
+                if intersects(geom_feature, geom_removed_feature):
+                    intersection = safe_intersection(geom_feature, geom_removed_feature)
+                    if intersection.area > 1:
+                        if feature not in kept_features:
+                            kept_features.append(feature)
 
-        equal_reference_features = True
-        for key in base_formula["reference_features"].keys():
+        # search for intersection and check if it more than x%
+        # keep these features
+
+        # add them to
+
+    collection_specific_date = deepcopy(collection_year_after_filtered)
+    filtered_features = collection_year_after_filtered["features"]
+    specific_date_features = filtered_features + kept_features
+    logging.debug(len(specific_date_features))
+    collection_specific_date["features"] = specific_date_features
+
+    return collection_specific_date
+
+
+def update_to_actual_grb(
+    featurecollection,
+    id_theme_fieldname,
+    formula_field=FORMULA_FIELD_NAME,
+    max_distance_for_actualisation=2,
+    feedback=None,
+):
+    """
+    Function to update a thematic featurecollection to the most actual version of GRB.
+    Important to notice that the featurecollection needs a 'formula' for the base-alignment.
+    """
+    logger = Logger(feedback)
+    # Load featurecollection into a shapely_dict:
+    dict_thematic = {}
+    dict_thematic_props = {}
+
+    last_version_date = datetime.now().date()
+    for feature in featurecollection["features"]:
+        id_theme = feature["properties"][id_theme_fieldname]
+        try:
+            geom = shape(feature["geometry"])
+        except Exception:
+            geom = Polygon()
+        logger.feedback_debug("id theme: " + id_theme)
+        logger.feedback_debug("geometry (wkt): " + geom.wkt)
+        dict_thematic[id_theme] = geom
+        try:
+            dict_thematic_props[id_theme] = {
+                FORMULA_FIELD_NAME: json.loads(feature["properties"][formula_field])
+            }
+            logger.feedback_debug("formula: " + str(dict_thematic_props[id_theme]))
+        except Exception:
+            raise Exception("Formula -attribute-field (json) cannot be loaded")
+        try:
+            logger.feedback_debug(str(dict_thematic_props[id_theme]))
             if (
-                (
-                    base_formula["reference_features"][key]["full"]
-                    == actual_formula["reference_features"][key]["full"]
-                )
-                or (
-                    abs(
-                        base_formula["reference_features"][key]["area"]
-                        - actual_formula["reference_features"][key]["area"]
-                    )
-                    > threshold_area
-                )
-                or (
-                    (
-                        abs(
-                            base_formula["reference_features"][key]["area"]
-                            - actual_formula["reference_features"][key]["area"]
-                        )
-                        * 100
-                        / base_formula["reference_features"][key]["area"]
-                    )
-                    > threshold_percentage
-                )
+                LAST_VERSION_DATE in dict_thematic_props[id_theme][FORMULA_FIELD_NAME]
+                and dict_thematic_props[id_theme][FORMULA_FIELD_NAME][LAST_VERSION_DATE]
+                is not None
+                and dict_thematic_props[id_theme][FORMULA_FIELD_NAME][LAST_VERSION_DATE]
+                != ""
             ):
-                equal_reference_features = False
-        if equal_reference_features:
-            return True, Evaluation.EQUALITY_FORMULA_2
-    if base_formula["full"] and base_formula["full"] and od_alike:
-        return True, Evaluation.EQUALITY_GEOM_3
-    return False, Evaluation.NO_PREDICTION_5
+                str_lvd = dict_thematic_props[id_theme][FORMULA_FIELD_NAME][
+                    LAST_VERSION_DATE
+                ]
+                lvd = datetime.strptime(str_lvd, DATE_FORMAT).date()
+                if lvd < last_version_date:
+                    last_version_date = lvd
+        except:
+            raise Exception(f"Problem with {LAST_VERSION_DATE}")
+
+    datetime_start = last_version_date
+    datetime_end = datetime.now().date()
+    base_aligner_result = Aligner(feedback=feedback)
+    base_aligner_result.load_thematic_data(DictLoader(dict_thematic))
+    base_aligner_result.name_thematic_id = id_theme_fieldname
+
+    dict_affected, dict_unchanged = get_geoms_affected_by_grb_change(
+        base_aligner_result,
+        grb_type=GRBType.ADP,
+        date_start=datetime_start,
+        date_end=datetime_end,
+        one_by_one=False,
+    )
+    logger.feedback_info(
+        "Number of possible affected OE-thematic during timespan: "
+        + str(len(dict_affected))
+    )
+    if len(dict_affected) == 0:
+        logger.feedback_info(
+            "No change detected in referencelayer during timespan. Script is finished"
+        )
+        return {}
+    logger.feedback_debug(str(datetime_start))
+    logger.feedback_debug(str(formula_field))
+
+    # Initiate a Aligner to reference thematic features to the actual borders
+    actual_aligner = Aligner(feedback=feedback)
+    actual_aligner.load_thematic_data(
+        DictLoader(data_dict=dict_affected, data_dict_properties=dict_thematic_props)
+    )
+    actual_aligner.load_reference_data(
+        GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=actual_aligner)
+    )
+
+    actual_aligner.relevant_distances = (
+        np.arange(0, max_distance_for_actualisation * 100, 10, dtype=int) / 100
+    )
+    dict_evaluated, prop_dictionary = actual_aligner.compare(
+        threshold_area=5, threshold_percentage=1, dict_unchanged=dict_unchanged
+    )
+
+    return get_series_geojson_dict(
+        dict_evaluated,
+        crs=actual_aligner.CRS,
+        id_field=actual_aligner.name_thematic_id,
+        series_prop_dict=prop_dictionary,
+    )
 
 
 class GRBActualLoader(GeoJsonLoader):
@@ -431,6 +449,7 @@ class GRBActualLoader(GeoJsonLoader):
         self.grb_type = grb_type
         self.part = partition
         self.data_dict_source["source"] = grb_type.value
+        self.versiondate_info = {"name": GRB_VERSION_DATE, "format": DATE_FORMAT}
 
     def load_data(self):
         if not self.aligner.dict_thematic:
@@ -444,7 +463,7 @@ class GRBActualLoader(GeoJsonLoader):
         )
         self.id_property = id_property
         self.input = dict(collection)
-        self.data_dict_source["version_date"] = datetime.now().strftime(date_format)
+        self.data_dict_source[VERSION_DATE] = datetime.now().strftime(DATE_FORMAT)
         self.aligner.logger.feedback_info(f"GRB downloaded: {self.grb_type}")
         return super().load_data()
 
@@ -456,9 +475,10 @@ class GRBFiscalParcelLoader(GeoJsonLoader):
         self.year = year
         self.part = partition
         self.data_dict_source["source"] = "Adpf"
-        self.data_dict_source["version_date"] = datetime(int(year), 1, 1).strftime(
-            date_format
+        self.data_dict_source[VERSION_DATE] = datetime(int(year), 1, 1).strftime(
+            DATE_FORMAT
         )
+        self.versiondate_info = {"name": GRB_VERSION_DATE, "format": datetime_format_TZ}
 
     def load_data(self):
         if not self.aligner.dict_thematic:
@@ -472,4 +492,42 @@ class GRBFiscalParcelLoader(GeoJsonLoader):
         )
         self.input = dict(collection)
         self.aligner.logger.feedback_info(f"Adpf downloaded for year: {self.year}")
+        return super().load_data()
+
+
+class GRBSpecificDateParcelLoader(GeoJsonLoader):
+    def __init__(self, date, aligner, partition=1000):
+        logging.warning("experimental loader; use with care!!!")
+        try:
+            date = datetime.strptime(date, DATE_FORMAT).date()
+            if date.year >= datetime.now().year:
+                raise ValueError(
+                    "The GRBSpecificDateParcelLoader can only be used for dates prior to the current year."
+                )
+        except Exception:
+            raise ValueError(
+                "No valid date, please provide a date in the format: " + DATE_FORMAT
+            )
+        super().__init__(_input=None, id_property=GRB_PARCEL_ID)
+        self.aligner = aligner
+        self.date = date
+        self.part = partition
+        self.data_dict_source["source"] = "Adp"
+        self.data_dict_source[VERSION_DATE] = date.strftime(DATE_FORMAT)
+        self.versiondate_info = {"name": GRB_VERSION_DATE, "format": datetime_format_TZ}
+
+    def load_data(self):
+        if not self.aligner.dict_thematic:
+            raise ValueError("Thematic data not loaded")
+        geom_union = buffer_pos(self.aligner.get_thematic_union(), MAX_REFERENCE_BUFFER)
+        collection = get_collection_grb_parcels_by_date(
+            date=self.date,
+            geometry=geom_union,
+            partition=self.part,
+            crs=self.aligner.CRS,
+        )
+        self.input = dict(collection)
+        self.aligner.logger.feedback_info(
+            f"Parcels downloaded for specific date: {self.date.strftime(DATE_FORMAT)}"
+        )
         return super().load_data()

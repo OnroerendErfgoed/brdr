@@ -14,17 +14,23 @@ from shapely import unary_union
 from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
 
-from brdr.constants import MULTI_SINGLE_ID_SEPARATOR, DEFAULT_CRS, DOWNLOAD_LIMIT
+from brdr.constants import (
+    MULTI_SINGLE_ID_SEPARATOR,
+    DEFAULT_CRS,
+    DOWNLOAD_LIMIT,
+    RELEVANT_DISTANCE_FIELD_NAME,
+    NR_CALCULATION_FIELD_NAME,
+)
 from brdr.enums import DiffMetric
 from brdr.geometry_utils import get_partitions, get_bbox
 from brdr.typings import ProcessResult
 
 
 def get_series_geojson_dict(
-    series_dict: dict[float, dict[str, ProcessResult]],
+    series_dict: dict[str, dict[float, ProcessResult]],
     crs: str,
     id_field: str,
-    series_prop_dict: dict[float, dict[str, any]] = None,
+    series_prop_dict: dict[str, dict[float, any]] = None,
     geom_attributes=True,
 ):
     """
@@ -32,18 +38,20 @@ def get_series_geojson_dict(
     """
     features_list_dict = {}
 
-    for relative_distance, results_dict in series_dict.items():
-        prop_dict = dict(series_prop_dict or {}).get(relative_distance, {})
-        for theme_id, process_result in results_dict.items():
-            properties = prop_dict.get(theme_id, {})
+    for theme_id, results_dict in series_dict.items():
+        nr_calculations = len(results_dict)
+        prop_dict = dict(series_prop_dict or {}).get(theme_id, {})
+        for relative_distance, process_result in results_dict.items():
+            properties = prop_dict.get(relative_distance, {})
             properties[id_field] = theme_id
-            properties["relevant_distance"] = relative_distance
+            properties[NR_CALCULATION_FIELD_NAME] = nr_calculations
+            properties[RELEVANT_DISTANCE_FIELD_NAME] = relative_distance
 
             for results_type, geom in process_result.items():
                 if results_type not in features_list_dict:
                     features_list_dict[results_type] = []
 
-                feature = feature_from_geom(geom, properties, geom_attributes)
+                feature = _feature_from_geom(geom, properties, geom_attributes)
                 features_list_dict[results_type].append(feature)
 
     crs_geojson = {"type": "name", "properties": {"name": crs}}
@@ -53,7 +61,7 @@ def get_series_geojson_dict(
     }
 
 
-def feature_from_geom(
+def _feature_from_geom(
     geom: BaseGeometry,
     properties: dict = None,
     geom_attributes=True,
@@ -89,7 +97,7 @@ def geojson_from_dict(dictionary, crs, id_field, prop_dict=None, geom_attributes
     for key, geom in dictionary.items():
         properties = dict(prop_dict or {}).get(key, {})
         properties[id_field] = key
-        features.append(feature_from_geom(geom, properties, geom_attributes))
+        features.append(_feature_from_geom(geom, properties, geom_attributes))
     crs_geojson = {"type": "name", "properties": {"name": crs}}
     geojson = FeatureCollection(features, crs=crs_geojson)
     return geojson
@@ -197,88 +205,6 @@ def polygonize_reference_data(dict_ref):
     return dict_ref
 
 
-def get_oe_dict_by_ids(objectids, oetype="aanduidingsobjecten"):
-    """
-    Fetches thematic data for a list of objectIDs from the Inventaris Onroerend Erfgoed
-    API.
-
-    This function retrieves information about designated heritage objects
-    (erfgoedobjecten or aanduidingsobjecten) from the Flemish Agency for Heritage (
-    Inventaris Onroerend Erfgoed) based on a list of their IDs.
-
-    Args:
-        objectids (list): A list of objectIDs of 'erfgoedobjecten' or
-            'aanduidingsobjecten'.
-        oetype (string): A string: 'aanduidingsobjecten' (default) or 'erfgoedobjecten'
-
-    Returns:
-        dict: A dictionary where keys are objectIDs (as strings) and values are
-              GeoJSON geometry objects. If an erfgoedobject/aanduidingsobject is not
-              found, a corresponding warning message will be logged, but it won't be\
-              included in the returned dictionary.
-
-    Raises:
-        requests.exceptions.RequestException: If there is an error fetching data from
-            the API.
-    """
-    dict_thematic = {}
-    base_url = "https://inventaris.onroerenderfgoed.be/" + oetype + "/"
-    headers = {"Accept": "application/json"}
-    for a in objectids:
-        url = base_url + str(a)
-        response = requests.get(url, headers=headers).json()
-        if "id" in response.keys():
-            key = str(response["id"])
-            geom = shape(response["locatie"]["contour"])
-            dict_thematic[key] = geom
-        else:
-            logging.warning("object id " + str(a) + " not available in " + oetype)
-    return dict_thematic
-
-
-def get_oe_geojson_by_bbox(bbox, limit=1000):
-    """
-    Fetches GeoJSON data for designated heritage objects (aanduidingsobjecten) within
-    a bounding box.
-
-    This function retrieves information about aanduidingsobjecten from the Flemish
-    Mercator public WFS service using a bounding box (bbox) as a filter. The bbox should
-    be provided in the format "xmin,ymin,xmax,ymax" (EPSG:31370 projection).
-
-    Args:
-        bbox (str): A comma-separated string representing the bounding box in EPSG:31370
-                   projection (e.g., "100000,500000,200000,600000").
-        limit (int, optional): The maximum number of features to retrieve per request.
-                              Defaults to 1000.
-
-    Returns:
-        dict: A dictionary containing the retrieved GeoJSON feature collection. This
-              collection might be truncated if the total number of features exceeds
-              the specified limit.
-    """
-    theme_url = (
-        "https://www.mercator.vlaanderen.be/raadpleegdienstenmercatorpubliek/wfs?"
-        "SERVICE=WFS&REQUEST=GetFeature&VERSION=2.0.0&"
-        "TYPENAMES=ps:ps_aandobj&"
-        f"COUNT={str(limit)}&"
-        "SRSNAME=urn:ogc:def:crs:EPSG::31370&"
-        f"BBOX={bbox}&outputFormat=application/json"
-    )
-    start_index = 0
-    collection = {}
-    while True:
-        url = theme_url + "&startIndex=" + str(start_index)
-        feature_collection = requests.get(url).json()
-        if (
-            "features" not in feature_collection
-            or len(feature_collection["features"]) == 0
-        ):
-            break
-        start_index = start_index + limit
-        collection = collection | feature_collection
-    return collection
-
-
 def get_breakpoints_zerostreak(x, y):
     """
     Determine the extremes and zero_streaks of a graph based on the derivative, and
@@ -303,7 +229,7 @@ def get_breakpoints_zerostreak(x, y):
         * counter of #relevant_distances where zero-streak holds on
         * extreme value for zero_streak
     """
-    derivative = numerical_derivative(x, y)
+    derivative = _numerical_derivative(x, y)
     # plt.plot(x, y, label="y")
     # plt.plot( x, derivative, label="derivative")
     # plt.legend()
@@ -363,7 +289,7 @@ def get_breakpoints_zerostreak(x, y):
     return extremes, zero_streaks
 
 
-def numerical_derivative(x, y):
+def _numerical_derivative(x, y):
     """
     Calculate the numerical derivative of a graph.
 
@@ -384,26 +310,8 @@ def numerical_derivative(x, y):
     return derivative
 
 
-def filter_dict_by_key(dictionary, filter_key):
-    """
-    Filters a dictionary to only include keys matching a specific value.
-
-    This function creates a new dictionary containing entries from the original
-    dictionary where the key matches the provided `filter_key`.
-
-    Args:
-        dictionary (dict): The dictionary to filter.
-        filter_key (str): The key value to filter by.
-
-    Returns:
-        dict: A new dictionary containing only entries where the key matches the
-            `filter_key`.
-    """
-    return {key: dictionary[key] for key in dictionary.keys() if key == filter_key}
-
-
 def diffs_from_dict_series(
-    dict_series: dict[float, dict[str, ProcessResult]],
+    dict_series: dict[str, dict[float, ProcessResult]],
     dict_thematic: dict[str, BaseGeometry],
     diff_metric: DiffMetric = DiffMetric.CHANGES_AREA,
 ):
@@ -456,20 +364,14 @@ def diffs_from_dict_series(
         KeyError: If a thematic element key is missing from the results in
         `dict_series`.
     """
-    thematic_ids = dict_thematic.keys()
-
-    diffs = {thematic_id: {} for thematic_id in thematic_ids}
-
+    diffs = {}
     # all the relevant distances used to calculate the series
-    for rel_dist, results_dict in dict_series.items():
+    for thematic_id, results_dict in dict_series.items():
+        diffs[thematic_id] = {}
 
-        for thematic_id in thematic_ids:
-            result = results_dict.get(thematic_id, {}).get("result")
-            result_diff = results_dict.get(thematic_id, {}).get("result_diff")
-            # result_diff_plus = results_dict.get(thematic_id, {})\
-            # .get("result_diff_plus")
-            # result_diff_min = results_dict.get(thematic_id, {})\
-            # .get("result_diff_min")
+        for rel_dist in results_dict:
+            result = results_dict.get(rel_dist, {}).get("result")
+            result_diff = results_dict.get(rel_dist, {}).get("result_diff")
 
             diff = 0
             if (
@@ -587,39 +489,11 @@ def _add_bbox_to_url(url, crs=DEFAULT_CRS, bbox=None):
     return url
 
 
-def merge_dict_series(
-    dict_series: dict[float, dict[str, ProcessResult]]
-) -> dict[float, dict[str, ProcessResult]]:
-    """
-    Merges dict_series (dict_predicted) with  seperated IDs (MULTI_SINGLE_ID_SEPARATOR)
-     to their original unique ID
-    """
-    dict_series_merged = {}
-    for dist, item in dict_series.items():
-        dict_series_merged[dist] = merge_process_results(item)
-    return dict_series_merged
-
-
-def merge_dict(dictionary: dict[str, BaseGeometry]) -> dict[str, BaseGeometry]:
-    """
-    Merges dict_series (dict_predicted) with  seperated IDs (MULTI_SINGLE_ID_SEPARATOR)
-     to their original unique ID
-    """
-    out_dictionary = {}
-    for id_theme, item in dictionary.items():
-        id_theme_global = id_theme.split(MULTI_SINGLE_ID_SEPARATOR)[0]
-        if id_theme_global not in out_dictionary:
-            out_dictionary[id_theme_global] = [item]
-        else:
-            out_dictionary[id_theme_global].append(item)
-    return {k: make_valid(unary_union(v)) for k, v in out_dictionary.items()}
-
-
 def merge_process_results(
-    result_dict: dict[str, ProcessResult]
-) -> dict[str, ProcessResult]:
+    result_dict: dict[str, dict[float, ProcessResult]]
+) -> dict[str, dict[float, ProcessResult]]:
     """
-    Merges geometries in a dictionary from multiple themes into a single theme.
+     Merges geometries in a dictionary from multiple themes into a single theme.
 
     Args: result_dict (dict): A dictionary where keys are theme IDs and values are
         process results
@@ -628,77 +502,22 @@ def merge_process_results(
         theme IDs and values are merged geometries.
 
     """
-    grouped_results: dict[str, ProcessResult] = {}
+    grouped_results: dict[str, dict[float, ProcessResult]] = {}
 
-    for id_theme, process_result in result_dict.items():
+    for id_theme, dict_results in result_dict.items():
         id_theme_global = id_theme.split(MULTI_SINGLE_ID_SEPARATOR)[0]
         if id_theme_global not in grouped_results:
-            grouped_results[id_theme_global] = process_result
+            grouped_results[id_theme_global] = dict_results
         else:
-            for key in process_result:
-                geom: BaseGeometry = process_result[key]  # noqa
-                if geom.is_empty or geom is None:
-                    continue
-                existing: BaseGeometry = grouped_results[id_theme_global][key]  # noqa
-                grouped_results[id_theme_global][key] = unary_union(  # noqa
-                    [existing, geom]
-                )
-
+            for rel_dist, process_result in dict_results.items():
+                for key in process_result:
+                    geom: BaseGeometry = process_result[key]  # noqa
+                    if geom.is_empty or geom is None:
+                        continue
+                    existing: BaseGeometry = grouped_results[id_theme_global][rel_dist][
+                        key
+                    ]  # noqa
+                    grouped_results[id_theme_global][rel_dist][key] = unary_union(
+                        [existing, geom]
+                    )  # noqa
     return grouped_results
-
-
-def processresult_to_dicts(dict_processresult):
-    """
-    Transforms a dictionary with all ProcessResults to individual dictionaries of the
-    results
-    Args:
-        dict_processresult:
-
-    Returns:
-
-    """
-    results = {}
-    results_diff = {}
-    results_diff_plus = {}
-    results_diff_min = {}
-    results_relevant_intersection = {}
-    results_relevant_diff = {}
-    for key in dict_processresult:
-        processresult = dict_processresult[key]
-        results[key] = processresult["result"]
-        results_diff[key] = processresult["result_diff"]
-        results_diff_plus[key] = processresult["result_diff_plus"]
-        results_diff_min[key] = processresult["result_diff_min"]
-        results_relevant_intersection[key] = processresult[
-            "result_relevant_intersection"
-        ]
-        results_relevant_diff[key] = processresult["result_relevant_diff"]
-
-    return (
-        results,
-        results_diff,
-        results_diff_plus,
-        results_diff_min,
-        results_relevant_intersection,
-        results_relevant_diff,
-    )
-
-
-def dict_series_by_keys(dict_series):
-    """
-    Transforms a dict_series into a dictionary with theme_id as keys, and a dictionary
-    with all predicted distances and their resulting geometry as a value.
-    Args:
-        dict_series: a dictionary result of the 'series/predictor'
-
-    Returns: dictionary with theme_id as keys, and a dictionary with all serial
-    distances and their resulting geometry as a value.
-
-    """
-    dict_series_keys = {}
-    for dist, res in dict_series.items():
-        for key in res.keys():
-            if key not in dict_series_keys.keys():
-                dict_series_keys[key] = {}
-            dict_series_keys[key][dist] = {key: res[key]}
-    return dict_series_keys

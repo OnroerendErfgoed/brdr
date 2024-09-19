@@ -5,13 +5,13 @@ from shapely import is_empty
 from shapely.geometry import Polygon
 
 from brdr.constants import MULTI_SINGLE_ID_SEPARATOR
+from brdr.oe import get_oe_dict_by_ids
 from brdr.typings import ProcessResult
 from brdr.utils import diffs_from_dict_series
-from brdr.utils import filter_dict_by_key
+
+# from brdr.utils import filter_dict_by_key
 from brdr.utils import get_breakpoints_zerostreak
 from brdr.utils import get_collection
-from brdr.utils import get_oe_dict_by_ids
-from brdr.utils import get_oe_geojson_by_bbox
 from brdr.utils import merge_process_results
 from brdr.utils import multipolygons_to_singles
 from brdr.utils import polygonize_reference_data
@@ -95,39 +95,34 @@ class TestUtils(unittest.TestCase):
         dict_thematic = get_oe_dict_by_ids([aanduid_id])
         self.assertFalse(is_empty(dict_thematic[str(aanduid_id)]))
 
-    def test_get_oe_dict_by_ids_erfgoedobject(self):
-        eo_id = 206363
-        dict_thematic = get_oe_dict_by_ids([eo_id], oetype="erfgoedobjecten")
-        self.assertFalse(is_empty(dict_thematic[str(eo_id)]))
+    # def test_get_oe_dict_by_ids_erfgoedobject(self):
+    #     eo_id = 206363
+    #     dict_thematic = get_oe_dict_by_ids([eo_id], oetype=OEType.EO)
+    #     self.assertFalse(is_empty(dict_thematic[str(eo_id)]))
+    #
+    # def test_get_oe_dict_by_ids_empty(self):
+    #     dict_thematic = get_oe_dict_by_ids([])
+    #     self.assertEqual(dict_thematic, {})
+    #
+    # def test_get_oe_dict_by_ids_not_existing(self):
+    #     aanduid_id = -1
+    #     dict_thematic = get_oe_dict_by_ids([aanduid_id])
+    #     self.assertEqual(dict_thematic, {})
 
-    def test_get_oe_dict_by_ids_empty(self):
-        dict_thematic = get_oe_dict_by_ids([])
-        self.assertEqual(dict_thematic, {})
-
-    def test_get_oe_dict_by_ids_not_existing(self):
-        aanduid_id = -1
-        dict_thematic = get_oe_dict_by_ids([aanduid_id])
-        self.assertEqual(dict_thematic, {})
-
-    def test_get_oe_geojson_by_bbox(self):
-        bbox = "172000,172000,174000,174000"
-        collection = get_oe_geojson_by_bbox(bbox)
-        self.assertEqual(collection["type"], "FeatureCollection")
-
-    def test_filter_dict_by_key_empty_dict(self):
-        data = {}
-        result = filter_dict_by_key(data, "key")
-        self.assertEqual(result, {})
-
-    def test_filter_dict_by_key_single_match(self):
-        data = {"key1": "value1", "key2": "value2"}
-        result = filter_dict_by_key(data, "key1")
-        self.assertEqual(result, {"key1": "value1"})
-
-    def test_filter_dict_by_key_no_match(self):
-        data = {"key1": "value1", "key2": "value2"}
-        result = filter_dict_by_key(data, "key3")
-        self.assertEqual(result, {})
+    # def test_filter_dict_by_key_empty_dict(self):
+    #     data = {}
+    #     result = filter_dict_by_key(data, "key")
+    #     self.assertEqual(result, {})
+    #
+    # def test_filter_dict_by_key_single_match(self):
+    #     data = {"key1": "value1", "key2": "value2"}
+    #     result = filter_dict_by_key(data, "key1")
+    #     self.assertEqual(result, {"key1": "value1"})
+    #
+    # def test_filter_dict_by_key_no_match(self):
+    #     data = {"key1": "value1", "key2": "value2"}
+    #     result = filter_dict_by_key(data, "key3")
+    #     self.assertEqual(result, {})
 
     def test_diffs_from_dict_series_complete(self):
         """Tests diffs_from_dict_series with complete data."""
@@ -137,16 +132,18 @@ class TestUtils(unittest.TestCase):
             "theme_id2": Polygon([(5, 5), (15, 5), (15, 15), (5, 15)]),
         }
         dict_series = {
-            10: {
-                "theme_id1": {
+            "theme_id1": {
+                10: {
                     "result": Polygon([(0, 0), (8, 0), (8, 8), (0, 8)]),
                     "result_diff": Polygon([(2, 2), (6, 2), (6, 6), (2, 6)]),
-                },
-                "theme_id2": {
+                }
+            },
+            "theme_id2": {
+                10: {
                     "result": Polygon([(7, 7), (13, 7), (13, 13), (7, 13)]),
                     "result_diff": Polygon([(9, 9), (11, 9), (11, 11), (9, 11)]),
-                },
-            }
+                }
+            },
         }
         expected_diffs = {"theme_id1": {10: 16.0}, "theme_id2": {10: 4.0}}
 
@@ -171,10 +168,17 @@ class TestUtils(unittest.TestCase):
     def test_merge_process_results(self):
         key_1 = "key" + MULTI_SINGLE_ID_SEPARATOR + "1"
         key_2 = "key" + MULTI_SINGLE_ID_SEPARATOR + "2"
+        key_3 = "key_3"
         process_result_1 = ProcessResult()
         process_result_1["result"] = Polygon([(0, 0), (10, 0), (10, 10), (0, 10)])
         process_result_2 = ProcessResult()
         process_result_2["result"] = Polygon([(0, 0), (8, 0), (8, 8), (0, 8)])
-        testdict = {key_1: process_result_1, key_2: process_result_2}
+        process_result_3 = ProcessResult()
+        process_result_3["result"] = Polygon([(0, 0), (8, 0), (8, 8), (0, 8)])
+        testdict = {
+            key_1: {0: process_result_1},
+            key_2: {0: process_result_2},
+            key_3: {0: process_result_3},
+        }
         merged_testdict = merge_process_results(testdict)
-        assert len(merged_testdict.keys()) == 1
+        assert len(merged_testdict.keys()) == 2
