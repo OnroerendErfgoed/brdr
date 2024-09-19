@@ -726,16 +726,20 @@ class Aligner:
 
         if inputtype == AlignerInputType.THEMATIC:
             dict_to_geojson = self.dict_thematic
+            dict_properties = self.dict_thematic_properties
+            property_id = self.name_thematic_id
         elif inputtype == AlignerInputType.REFERENCE:
             dict_to_geojson = self.dict_reference
+            dict_properties = self.dict_reference_properties
+            property_id = self.name_reference_id
         else:
             raise (ValueError, "AlignerInputType unknown")
+        dict_properties
         if dict_to_geojson is None or dict_to_geojson == {}:
             self.logger.feedback_warning ("Empty input: No input to export.")
             return {}
-        # TODO: also add properties?
         return geojson_from_dict(
-            dict_to_geojson, self.CRS, self.name_reference_id, geom_attributes=False
+            dict_to_geojson, self.CRS, property_id,prop_dict=dict_properties, geom_attributes=False
         )
     def save_results(self, path, resulttype=AlignerResultType.PROCESSRESULTS, formula=True):
         """

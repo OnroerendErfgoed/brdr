@@ -10,7 +10,13 @@ from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
 
 from brdr.aligner import Aligner
-from brdr.constants import DEFAULT_CRS, LAST_VERSION_DATE, DATE_FORMAT, VERSION_DATE, FORMULA_FIELD_NAME
+from brdr.constants import (
+    DEFAULT_CRS,
+    LAST_VERSION_DATE,
+    DATE_FORMAT,
+    VERSION_DATE,
+    FORMULA_FIELD_NAME,
+)
 from brdr.constants import DOWNLOAD_LIMIT
 from brdr.constants import GRB_BUILDING_ID
 from brdr.constants import GRB_FEATURE_URL
@@ -268,6 +274,8 @@ def get_collection_grb_fiscal_parcels(
     return get_collection_by_partition(
         url, geometry=geometry, partition=partition, limit=limit, crs=crs
     )
+
+
 def get_collection_grb_parcels_by_date(
     geometry,
     date,
@@ -281,12 +289,15 @@ def get_collection_grb_parcels_by_date(
         partition=partition,
         crs=crs,
     )
-    #Filter on specific date: delete all features > specific_date
-    #TODO: experimental loader; unclear if we have to use "year-1 & year" OR if we have to use "year & year + 1"
+    # Filter on specific date: delete all features > specific_date
+    # TODO: experimental loader; unclear if we have to use "year-1 & year" OR if we have to use "year & year + 1"
     collection_year_after_filtered = deepcopy(collection_year_after)
-    logging.debug(len (collection_year_after_filtered["features"]))
-    if "features" in collection_year_after_filtered and len (collection_year_after_filtered["features"])>0:
-        removed_features =[]
+    logging.debug(len(collection_year_after_filtered["features"]))
+    if (
+        "features" in collection_year_after_filtered
+        and len(collection_year_after_filtered["features"]) > 0
+    ):
+        removed_features = []
         for feature in collection_year_after_filtered["features"]:
             versiondate = datetime.strptime(
                 feature["properties"][GRB_VERSION_DATE][:10], DATE_FORMAT
@@ -295,43 +306,49 @@ def get_collection_grb_parcels_by_date(
                 removed_features.append(feature)
                 collection_year_after_filtered["features"].remove(feature)
     logging.debug(len(collection_year_after_filtered["features"]))
-    #if no features are removed, return the full collection of year_after
-    if len(removed_features)==0:
+    # if no features are removed, return the full collection of year_after
+    if len(removed_features) == 0:
         return collection_year_after
     # if  features are removed, search for the features in year before
     collection_year_before = get_collection_grb_fiscal_parcels(
-        year=str(date.year-1),
+        year=str(date.year - 1),
         geometry=geometry,
         partition=partition,
         crs=crs,
     )
     kept_features = []
-    if "features" in collection_year_before and len(collection_year_before)>0:
+    if "features" in collection_year_before and len(collection_year_before) > 0:
         for feature in collection_year_before["features"]:
             for rf in removed_features:
                 geom_feature = shape(feature["geometry"])
-                geom_removed_feature= shape(rf["geometry"])
+                geom_removed_feature = shape(rf["geometry"])
                 if intersects(geom_feature, geom_removed_feature):
-                    intersection =safe_intersection(geom_feature, geom_removed_feature)
-                    if intersection.area>1:
+                    intersection = safe_intersection(geom_feature, geom_removed_feature)
+                    if intersection.area > 1:
                         if feature not in kept_features:
                             kept_features.append(feature)
 
+        # search for intersection and check if it more than x%
+        # keep these features
 
-        #search for intersection and check if it more than x%
-        #keep these features
-
-        #add them to
+        # add them to
 
     collection_specific_date = deepcopy(collection_year_after_filtered)
     filtered_features = collection_year_after_filtered["features"]
     specific_date_features = filtered_features + kept_features
     logging.debug(len(specific_date_features))
-    collection_specific_date["features"]=specific_date_features
+    collection_specific_date["features"] = specific_date_features
 
     return collection_specific_date
 
-def update_to_actual_grb(featurecollection, id_theme_fieldname, formula_field=FORMULA_FIELD_NAME, max_distance_for_actualisation=2, feedback=None ):
+
+def update_to_actual_grb(
+    featurecollection,
+    id_theme_fieldname,
+    formula_field=FORMULA_FIELD_NAME,
+    max_distance_for_actualisation=2,
+    feedback=None,
+):
     """
     Function to update a thematic featurecollection to the most actual version of GRB.
     Important to notice that the featurecollection needs a 'formula' for the base-alignment.
@@ -349,17 +366,27 @@ def update_to_actual_grb(featurecollection, id_theme_fieldname, formula_field=FO
         except Exception:
             geom = Polygon()
         logger.feedback_debug("id theme: " + id_theme)
-        logger.feedback_debug ("geometry (wkt): " + geom.wkt)
+        logger.feedback_debug("geometry (wkt): " + geom.wkt)
         dict_thematic[id_theme] = geom
         try:
-            dict_thematic_props[id_theme] = {FORMULA_FIELD_NAME: json.loads(feature["properties"][formula_field])}
-            logger.feedback_debug ("formula: " +str(dict_thematic_props[id_theme]))
+            dict_thematic_props[id_theme] = {
+                FORMULA_FIELD_NAME: json.loads(feature["properties"][formula_field])
+            }
+            logger.feedback_debug("formula: " + str(dict_thematic_props[id_theme]))
         except Exception:
-            raise Exception ("Formula -attribute-field (json) cannot be loaded")
+            raise Exception("Formula -attribute-field (json) cannot be loaded")
         try:
             logger.feedback_debug(str(dict_thematic_props[id_theme]))
-            if LAST_VERSION_DATE in dict_thematic_props[id_theme][FORMULA_FIELD_NAME] and dict_thematic_props[id_theme][FORMULA_FIELD_NAME][LAST_VERSION_DATE] is not None and dict_thematic_props[id_theme][FORMULA_FIELD_NAME][LAST_VERSION_DATE] != "":
-                str_lvd = dict_thematic_props[id_theme][FORMULA_FIELD_NAME][LAST_VERSION_DATE]
+            if (
+                LAST_VERSION_DATE in dict_thematic_props[id_theme][FORMULA_FIELD_NAME]
+                and dict_thematic_props[id_theme][FORMULA_FIELD_NAME][LAST_VERSION_DATE]
+                is not None
+                and dict_thematic_props[id_theme][FORMULA_FIELD_NAME][LAST_VERSION_DATE]
+                != ""
+            ):
+                str_lvd = dict_thematic_props[id_theme][FORMULA_FIELD_NAME][
+                    LAST_VERSION_DATE
+                ]
                 lvd = datetime.strptime(str_lvd, DATE_FORMAT).date()
                 if lvd < last_version_date:
                     last_version_date = lvd
@@ -379,23 +406,33 @@ def update_to_actual_grb(featurecollection, id_theme_fieldname, formula_field=FO
         date_end=datetime_end,
         one_by_one=False,
     )
-    logger.feedback_info("Number of possible affected OE-thematic during timespan: " + str(len(dict_affected)))
+    logger.feedback_info(
+        "Number of possible affected OE-thematic during timespan: "
+        + str(len(dict_affected))
+    )
     if len(dict_affected) == 0:
-        logger.feedback_info("No change detected in referencelayer during timespan. Script is finished")
+        logger.feedback_info(
+            "No change detected in referencelayer during timespan. Script is finished"
+        )
         return {}
     logger.feedback_debug(str(datetime_start))
     logger.feedback_debug(str(formula_field))
 
     # Initiate a Aligner to reference thematic features to the actual borders
     actual_aligner = Aligner(feedback=feedback)
-    actual_aligner.load_thematic_data(DictLoader(data_dict=dict_affected,data_dict_properties=dict_thematic_props))
+    actual_aligner.load_thematic_data(
+        DictLoader(data_dict=dict_affected, data_dict_properties=dict_thematic_props)
+    )
     actual_aligner.load_reference_data(
-        GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=actual_aligner))
+        GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=actual_aligner)
+    )
 
-    actual_aligner.relevant_distances = np.arange(0, max_distance_for_actualisation * 100, 10, dtype=int) / 100
+    actual_aligner.relevant_distances = (
+        np.arange(0, max_distance_for_actualisation * 100, 10, dtype=int) / 100
+    )
     dict_evaluated, prop_dictionary = actual_aligner.compare(
-                                                             threshold_area=5, threshold_percentage=1,
-                                                             dict_unchanged=dict_unchanged)
+        threshold_area=5, threshold_percentage=1, dict_unchanged=dict_unchanged
+    )
 
     return get_series_geojson_dict(
         dict_evaluated,
@@ -412,7 +449,7 @@ class GRBActualLoader(GeoJsonLoader):
         self.grb_type = grb_type
         self.part = partition
         self.data_dict_source["source"] = grb_type.value
-        self.versiondate_info= {"name": GRB_VERSION_DATE,"format": DATE_FORMAT}
+        self.versiondate_info = {"name": GRB_VERSION_DATE, "format": DATE_FORMAT}
 
     def load_data(self):
         if not self.aligner.dict_thematic:
@@ -441,7 +478,7 @@ class GRBFiscalParcelLoader(GeoJsonLoader):
         self.data_dict_source[VERSION_DATE] = datetime(int(year), 1, 1).strftime(
             DATE_FORMAT
         )
-        self.versiondate_info= {"name": GRB_VERSION_DATE,"format": datetime_format_TZ}
+        self.versiondate_info = {"name": GRB_VERSION_DATE, "format": datetime_format_TZ}
 
     def load_data(self):
         if not self.aligner.dict_thematic:
@@ -457,35 +494,40 @@ class GRBFiscalParcelLoader(GeoJsonLoader):
         self.aligner.logger.feedback_info(f"Adpf downloaded for year: {self.year}")
         return super().load_data()
 
+
 class GRBSpecificDateParcelLoader(GeoJsonLoader):
     def __init__(self, date, aligner, partition=1000):
         logging.warning("experimental loader; use with care!!!")
         try:
-            date = datetime.strptime(date, DATE_FORMAT
-                                     ).date()
-            if date.year>=datetime.now().year:
-                raise ValueError("The GRBSpecificDateParcelLoader can only be used for dates prior to the current year.")
+            date = datetime.strptime(date, DATE_FORMAT).date()
+            if date.year >= datetime.now().year:
+                raise ValueError(
+                    "The GRBSpecificDateParcelLoader can only be used for dates prior to the current year."
+                )
         except Exception:
-            raise ValueError("No valid date, please provide a date in the format: " + DATE_FORMAT)
+            raise ValueError(
+                "No valid date, please provide a date in the format: " + DATE_FORMAT
+            )
         super().__init__(_input=None, id_property=GRB_PARCEL_ID)
         self.aligner = aligner
         self.date = date
         self.part = partition
         self.data_dict_source["source"] = "Adp"
         self.data_dict_source[VERSION_DATE] = date.strftime(DATE_FORMAT)
-        self.versiondate_info= {"name": GRB_VERSION_DATE,"format": datetime_format_TZ}
+        self.versiondate_info = {"name": GRB_VERSION_DATE, "format": datetime_format_TZ}
 
     def load_data(self):
         if not self.aligner.dict_thematic:
             raise ValueError("Thematic data not loaded")
         geom_union = buffer_pos(self.aligner.get_thematic_union(), MAX_REFERENCE_BUFFER)
-        collection= get_collection_grb_parcels_by_date(
+        collection = get_collection_grb_parcels_by_date(
             date=self.date,
             geometry=geom_union,
             partition=self.part,
             crs=self.aligner.CRS,
         )
         self.input = dict(collection)
-        self.aligner.logger.feedback_info(f"Parcels downloaded for specific date: {self.date.strftime(DATE_FORMAT)}")
+        self.aligner.logger.feedback_info(
+            f"Parcels downloaded for specific date: {self.date.strftime(DATE_FORMAT)}"
+        )
         return super().load_data()
-
