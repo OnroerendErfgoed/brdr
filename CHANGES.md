@@ -20,7 +20,7 @@
 
 # 0.3.0
 
-! Not Backwards compatable!
+! Not Backwards compatable !
 
 - Refactoring:
     - refactor the structure of the (internal) dicts: dict_series, dict_predicted. More logical and faster [#57]
@@ -28,7 +28,6 @@
     - removed deprecated loaders from codebase [#77]
     - simplify the core-functionalities of Aligner: process, predict, compare [#89]
     - cleanup unused functions [#81]
-    - requires python>=3.10
 
 - Functionalities:
     - Add brdr-version to formula [#66]
@@ -41,4 +40,10 @@
 - Bugfixing:
     - adding a safe_equals-function to catch GEOsException bug [#71]
 
-  
+
+
+
+
+
+
+
