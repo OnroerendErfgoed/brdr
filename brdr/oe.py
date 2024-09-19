@@ -53,15 +53,17 @@ def get_oe_dict_by_ids(objectids, oetype=OEType.AO):
     logging.warning("deprecated method, use OnroerendErfgoedLoader instead")
     # TODO remove function
     dict_thematic = {}
-    if oetype==OEType.AO:
+    if oetype == OEType.AO:
         typename = "aanduidingsobjecten"
-        #id_property = "aanduid_id"
-    elif oetype==OEType.EO:
+        # id_property = "aanduid_id"
+    elif oetype == OEType.EO:
         typename = "erfgoedobjecten"
-        #id_property = "erfgoed_id"
+        # id_property = "erfgoed_id"
     else:
-        logging.warning("Undefined OE-type: " + str(oetype) + ": Empty collection returned")
-        return {},None
+        logging.warning(
+            "Undefined OE-type: " + str(oetype) + ": Empty collection returned"
+        )
+        return {}, None
 
     base_url = "https://inventaris.onroerenderfgoed.be/" + typename + "/"
     headers = {"Accept": "application/json"}
@@ -77,7 +79,14 @@ def get_oe_dict_by_ids(objectids, oetype=OEType.AO):
     return dict_thematic
 
 
-def get_collection_oe_objects(oetype=OEType.AO,objectids=None,bbox=None,limit=DOWNLOAD_LIMIT, partition=1000 ,crs=DEFAULT_CRS):
+def get_collection_oe_objects(
+    oetype=OEType.AO,
+    objectids=None,
+    bbox=None,
+    limit=DOWNLOAD_LIMIT,
+    partition=1000,
+    crs=DEFAULT_CRS,
+):
     """
     Fetches GeoJSON data for designated heritage objects (aanduidingsobjecten) within
     a bounding box.
@@ -97,16 +106,17 @@ def get_collection_oe_objects(oetype=OEType.AO,objectids=None,bbox=None,limit=DO
               collection might be truncated if the total number of features exceeds
               the specified limit.
     """
-    if oetype==OEType.AO:
+    if oetype == OEType.AO:
         typename = "ps:ps_aandobj"
         id_property = "aanduid_id"
-    elif oetype==OEType.EO:
+    elif oetype == OEType.EO:
         typename = "lu:lu_wet_erfgobj_pub"
         id_property = "erfgoed_id"
     else:
-        logging.warning("Undefined OE-type: " + str(oetype) + ": Empty collection returned")
-        return {},None
-
+        logging.warning(
+            "Undefined OE-type: " + str(oetype) + ": Empty collection returned"
+        )
+        return {}, None
 
     theme_url = (
         "https://www.mercator.vlaanderen.be/raadpleegdienstenmercatorpubliek/wfs?"
@@ -114,48 +124,62 @@ def get_collection_oe_objects(oetype=OEType.AO,objectids=None,bbox=None,limit=DO
         f"TYPENAMES={typename}&"
         f"SRSNAME={crs}"
         "&outputFormat=application/json"
-
     )
     if objectids is not None:
-        filter = f"&CQL_FILTER={id_property} IN (" + ', '.join(str(o) for o in objectids) + ")"
+        filter = (
+            f"&CQL_FILTER={id_property} IN ("
+            + ", ".join(str(o) for o in objectids)
+            + ")"
+        )
         theme_url = theme_url + filter
     bbox_polygon = None
     if bbox is not None:
         bbox_polygon = box(*tuple(o for o in bbox))
 
-    return get_collection_by_partition(
-        theme_url, geometry=bbox_polygon, partition=partition, limit=limit, crs=crs
-    ),id_property
+    return (
+        get_collection_by_partition(
+            theme_url, geometry=bbox_polygon, partition=partition, limit=limit, crs=crs
+        ),
+        id_property,
+    )
 
 
 class OnroerendErfgoedLoader(GeoJsonLoader):
-    def __init__(self, objectids=None, oetype=OEType.AO, bbox = None,limit=DOWNLOAD_LIMIT, partition=1000,crs=DEFAULT_CRS):
-        if (objectids is None and bbox is None) or (objectids is not None and bbox is not None):
+    def __init__(
+        self,
+        objectids=None,
+        oetype=OEType.AO,
+        bbox=None,
+        limit=DOWNLOAD_LIMIT,
+        partition=1000,
+        crs=DEFAULT_CRS,
+    ):
+        if (objectids is None and bbox is None) or (
+            objectids is not None and bbox is not None
+        ):
             raise ValueError("Please provide a ID-filter OR a BBOX-filter, not both")
         super().__init__()
         self.objectids = objectids
         self.oetype = oetype
         self.bbox = bbox
-        self.limit= limit
+        self.limit = limit
         self.part = partition
-        self.crs=crs
+        self.crs = crs
         self.data_dict_source["source"] = "Onroerend Erfgoed"
 
     def load_data(self):
 
-        #geom_union = buffer_pos(self.aligner.get_thematic_union(), MAX_REFERENCE_BUFFER)
-        collection,id_property = get_collection_oe_objects(
+        # geom_union = buffer_pos(self.aligner.get_thematic_union(), MAX_REFERENCE_BUFFER)
+        collection, id_property = get_collection_oe_objects(
             oetype=self.oetype,
             objectids=self.objectids,
             bbox=self.bbox,
             partition=self.part,
-            limit = self.limit,
-            crs = self.crs
+            limit=self.limit,
+            crs=self.crs,
         )
         self.id_property = id_property
         self.input = dict(collection)
         self.data_dict_source[VERSION_DATE] = datetime.now().strftime(DATE_FORMAT)
         LOGGER.debug(f"OnroerendErfgoed-objects downloaded")
         return super().load_data()
-
-

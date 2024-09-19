@@ -19,7 +19,7 @@ counter_excluded = 0
 # =========
 crs = "EPSG:31370"
 limit = 10000
-bbox = [172800,170900,173000,171100]
+bbox = [172800, 170900, 173000, 171100]
 bbox = [172000, 172000, 174000, 174000]
 # bbox = "170000,170000,175000,174900"
 # bbox = "100000,195000,105000,195900"
@@ -40,7 +40,7 @@ max_distance_for_actualisation = 2
 # base_year
 base_aligner = Aligner()
 # Load the thematic data to evaluate
-loader = OnroerendErfgoedLoader(bbox=bbox,partition=0)
+loader = OnroerendErfgoedLoader(bbox=bbox, partition=0)
 base_aligner.load_thematic_data(loader)
 
 logging.info(
@@ -65,34 +65,35 @@ for x in keys_to_exclude:
     del base_aligner.dict_thematic[x]
 
 # # Align the features to the base-GRB
-base_process_result = base_aligner.process(
-     relevant_distance=base_correction
- )
-#get resulting aligned features on Adpfxxxx, with formula
-processresults=base_aligner.get_results_as_geojson(formula=True)
-if len(processresults)==0:
+base_process_result = base_aligner.process(relevant_distance=base_correction)
+# get resulting aligned features on Adpfxxxx, with formula
+processresults = base_aligner.get_results_as_geojson(formula=True)
+if len(processresults) == 0:
     print("empty processresults")
     exit()
 featurecollection_base_result = processresults["result"]
 
 # Update Featurecollection to actual version
 fcs = update_to_actual_grb(
-    featurecollection_base_result, base_aligner.name_thematic_id,max_distance_for_actualisation=max_distance_for_actualisation)
+    featurecollection_base_result,
+    base_aligner.name_thematic_id,
+    max_distance_for_actualisation=max_distance_for_actualisation,
+)
 
 
 counter_equality = 0
 counter_equality_by_alignment = 0
 counter_difference = 0
 for feature in fcs["result"]["features"]:
-        if EVALUATION_FIELD_NAME in feature["properties"].keys():
-            ev = feature["properties"][EVALUATION_FIELD_NAME]
-            rd =feature["properties"][RELEVANT_DISTANCE_FIELD_NAME]
-            if ev.startswith("equal") and rd == 0:
-                counter_equality = counter_equality + 1
-            elif ev.startswith("equal") and rd > 0:
-                counter_equality_by_alignment = counter_equality_by_alignment + 1
-            else:
-                counter_difference = counter_difference + 1
+    if EVALUATION_FIELD_NAME in feature["properties"].keys():
+        ev = feature["properties"][EVALUATION_FIELD_NAME]
+        rd = feature["properties"][RELEVANT_DISTANCE_FIELD_NAME]
+        if ev.startswith("equal") and rd == 0:
+            counter_equality = counter_equality + 1
+        elif ev.startswith("equal") and rd > 0:
+            counter_equality_by_alignment = counter_equality_by_alignment + 1
+        else:
+            counter_difference = counter_difference + 1
 
 print(
     "Features: "

@@ -22,14 +22,14 @@ base_aligner.load_reference_data(
     GRBFiscalParcelLoader(year=base_year, aligner=base_aligner)
 )
 relevant_distance = 3
-base_process_result = base_aligner.process(
-    relevant_distance=relevant_distance
-)
+base_process_result = base_aligner.process(relevant_distance=relevant_distance)
 thematic_dict_formula = {}
 thematic_dict_result = {}
 for key in base_process_result:
     thematic_dict_result[key] = base_process_result[key][relevant_distance]["result"]
-    thematic_dict_formula[key]= {FORMULA_FIELD_NAME:base_aligner.get_brdr_formula(thematic_dict_result[key])}
+    thematic_dict_formula[key] = {
+        FORMULA_FIELD_NAME: base_aligner.get_brdr_formula(thematic_dict_result[key])
+    }
 base_aligner_result = Aligner()
 base_aligner_result.load_thematic_data(DictLoader(thematic_dict_result))
 dict_affected, dict_unchanged = get_geoms_affected_by_grb_change(
@@ -44,16 +44,18 @@ if dict_affected == {}:
     exit()
 
 actual_aligner = Aligner()
-actual_aligner.load_thematic_data(DictLoader(data_dict=dict_affected,data_dict_properties=thematic_dict_formula))
+actual_aligner.load_thematic_data(
+    DictLoader(data_dict=dict_affected, data_dict_properties=thematic_dict_formula)
+)
 loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=actual_aligner)
 actual_aligner.load_reference_data(loader)
 series = np.arange(0, 300, 10, dtype=int) / 100
 
 dict_evaluated, prop_dictionary = actual_aligner.compare(
-                                                         threshold_area=5,
-                                                         threshold_percentage=1,
-                                                         dict_unchanged=dict_unchanged,
-                                                         )
+    threshold_area=5,
+    threshold_percentage=1,
+    dict_unchanged=dict_unchanged,
+)
 
 fc = get_series_geojson_dict(
     dict_evaluated,

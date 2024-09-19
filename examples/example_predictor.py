@@ -27,7 +27,9 @@ if __name__ == "__main__":
     dict_series, dict_predictions, diffs = aligner.predictor(
         relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
     )
-    fcs = aligner.get_results_as_geojson(resulttype=AlignerResultType.PREDICTIONS,formula=False)
+    fcs = aligner.get_results_as_geojson(
+        resulttype=AlignerResultType.PREDICTIONS, formula=False
+    )
     print(fcs["result"])
     # for key in dict_predictions:
     #     show_map(
