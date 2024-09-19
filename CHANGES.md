@@ -20,25 +20,25 @@
 
 # 0.3.0
 
+! Not Backwards compatable !
+
 - Refactoring:
-    - refactor the structure of the (internal) dicts: dict_series, dict_predicted,.... enhancement question [#57]
-    - refactoring of 'formula-unction': generic vs GRB enhancement question [#59]
-    - remove deprecated loaders from code enhancement [#77]
-    - simplify the core-functionalities of Aligner [#89]
-    - cleanup unused functions cleanup [#81]
-    -
+    - refactor the structure of the (internal) dicts: dict_series, dict_predicted. More logical and faster [#57]
+    - refactoring of 'formula-function': more generic [#59]
+    - removed deprecated loaders from codebase [#77]
+    - simplify the core-functionalities of Aligner: process, predict, compare [#89]
+    - cleanup unused functions [#81]
+
 - Functionalities:
-    - Add brdr-version to formula enhancement [#66]
-    - predictor: when multiple predictions with the same resulting geometries are found, only keep the smallest
-      enhancement [#70]
-    - Predictor: add a field/attribute that states how many predictions are found, so it can used in the output
-      enhancement [#69]
-    - Add function to grb.py: "update_to_actual_version" brdrQ enhancement [#64]
-    - GRBSpecificdateLoader: Alignment on GRB (parcels) on specific date [f.e alignment-date] enhancement [#63]
-    - Create OnroerendErfgoedLoader; to replace other utirl function to load OE-data enhancement [#65]
+    - Add brdr-version to formula [#66]
+    - predict: filter duplicate predictions [#70]
+    - Predictor: add a attribute (nr_calculations) that states how many predictions are found, so it can used in the
+      output [#69]
+    - Added GRB-function"update_to_actual_version", to be used in brdrQ [#64]
+    - Added GRBSpecificDateLoader: Alignment on GRB (parcels) on specific date [#63]
+    - Added OnroerendErfgoedLoader, to load OnroerendErfgoed-data [#65]
 - Bugfixing:
-    - adding a safe_equals-function to catch GEOsException bug enhancement [#71]
-    - research: evaluation of case - to check bug enhancement research [#67]
+    - adding a safe_equals-function to catch GEOsException bug [#71]
 
 
 
