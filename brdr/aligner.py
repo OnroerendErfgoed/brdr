@@ -1203,7 +1203,7 @@ class Aligner:
         return array
 
 
-@staticmethod
+
 def _calculate_geom_by_intersection_and_reference(
     geom_intersection: BaseGeometry,
     geom_reference: BaseGeometry,
@@ -1311,7 +1311,7 @@ def _calculate_geom_by_intersection_and_reference(
     return geom, geom_relevant_intersection, geom_relevant_difference
 
 
-@staticmethod
+
 def _get_relevant_polygons_from_geom(geometry: BaseGeometry, buffer_distance: float):
     """
     Get only the relevant parts (polygon) from a geometry.
@@ -1336,7 +1336,7 @@ def _get_relevant_polygons_from_geom(geometry: BaseGeometry, buffer_distance: fl
     return make_valid(unary_union(array))
 
 
-@staticmethod
+
 def _equal_geom_in_array(geom, geom_array):
     """
     Check if a predicted geometry is equal to other predicted geometries in a list.
@@ -1350,7 +1350,6 @@ def _equal_geom_in_array(geom, geom_array):
     return False
 
 
-@staticmethod
 def _check_equality(
     base_formula, actual_formula, threshold_area=5, threshold_percentage=1
 ):
