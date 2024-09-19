@@ -9,7 +9,8 @@ from shapely.geometry import Polygon
 from shapely.geometry import shape
 
 from brdr.aligner import Aligner
-from brdr.enums import GRBType
+from brdr.constants import FORMULA_FIELD_NAME
+from brdr.enums import GRBType, AlignerResultType
 from brdr.enums import OpenbaarDomeinStrategy
 from brdr.geometry_utils import _grid_bounds
 from brdr.geometry_utils import buffer_neg_pos
@@ -62,10 +63,11 @@ class TestAligner(unittest.TestCase):
         aligner.load_reference_data(
             DictLoader({"ref_id_1": from_wkt("POLYGON ((0 1, 0 10,8 10,10 1,0 1))")})
         )
-        aligner.process_dict_thematic()
+        aligner.process()
         path = "./tmp/"
-        aligner.export_results(path=path)
-        filenames = [f"{k}.geojson" for k in ProcessResult.__annotations__]
+        resulttype = AlignerResultType.PROCESSRESULTS
+        aligner.save_results(path=path, resulttype=resulttype)
+        filenames = [resulttype.value + f"_{k}.geojson" for k in ProcessResult.__annotations__]
         for file_name in os.listdir(path):
             os.remove(path + file_name)
             assert file_name in filenames
@@ -76,7 +78,7 @@ class TestAligner(unittest.TestCase):
         key = "a"
         ref_dict = {key: self.sample_geom}
         self.sample_aligner.load_reference_data(DictLoader(ref_dict))
-        res = self.sample_aligner.get_formula(self.sample_geom, with_geom=True)
+        res = self.sample_aligner.get_brdr_formula(self.sample_geom, with_geom=True)
         self.assertTrue(res["full"])
         result = res["reference_features"][key]
         self.assertTrue(result["full"])
@@ -87,7 +89,7 @@ class TestAligner(unittest.TestCase):
         key = "a"
         ref_dict = {key: self.sample_geom.buffer(0.5)}
         self.sample_aligner.load_reference_data(DictLoader(ref_dict))
-        res = self.sample_aligner.get_formula(self.sample_geom, with_geom=True)
+        res = self.sample_aligner.get_brdr_formula(self.sample_geom, with_geom=True)
         self.assertFalse(res["full"])
         result = res["reference_features"][key]
         self.assertFalse(result["full"])
@@ -122,15 +124,15 @@ class TestAligner(unittest.TestCase):
         # predict which relevant distances are interesting to propose as resulting
         # geometry
 
-        dict_series, dict_predicted, dict_diffs = self.sample_aligner.predictor(
+        dict_series, dict_predictions, dict_diffs = self.sample_aligner.predictor(
             relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
         )
-        self.assertEqual(len(dict_predicted), len(thematic_dict))
+        self.assertEqual(len(dict_predictions), len(thematic_dict))
 
     def test_predictor_double_prediction(self):
         """
         Test if a double prediction is filtered out of the prediction results.
-        This testdata has 2 resulting predictions that are the same (at 0.0 and 6.0), and 6.0 will be removed from dict_predicted
+        This testdata has 2 resulting predictions that are the same (at 0.0 and 6.0), and 6.0 will be removed from dict_predictions
         """
         # Initiate an Aligner
         aligner = Aligner()
@@ -148,10 +150,10 @@ class TestAligner(unittest.TestCase):
 
         series = np.arange(0, 800, 10, dtype=int) / 100
         # predict which relevant distances are interesting to propose as resulting geometry
-        dict_series, dict_predicted, diffs = aligner.predictor(
+        dict_series, dict_predictions, diffs = aligner.predictor(
             relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
         )
-        self.assertEqual(len(dict_predicted["id1"]), 3)
+        self.assertEqual(len(dict_predictions["id1"]), 3)
 
     def test_load_reference_data_grb_actual_adp(self):
         thematic_dict = {
@@ -211,7 +213,7 @@ class TestAligner(unittest.TestCase):
                 aligner=self.sample_aligner, grb_type=GRBType.KNW, partition=1000
             )
         )
-        self.sample_aligner.process_dict_thematic()
+        self.sample_aligner.process()
         self.assertGreaterEqual(len(self.sample_aligner.dict_reference), 0)
 
     def test_all_od_strategies(self):
@@ -227,7 +229,7 @@ class TestAligner(unittest.TestCase):
         self.sample_aligner.load_reference_data(DictLoader(reference_dict))
         relevant_distance = 1
         for od_strategy in OpenbaarDomeinStrategy:
-            process_result = self.sample_aligner.process_dict_thematic(
+            process_result = self.sample_aligner.process(
                 relevant_distance=relevant_distance,
                 od_strategy=od_strategy,
                 threshold_overlap_percentage=50,
@@ -257,7 +259,7 @@ class TestAligner(unittest.TestCase):
                 aligner=self.sample_aligner, grb_type=GRBType.GBG, partition=1000
             )
         )
-        result_dict = self.sample_aligner.process_dict_thematic()
+        result_dict = self.sample_aligner.process()
         self.assertEqual(len(result_dict), len(thematic_dict))
 
     def test_process_circle(self):
@@ -272,7 +274,7 @@ class TestAligner(unittest.TestCase):
             )
         )
         relevant_distance = 1
-        results_dict = self.sample_aligner.process_dict_thematic(
+        results_dict = self.sample_aligner.process(
             relevant_distance=relevant_distance
         )
         self.assertEqual(geometry, results_dict["key"][relevant_distance]["result"])
@@ -326,8 +328,8 @@ class TestAligner(unittest.TestCase):
         self.sample_aligner.load_reference_data(
             DictLoader({"ref_id_1": from_wkt("POLYGON ((0 1, 0 10,8 10,10 1,0 1))")})
         )
-        self.sample_aligner.process_dict_thematic()
-        self.sample_aligner.get_reference_as_geojson()
+        self.sample_aligner.process()
+        self.sample_aligner.get_input_as_geojson()
 
     def test_fully_aligned_input(self):
         aligned_shape = from_wkt("POLYGON ((0 0, 0 9, 5 10, 10 0, 0 0))")
@@ -337,7 +339,7 @@ class TestAligner(unittest.TestCase):
         )
         self.sample_aligner.load_reference_data(DictLoader({"ref_id_1": aligned_shape}))
         relevant_distance = 1
-        result = self.sample_aligner.process_dict_thematic(
+        result = self.sample_aligner.process(
             relevant_distance=relevant_distance
         )
         assert result["theme_id_1"][relevant_distance].get("result") == aligned_shape
@@ -366,14 +368,12 @@ class TestAligner(unittest.TestCase):
             GRBFiscalParcelLoader(aligner=base_aligner, year="2022", partition=1000)
         )
         relevant_distance=1
-        base_process_result = base_aligner.process_dict_thematic(relevant_distance=relevant_distance)
+        base_process_result = base_aligner.process(relevant_distance=relevant_distance)
         thematic_dict_formula = {}
         thematic_dict_result = {}
         for key in base_process_result:
             thematic_dict_result[key] = base_process_result[key][relevant_distance]["result"]
-            thematic_dict_formula[key] = base_aligner.get_formula(
-                thematic_dict_result[key]
-            )
+            thematic_dict_formula[key] = {FORMULA_FIELD_NAME: base_aligner.get_brdr_formula(thematic_dict_result[key])}
         aligner_result = Aligner()
         aligner_result.load_thematic_data(DictLoader(thematic_dict_result))
         dict_affected, dict_unchanged = get_geoms_affected_by_grb_change(
@@ -385,19 +385,18 @@ class TestAligner(unittest.TestCase):
         )
 
         actual_aligner = Aligner()
-        loader = DictLoader(dict_affected)
-        actual_aligner.load_thematic_data(loader)
+        actual_aligner.load_thematic_data(
+            DictLoader(data_dict=dict_affected, data_dict_properties=thematic_dict_formula))
         loader = GRBActualLoader(
             grb_type=GRBType.ADP, partition=1000, aligner=actual_aligner
         )
         actual_aligner.load_reference_data(loader)
         series = np.arange(0, 200, 10, dtype=int) / 100
 
-        dict_evaluated, prop_dictionary = actual_aligner.evaluate(series=series,
-            thematic_dict_formula= thematic_dict_formula,
-            threshold_area=5,
-            threshold_percentage=1,
-        )
+        dict_evaluated, prop_dictionary = actual_aligner.compare(
+                                                                 threshold_area=5,
+                                                                 threshold_percentage=1,
+                                                                 )
         fc = get_series_geojson_dict(
             dict_evaluated,
             crs=actual_aligner.CRS,
@@ -429,7 +428,7 @@ class TestAligner(unittest.TestCase):
             DictLoader({"theme_id_1": aligned_shape})
         )
         self.sample_aligner.load_reference_data(DictLoader({"ref_id_1": aligned_shape}))
-        self.sample_aligner.process_dict_thematic()
+        self.sample_aligner.process()
         fcs = self.sample_aligner.get_results_as_geojson(formula=True)
         assert fcs["result"]["features"][0]["properties"]["area"] > 0
         assert fcs["result_diff"]["features"][0]["properties"]["area"] == 0

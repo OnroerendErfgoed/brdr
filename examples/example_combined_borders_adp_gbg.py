@@ -3,7 +3,7 @@ from brdr.enums import GRBType
 from brdr.grb import get_collection_grb_actual, GRBActualLoader
 from brdr.loader import GeoJsonFileLoader, DictLoader
 from brdr.utils import polygonize_reference_data, geojson_to_dicts
-from examples import show_map, print_formula
+from examples import show_map, print_brdr_formula
 
 # example to test what happens if we combine borders
 # (so thematic data can use both polygons)
@@ -57,7 +57,7 @@ if __name__ == "__main__":
     aligner.load_reference_data(DictLoader(dict_ref))
 
     rel_dist = 2
-    dict_results = aligner.process_dict_thematic(rel_dist, 4)
-    aligner.export_results("output/")
+    dict_results = aligner.process(relevant_distances=[rel_dist], od_strategy=4)
+    aligner.save_results("output/")
     show_map(dict_results, aligner.dict_thematic, aligner.dict_reference)
-    print_formula(dict_results, aligner)
+    print_brdr_formula(dict_results, aligner)

@@ -1,6 +1,6 @@
 # Initiate brdr
 from brdr.aligner import Aligner
-from brdr.enums import GRBType
+from brdr.enums import GRBType, AlignerResultType
 from brdr.grb import GRBActualLoader
 from brdr.loader import DictLoader, GeoJsonFileLoader
 from brdr.utils import multipolygons_to_singles
@@ -27,8 +27,10 @@ aligner.load_reference_data(
     GRBActualLoader(aligner=aligner, grb_type=GRBType.ADP, partition=1000)
 )
 
-dict_series, dict_predicted, diffs = aligner.predictor()
-fcs = aligner.get_series_as_geojson(series_dict=dict_predicted, formula=True)
-aligner.export_results("output/")
+dict_series, dict_predictions, diffs = aligner.predictor()
+fcs = aligner.get_results_as_geojson(
+    resulttype=AlignerResultType.PREDICTIONS, formula=True
+)
+aligner.save_results("output/")
 write_geojson("output/predicted.geojson", fcs["result"])
 write_geojson("output/predicted_diff.geojson", fcs["result_diff"])

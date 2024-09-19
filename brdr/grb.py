@@ -10,7 +10,7 @@ from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
 
 from brdr.aligner import Aligner
-from brdr.constants import DEFAULT_CRS, LAST_VERSION_DATE, DATE_FORMAT, VERSION_DATE
+from brdr.constants import DEFAULT_CRS, LAST_VERSION_DATE, DATE_FORMAT, VERSION_DATE, FORMULA_FIELD_NAME
 from brdr.constants import DOWNLOAD_LIMIT
 from brdr.constants import GRB_BUILDING_ID
 from brdr.constants import GRB_FEATURE_URL
@@ -331,7 +331,7 @@ def get_collection_grb_parcels_by_date(
 
     return collection_specific_date
 
-def update_to_actual_grb(featurecollection, id_theme_fieldname, formula_field="formula", max_distance_for_actualisation=2, feedback=None ):
+def update_to_actual_grb(featurecollection, id_theme_fieldname, formula_field=FORMULA_FIELD_NAME, max_distance_for_actualisation=2, feedback=None ):
     """
     Function to update a thematic featurecollection to the most actual version of GRB.
     Important to notice that the featurecollection needs a 'formula' for the base-alignment.
@@ -339,7 +339,7 @@ def update_to_actual_grb(featurecollection, id_theme_fieldname, formula_field="f
     logger = Logger(feedback)
     # Load featurecollection into a shapely_dict:
     dict_thematic = {}
-    dict_thematic_formula = {}
+    dict_thematic_props = {}
 
     last_version_date = datetime.now().date()
     for feature in featurecollection["features"]:
@@ -352,14 +352,14 @@ def update_to_actual_grb(featurecollection, id_theme_fieldname, formula_field="f
         logger.feedback_debug ("geometry (wkt): " + geom.wkt)
         dict_thematic[id_theme] = geom
         try:
-            dict_thematic_formula[id_theme] = json.loads(feature["properties"][formula_field])
-            logger.feedback_debug ("formula: " +str(dict_thematic_formula[id_theme]))
+            dict_thematic_props[id_theme] = {FORMULA_FIELD_NAME: json.loads(feature["properties"][formula_field])}
+            logger.feedback_debug ("formula: " +str(dict_thematic_props[id_theme]))
         except Exception:
             raise Exception ("Formula -attribute-field (json) cannot be loaded")
         try:
-            logger.feedback_debug(str(dict_thematic_formula[id_theme]))
-            if LAST_VERSION_DATE in dict_thematic_formula[id_theme] and dict_thematic_formula[id_theme][LAST_VERSION_DATE] is not None and dict_thematic_formula[id_theme][LAST_VERSION_DATE] != "":
-                str_lvd = dict_thematic_formula[id_theme][LAST_VERSION_DATE]
+            logger.feedback_debug(str(dict_thematic_props[id_theme]))
+            if LAST_VERSION_DATE in dict_thematic_props[id_theme][FORMULA_FIELD_NAME] and dict_thematic_props[id_theme][FORMULA_FIELD_NAME][LAST_VERSION_DATE] is not None and dict_thematic_props[id_theme][FORMULA_FIELD_NAME][LAST_VERSION_DATE] != "":
+                str_lvd = dict_thematic_props[id_theme][FORMULA_FIELD_NAME][LAST_VERSION_DATE]
                 lvd = datetime.strptime(str_lvd, DATE_FORMAT).date()
                 if lvd < last_version_date:
                     last_version_date = lvd
@@ -388,15 +388,14 @@ def update_to_actual_grb(featurecollection, id_theme_fieldname, formula_field="f
 
     # Initiate a Aligner to reference thematic features to the actual borders
     actual_aligner = Aligner(feedback=feedback)
-    actual_aligner.load_thematic_data(DictLoader(dict_affected))
+    actual_aligner.load_thematic_data(DictLoader(data_dict=dict_affected,data_dict_properties=dict_thematic_props))
     actual_aligner.load_reference_data(
         GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=actual_aligner))
 
-    series = np.arange(0, max_distance_for_actualisation * 100, 10, dtype=int) / 100
-    #actual_aligner.predictor(series)
-    dict_evaluated, prop_dictionary = actual_aligner.evaluate(series=series,thematic_dict_formula=dict_thematic_formula,
-                                               threshold_area=5, threshold_percentage=1,
-                                               dict_unchanged=dict_unchanged)
+    actual_aligner.relevant_distances = np.arange(0, max_distance_for_actualisation * 100, 10, dtype=int) / 100
+    dict_evaluated, prop_dictionary = actual_aligner.compare(
+                                                             threshold_area=5, threshold_percentage=1,
+                                                             dict_unchanged=dict_unchanged)
 
     return get_series_geojson_dict(
         dict_evaluated,

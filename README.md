@@ -52,26 +52,18 @@ The figure below shows:
       GeoJsonFileLoader,GeoJsonUrlLoader)
 
 * Processors:
-    * aligner.process_dict_thematic(): Align thematic boundaries to reference boundaries with a specific relevant
-      distance
-    * aligner.process_series(): Align thematic boundaries to reference boundaries with a series of specified relevant
-      distances (process_series)
-    * aligner.predictor(): Make use of a 'predictor'-function that aligns thematic boundaries to reference boundaries
-      for 'predicted' interesting
-      relevant distances (predictor)
-    * aligner.get_formula(): Calculating a descriptive formula of a thematic boundary based on a reference layer
-    * evaluate(): Evaluates a thematic dictionary on equality with another version and adds a 'evaluation'-property
-
+    * aligner.process(): Align thematic boundaries to reference boundaries with a specific relevant
+      distance or a range of relevant distances
+    * aligner.predictor(): Searches all 'stable' (=predicted) processresults in a range of relevant distances
+    * aligner.get_brdr_formula(): Calculating a descriptive formula of a thematic boundary based on a reference layer
+    * compare(): Compares input geometries with another version and adds a EVALUATION_FIELD_NAME
 * Exporters:
-    * aligner.get_results_as_geojson(): Returns a collection of geojson-dictionaries with the results (resulting
-      geometry, differences,...)
-    * aligner.get_predictions_as_geojson(): Returns a collection of geojson-dictionaries with the predictions (resulting
-      geometry, differences,...)
-    * aligner.get_series_as_geojson(): Returns a collection of geojson-dictionaries for a given resulting series (
-      resulting geometry, differences,...)
-    * aligner.get_reference_as_geojson(): Returns a geojson-featurecollection with all the reference-geometries
-    * aligner.export_predictions(): Exports the predicted geojson-files to a specified path
-    * aligner.export_results(): Exports the resuling geojson-files to a specified path
+    * aligner.get_results_as_geojson(): Returns a collection of geojson-dictionaries with the processresults (resulting
+      geometry, differences,...): This can be used for all processresults or only the 'predicted' results
+    * aligner.get_input_as_geojson(): Returns a geojson-featurecollection from input-dictionaries (thematic or
+      reference)
+    * aligner.save_results(): Exports the resuling geojson-files to a specified path:This can be used for all
+      processresults or only the 'predicted' results
 
 Besides the generic functionalities, a range of Flanders-specific functionalities are provided:
 
@@ -123,9 +115,6 @@ from brdr.loader import DictLoader
 
 # CREATE AN ALIGNER
 aligner = Aligner(
-    relevant_distance=1,
-    od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
-    threshold_overlap_percentage=50,
     crs="EPSG:31370",
 )
 # ADD A THEMATIC POLYGON TO THEMATIC DICTIONARY and LOAD into Aligner
@@ -138,7 +127,11 @@ loader = DictLoader(reference_dict)
 aligner.load_reference_data(loader)
 # EXECUTE THE ALIGNMENT
 relevant_distance = 1
-process_result = aligner.process_dict_thematic(relevant_distance=relevant_distance)
+process_result = aligner.process(
+    relevant_distance=relevant_distance,
+    od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
+    threshold_overlap_percentage=50,
+)
 # PRINT RESULTS IN WKT
 print("result: " + process_result["theme_id_1"][relevant_distance]["result"].wkt)
 print(

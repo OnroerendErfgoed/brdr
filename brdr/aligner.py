@@ -19,11 +19,11 @@ from shapely.geometry.base import BaseGeometry
 
 from brdr import __version__
 from brdr.constants import BUFFER_MULTIPLICATION_FACTOR, LAST_VERSION_DATE, VERSION_DATE, DATE_FORMAT, \
-    THRESHOLD_EXCLUSION_PERCENTAGE, THRESHOLD_EXCLUSION_AREA
+    THRESHOLD_EXCLUSION_PERCENTAGE, THRESHOLD_EXCLUSION_AREA, FORMULA_FIELD_NAME, EVALUATION_FIELD_NAME
 from brdr.constants import CORR_DISTANCE
 from brdr.constants import DEFAULT_CRS
 from brdr.constants import THRESHOLD_CIRCLE_RATIO
-from brdr.enums import OpenbaarDomeinStrategy, Evaluation
+from brdr.enums import OpenbaarDomeinStrategy, Evaluation, AlignerResultType, AlignerInputType
 from brdr.geometry_utils import buffer_neg
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import buffer_pos
@@ -60,6 +60,7 @@ class Aligner:
         *,
         feedback=None,
         relevant_distance=1,
+        relevant_distances= np.arange(0, 200, 10, dtype=int) / 100,
         threshold_overlap_percentage=50,
         od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
         crs=DEFAULT_CRS,
@@ -91,6 +92,7 @@ class Aligner:
         """
         self.logger = Logger(feedback)
         self.relevant_distance = relevant_distance
+        self.relevant_distances = relevant_distances
         self.od_strategy = od_strategy
         self.threshold_overlap_percentage = threshold_overlap_percentage
         self.area_limit = area_limit
@@ -125,10 +127,10 @@ class Aligner:
 
         # results
 
-        # output-dictionaries (when processing dict_thematic)
-        self.dict_result: dict[str, dict[float, ProcessResult]]= {}
-        # dictionary with the 'predicted' results, grouped by relevant distance
-        self.dict_predicted : dict[str, dict[float, ProcessResult]] ={}
+        # output-dictionaries (all results of process()), grouped by theme_id and relevant_distance
+        self.dict_processresults: dict[str, dict[float, ProcessResult]]= {}
+        # dictionary with the 'predicted' results, grouped by theme_id and relevant_distance
+        self.dict_predictions : dict[str, dict[float, ProcessResult]] ={}
 
         # Coordinate reference system
         # thematic geometries and reference geometries are assumed to be in the same CRS
@@ -145,6 +147,14 @@ class Aligner:
     def buffer_distance(self):
         return self.relevant_distance / 2
 
+    ##########LOADERS##########################
+    ###########################################
+
+    def load_thematic_data(self, loader: Loader):
+        self.dict_thematic, self.dict_thematic_properties, self.dict_thematic_source = (
+            loader.load_data()
+        )
+
     def load_reference_data(self, loader: Loader):
         (
             self.dict_reference,
@@ -153,10 +163,8 @@ class Aligner:
         ) = loader.load_data()
         self._prepare_reference_data()
 
-    def load_thematic_data(self, loader: Loader):
-        self.dict_thematic, self.dict_thematic_properties, self.dict_thematic_source = (
-            loader.load_data()
-        )
+    ##########PROCESSORS#######################
+    ###########################################
 
     def process_geometry(
         self,
@@ -261,40 +269,111 @@ class Aligner:
 
         return result_dict
 
-    def process_dict_thematic(
+    def process(
         self,
+        relevant_distances: Iterable[float]=None,
         relevant_distance=1,
         od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
         threshold_overlap_percentage=50,
     ) -> dict[str, dict[float, ProcessResult]]:
         """
-        Aligns a thematic dictionary of geometries to the reference layer based on
-        specified parameters. - method to align a thematic dictionary to the reference
-        layer
+        Calculates the resulting dictionaries for thematic data based on a series of
+            relevant distances.
 
         Args:
-            relevant_distance (float, optional): The relevant distance (in meters) for
-                processing. Defaults to 1.
+            relevant_distances (Iterable[float]): A series of relevant distances
+                (in meters) to process
             od_strategy (int, optional): The strategy for overlap detection.
                 Defaults to 1.
             threshold_overlap_percentage (float, optional): The threshold percentage for
                 considering full overlap. Defaults to 50.
 
         Returns:
-            dict: A dict containing processed data for each thematic key:
-                - result: Aligned thematic data.
-                - result_diff: global differences between thematic data and reference
-                  data.
-                - result_diff_plus: Positive differences.
-                - result_diff_min: Negative differences.
-                - relevant_intersection: relevant intersections.
-                - relevant_diff: relevant differences.
+            dict: A dictionary, for every thematic ID a dictionary with the results for all distances
 
+                {
+                    'theme_id_1': {0: (ProcessResult), 0.1:
+                        (ProcessResult), ...},
+                    'theme_id_2': {0: (ProcessResult), 0.1:
+                        (ProcessResult), ...},
+                    ...
+                }
         """
-        self.dict_result = self.process_series(relevant_distances=[relevant_distance],
-        od_strategy=od_strategy,
-        threshold_overlap_percentage=threshold_overlap_percentage)
-        return self.dict_result
+        if relevant_distances is None:
+            relevant_distances=[relevant_distance]
+            self.relevant_distance=relevant_distance
+        self.relevant_distances = relevant_distances
+        self.od_strategy = od_strategy
+        self.threshold_overlap_percentage = threshold_overlap_percentage
+        self.logger.feedback_debug("Process series" + str(self.relevant_distances))
+        dict_series = {}
+        dict_thematic = self.dict_thematic
+
+        if self.multi_as_single_modus:
+            dict_thematic = multipolygons_to_singles(dict_thematic)
+
+        for key,geometry in dict_thematic.items():
+            self.logger.feedback_info(f"thematic id {str(key)} processed with relevant distances (m) [{str(self.relevant_distances)}]")
+            dict_series[key] = {}
+            for relevant_distance in self.relevant_distances:
+                try:
+                    self.relevant_distance=relevant_distance
+                    processed_result = self.process_geometry(
+                        geometry,
+                        self.relevant_distance,
+                        od_strategy,
+                        threshold_overlap_percentage,
+                    )
+                except ValueError as e:
+                    self.logger.feedback_warning(str(e))
+
+                dict_series[key][self.relevant_distance] =  processed_result
+
+        if self.multi_as_single_modus:
+            dict_series = merge_process_results(dict_series)
+
+        self.logger.feedback_info(
+            "End of processing series: " + str(self.relevant_distances)
+        )
+        self.dict_processresults = dict_series
+
+        return self.dict_processresults
+
+    # def process(
+    #     self,
+    #     relevant_distance=1,
+    #     od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
+    #     threshold_overlap_percentage=50,
+    # ) -> dict[str, dict[float, ProcessResult]]:
+    #     """
+    #     Aligns a thematic dictionary of geometries to the reference layer based on
+    #     specified parameters. - method to align a thematic dictionary to the reference
+    #     layer
+    #
+    #     Args:
+    #         relevant_distance (float, optional): The relevant distance (in meters) for
+    #             processing. Defaults to 1.
+    #         od_strategy (int, optional): The strategy for overlap detection.
+    #             Defaults to 1.
+    #         threshold_overlap_percentage (float, optional): The threshold percentage for
+    #             considering full overlap. Defaults to 50.
+    #
+    #     Returns:
+    #         dict: A dict containing processed data for each thematic key:
+    #             - result: Aligned thematic data.
+    #             - result_diff: global differences between thematic data and reference
+    #               data.
+    #             - result_diff_plus: Positive differences.
+    #             - result_diff_min: Negative differences.
+    #             - relevant_intersection: relevant intersections.
+    #             - relevant_diff: relevant differences.
+    #
+    #     """
+    #     self.relevant_distance=relevant_distance
+    #     self.dict_result = self.process(relevant_distances=[self.relevant_distance],
+    #                                     od_strategy=od_strategy,
+    #                                     threshold_overlap_percentage=threshold_overlap_percentage)
+    #     return self.dict_result
 
     def predictor(
         self,
@@ -331,7 +410,7 @@ class Aligner:
         4. **Predict Interesting Distances:**
             - The function considers distances corresponding to breakpoints and
               zero-streaks as potentially interesting for further analysis.
-            - These distances are stored in a dictionary (`dict_predicted`) with the
+            - These distances are stored in a dictionary (`dict_predictions`) with the
               thematic element key as the outer key.
             - Additionally, the corresponding results from the distance series for
               those distances are included.
@@ -365,8 +444,8 @@ class Aligner:
         Logs:
             - Debug logs the thematic element key being processed.
         """
-        dict_predicted = defaultdict(dict)
-        dict_series = self.process_series(
+        dict_predictions = defaultdict(dict)
+        dict_series = self.process(
             relevant_distances=relevant_distances,
             od_strategy=od_strategy,
             threshold_overlap_percentage=threshold_overlap_percentage,
@@ -388,101 +467,117 @@ class Aligner:
             )
             logging.debug(str(theme_id))
             if len(zero_streaks) == 0:
-                dict_predicted[theme_id][relevant_distances[0]] = dict_series[theme_id][
+                dict_predictions[theme_id][relevant_distances[0]] = dict_series[theme_id][
                     relevant_distances[0]
                 ]
                 logging.info("No zero-streaks found for: " + str(theme_id))
             for zs in zero_streaks:
-                dict_predicted[theme_id] [zs[0]]= dict_series[theme_id][zs[0]]
+                dict_predictions[theme_id] [zs[0]]= dict_series[theme_id][zs[0]]
 
         #Check if the predicted reldists are unique (and remove duplicated predictions
-        dict_predicted_unique = defaultdict(dict)
-        for theme_id,dist_results in dict_predicted.items():
-            dict_predicted_unique[theme_id] = {}
+        dict_predictions_unique = defaultdict(dict)
+        for theme_id,dist_results in dict_predictions.items():
+            dict_predictions_unique[theme_id] = {}
             predicted_geoms_for_theme_id = []
             for rel_dist, processresults in dist_results.items():
                 predicted_geom = processresults["result"]
                 if not _equal_geom_in_array(predicted_geom,predicted_geoms_for_theme_id):
-                    dict_predicted_unique[theme_id][rel_dist] = processresults
+                    dict_predictions_unique[theme_id][rel_dist] = processresults
                     predicted_geoms_for_theme_id.append(processresults["result"])
                 else:
                     self.logger.feedback_info(f"Duplicate prediction found for key {theme_id} at distance {rel_dist}: Prediction excluded")
 
-        self.dict_predicted = dict_predicted_unique
+        self.dict_predictions = dict_predictions_unique
 
         return (
             dict_series,
-            self.dict_predicted,
+            self.dict_predictions,
             diffs_dict,
         )
 
 
-
-    def process_series(
-        self,
-        relevant_distances: Iterable[float],
-        od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
-        threshold_overlap_percentage=50,
-    ) -> dict[str, dict[float, ProcessResult]]:
+    def compare(
+            self,
+            threshold_area=5,
+            threshold_percentage=1,
+            dict_unchanged=None,
+    ):
         """
-        Calculates the resulting dictionaries for thematic data based on a series of
-            relevant distances.
-
-        Args:
-            relevant_distances (Iterable[float]): A series of relevant distances
-                (in meters) to process
-            od_strategy (int, optional): The strategy for overlap detection.
-                Defaults to 1.
-            threshold_overlap_percentage (float, optional): The threshold percentage for
-                considering full overlap. Defaults to 50.
-
-        Returns:
-            dict: A dictionary, for every thematic ID a dictionary with the results for all distances
-
-                {
-                    'theme_id_1': {0: (ProcessResult), 0.1:
-                        (ProcessResult), ...},
-                    'theme_id_2': {0: (ProcessResult), 0.1:
-                        (ProcessResult), ...},
-                    ...
-                }
+        Compares input-geometries (with formula) and evaluates these geometries: An attribute is added to evaluate and decide if new
+        proposals can be used
         """
-        self.logger.feedback_debug("Process series" + str(relevant_distances))
-        self.od_strategy = od_strategy
-        self.threshold_overlap_percentage = threshold_overlap_percentage
-        dict_series = {}
-        dict_thematic = self.dict_thematic
+        dict_series,dict_predictions,diffs = self.predictor(self.relevant_distances)
+        if dict_unchanged is None:
+            dict_unchanged = {}
+        theme_ids = list(dict_series.keys())
+        dict_evaluated_result = {}
+        prop_dictionary = {}
+        # Fill the dictionary-structure with empty values
+        for theme_id in theme_ids:
+            dict_evaluated_result[theme_id] = {}
+            prop_dictionary[theme_id] = {}
+            for dist in dict_series[theme_id].keys():
+                prop_dictionary[theme_id][dist] = {}
+        for theme_id in dict_unchanged.keys():
+            prop_dictionary[theme_id] = {}
 
-        if self.multi_as_single_modus:
-            dict_thematic = multipolygons_to_singles(dict_thematic)
+        for theme_id, dict_results in dict_predictions.items():
+            equality = False
+            for dist in sorted(dict_results.keys()):
+                if equality:
+                    break
+                geomresult = dict_results[dist]["result"]
+                actual_formula = self.get_brdr_formula(geomresult)
+                prop_dictionary[theme_id][dist][FORMULA_FIELD_NAME] = json.dumps(actual_formula)
+                base_formula = None
+                if theme_id in self.dict_thematic_properties and FORMULA_FIELD_NAME in self.dict_thematic_properties[theme_id]:
+                    base_formula = self.dict_thematic_properties[theme_id][FORMULA_FIELD_NAME]
+                equality, prop = _check_equality(
+                    base_formula,
+                    actual_formula,
+                    threshold_area,
+                    threshold_percentage,
+                )
+                if equality:
+                    dict_evaluated_result[theme_id][dist] = dict_predictions[theme_id][dist]
+                    prop_dictionary[theme_id][dist][EVALUATION_FIELD_NAME] = prop
+                    break
 
-        for key,geometry in dict_thematic.items():
-            self.logger.feedback_info(f"thematic id {str(key)} processed with relevant distances (m) [{str(relevant_distances)}]")
-            dict_series[key] = {}
-            for relevant_distance in relevant_distances:
-                try:
-                    processed_result = self.process_geometry(
-                        geometry,
-                        relevant_distance,
-                        od_strategy,
-                        threshold_overlap_percentage,
+        evaluated_theme_ids = [theme_id for theme_id, value in dict_evaluated_result.items() if value != {}]
+
+        # fill where no equality is found/ The biggest predicted distance is returned as
+        # proposal
+        for theme_id in theme_ids:
+            if theme_id not in evaluated_theme_ids:
+                if len(dict_predictions[theme_id].keys()) == 0:
+                    result = dict_series[theme_id][0]
+                    dict_evaluated_result[theme_id][0] = result
+                    prop_dictionary[theme_id][0][FORMULA_FIELD_NAME] = json.dumps(
+                        self.get_brdr_formula(result["result"])
                     )
-                except ValueError as e:
-                    self.logger.feedback_warning(str(e))
+                    prop_dictionary[theme_id][0][EVALUATION_FIELD_NAME] = Evaluation.NO_PREDICTION_5
+                    continue
+                # Add all predicted features so they can be manually checked
+                for dist in dict_predictions[theme_id].keys():
+                    predicted_resultset = dict_predictions[theme_id][dist]
+                    dict_evaluated_result[theme_id][dist] = predicted_resultset
+                    prop_dictionary[theme_id][dist][FORMULA_FIELD_NAME] = json.dumps(
+                        self.get_brdr_formula(predicted_resultset["result"])
+                    )
+                    prop_dictionary[theme_id][dist][EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_4
 
-                dict_series[key][relevant_distance] =  processed_result
+        for theme_id, geom in dict_unchanged.items():
+            prop_dictionary[theme_id] = {0:
+                                             {"result": geom,
+                                              EVALUATION_FIELD_NAME: Evaluation.NO_CHANGE_6,
+                                              FORMULA_FIELD_NAME: json.dumps(self.get_brdr_formula(geom))
+                                              }
+                                         }
+        return dict_evaluated_result, prop_dictionary
 
-        if self.multi_as_single_modus:
-            dict_series = merge_process_results(dict_series)
 
-        self.logger.feedback_info(
-            "End of processing series: " + str(relevant_distances)
-        )
-        self.dict_result = dict_series
 
-        return self.dict_result
-
-    def get_formula(self, geometry: BaseGeometry, with_geom=False):
+    def get_brdr_formula(self, geometry: BaseGeometry, with_geom=False):
         """
         Calculates formula-related information based on the input geometry.
 
@@ -541,12 +636,6 @@ class Aligner:
                 if version_date is not None and version_date > last_version_date:
                     last_version_date = version_date
 
-            # if safe_equals(geom_intersection, geom_reference):
-            #     full = True
-            #     area = round(geom_reference.area, 2)
-            #     perc = 100
-            #     if with_geom:
-            #         geom = geom_reference
             if perc > 99.99:
                     full = True
                     area = round(geom_reference.area, 2)
@@ -591,40 +680,28 @@ class Aligner:
         self.logger.feedback_debug(str(dict_formula))
         return dict_formula
 
-    def get_results_as_geojson(self, formula=False):
-        """
-        convert the results to geojson feature collections
+    ##########EXPORTERS########################
+    ###########################################
 
-        Args:
-            formula (bool, optional): Whether to include formula-related information
-                in the output. Defaults to False.
-        """
-        return self.get_series_as_geojson(
-            formula,self.dict_result,
-        )
-
-    def get_predictions_as_geojson(self, formula=False):
-        """
-        convert the predictions to geojson feature collections
-
-        Args:
-            formula (bool, optional): Whether to include formula-related information
-                in the output. Defaults to False.
-        """
-        return self.get_series_as_geojson(
-            formula,self.dict_predicted,
-        )
-
-    def get_series_as_geojson(self, formula=False, series_dict=None):
+    def get_results_as_geojson(self, resulttype= AlignerResultType.PROCESSRESULTS, formula=False):
         """
         get a geojson of  a dictionary containing the resulting geometries for all
             'serial' relevant distances. If no dict_series is given, the dict_result returned.
         Optional: The descriptive formula is added as an attribute to the result"""
 
-        series_dict = series_dict or self.dict_result
+        if resulttype == AlignerResultType.PROCESSRESULTS:
+            dict_series = self.dict_processresults
+        elif resulttype == AlignerResultType.PREDICTIONS:
+            dict_series = self.dict_predictions
+        else:
+            raise (ValueError, "AlignerResultType unknown")
+        if dict_series is None or dict_series == {}:
+            self.logger.feedback_warning ("Empty results: No calculated results to export.")
+            return {}
+
         prop_dictionary = defaultdict(dict)
 
-        for theme_id, results_dict in series_dict.items():
+        for theme_id, results_dict in dict_series.items():
             nr_calculations = len(results_dict)
             for relevant_distance, process_results in results_dict.items():
                 prop_dictionary[theme_id][relevant_distance] = {
@@ -632,64 +709,66 @@ class Aligner:
                 }
                 if formula:
                     result = process_results["result"]
-                    formula = self.get_formula(result)
-                    prop_dictionary[theme_id][relevant_distance]["formula"] =json.dumps(formula)
+                    formula = self.get_brdr_formula(result)
+                    prop_dictionary[theme_id][relevant_distance][FORMULA_FIELD_NAME] =json.dumps(formula)
 
         return get_series_geojson_dict(
-            series_dict,
+            dict_series,
             crs=self.CRS,
             id_field=self.name_thematic_id,
             series_prop_dict=prop_dictionary,
         )
 
-    def get_reference_as_geojson(self):
+    def get_input_as_geojson(self,inputtype=AlignerInputType.REFERENCE):
         """
         get a geojson of the reference polygons
         """
+
+        if inputtype == AlignerInputType.THEMATIC:
+            dict_to_geojson = self.dict_thematic
+        elif inputtype == AlignerInputType.REFERENCE:
+            dict_to_geojson = self.dict_reference
+        else:
+            raise (ValueError, "AlignerInputType unknown")
+        if dict_to_geojson is None or dict_to_geojson == {}:
+            self.logger.feedback_warning ("Empty input: No input to export.")
+            return {}
+        # TODO: also add properties?
         return geojson_from_dict(
-            self.dict_reference, self.CRS, self.name_reference_id, geom_attributes=False
+            dict_to_geojson, self.CRS, self.name_reference_id, geom_attributes=False
         )
-    def export_predictions(self, path, formula=True):
-        """
-        Exports 'predicted' results as GeoJSON files.
-
-        This function exports 6 GeoJSON files containing the 'predicted' results to the
-            specified `path`.
-        """
-        fcs = self.get_predictions_as_geojson(formula)
-        for name, fc in fcs.items():
-            write_geojson(os.path.join(path, name + "_predictions.geojson"), fc)
-
-
-    def export_results(self, path, formula=True):
+    def save_results(self, path, resulttype=AlignerResultType.PROCESSRESULTS, formula=True):
         """
         Exports analysis results as GeoJSON files.
 
         This function exports 6 GeoJSON files containing the analysis results to the
-            specified `path`.
+        specified `path`.
 
         Args:
-            path (str): The path to the directory where the GeoJSON files will be saved.
-            formula (bool, optional): Whether to include formula-related information
-                in the output. Defaults to True.
+        path (str): The path to the directory where the GeoJSON files will be saved.
+        formula (bool, optional): Whether to include formula-related information
+            in the output. Defaults to True.
 
         Details of exported files:
-            - result.geojson: Contains the original thematic data from `
-              self.dict_result`.
-            - result_diff.geojson: Contains the difference between the original
-              and predicted data from `self.dict_result_diff`.
-            - result_diff_plus.geojson: Contains results for areas that are
-              added (increased area).
-            - result_diff_min.geojson: Contains results for areas that are
-              removed (decreased area).
-            - result_relevant_intersection.geojson: Contains the areas with
-              relevant intersection that has to be included in the result.
-            - result_relevant_difference.geojson: Contains the areas with
-              relevant difference that has to be excluded from the result.
-        """
-        fcs = self.get_results_as_geojson(formula)
+        - result.geojson: Contains the original thematic data from `
+          self.dict_result`.
+        - result_diff.geojson: Contains the difference between the original
+          and predicted data from `self.dict_result_diff`.
+        - result_diff_plus.geojson: Contains results for areas that are
+          added (increased area).
+        - result_diff_min.geojson: Contains results for areas that are
+          removed (decreased area).
+        - result_relevant_intersection.geojson: Contains the areas with
+          relevant intersection that has to be included in the result.
+        - result_relevant_difference.geojson: Contains the areas with
+          relevant difference that has to be excluded from the result.
+          """
+
+        fcs = self.get_results_as_geojson(
+            formula=formula,resulttype=resulttype,
+        )
         for name, fc in fcs.items():
-            write_geojson(os.path.join(path, name + ".geojson"), fc)
+            write_geojson(os.path.join(path, resulttype.value + "_"+ name +".geojson"), fc)
 
     def get_thematic_union(self):
         if self.thematic_union is None:
@@ -697,86 +776,6 @@ class Aligner:
                 unary_union(list(self.dict_thematic.values()))
             )
         return self.thematic_union
-
-    def evaluate(
-            self,series,
-            thematic_dict_formula,
-            threshold_area=5,
-            threshold_percentage=1,
-            dict_unchanged=None,
-    ):
-        """
-        evaluate affected geometries and give attributes to evaluate and decide if new
-        proposals can be used
-        """
-        dict_series,dict_predicted,diffs = self.predictor(series)
-        if dict_unchanged is None:
-            dict_unchanged = {}
-        theme_ids = list(dict_series.keys())
-        dict_evaluated_result = {}
-        prop_dictionary = {}
-        # Fill the dictionary-structure with empty values
-        for theme_id in theme_ids:
-            dict_evaluated_result[theme_id] = {}
-            prop_dictionary[theme_id] = {}
-            for dist in dict_series[theme_id].keys():
-                prop_dictionary[theme_id][dist] = {}
-        for theme_id in dict_unchanged.keys():
-            prop_dictionary[theme_id] = {}
-
-        for theme_id, dict_results in dict_predicted.items():
-            equality = False
-            for dist in sorted(dict_results.keys()):
-                if equality:
-                    break
-                geomresult = dict_results[dist]["result"]
-                actual_formula = self.get_formula(geomresult)
-                prop_dictionary[theme_id][dist]["formula"] = json.dumps(actual_formula)
-                base_formula = None
-                if theme_id in thematic_dict_formula:
-                    base_formula = thematic_dict_formula[theme_id]
-                equality, prop = _check_equality(
-                    base_formula,
-                    actual_formula,
-                    threshold_area,
-                    threshold_percentage,
-                )
-                if equality:
-                    dict_evaluated_result[theme_id][dist] = dict_predicted[theme_id][dist]
-                    prop_dictionary[theme_id][dist]["evaluation"] = prop
-                    break
-
-        evaluated_theme_ids = [theme_id for theme_id, value in dict_evaluated_result.items() if value != {}]
-
-        # fill where no equality is found/ The biggest predicted distance is returned as
-        # proposal
-        for theme_id in theme_ids:
-            if theme_id not in evaluated_theme_ids:
-                if len(dict_predicted[theme_id].keys()) == 0:
-                    result = dict_series[theme_id][0]
-                    dict_evaluated_result[theme_id][0] = result
-                    prop_dictionary[theme_id][0]["formula"] = json.dumps(
-                        self.get_formula(result["result"])
-                    )
-                    prop_dictionary[theme_id][0]["evaluation"] = Evaluation.NO_PREDICTION_5
-                    continue
-                # Add all predicted features so they can be manually checked
-                for dist in dict_predicted[theme_id].keys():
-                    predicted_resultset = dict_predicted[theme_id][dist]
-                    dict_evaluated_result[theme_id][dist] = predicted_resultset
-                    prop_dictionary[theme_id][dist]["formula"] = json.dumps(
-                        self.get_formula(predicted_resultset["result"])
-                    )
-                    prop_dictionary[theme_id][dist]["evaluation"] = Evaluation.TO_CHECK_4
-
-        for theme_id, geom in dict_unchanged.items():
-            prop_dictionary[theme_id] = {0:
-                                             {"result": geom,
-                                              "evaluation": Evaluation.NO_CHANGE_6,
-                                              "formula": json.dumps(self.get_formula(geom))
-                                              }
-                                         }
-        return dict_evaluated_result, prop_dictionary
 
     def _prepare_reference_data(self):
         """

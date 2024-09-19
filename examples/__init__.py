@@ -122,7 +122,7 @@ def show_map(
     plt.show()
 
 
-def print_formula(dict_results, aligner):
+def print_brdr_formula(dict_results, aligner):
     for theme_id, dist_results in dict_results.items():
         for rel_dist, processresults in dist_results.items():
             print(
@@ -132,7 +132,7 @@ def print_formula(dict_results, aligner):
                 + str(rel_dist)
                 + "--------------"
             )
-            print(aligner.get_formula(processresults["result"]))
+            print(aligner.get_brdr_formula(processresults["result"]))
     return
 
 

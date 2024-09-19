@@ -24,7 +24,7 @@ for iter in range(1, 3):
 
     # Example how to use the Aligner
     aligner.predictor()
-    fcs = aligner.get_series_as_geojson(formula=True)
+    fcs = aligner.get_results_as_geojson(formula=True)
     endtime = datetime.now()
     seconds = (endtime - starttime).total_seconds()
     times.append(seconds)

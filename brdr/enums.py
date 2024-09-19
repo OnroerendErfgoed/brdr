@@ -36,6 +36,30 @@ class OpenbaarDomeinStrategy(IntEnum):
     SNAP_SINGLE_SIDE_VARIANT_2 = 6
 
 
+class AlignerResultType(str, Enum):
+    """
+    2 Types of resulting dictionary are available in Aligner
+
+    * PREDICTIONS = "predictions" (only the predicted versions for specific relevenat distances are returned)
+    * PROCESSRESULTS = "processresults" (All versions of resulting geometries for all relevant distances are returned)
+    """
+
+    PREDICTIONS = "predictions"
+    PROCESSRESULTS = "processresults"
+
+
+class AlignerInputType(str, Enum):
+    """
+    2 Types of input dictionary are available in Aligner
+
+    * THEMATIC = "thematic"
+    * REFERENCE = "reference"
+    """
+
+    THEMATIC = "thematic"
+    REFERENCE = "reference"
+
+
 class GRBType(str, Enum):
     """
     Determines which GRB feature collection is used. Different types are available:

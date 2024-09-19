@@ -23,10 +23,9 @@ class TestExamples(unittest.TestCase):
         loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         aligner.load_reference_data(loader)
         rel_dist = 2
-        aligner.process_dict_thematic(rel_dist, 4)
+        aligner.process(relevant_distance=rel_dist, od_strategy=4)
 
     def test_example_combined_borders_adp_gbg(self):
-
         aligner = Aligner()
         loader = OnroerendErfgoedLoader([131635])
         aligner.load_thematic_data(loader)
@@ -43,9 +42,9 @@ class TestExamples(unittest.TestCase):
         aligner.load_reference_data(DictLoader(dict_ref))
 
         rel_dist = 2
-        result_dict = aligner.process_dict_thematic(rel_dist, 4)
+        result_dict = aligner.process(relevant_distance=rel_dist, od_strategy=4)
         for process_results in result_dict.values():
-            aligner.get_formula(process_results[rel_dist]["result"])
+            aligner.get_brdr_formula(process_results[rel_dist]["result"])
 
     def test_example_multipolygon(self):
         aligner0 = Aligner()
@@ -171,10 +170,10 @@ class TestExamples(unittest.TestCase):
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         )
 
-        _, dict_predicted, _ = aligner.predictor()
+        _, dict_predictions, _ = aligner.predictor()
 
-        self.assertGreater(len(dict_predicted), 0)
-        fcs = aligner.get_series_as_geojson(formula=True)
+        self.assertGreater(len(dict_predictions), 0)
+        fcs = aligner.get_results_as_geojson(formula=True)
         self.assertEqual(len(fcs), 6)
 
     def test_example_wanted_changes(self):
@@ -188,11 +187,11 @@ class TestExamples(unittest.TestCase):
 
         # Example how to use the Aligner
         rel_dist = 2
-        aligner.process_dict_thematic(rel_dist, 4)
+        aligner.process(relevant_distance=rel_dist,od_strategy= 4)
 
         # Example how to use a series (for histogram)
         series = np.arange(0, 300, 10, dtype=int) / 100
-        dict_series = aligner.process_series(series, 4, 50)
+        dict_series = aligner.process(series, 4, 50)
         resulting_areas = diffs_from_dict_series(dict_series, aligner.dict_thematic)
         for key in resulting_areas:
             if len(resulting_areas[key]) == len(series):
@@ -206,7 +205,7 @@ class TestExamples(unittest.TestCase):
                         f"{st[0]:.2f} - {st[1]:.2f} -{st[2]:.2f} - {st[3]:.2f}"
                         f" - startextreme {st[4]:.2f} "
                     )
-                    aligner.process_dict_thematic(st[0], 4)
+                    aligner.process(relevant_distance=st[0], od_strategy=4)
 
     def test_example_predictor(self):
         aligner = Aligner()
@@ -220,9 +219,9 @@ class TestExamples(unittest.TestCase):
         # predict which relevant distances are interesting to propose as resulting
         # geometry
 
-        _, dict_predicted, _ = aligner.predictor(
+        _, dict_predictions, _ = aligner.predictor(
             relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
         )
-        for key in dict_predicted.keys():
-            assert key in dict_predicted.keys()
+        for key in dict_predictions.keys():
+            assert key in dict_predictions.keys()
             continue

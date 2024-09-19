@@ -4,8 +4,8 @@ import numpy as np
 from shapely import from_wkt
 
 from brdr.aligner import Aligner
+from brdr.constants import FORMULA_FIELD_NAME, EVALUATION_FIELD_NAME
 from brdr.enums import GRBType
-from brdr.geometry_utils import geojson_polygon_to_multipolygon
 from brdr.grb import GRBActualLoader
 from brdr.grb import GRBFiscalParcelLoader
 from brdr.grb import get_geoms_affected_by_grb_change
@@ -25,14 +25,14 @@ base_aligner.load_reference_data(
     GRBFiscalParcelLoader(year=base_year, aligner=base_aligner)
 )
 relevant_distance = 2
-base_process_result = base_aligner.process_dict_thematic(
+base_process_result = base_aligner.process(
     relevant_distance=relevant_distance
 )
 thematic_dict_formula = {}
 thematic_dict_result = {}
 for key in base_process_result:
     thematic_dict_result[key] = base_process_result[key][relevant_distance]["result"]
-    thematic_dict_formula[key] = base_aligner.get_formula(thematic_dict_result[key])
+    thematic_dict_formula[key]= {FORMULA_FIELD_NAME:base_aligner.get_brdr_formula(thematic_dict_result[key])}
     print(key + ": " + thematic_dict_result[key].wkt)
     print(key + ": " + str(thematic_dict_formula[key]))
 base_aligner_result = Aligner()
@@ -51,18 +51,17 @@ for key, value in dict_affected.items():
     print(key + ": " + value.wkt)
 actual_aligner = Aligner()
 loader = DictLoader(dict_affected)
-actual_aligner.load_thematic_data(DictLoader(dict_affected))
+actual_aligner.load_thematic_data(DictLoader(data_dict=dict_affected,data_dict_properties=thematic_dict_formula))
 actual_aligner.load_reference_data(
     GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=actual_aligner)
 )
-series = np.arange(0, 200, 10, dtype=int) / 100
-
-dict_evaluated, prop_dictionary = actual_aligner.evaluate(series=series,
-    thematic_dict_formula=thematic_dict_formula,
-    threshold_area=5,
-    threshold_percentage=1,
-    dict_unchanged=dict_unchanged,
-)
+actual_aligner.relevant_distances = np.arange(0, 200, 10, dtype=int) / 100
+dict_evaluated, prop_dictionary = actual_aligner.compare(
+                                                         #thematic_dict_formula=thematic_dict_formula,
+                                                         threshold_area=5,
+                                                         threshold_percentage=1,
+                                                         dict_unchanged=dict_unchanged,
+                                                         )
 
 fc = get_series_geojson_dict(
     dict_evaluated,
@@ -71,17 +70,14 @@ fc = get_series_geojson_dict(
     series_prop_dict=prop_dictionary,
 )
 print(fc["result"])
-fcs = actual_aligner.get_series_as_geojson(formula=True)
+fcs = actual_aligner.get_results_as_geojson(formula=True)
 print(fcs["result"])
 
 for feature in fc["result"]["features"]:
     print(
         feature["properties"][actual_aligner.name_thematic_id]
         + ": "
-        + feature["properties"]["evaluation"]
+        + feature["properties"][EVALUATION_FIELD_NAME]
     )
 
-geojson = geojson_polygon_to_multipolygon(fc["result"])
 
-
-print(geojson)

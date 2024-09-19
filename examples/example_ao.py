@@ -22,14 +22,14 @@ if __name__ == "__main__":
 
     series = np.arange(0, 500, 20, dtype=int) / 100
     # predict which relevant distances are interesting to propose as resulting geometry
-    dict_series, dict_predicted, diffs = aligner.predictor(
+    dict_series, dict_predictions, diffs = aligner.predictor(
         relevant_distances=series, od_strategy=2, threshold_overlap_percentage=50
     )
-    for key in dict_predicted.keys():
+    for key in dict_predictions.keys():
         diff = {key: diffs[key]}
         plot_series(series, diff)
         show_map(
-            {key: dict_predicted[key]},
+            {key: dict_predictions[key]},
             {key: aligner.dict_thematic[key]},
             aligner.dict_reference,
         )

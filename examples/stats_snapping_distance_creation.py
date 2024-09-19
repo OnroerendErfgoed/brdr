@@ -54,7 +54,7 @@ with open("../tests/output/stats" + time + ".csv", "w", newline="") as csvfile:
                     results_diff_min,
                     si,
                     sd,
-                ) = x.process_dict_thematic(s, od, full_percentage)
+                ) = x.process(s, od, full_percentage)
                 for key in results:
                     results_area = results[key].area
                     results_diff_plus_area = results_diff_plus[key].area
