@@ -55,7 +55,7 @@ class TestExamples(unittest.TestCase):
 
         series = np.arange(0, 61, 1, dtype=float) / 10
 
-        dict_series = aligner.process_series(series, openbaardomein_strategy, 50)
+        dict_series = aligner.process(series, openbaardomein_strategy, 50)
         dict_diffs = diffs_from_dict_series(
             dict_series, aligner.dict_thematic, DiffMetric.CHANGES_AREA
         )

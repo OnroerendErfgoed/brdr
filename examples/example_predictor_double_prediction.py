@@ -29,14 +29,14 @@ if __name__ == "__main__":
 
     series = np.arange(0, 800, 10, dtype=int) / 100
     # predict which relevant distances are interesting to propose as resulting geometry
-    dict_series, dict_predicted, diffs = aligner.predictor(
+    dict_series, dict_predictions, diffs = aligner.predictor(
         relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
     )
-    fcs = aligner.get_predictions_as_geojson(formula=False)
+    fcs = aligner.get_results_as_geojson(formula=False)
     print(fcs["result"])
-    # for key in dict_predicted:
+    # for key in dict_predictions:
     #     show_map(
-    #         {key:dict_predicted[key]},
+    #         {key:dict_predictions[key]},
     #         {key: aligner.dict_thematic[key]},
     #         aligner.dict_reference,
     #     )

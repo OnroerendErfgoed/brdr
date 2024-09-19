@@ -1,7 +1,7 @@
 import numpy as np
 
 from brdr.aligner import Aligner
-from brdr.enums import GRBType
+from brdr.enums import GRBType, AlignerResultType
 from brdr.grb import GRBActualLoader
 from brdr.oe import OnroerendErfgoedLoader, OEType
 from brdr.utils import write_geojson
@@ -33,18 +33,18 @@ if __name__ == "__main__":
 
     series = np.arange(0, 200, 20, dtype=int) / 100
     # predict which relevant distances are interesting to propose as resulting geometry
-    dict_series, dict_predicted, diffs = aligner.predictor(
+    dict_series, dict_predictions, diffs = aligner.predictor(
         relevant_distances=series, od_strategy=2, threshold_overlap_percentage=50
     )
-    fcs = aligner.get_series_as_geojson(series_dict=dict_predicted)
+    fcs = aligner.get_results_as_geojson(resulttype=AlignerResultType.PREDICTIONS)
     write_geojson("output/predicted.geojson", fcs["result"])
     write_geojson("output/predicted_diff.geojson", fcs["result_diff"])
 
-    for key in dict_predicted.keys():
+    for key in dict_predictions.keys():
         diff = {key: diffs[key]}
         plot_series(series, diff)
         show_map(
-            {key: dict_predicted[key]},
+            {key: dict_predictions[key]},
             {key: aligner.dict_thematic[key]},
             aligner.dict_reference,
         )

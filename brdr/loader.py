@@ -44,7 +44,7 @@ class DictLoader(Loader):
     def __init__(
         self,
         data_dict: dict[str:BaseGeometry],
-        data_dict_properties: dict[str:str] = {},
+        data_dict_properties: dict[str:dict] = {},
         data_dict_source: dict[str:str] = {},
     ):
         super().__init__()
