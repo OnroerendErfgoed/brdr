@@ -13,7 +13,7 @@ maintainers = [
     { name = "Koen Van Daele", email = "koen.vandaele@vlaanderen.be" },
     { name = "Vermeyen Maerten", email = "maarten.vermeyen@vlaanderen.be" }
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "License :: OSI Approved :: MIT License",
@@ -21,7 +21,6 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.9",
     "Topic :: Scientific/Engineering :: GIS",
 ]
 dependencies = [
@@ -58,4 +57,4 @@ build-backend = "hatchling.build"
 packages = ["brdr"]
 
 [tool.black]
-target-version = ['py39', 'py310', 'py311', 'py312']
+target-version = ['py310', 'py311', 'py312']
