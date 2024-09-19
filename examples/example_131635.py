@@ -21,6 +21,8 @@ if __name__ == "__main__":
     # RESULTS
     rel_dist = 2
     dict_results = aligner.process(relevant_distance=rel_dist, od_strategy=4)
+    fcs = aligner.get_results_as_geojson()
+    print(fcs["result"])
     # put resulting tuple in a dictionary
     aligner.save_results("output/", formula=True)
 

@@ -18,12 +18,25 @@ from shapely import unary_union
 from shapely.geometry.base import BaseGeometry
 
 from brdr import __version__
-from brdr.constants import BUFFER_MULTIPLICATION_FACTOR, LAST_VERSION_DATE, VERSION_DATE, DATE_FORMAT, \
-    THRESHOLD_EXCLUSION_PERCENTAGE, THRESHOLD_EXCLUSION_AREA, FORMULA_FIELD_NAME, EVALUATION_FIELD_NAME
+from brdr.constants import (
+    BUFFER_MULTIPLICATION_FACTOR,
+    LAST_VERSION_DATE,
+    VERSION_DATE,
+    DATE_FORMAT,
+    THRESHOLD_EXCLUSION_PERCENTAGE,
+    THRESHOLD_EXCLUSION_AREA,
+    FORMULA_FIELD_NAME,
+    EVALUATION_FIELD_NAME,
+)
 from brdr.constants import CORR_DISTANCE
 from brdr.constants import DEFAULT_CRS
 from brdr.constants import THRESHOLD_CIRCLE_RATIO
-from brdr.enums import OpenbaarDomeinStrategy, Evaluation, AlignerResultType, AlignerInputType
+from brdr.enums import (
+    OpenbaarDomeinStrategy,
+    Evaluation,
+    AlignerResultType,
+    AlignerInputType,
+)
 from brdr.geometry_utils import buffer_neg
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import buffer_pos
@@ -60,7 +73,7 @@ class Aligner:
         *,
         feedback=None,
         relevant_distance=1,
-        relevant_distances= np.arange(0, 200, 10, dtype=int) / 100,
+        relevant_distances=np.arange(0, 200, 10, dtype=int) / 100,
         threshold_overlap_percentage=50,
         od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
         crs=DEFAULT_CRS,
@@ -128,9 +141,9 @@ class Aligner:
         # results
 
         # output-dictionaries (all results of process()), grouped by theme_id and relevant_distance
-        self.dict_processresults: dict[str, dict[float, ProcessResult]]= {}
+        self.dict_processresults: dict[str, dict[float, ProcessResult]] = {}
         # dictionary with the 'predicted' results, grouped by theme_id and relevant_distance
-        self.dict_predictions : dict[str, dict[float, ProcessResult]] ={}
+        self.dict_predictions: dict[str, dict[float, ProcessResult]] = {}
 
         # Coordinate reference system
         # thematic geometries and reference geometries are assumed to be in the same CRS
@@ -159,7 +172,7 @@ class Aligner:
         (
             self.dict_reference,
             self.dict_reference_properties,
-            self.dict_reference_source
+            self.dict_reference_source,
         ) = loader.load_data()
         self._prepare_reference_data()
 
@@ -169,7 +182,7 @@ class Aligner:
     def process_geometry(
         self,
         input_geometry: BaseGeometry,
-        relevant_distance:float=1,
+        relevant_distance: float = 1,
         od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
         threshold_overlap_percentage=50,
     ) -> ProcessResult:
@@ -271,7 +284,7 @@ class Aligner:
 
     def process(
         self,
-        relevant_distances: Iterable[float]=None,
+        relevant_distances: Iterable[float] = None,
         relevant_distance=1,
         od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
         threshold_overlap_percentage=50,
@@ -300,8 +313,8 @@ class Aligner:
                 }
         """
         if relevant_distances is None:
-            relevant_distances=[relevant_distance]
-            self.relevant_distance=relevant_distance
+            relevant_distances = [relevant_distance]
+            self.relevant_distance = relevant_distance
         self.relevant_distances = relevant_distances
         self.od_strategy = od_strategy
         self.threshold_overlap_percentage = threshold_overlap_percentage
@@ -312,12 +325,14 @@ class Aligner:
         if self.multi_as_single_modus:
             dict_thematic = multipolygons_to_singles(dict_thematic)
 
-        for key,geometry in dict_thematic.items():
-            self.logger.feedback_info(f"thematic id {str(key)} processed with relevant distances (m) [{str(self.relevant_distances)}]")
+        for key, geometry in dict_thematic.items():
+            self.logger.feedback_info(
+                f"thematic id {str(key)} processed with relevant distances (m) [{str(self.relevant_distances)}]"
+            )
             dict_series[key] = {}
             for relevant_distance in self.relevant_distances:
                 try:
-                    self.relevant_distance=relevant_distance
+                    self.relevant_distance = relevant_distance
                     processed_result = self.process_geometry(
                         geometry,
                         self.relevant_distance,
@@ -327,7 +342,7 @@ class Aligner:
                 except ValueError as e:
                     self.logger.feedback_warning(str(e))
 
-                dict_series[key][self.relevant_distance] =  processed_result
+                dict_series[key][self.relevant_distance] = processed_result
 
         if self.multi_as_single_modus:
             dict_series = merge_process_results(dict_series)
@@ -467,25 +482,29 @@ class Aligner:
             )
             logging.debug(str(theme_id))
             if len(zero_streaks) == 0:
-                dict_predictions[theme_id][relevant_distances[0]] = dict_series[theme_id][
-                    relevant_distances[0]
-                ]
+                dict_predictions[theme_id][relevant_distances[0]] = dict_series[
+                    theme_id
+                ][relevant_distances[0]]
                 logging.info("No zero-streaks found for: " + str(theme_id))
             for zs in zero_streaks:
-                dict_predictions[theme_id] [zs[0]]= dict_series[theme_id][zs[0]]
+                dict_predictions[theme_id][zs[0]] = dict_series[theme_id][zs[0]]
 
-        #Check if the predicted reldists are unique (and remove duplicated predictions
+        # Check if the predicted reldists are unique (and remove duplicated predictions
         dict_predictions_unique = defaultdict(dict)
-        for theme_id,dist_results in dict_predictions.items():
+        for theme_id, dist_results in dict_predictions.items():
             dict_predictions_unique[theme_id] = {}
             predicted_geoms_for_theme_id = []
             for rel_dist, processresults in dist_results.items():
                 predicted_geom = processresults["result"]
-                if not _equal_geom_in_array(predicted_geom,predicted_geoms_for_theme_id):
+                if not _equal_geom_in_array(
+                    predicted_geom, predicted_geoms_for_theme_id
+                ):
                     dict_predictions_unique[theme_id][rel_dist] = processresults
                     predicted_geoms_for_theme_id.append(processresults["result"])
                 else:
-                    self.logger.feedback_info(f"Duplicate prediction found for key {theme_id} at distance {rel_dist}: Prediction excluded")
+                    self.logger.feedback_info(
+                        f"Duplicate prediction found for key {theme_id} at distance {rel_dist}: Prediction excluded"
+                    )
 
         self.dict_predictions = dict_predictions_unique
 
@@ -495,18 +514,17 @@ class Aligner:
             diffs_dict,
         )
 
-
     def compare(
-            self,
-            threshold_area=5,
-            threshold_percentage=1,
-            dict_unchanged=None,
+        self,
+        threshold_area=5,
+        threshold_percentage=1,
+        dict_unchanged=None,
     ):
         """
         Compares input-geometries (with formula) and evaluates these geometries: An attribute is added to evaluate and decide if new
         proposals can be used
         """
-        dict_series,dict_predictions,diffs = self.predictor(self.relevant_distances)
+        dict_series, dict_predictions, diffs = self.predictor(self.relevant_distances)
         if dict_unchanged is None:
             dict_unchanged = {}
         theme_ids = list(dict_series.keys())
@@ -528,10 +546,17 @@ class Aligner:
                     break
                 geomresult = dict_results[dist]["result"]
                 actual_formula = self.get_brdr_formula(geomresult)
-                prop_dictionary[theme_id][dist][FORMULA_FIELD_NAME] = json.dumps(actual_formula)
+                prop_dictionary[theme_id][dist][FORMULA_FIELD_NAME] = json.dumps(
+                    actual_formula
+                )
                 base_formula = None
-                if theme_id in self.dict_thematic_properties and FORMULA_FIELD_NAME in self.dict_thematic_properties[theme_id]:
-                    base_formula = self.dict_thematic_properties[theme_id][FORMULA_FIELD_NAME]
+                if (
+                    theme_id in self.dict_thematic_properties
+                    and FORMULA_FIELD_NAME in self.dict_thematic_properties[theme_id]
+                ):
+                    base_formula = self.dict_thematic_properties[theme_id][
+                        FORMULA_FIELD_NAME
+                    ]
                 equality, prop = _check_equality(
                     base_formula,
                     actual_formula,
@@ -539,11 +564,15 @@ class Aligner:
                     threshold_percentage,
                 )
                 if equality:
-                    dict_evaluated_result[theme_id][dist] = dict_predictions[theme_id][dist]
+                    dict_evaluated_result[theme_id][dist] = dict_predictions[theme_id][
+                        dist
+                    ]
                     prop_dictionary[theme_id][dist][EVALUATION_FIELD_NAME] = prop
                     break
 
-        evaluated_theme_ids = [theme_id for theme_id, value in dict_evaluated_result.items() if value != {}]
+        evaluated_theme_ids = [
+            theme_id for theme_id, value in dict_evaluated_result.items() if value != {}
+        ]
 
         # fill where no equality is found/ The biggest predicted distance is returned as
         # proposal
@@ -555,7 +584,9 @@ class Aligner:
                     prop_dictionary[theme_id][0][FORMULA_FIELD_NAME] = json.dumps(
                         self.get_brdr_formula(result["result"])
                     )
-                    prop_dictionary[theme_id][0][EVALUATION_FIELD_NAME] = Evaluation.NO_PREDICTION_5
+                    prop_dictionary[theme_id][0][
+                        EVALUATION_FIELD_NAME
+                    ] = Evaluation.NO_PREDICTION_5
                     continue
                 # Add all predicted features so they can be manually checked
                 for dist in dict_predictions[theme_id].keys():
@@ -564,18 +595,19 @@ class Aligner:
                     prop_dictionary[theme_id][dist][FORMULA_FIELD_NAME] = json.dumps(
                         self.get_brdr_formula(predicted_resultset["result"])
                     )
-                    prop_dictionary[theme_id][dist][EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_4
+                    prop_dictionary[theme_id][dist][
+                        EVALUATION_FIELD_NAME
+                    ] = Evaluation.TO_CHECK_4
 
         for theme_id, geom in dict_unchanged.items():
-            prop_dictionary[theme_id] = {0:
-                                             {"result": geom,
-                                              EVALUATION_FIELD_NAME: Evaluation.NO_CHANGE_6,
-                                              FORMULA_FIELD_NAME: json.dumps(self.get_brdr_formula(geom))
-                                              }
-                                         }
+            prop_dictionary[theme_id] = {
+                0: {
+                    "result": geom,
+                    EVALUATION_FIELD_NAME: Evaluation.NO_CHANGE_6,
+                    FORMULA_FIELD_NAME: json.dumps(self.get_brdr_formula(geom)),
+                }
+            }
         return dict_evaluated_result, prop_dictionary
-
-
 
     def get_brdr_formula(self, geometry: BaseGeometry, with_geom=False):
         """
@@ -603,7 +635,7 @@ class Aligner:
             "reference_source": self.dict_reference_source,
             "full": True,
             "reference_features": {},
-            "reference_od": None
+            "reference_od": None,
         }
 
         full_total = True
@@ -637,11 +669,11 @@ class Aligner:
                     last_version_date = version_date
 
             if perc > 99.99:
-                    full = True
-                    area = round(geom_reference.area, 2)
-                    perc = 100
-                    if with_geom:
-                        geom = geom_reference
+                full = True
+                area = round(geom_reference.area, 2)
+                perc = 100
+                if with_geom:
+                    geom = geom_reference
             else:
                 full = False
                 full_total = False
@@ -652,12 +684,16 @@ class Aligner:
             dict_formula["reference_features"][key_ref] = {
                 "full": full,
                 "area": area,
-                "percentage": perc
+                "percentage": perc,
             }
             if version_date is not None:
-                dict_formula["reference_features"][key_ref][VERSION_DATE] = version_date.strftime(DATE_FORMAT)
+                dict_formula["reference_features"][key_ref][VERSION_DATE] = (
+                    version_date.strftime(DATE_FORMAT)
+                )
             if with_geom:
-                dict_formula["reference_features"][key_ref]["geometry"] = to_geojson(geom)
+                dict_formula["reference_features"][key_ref]["geometry"] = to_geojson(
+                    geom
+                )
 
         dict_formula["full"] = full_total
         if last_version_date is not None:
@@ -672,9 +708,7 @@ class Aligner:
         if geom_od is not None:
             area_od = round(geom_od.area, 2)
             if area_od > 0:
-                dict_formula["reference_od"] = {
-                    "area": area_od
-                }
+                dict_formula["reference_od"] = {"area": area_od}
                 if with_geom:
                     dict_formula["reference_od"]["geometry"] = to_geojson(geom_od)
         self.logger.feedback_debug(str(dict_formula))
@@ -683,7 +717,9 @@ class Aligner:
     ##########EXPORTERS########################
     ###########################################
 
-    def get_results_as_geojson(self, resulttype= AlignerResultType.PROCESSRESULTS, formula=False):
+    def get_results_as_geojson(
+        self, resulttype=AlignerResultType.PROCESSRESULTS, formula=False
+    ):
         """
         get a geojson of  a dictionary containing the resulting geometries for all
             'serial' relevant distances. If no dict_series is given, the dict_result returned.
@@ -696,21 +732,21 @@ class Aligner:
         else:
             raise (ValueError, "AlignerResultType unknown")
         if dict_series is None or dict_series == {}:
-            self.logger.feedback_warning ("Empty results: No calculated results to export.")
+            self.logger.feedback_warning(
+                "Empty results: No calculated results to export."
+            )
             return {}
 
         prop_dictionary = defaultdict(dict)
 
         for theme_id, results_dict in dict_series.items():
-            nr_calculations = len(results_dict)
             for relevant_distance, process_results in results_dict.items():
-                prop_dictionary[theme_id][relevant_distance] = {
-                    "nr_calculations": nr_calculations
-                }
                 if formula:
                     result = process_results["result"]
                     formula = self.get_brdr_formula(result)
-                    prop_dictionary[theme_id][relevant_distance][FORMULA_FIELD_NAME] =json.dumps(formula)
+                    prop_dictionary[theme_id][relevant_distance] = {
+                        FORMULA_FIELD_NAME: json.dumps(formula)
+                    }
 
         return get_series_geojson_dict(
             dict_series,
@@ -719,7 +755,7 @@ class Aligner:
             series_prop_dict=prop_dictionary,
         )
 
-    def get_input_as_geojson(self,inputtype=AlignerInputType.REFERENCE):
+    def get_input_as_geojson(self, inputtype=AlignerInputType.REFERENCE):
         """
         get a geojson of the reference polygons
         """
@@ -736,12 +772,19 @@ class Aligner:
             raise (ValueError, "AlignerInputType unknown")
         dict_properties
         if dict_to_geojson is None or dict_to_geojson == {}:
-            self.logger.feedback_warning ("Empty input: No input to export.")
+            self.logger.feedback_warning("Empty input: No input to export.")
             return {}
         return geojson_from_dict(
-            dict_to_geojson, self.CRS, property_id,prop_dict=dict_properties, geom_attributes=False
+            dict_to_geojson,
+            self.CRS,
+            property_id,
+            prop_dict=dict_properties,
+            geom_attributes=False,
         )
-    def save_results(self, path, resulttype=AlignerResultType.PROCESSRESULTS, formula=True):
+
+    def save_results(
+        self, path, resulttype=AlignerResultType.PROCESSRESULTS, formula=True
+    ):
         """
         Exports analysis results as GeoJSON files.
 
@@ -766,13 +809,16 @@ class Aligner:
           relevant intersection that has to be included in the result.
         - result_relevant_difference.geojson: Contains the areas with
           relevant difference that has to be excluded from the result.
-          """
+        """
 
         fcs = self.get_results_as_geojson(
-            formula=formula,resulttype=resulttype,
+            formula=formula,
+            resulttype=resulttype,
         )
         for name, fc in fcs.items():
-            write_geojson(os.path.join(path, resulttype.value + "_"+ name +".geojson"), fc)
+            write_geojson(
+                os.path.join(path, resulttype.value + "_" + name + ".geojson"), fc
+            )
 
     def get_thematic_union(self):
         if self.thematic_union is None:
@@ -981,14 +1027,12 @@ class Aligner:
             )
         return geom_thematic_od, relevant_difference_array, relevant_intersection_array
 
-
     def _get_reference_union(self):
         if self.reference_union is None:
             self.reference_union = make_valid(
                 unary_union(list(self.dict_reference.values()))
             )
         return self.reference_union
-
 
     def _postprocess_preresult(self, preresult, geom_thematic) -> ProcessResult:
         """
@@ -1158,7 +1202,7 @@ class Aligner:
                     array.append(g)
         return array
 
-@staticmethod
+
 def _calculate_geom_by_intersection_and_reference(
     geom_intersection: BaseGeometry,
     geom_reference: BaseGeometry,
@@ -1265,7 +1309,7 @@ def _calculate_geom_by_intersection_and_reference(
             geom = geom_relevant_intersection  # (=empty geometry)
     return geom, geom_relevant_intersection, geom_relevant_difference
 
-@staticmethod
+
 def _get_relevant_polygons_from_geom(geometry: BaseGeometry, buffer_distance: float):
     """
     Get only the relevant parts (polygon) from a geometry.
@@ -1289,21 +1333,20 @@ def _get_relevant_polygons_from_geom(geometry: BaseGeometry, buffer_distance: fl
                     array.append(g)
     return make_valid(unary_union(array))
 
-@staticmethod
-def _equal_geom_in_array(geom,geom_array):
+
+def _equal_geom_in_array(geom, geom_array):
     """
     Check if a predicted geometry is equal to other predicted geometries in a list.
     Equality is defined as there is the symmetrical difference is smaller than the CORRECTION DISTANCE
     Returns True if one of the elements is equal, otherwise False
     """
     for g in geom_array:
-        #if safe_equals(geom,g):
-        if buffer_neg(safe_symmetric_difference(geom, g),CORR_DISTANCE).is_empty:
+        # if safe_equals(geom,g):
+        if buffer_neg(safe_symmetric_difference(geom, g), CORR_DISTANCE).is_empty:
             return True
     return False
 
 
-@staticmethod
 def _check_equality(
     base_formula, actual_formula, threshold_area=5, threshold_percentage=1
 ):
@@ -1367,4 +1410,3 @@ def _check_equality(
     if base_formula["full"] and base_formula["full"] and od_alike:
         return True, Evaluation.EQUALITY_GEOM_3
     return False, Evaluation.NO_PREDICTION_5
-

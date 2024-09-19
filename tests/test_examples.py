@@ -187,7 +187,7 @@ class TestExamples(unittest.TestCase):
 
         # Example how to use the Aligner
         rel_dist = 2
-        aligner.process(relevant_distance=rel_dist,od_strategy= 4)
+        aligner.process(relevant_distance=rel_dist, od_strategy=4)
 
         # Example how to use a series (for histogram)
         series = np.arange(0, 300, 10, dtype=int) / 100

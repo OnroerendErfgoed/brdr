@@ -14,7 +14,13 @@ from shapely import unary_union
 from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
 
-from brdr.constants import MULTI_SINGLE_ID_SEPARATOR, DEFAULT_CRS, DOWNLOAD_LIMIT, RELEVANT_DISTANCE_FIELD_NAME
+from brdr.constants import (
+    MULTI_SINGLE_ID_SEPARATOR,
+    DEFAULT_CRS,
+    DOWNLOAD_LIMIT,
+    RELEVANT_DISTANCE_FIELD_NAME,
+    NR_CALCULATION_FIELD_NAME,
+)
 from brdr.enums import DiffMetric
 from brdr.geometry_utils import get_partitions, get_bbox
 from brdr.typings import ProcessResult
@@ -33,10 +39,12 @@ def get_series_geojson_dict(
     features_list_dict = {}
 
     for theme_id, results_dict in series_dict.items():
+        nr_calculations = len(results_dict)
         prop_dict = dict(series_prop_dict or {}).get(theme_id, {})
         for relative_distance, process_result in results_dict.items():
             properties = prop_dict.get(relative_distance, {})
             properties[id_field] = theme_id
+            properties[NR_CALCULATION_FIELD_NAME] = nr_calculations
             properties[RELEVANT_DISTANCE_FIELD_NAME] = relative_distance
 
             for results_type, geom in process_result.items():
@@ -197,7 +205,6 @@ def polygonize_reference_data(dict_ref):
     return dict_ref
 
 
-
 def get_breakpoints_zerostreak(x, y):
     """
     Determine the extremes and zero_streaks of a graph based on the derivative, and
@@ -301,6 +308,7 @@ def _numerical_derivative(x, y):
     # derivative = np.append(derivative, 0)
 
     return derivative
+
 
 def diffs_from_dict_series(
     dict_series: dict[str, dict[float, ProcessResult]],
@@ -464,7 +472,9 @@ def get_collection_by_partition(
     else:
         geoms = get_partitions(geometry, partition)
         for g in geoms:
-            coll = get_collection(_add_bbox_to_url(url=url, crs=crs, bbox=get_bbox(g)), limit)
+            coll = get_collection(
+                _add_bbox_to_url(url=url, crs=crs, bbox=get_bbox(g)), limit
+            )
             if collection == {}:
                 collection = dict(coll)
             elif "features" in collection and "features" in coll:
@@ -499,13 +509,15 @@ def merge_process_results(
         if id_theme_global not in grouped_results:
             grouped_results[id_theme_global] = dict_results
         else:
-            for rel_dist,process_result in dict_results.items():
+            for rel_dist, process_result in dict_results.items():
                 for key in process_result:
                     geom: BaseGeometry = process_result[key]  # noqa
                     if geom.is_empty or geom is None:
                         continue
-                    existing: BaseGeometry = grouped_results[id_theme_global][rel_dist][key]  # noqa
-                    grouped_results[id_theme_global][rel_dist][key] = unary_union(  # noqa
+                    existing: BaseGeometry = grouped_results[id_theme_global][rel_dist][
+                        key
+                    ]  # noqa
+                    grouped_results[id_theme_global][rel_dist][key] = unary_union(
                         [existing, geom]
-                    )
+                    )  # noqa
     return grouped_results

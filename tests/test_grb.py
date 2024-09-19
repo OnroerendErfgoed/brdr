@@ -10,7 +10,8 @@ from brdr.grb import (
     get_last_version_date,
     is_grb_changed,
     get_geoms_affected_by_grb_change,
-    GRBSpecificDateParcelLoader, update_to_actual_grb,
+    GRBSpecificDateParcelLoader,
+    update_to_actual_grb,
 )
 from brdr.loader import DictLoader
 
@@ -169,8 +170,6 @@ class TestGrb(unittest.TestCase):
         )
         assert len(dict_affected.keys()) > 0
 
-
-
     def test_grbspecificdateparcelloader(self):
         thematic_dict = {
             "theme_id_1": from_wkt(
@@ -182,20 +181,60 @@ class TestGrb(unittest.TestCase):
         aligner.load_thematic_data(loader)
         loader = GRBSpecificDateParcelLoader(date="2023-01-03", aligner=aligner)
         aligner.load_reference_data(loader)
-        assert len (aligner.dict_reference.keys())==53
+        assert len(aligner.dict_reference.keys()) == 53
 
         loader = GRBSpecificDateParcelLoader(date="2023-08-03", aligner=aligner)
         aligner.load_reference_data(loader)
-        assert len (aligner.dict_reference.keys())==52
+        assert len(aligner.dict_reference.keys()) == 52
 
     def test_update_to_actual_grb(self):
-        #Create a featurecollection (aligned on 2022), to use for the 'update_to_actual_grb'
+        # Create a featurecollection (aligned on 2022), to use for the 'update_to_actual_grb'
         name_thematic_id = "theme_identifier"
-        featurecollection_base_result = {"crs": {"properties": {"name": "EPSG:31370"}, "type": "name"}, "features": [{"geometry": {"coordinates": [[[138541.4173, 194007.7292], [138539.3263, 193994.1382], [138529.3663, 193995.5664], [138522.0997, 193996.6084], [138514.9844, 193997.6287], [138505.8261, 193996.615], [138498.8406, 193996.4314], [138492.9442, 193996.2895], [138491.2246, 193996.2481], [138491.4111, 194004.8147], [138514.3685, 194005.1297], [138520.2585, 194004.5753], [138520.3946, 194005.5833], [138520.5426, 194009.732], [138541.4173, 194007.7292]]], "type": "Polygon"}, "properties": {"area": 503.67736346047064, "brdr_formula": "{\"alignment_date\": \"2024-09-19\", \"brdr_version\": \"0.2.1\", \"reference_source\": {\"source\": \"Adpf\", \"version_date\": \"2022-01-01\"}, \"full\": true, \"reference_features\": {\"12034A0181/00K000\": {\"full\": true, \"area\": 503.68, \"percentage\": 100, \"version_date\": \"2019-08-30\"}}, \"reference_od\": null, \"last_version_date\": \"2019-08-30\"}", "nr_calculations": 1, "perimeter": 125.74541473322422, "relevant_distance": 2, "shape_index": 0.24965468741597102, "theme_identifier": "206285"}, "type": "Feature"}], "type": "FeatureCollection"}
+        featurecollection_base_result = {
+            "crs": {"properties": {"name": "EPSG:31370"}, "type": "name"},
+            "features": [
+                {
+                    "geometry": {
+                        "coordinates": [
+                            [
+                                [138541.4173, 194007.7292],
+                                [138539.3263, 193994.1382],
+                                [138529.3663, 193995.5664],
+                                [138522.0997, 193996.6084],
+                                [138514.9844, 193997.6287],
+                                [138505.8261, 193996.615],
+                                [138498.8406, 193996.4314],
+                                [138492.9442, 193996.2895],
+                                [138491.2246, 193996.2481],
+                                [138491.4111, 194004.8147],
+                                [138514.3685, 194005.1297],
+                                [138520.2585, 194004.5753],
+                                [138520.3946, 194005.5833],
+                                [138520.5426, 194009.732],
+                                [138541.4173, 194007.7292],
+                            ]
+                        ],
+                        "type": "Polygon",
+                    },
+                    "properties": {
+                        "area": 503.67736346047064,
+                        "brdr_formula": '{"alignment_date": "2024-09-19", "brdr_version": "0.2.1", "reference_source": {"source": "Adpf", "version_date": "2022-01-01"}, "full": true, "reference_features": {"12034A0181/00K000": {"full": true, "area": 503.68, "percentage": 100, "version_date": "2019-08-30"}}, "reference_od": null, "last_version_date": "2019-08-30"}',
+                        "nr_calculations": 1,
+                        "perimeter": 125.74541473322422,
+                        "relevant_distance": 2,
+                        "shape_index": 0.24965468741597102,
+                        "theme_identifier": "206285",
+                    },
+                    "type": "Feature",
+                }
+            ],
+            "type": "FeatureCollection",
+        }
 
-
-        #Update Featurecollection to actual version
-        featurecollection = update_to_actual_grb(featurecollection_base_result,name_thematic_id)
-        #Print results
+        # Update Featurecollection to actual version
+        featurecollection = update_to_actual_grb(
+            featurecollection_base_result, name_thematic_id
+        )
+        # Print results
         for feature in featurecollection["result"]["features"]:
-            assert isinstance(feature["properties"][EVALUATION_FIELD_NAME],Evaluation)
+            assert isinstance(feature["properties"][EVALUATION_FIELD_NAME], Evaluation)
