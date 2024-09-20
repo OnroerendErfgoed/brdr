@@ -1,5 +1,5 @@
 from brdr.aligner import Aligner
-from brdr.enums import GRBType
+from brdr.enums import GRBType, AlignerInputType
 from brdr.grb import GRBActualLoader
 from brdr.oe import OnroerendErfgoedLoader
 from examples import print_brdr_formula
@@ -16,7 +16,7 @@ if __name__ == "__main__":
     aligner.load_thematic_data(loader)
     loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
     aligner.load_reference_data(loader)
-    ref_geojson = aligner.get_input_as_geojson()
+    ref_geojson = aligner.get_input_as_geojson(inputtype=AlignerInputType.REFERENCE)
 
     # RESULTS
     rel_dist = 2
