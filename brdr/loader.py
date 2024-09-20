@@ -24,18 +24,19 @@ class Loader(ABC):
         if self.versiondate_info is not None:
             for key in self.data_dict_properties.keys():
                 try:
-                    self.data_dict_properties[key][VERSION_DATE] = datetime.strptime(
+                    date = datetime.strptime(
                         self.data_dict_properties[key][self.versiondate_info["name"]],
                         self.versiondate_info["format"],
                     )
                 except:
                     # Catch, to try extracting only the date with default -date format if specific format does not work
-                    self.data_dict_properties[key][VERSION_DATE] = datetime.strptime(
+                    date = datetime.strptime(
                         self.data_dict_properties[key][self.versiondate_info["name"]][
                             :10
                         ],
                         DATE_FORMAT,
                     )
+                self.data_dict_properties[key][VERSION_DATE] = datetime.strftime(date,DATE_FORMAT)
 
         return self.data_dict, self.data_dict_properties, self.data_dict_source
 

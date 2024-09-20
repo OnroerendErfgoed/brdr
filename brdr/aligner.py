@@ -662,7 +662,8 @@ class Aligner:
                 key_ref in self.dict_reference_properties
                 and VERSION_DATE in self.dict_reference_properties[key_ref]
             ):
-                version_date = self.dict_reference_properties[key_ref][VERSION_DATE]
+                str_version_date = self.dict_reference_properties[key_ref][VERSION_DATE]
+                version_date = datetime.strptime(str_version_date,DATE_FORMAT)
                 if last_version_date is None and version_date is not None:
                     last_version_date = version_date
                 if version_date is not None and version_date > last_version_date:
