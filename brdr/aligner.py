@@ -2,6 +2,7 @@ import json
 import logging
 import os
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from math import pi
 from typing import Iterable
@@ -179,6 +180,7 @@ class Aligner:
     ##########PROCESSORS#######################
     ###########################################
 
+
     def process_geometry(
         self,
         input_geometry: BaseGeometry,
@@ -282,6 +284,7 @@ class Aligner:
 
         return result_dict
 
+
     def process(
         self,
         relevant_distances: Iterable[float] = None,
@@ -320,29 +323,33 @@ class Aligner:
         self.threshold_overlap_percentage = threshold_overlap_percentage
         self.logger.feedback_debug("Process series" + str(self.relevant_distances))
         dict_series = {}
+        dict_series_queue = {}
         dict_thematic = self.dict_thematic
 
         if self.multi_as_single_modus:
             dict_thematic = multipolygons_to_singles(dict_thematic)
-
-        for key, geometry in dict_thematic.items():
-            self.logger.feedback_info(
-                f"thematic id {str(key)} processed with relevant distances (m) [{str(self.relevant_distances)}]"
-            )
-            dict_series[key] = {}
-            for relevant_distance in self.relevant_distances:
-                try:
+        with ThreadPoolExecutor(max_workers=5) as executor:#max_workers=5
+            for key, geometry in dict_thematic.items():
+                self.logger.feedback_info(
+                    f"thematic id {str(key)} processed with relevant distances (m) [{str(self.relevant_distances)}]"
+                )
+                dict_series[key] = {}
+                dict_series_queue[key] = {}
+                for relevant_distance in self.relevant_distances:
                     self.relevant_distance = relevant_distance
-                    processed_result = self.process_geometry(
-                        geometry,
-                        self.relevant_distance,
-                        od_strategy,
-                        threshold_overlap_percentage,
-                    )
-                except ValueError as e:
-                    self.logger.feedback_warning(str(e))
+                    try:
+                        dict_series_queue[key][self.relevant_distance]  = executor.submit(self.process_geometry, geometry,
+                            self.relevant_distance,
+                            od_strategy,
+                            threshold_overlap_percentage,)
+                    except ValueError as e:
+                        print("error for" + f"thematic id {str(key)} processed with relevant distances (m) [{str(self.relevant_distances)}]")
+                        dict_series_queue[key][self.relevant_distance] = None
+                        self.logger.feedback_warning(str(e))
 
-                dict_series[key][self.relevant_distance] = processed_result
+        for key in dict_series_queue.keys():
+            for rd in dict_series_queue[key]:
+                dict_series[key][rd] = dict_series_queue[key][rd].result()
 
         if self.multi_as_single_modus:
             dict_series = merge_process_results(dict_series)
@@ -354,41 +361,6 @@ class Aligner:
 
         return self.dict_processresults
 
-    # def process(
-    #     self,
-    #     relevant_distance=1,
-    #     od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
-    #     threshold_overlap_percentage=50,
-    # ) -> dict[str, dict[float, ProcessResult]]:
-    #     """
-    #     Aligns a thematic dictionary of geometries to the reference layer based on
-    #     specified parameters. - method to align a thematic dictionary to the reference
-    #     layer
-    #
-    #     Args:
-    #         relevant_distance (float, optional): The relevant distance (in meters) for
-    #             processing. Defaults to 1.
-    #         od_strategy (int, optional): The strategy for overlap detection.
-    #             Defaults to 1.
-    #         threshold_overlap_percentage (float, optional): The threshold percentage for
-    #             considering full overlap. Defaults to 50.
-    #
-    #     Returns:
-    #         dict: A dict containing processed data for each thematic key:
-    #             - result: Aligned thematic data.
-    #             - result_diff: global differences between thematic data and reference
-    #               data.
-    #             - result_diff_plus: Positive differences.
-    #             - result_diff_min: Negative differences.
-    #             - relevant_intersection: relevant intersections.
-    #             - relevant_diff: relevant differences.
-    #
-    #     """
-    #     self.relevant_distance=relevant_distance
-    #     self.dict_result = self.process(relevant_distances=[self.relevant_distance],
-    #                                     od_strategy=od_strategy,
-    #                                     threshold_overlap_percentage=threshold_overlap_percentage)
-    #     return self.dict_result
 
     def predictor(
         self,
