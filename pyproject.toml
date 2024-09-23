@@ -35,7 +35,14 @@ Repository = "https://github.com/OnroerendErfgoed/brdr"
 Issues = "https://github.com/OnroerendErfgoed/brdr/issues"
 
 [project.optional-dependencies]
+test = [
+    "pytest-cov==5.0.0",
+    "pytest==8.1.1",
+    "responses==0.25.3",
+    "toml==0.10.2",
+]
 dev = [
+    "brdr[test]",
     "black==24.4.0",
     "flake8==7.0.0",
     "geopandas==0.14.3",
@@ -43,10 +50,6 @@ dev = [
     "matplotlib==3.8.4",
     "mypy==1.9.0",
     "pip-tools==7.4.1",
-    "pytest-cov==5.0.0",
-    "pytest==8.1.1",
-    "responses==0.25.3",
-    "toml==0.10.2",
     "types-requests==2.31.0.20240406",
 ]
 
@@ -59,3 +62,18 @@ packages = ["brdr"]
 
 [tool.black]
 target-version = ['py39', 'py310', 'py311', 'py312']
+
+# Config for hatch environments
+[tool.hatch.envs.dev]
+features = [
+  'dev',
+]
+
+# Config for hatch test
+[tool.hatch.envs.hatch-test]
+features = [
+  'test',
+]
+
+[[tool.hatch.envs.hatch-test.matrix]]
+python = ["3.9", "3.10", '3.11', '3.12']
