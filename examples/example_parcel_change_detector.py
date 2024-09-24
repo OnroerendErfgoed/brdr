@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 
 from brdr.aligner import Aligner
 from brdr.constants import EVALUATION_FIELD_NAME, RELEVANT_DISTANCE_FIELD_NAME
@@ -39,18 +40,19 @@ max_distance_for_actualisation = 2
 # Initiate an Aligner to create a themeset that is base-referenced on a specific
 # base_year
 base_aligner = Aligner()
+print("start loading OE-objects")
 # Load the thematic data to evaluate
 loader = OnroerendErfgoedLoader(bbox=bbox, partition=0)
 base_aligner.load_thematic_data(loader)
 
-logging.info(
+print(
     "Number of OE-thematic features loaded into base-aligner: "
     + str(len(base_aligner.dict_thematic))
 )
 base_aligner.load_reference_data(
-    GRBFiscalParcelLoader(year=base_year, aligner=base_aligner)
+    GRBFiscalParcelLoader(year=base_year, aligner=base_aligner,partition=1000)
 )
-
+print("Reference-data loaded")
 # Exclude objects bigger than specified area
 keys_to_exclude = []
 nr_features = len(base_aligner.dict_thematic)
@@ -58,13 +60,15 @@ for key in base_aligner.dict_thematic:
     if base_aligner.dict_thematic[key].area > excluded_area:
         keys_to_exclude.append(key)
         counter_excluded = counter_excluded + 1
-        logging.info(
+        print(
             "geometrie excluded; bigger than " + str(excluded_area) + ": " + key
         )
 for x in keys_to_exclude:
     del base_aligner.dict_thematic[x]
 
 # # Align the features to the base-GRB
+print("Process base objects")
+starttime = datetime.now()
 base_process_result = base_aligner.process(relevant_distance=base_correction)
 # get resulting aligned features on Adpfxxxx, with formula
 processresults = base_aligner.get_results_as_geojson(formula=True)
@@ -74,6 +78,7 @@ if len(processresults) == 0:
 featurecollection_base_result = processresults["result"]
 
 # Update Featurecollection to actual version
+print("Actualise base objects")
 fcs = update_to_actual_grb(
     featurecollection_base_result,
     base_aligner.name_thematic_id,
@@ -107,3 +112,6 @@ print(
     + "//Excluded: "
     + str(counter_excluded)
 )
+endtime = datetime.now()
+seconds = (endtime - starttime).total_seconds()
+print("duration: " + str(seconds))
