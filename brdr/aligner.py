@@ -3,6 +3,7 @@ import logging
 import os
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import wait
 from datetime import datetime
 from math import pi
 from typing import Iterable
@@ -105,7 +106,8 @@ class Aligner:
 
         """
         self.logger = Logger(feedback)
-        self.relevant_distance = relevant_distance
+        if relevant_distances is None and relevant_distance is not None:
+            relevant_distances = [relevant_distance]
         self.relevant_distances = relevant_distances
         self.od_strategy = od_strategy
         self.threshold_overlap_percentage = threshold_overlap_percentage
@@ -157,9 +159,6 @@ class Aligner:
         # with ID splitter are separately evaluated and merged on result.
         self.multi_as_single_modus = True
         self.logger.feedback_info("Aligner initialized")
-
-    def buffer_distance(self):
-        return self.relevant_distance / 2
 
     ##########LOADERS##########################
     ###########################################
@@ -218,10 +217,9 @@ class Aligner:
             raise ValueError(message)
 
         self.logger.feedback_debug("process geometry")
-        self.relevant_distance = relevant_distance
         self.od_strategy = od_strategy
         self.threshold_overlap_percentage = threshold_overlap_percentage
-
+        buffer_distance = relevant_distance/2
         # combine all parts of the input geometry to one polygon
         input_geometry = unary_union(get_parts(input_geometry))
 
@@ -231,7 +229,7 @@ class Aligner:
             preresult,
             relevant_intersection_array,
             relevant_diff_array,
-        ) = self._calculate_intersection_between_geometry_and_od(input_geometry)
+        ) = self._calculate_intersection_between_geometry_and_od(input_geometry,relevant_distance)
         # get a list of all ref_ids that are intersecting the thematic geometry
         ref_intersections = self.reference_items.take(
             self.reference_tree.query(geometry)
@@ -250,7 +248,7 @@ class Aligner:
                 geom_intersection,
                 geom_reference,
                 False,
-                self.relevant_distance / 2,
+                buffer_distance,
                 self.threshold_overlap_percentage,
             )
             self.logger.feedback_debug("intersection calculated")
@@ -270,7 +268,7 @@ class Aligner:
             relevant_diff = Polygon()
 
         # POSTPROCESSING
-        result_dict = self._postprocess_preresult(preresult, geometry)
+        result_dict = self._postprocess_preresult(preresult, geometry,relevant_distance)
 
         result_dict["result_relevant_intersection"] = relevant_intersection
         result_dict["result_relevant_diff"] = relevant_diff
@@ -317,13 +315,13 @@ class Aligner:
         """
         if relevant_distances is None:
             relevant_distances = [relevant_distance]
-            self.relevant_distance = relevant_distance
         self.relevant_distances = relevant_distances
         self.od_strategy = od_strategy
         self.threshold_overlap_percentage = threshold_overlap_percentage
         self.logger.feedback_debug("Process series" + str(self.relevant_distances))
         dict_series = {}
         dict_series_queue = {}
+        futures = []
         dict_thematic = self.dict_thematic
 
         if self.multi_as_single_modus:
@@ -336,20 +334,22 @@ class Aligner:
                 dict_series[key] = {}
                 dict_series_queue[key] = {}
                 for relevant_distance in self.relevant_distances:
-                    self.relevant_distance = relevant_distance
                     try:
-                        dict_series_queue[key][self.relevant_distance]  = executor.submit(self.process_geometry, geometry,
-                            self.relevant_distance,
+                        future = executor.submit(self.process_geometry, geometry,
+                            relevant_distance,
                             od_strategy,
                             threshold_overlap_percentage,)
+                        futures.append(future)
+                        dict_series_queue[key][relevant_distance]  = future
                     except ValueError as e:
                         print("error for" + f"thematic id {str(key)} processed with relevant distances (m) [{str(self.relevant_distances)}]")
-                        dict_series_queue[key][self.relevant_distance] = None
+                        dict_series_queue[key][relevant_distance] = None
                         self.logger.feedback_warning(str(e))
-
-        for key in dict_series_queue.keys():
-            for rd in dict_series_queue[key]:
-                dict_series[key][rd] = dict_series_queue[key][rd].result()
+        self.logger.feedback_debug ("waiting all started RD calculations")
+        wait(futures)
+        for id_theme,dict_dist in dict_series_queue.items():
+            for reldist,future in dict_dist.items():
+                dict_series[id_theme][reldist] = future.result()
 
         if self.multi_as_single_modus:
             dict_series = merge_process_results(dict_series)
@@ -831,8 +831,9 @@ class Aligner:
         self.reference_union = None
         return
 
-    def _calculate_intersection_between_geometry_and_od(self, geometry):
+    def _calculate_intersection_between_geometry_and_od(self, geometry,relevant_distance):
         # Calculate the intersection between thematic and Openbaar Domein
+        buffer_distance = relevant_distance/2
         relevant_intersection_array = []
         relevant_difference_array = []
         geom_thematic_od = Polygon()
@@ -859,11 +860,11 @@ class Aligner:
             # geom of OD
             geom_od = safe_difference(geometry, self._get_reference_union())
             # only the relevant parts of OD
-            geom_od_neg_pos = buffer_neg_pos(geom_od, self.buffer_distance())
+            geom_od_neg_pos = buffer_neg_pos(geom_od, buffer_distance)
             # geom_thematic_od = safe_intersection(geom_od_neg_pos,geom_od)# resulting
             # thematic OD
             geom_od_neg_pos_buffered = buffer_pos(
-                geom_od_neg_pos, self.buffer_distance()
+                geom_od_neg_pos, buffer_distance
             )  # include parts
             geom_thematic_od = safe_intersection(
                 geom_od_neg_pos_buffered, geom_od
@@ -877,7 +878,7 @@ class Aligner:
                 geom_thematic_od,
                 relevant_difference_array,
                 relevant_intersection_array,
-            ) = self._od_snap_all_side(geometry)
+            ) = self._od_snap_all_side(geometry,relevant_distance)
         elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_FULL_AREA_SINGLE_SIDE:
             # Strategy useful for bigger areas.
             # integrates the entire inner area of the input geometry,
@@ -886,7 +887,7 @@ class Aligner:
             self.logger.feedback_debug(
                 "OD-strategy Full-area-variant of OD-SNAP_SINGLE_SIDE"
             )
-            geom_thematic_od = self._od_full_area(geometry)
+            geom_thematic_od = self._od_full_area(geometry,relevant_distance)
         elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_FULL_AREA_ALL_SIDE:
             # Strategy useful for bigger areas.
             # integrates the entire inner area of the input geometry,
@@ -900,10 +901,10 @@ class Aligner:
                 geom_thematic_od,
                 relevant_difference_array,
                 relevant_intersection_array,
-            ) = self._od_snap_all_side(geometry)
+            ) = self._od_snap_all_side(geometry,relevant_distance)
             # This part is a copy of SNAP_FULL_AREA_SINGLE_SIDE
             geom_theme_od_min_clipped_plus_buffered_clipped = self._od_full_area(
-                geometry
+                geometry,relevant_distance
             )
             # UNION the calculation of  OD-SNAP_ALL_SIDE with FULL AREA of
             # OD-SNAP_FULL_AREA_SINGLE_SIDE
@@ -921,7 +922,7 @@ class Aligner:
             # geom of OD
             geom_od = safe_difference(geometry, self._get_reference_union())
             # only the relevant parts of OD
-            geom_od_neg_pos = buffer_neg_pos(geom_od, self.buffer_distance())
+            geom_od_neg_pos = buffer_neg_pos(geom_od, buffer_distance)
             # resulting thematic OD
             geom_thematic_od = safe_intersection(geom_od_neg_pos, geom_od)
         elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE_VARIANT_2:
@@ -943,20 +944,21 @@ class Aligner:
             relevant_difference_array,
         )
 
-    def _od_full_area(self, geometry):
+    def _od_full_area(self, geometry,relevant_distance):
+        buffer_distance=relevant_distance/2
         geom_theme_od = safe_difference(geometry, self._get_reference_union())
         geom_theme_min_buffered = buffer_neg(
             buffer_pos(
-                buffer_neg(geometry, self.relevant_distance),
-                self.buffer_distance(),
+                buffer_neg(geometry, relevant_distance),
+                buffer_distance,
             ),
-            self.buffer_distance(),
+            buffer_distance,
         )
         geom_theme_od_clipped_min_buffered = safe_intersection(
             geom_theme_min_buffered, geom_theme_od
         )
         geom_theme_od_min_clipped_plus_buffered = buffer_pos(
-            geom_theme_od_clipped_min_buffered, self.relevant_distance
+            geom_theme_od_clipped_min_buffered, relevant_distance
         )
         geom_theme_od_min_clipped_plus_buffered_clipped = safe_intersection(
             geom_theme_od_min_clipped_plus_buffered, geom_theme_od
@@ -964,11 +966,12 @@ class Aligner:
         geom_thematic_od = geom_theme_od_min_clipped_plus_buffered_clipped
         return geom_thematic_od
 
-    def _od_snap_all_side(self, geometry):
+    def _od_snap_all_side(self, geometry,relevant_distance):
+        buffer_distance = relevant_distance/2
         relevant_difference_array = []
         relevant_intersection_array = []
         geom_thematic_buffered = make_valid(
-            buffer_pos(geometry, BUFFER_MULTIPLICATION_FACTOR * self.relevant_distance)
+            buffer_pos(geometry, BUFFER_MULTIPLICATION_FACTOR * relevant_distance)
         )
         clip_ref_thematic_buffered = safe_intersection(
             self._get_reference_union(), geom_thematic_buffered
@@ -989,7 +992,7 @@ class Aligner:
                 geom_intersection,
                 geom_reference,
                 True,
-                self.relevant_distance / 2,
+                buffer_distance,
                 self.threshold_overlap_percentage,
             )
             relevant_intersection_array = self._add_multi_polygons_from_geom_to_array(
@@ -1007,7 +1010,7 @@ class Aligner:
             )
         return self.reference_union
 
-    def _postprocess_preresult(self, preresult, geom_thematic) -> ProcessResult:
+    def _postprocess_preresult(self, preresult, geom_thematic,relevant_distance) -> ProcessResult:
         """
         Postprocess the preresult with the following actions to create the final result
         *Corrections for areas that differ more than the relevant distance
@@ -1032,6 +1035,7 @@ class Aligner:
                 geometry
         """
         # Process array
+        buffer_distance = relevant_distance/2
         result = []
         geom_preresult = make_valid(unary_union(preresult))
         geom_thematic = make_valid(geom_thematic)
@@ -1069,14 +1073,14 @@ class Aligner:
             geom_thematic_dissolved,
             safe_intersection(
                 geom_diff_delete,
-                buffer_neg_pos(geom_diff_delete, self.buffer_distance()),
+                buffer_neg_pos(geom_diff_delete, buffer_distance),
             ),
         )
         geom_diff_removed_added = safe_union(
             geom_diff_removed,
             safe_intersection(
                 geom_diff_add,
-                buffer_neg_pos(geom_diff_add, self.buffer_distance()),
+                buffer_neg_pos(geom_diff_add, buffer_distance),
             ),
         )
         geom_thematic_preresult = buffer_pos(
@@ -1089,7 +1093,7 @@ class Aligner:
         # Correction for Inner holes(donuts) / multipolygons
         # fill and remove gaps
         geom_thematic_cleaned_holes = fill_and_remove_gaps(
-            geom_thematic_preresult, self.buffer_distance()
+            geom_thematic_preresult, buffer_distance
         )
         geom_thematic_result = buffer_pos(
             buffer_neg(
