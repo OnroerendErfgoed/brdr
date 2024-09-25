@@ -15,7 +15,7 @@ from brdr.oe import OnroerendErfgoedLoader
 from brdr.utils import get_series_geojson_dict
 
 base_aligner = Aligner()
-loader = OnroerendErfgoedLoader([120288])
+loader = OnroerendErfgoedLoader([120288,120108])
 base_aligner.load_thematic_data(loader)
 base_year = "2022"
 base_aligner.load_reference_data(
@@ -64,4 +64,6 @@ fc = get_series_geojson_dict(
     series_prop_dict=prop_dictionary,
 )
 for feature in fc["result"]["features"]:
-    print(feature["properties"][EVALUATION_FIELD_NAME])
+    id = feature["properties"][actual_aligner.name_thematic_id]
+    evaluation = feature["properties"][EVALUATION_FIELD_NAME]
+    print(id + ": " + evaluation)

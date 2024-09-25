@@ -76,8 +76,6 @@ fcs = actual_aligner.get_results_as_geojson(formula=True)
 print(fcs["result"])
 
 for feature in fc["result"]["features"]:
-    print(
-        feature["properties"][actual_aligner.name_thematic_id]
-        + ": "
-        + feature["properties"][EVALUATION_FIELD_NAME]
-    )
+    id = feature["properties"][actual_aligner.name_thematic_id]
+    evaluation = feature["properties"][EVALUATION_FIELD_NAME]
+    print(id + ": " + evaluation)
