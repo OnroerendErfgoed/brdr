@@ -80,6 +80,7 @@ class Aligner:
         od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
         crs=DEFAULT_CRS,
         area_limit=None,
+        max_workers=None,
     ):
         """
         Initializes the Aligner object
@@ -102,6 +103,7 @@ class Aligner:
             crs (str, optional): Coordinate Reference System (CRS) of the data.
                 (default EPSG:31370)
             area_limit (int, optional): Maximum area for processing. (default 100000)
+            max_workers (int, optional): Amount of workers that is used in ThreadPoolExecutor when processing objects for multiple relevant distances. (default None)
 
 
         """
@@ -112,6 +114,7 @@ class Aligner:
         self.od_strategy = od_strategy
         self.threshold_overlap_percentage = threshold_overlap_percentage
         self.area_limit = area_limit
+        self.max_workers = max_workers
 
         # PROCESSING DEFAULTS
         # thematic
@@ -326,7 +329,7 @@ class Aligner:
 
         if self.multi_as_single_modus:
             dict_thematic = multipolygons_to_singles(dict_thematic)
-        with ThreadPoolExecutor(max_workers=5) as executor:#max_workers=5
+        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:#max_workers=5
             for key, geometry in dict_thematic.items():
                 self.logger.feedback_info(
                     f"thematic id {str(key)} processed with relevant distances (m) [{str(self.relevant_distances)}]"
@@ -342,7 +345,7 @@ class Aligner:
                         futures.append(future)
                         dict_series_queue[key][relevant_distance]  = future
                     except ValueError as e:
-                        print("error for" + f"thematic id {str(key)} processed with relevant distances (m) [{str(self.relevant_distances)}]")
+                        self.logger.feedback_warning("error for" + f"thematic id {str(key)} processed with relevant distances (m) [{str(self.relevant_distances)}]")
                         dict_series_queue[key][relevant_distance] = None
                         self.logger.feedback_warning(str(e))
         self.logger.feedback_debug ("waiting all started RD calculations")
