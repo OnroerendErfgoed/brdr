@@ -19,7 +19,7 @@ loader = GeoJsonFileLoader("../tests/testdata/reference_leuven.geojson", "capake
 aligner.load_reference_data(loader)
 
 times = []
-for iter in range(1, 3):
+for iter in range(1, 10):
     starttime = datetime.now()
 
     # Example how to use the Aligner
