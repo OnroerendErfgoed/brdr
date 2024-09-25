@@ -96,7 +96,8 @@ class Aligner:
             threshold_overlap_percentage (int, optional): Threshold (%) to determine
                 from which overlapping-percentage a reference-polygon has to be included
                 when there aren't relevant intersections or relevant differences
-                (default 50%)
+                (default 50%).
+                When setting this parameter to '-1' the original border for will be returned for cases where nor relevant intersections and relevant differences are found
             od_strategy (int, optional): Determines how the algorithm deals with parts
                 of the geometry that are not on the
                 reference (default 1: SNAP_SINGLE_SIDE)
@@ -512,6 +513,7 @@ class Aligner:
             for dist in dict_series[theme_id].keys():
                 prop_dictionary[theme_id][dist] = {}
         for theme_id in dict_unchanged.keys():
+            dict_evaluated_result[theme_id]={}
             prop_dictionary[theme_id] = {}
 
         for theme_id, dict_results in dict_predictions.items():
@@ -575,9 +577,10 @@ class Aligner:
                     ] = Evaluation.TO_CHECK_4
 
         for theme_id, geom in dict_unchanged.items():
+            dict_evaluated_result[theme_id] = {0: {"result": geom}}
             prop_dictionary[theme_id] = {
                 0: {
-                    "result": geom,
+                    #"result": geom,
                     EVALUATION_FIELD_NAME: Evaluation.NO_CHANGE_6,
                     FORMULA_FIELD_NAME: json.dumps(self.get_brdr_formula(geom)),
                 }

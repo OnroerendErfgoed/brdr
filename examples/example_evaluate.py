@@ -59,7 +59,6 @@ actual_aligner.load_reference_data(
 )
 actual_aligner.relevant_distances = np.arange(0, 200, 10, dtype=int) / 100
 dict_evaluated, prop_dictionary = actual_aligner.compare(
-    # thematic_dict_formula=thematic_dict_formula,
     threshold_area=5,
     threshold_percentage=1,
     dict_unchanged=dict_unchanged,

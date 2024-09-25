@@ -89,14 +89,20 @@ fcs = update_to_actual_grb(
 counter_equality = 0
 counter_equality_by_alignment = 0
 counter_difference = 0
+counter_no_change = 0
+#TODO:  counter_difference collects al the 'TO_CHECK's' but these are multiple  proposals, so clean up the stats
+#TODO: Move this as general output from the updater?
 for feature in fcs["result"]["features"]:
     if EVALUATION_FIELD_NAME in feature["properties"].keys():
         ev = feature["properties"][EVALUATION_FIELD_NAME]
+        print(ev)
         rd = feature["properties"][RELEVANT_DISTANCE_FIELD_NAME]
         if ev.startswith("equal") and rd == 0:
             counter_equality = counter_equality + 1
         elif ev.startswith("equal") and rd > 0:
             counter_equality_by_alignment = counter_equality_by_alignment + 1
+        elif ev.startswith("no_change"):
+            counter_no_change= counter_no_change + 1
         else:
             counter_difference = counter_difference + 1
 
@@ -107,6 +113,8 @@ print(
     + str(counter_equality)
     + "//Equality by alignment: "
     + str(counter_equality_by_alignment)
+    + "//No change: "
+    + str(counter_no_change)
     + "//Difference: "
     + str(counter_difference)
     + "//Excluded: "

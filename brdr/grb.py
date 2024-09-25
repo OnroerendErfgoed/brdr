@@ -497,7 +497,7 @@ class GRBFiscalParcelLoader(GeoJsonLoader):
 
 class GRBSpecificDateParcelLoader(GeoJsonLoader):
     def __init__(self, date, aligner, partition=1000):
-        logging.warning("experimental loader; use with care!!!")
+        logging.warning("Loader for GRB parcel-situation on specific date (experimental); Use it with care!!!")
         try:
             date = datetime.strptime(date, DATE_FORMAT).date()
             if date.year >= datetime.now().year:
