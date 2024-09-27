@@ -519,102 +519,6 @@ class Aligner:
             diffs_dict,
         )
 
-    # def compare(
-    #     self,
-    #     threshold_area=5,
-    #     threshold_percentage=1,
-    #     dict_unchanged=None,
-    # ):
-    #     """
-    #     Compares input-geometries (with formula) and evaluates these geometries: An attribute is added to evaluate and decide if new
-    #     proposals can be used
-    #     """
-    #     dict_series, dict_predictions, diffs = self.predictor(self.relevant_distances)
-    #     if dict_unchanged is None:
-    #         dict_unchanged = {}
-    #     theme_ids = list(dict_series.keys())
-    #     dict_evaluated_result = {}
-    #     prop_dictionary = {}
-    #     # Fill the dictionary-structure with empty values
-    #     for theme_id in theme_ids:
-    #         dict_evaluated_result[theme_id] = {}
-    #         prop_dictionary[theme_id] = {}
-    #         for dist in dict_series[theme_id].keys():
-    #             prop_dictionary[theme_id][dist] = {}
-    #     for theme_id in dict_unchanged.keys():
-    #         dict_evaluated_result[theme_id]={}
-    #         prop_dictionary[theme_id] = {}
-    #
-    #     for theme_id, dict_results in dict_predictions.items():
-    #         equality = False
-    #         for dist in sorted(dict_results.keys()):
-    #             if equality:
-    #                 break
-    #             geomresult = dict_results[dist]["result"]
-    #             actual_formula = self.get_brdr_formula(geomresult)
-    #             prop_dictionary[theme_id][dist][FORMULA_FIELD_NAME] = json.dumps(
-    #                 actual_formula
-    #             )
-    #             base_formula = None
-    #             if (
-    #                 theme_id in self.dict_thematic_properties
-    #                 and FORMULA_FIELD_NAME in self.dict_thematic_properties[theme_id]
-    #             ):
-    #                 base_formula = self.dict_thematic_properties[theme_id][
-    #                     FORMULA_FIELD_NAME
-    #                 ]
-    #             equality, prop = _check_equality(
-    #                 base_formula,
-    #                 actual_formula,
-    #                 threshold_area,
-    #                 threshold_percentage,
-    #             )
-    #             if equality:
-    #                 dict_evaluated_result[theme_id][dist] = dict_predictions[theme_id][
-    #                     dist
-    #                 ]
-    #                 prop_dictionary[theme_id][dist][EVALUATION_FIELD_NAME] = prop
-    #                 break
-    #
-    #     evaluated_theme_ids = [
-    #         theme_id for theme_id, value in dict_evaluated_result.items() if value != {}
-    #     ]
-    #
-    #     # fill where no equality is found/ The biggest predicted distance is returned as
-    #     # proposal
-    #     for theme_id in theme_ids:
-    #         if theme_id not in evaluated_theme_ids:
-    #             if len(dict_predictions[theme_id].keys()) == 0:
-    #                 result = dict_series[theme_id][0]
-    #                 dict_evaluated_result[theme_id][0] = result
-    #                 prop_dictionary[theme_id][0][FORMULA_FIELD_NAME] = json.dumps(
-    #                     self.get_brdr_formula(result["result"])
-    #                 )
-    #                 prop_dictionary[theme_id][0][
-    #                     EVALUATION_FIELD_NAME
-    #                 ] = Evaluation.NO_PREDICTION_5
-    #                 continue
-    #             # Add all predicted features so they can be manually checked
-    #             for dist in dict_predictions[theme_id].keys():
-    #                 predicted_resultset = dict_predictions[theme_id][dist]
-    #                 dict_evaluated_result[theme_id][dist] = predicted_resultset
-    #                 prop_dictionary[theme_id][dist][FORMULA_FIELD_NAME] = json.dumps(
-    #                     self.get_brdr_formula(predicted_resultset["result"])
-    #                 )
-    #                 prop_dictionary[theme_id][dist][
-    #                     EVALUATION_FIELD_NAME
-    #                 ] = Evaluation.TO_CHECK_4
-    #
-    #     for theme_id, geom in dict_unchanged.items():
-    #         dict_evaluated_result[theme_id] = {0: {"result": geom}}
-    #         prop_dictionary[theme_id] = {
-    #             0: {
-    #                 #"result": geom,
-    #                 EVALUATION_FIELD_NAME: Evaluation.NO_CHANGE_6,
-    #                 FORMULA_FIELD_NAME: json.dumps(self.get_brdr_formula(geom)),
-    #             }
-    #         }
-    #     return dict_evaluated_result, prop_dictionary
 
     def compare(
         self,
@@ -799,13 +703,12 @@ class Aligner:
 
         for theme_id, results_dict in dict_series.items():
             for relevant_distance, process_results in results_dict.items():
-                if formula:
+                if formula and not (theme_id in prop_dictionary and relevant_distance in prop_dictionary[theme_id] and FORMULA_FIELD_NAME in prop_dictionary[theme_id][relevant_distance]):
                     result = process_results["result"]
                     formula = self.get_brdr_formula(result)
                     prop_dictionary[theme_id][relevant_distance] = {
                         FORMULA_FIELD_NAME: json.dumps(formula)
-                    }#TODO check if formula all available in properties
-
+                    }
         return get_series_geojson_dict(
             dict_series,
             crs=self.CRS,
@@ -828,7 +731,6 @@ class Aligner:
             property_id = self.name_reference_id
         else:
             raise (ValueError, "AlignerInputType unknown")
-        dict_properties
         if dict_to_geojson is None or dict_to_geojson == {}:
             self.logger.feedback_warning("Empty input: No input to export.")
             return {}
@@ -1190,11 +1092,11 @@ class Aligner:
         # Correction for empty preresults
         if geom_thematic_result.is_empty or geom_thematic_result is None:
             self.logger.feedback_warning(
-                "Empty result: -->resulting geometry = empty geometry"
+                "Empty result: -->resulting geometry = original geometry returned"
             )
 
-            # geom_thematic_result = geom_thematic
-            geom_thematic_result = Polygon() #TODO : this results in disappearance of objects -> instead, return original geometry
+            geom_thematic_result = geom_thematic
+            # geom_thematic_result = Polygon() #If we return an empty geometry, the feature disappears, so we return the original geometry
 
         # group all initial multipolygons into a new resulting dictionary
         result.append(geom_thematic_result)
