@@ -66,13 +66,13 @@ target-version = ['py39', 'py310', 'py311', 'py312']
 # Config for hatch environments
 [tool.hatch.envs.dev]
 features = [
-  'dev',
+    'dev',
 ]
 
 # Config for hatch test
 [tool.hatch.envs.hatch-test]
 features = [
-  'test',
+    'test',
 ]
 
 [[tool.hatch.envs.hatch-test.matrix]]

@@ -16,7 +16,6 @@ from shapely import get_parts
 from shapely import make_valid
 from shapely import remove_repeated_points
 from shapely import to_geojson
-from shapely import unary_union
 from shapely.geometry.base import BaseGeometry
 
 from brdr import __version__
@@ -27,8 +26,8 @@ from brdr.constants import (
     DATE_FORMAT,
     THRESHOLD_EXCLUSION_PERCENTAGE,
     THRESHOLD_EXCLUSION_AREA,
-    FORMULA_FIELD_NAME,
-    EVALUATION_FIELD_NAME,
+    FORMULA_FIELD_NAME, EVALUATION_FIELD_NAME, FULL_BASE_FIELD_NAME, FULL_ACTUAL_FIELD_NAME, DIFF_PERCENTAGE_FIELD_NAME,
+    DIFF_AREA_FIELD_NAME, OD_ALIKE_FIELD_NAME, EQUAL_REFERENCE_FEATURES_FIELD_NAME,
 )
 from brdr.constants import CORR_DISTANCE
 from brdr.constants import DEFAULT_CRS
@@ -39,7 +38,7 @@ from brdr.enums import (
     AlignerResultType,
     AlignerInputType,
 )
-from brdr.geometry_utils import buffer_neg
+from brdr.geometry_utils import buffer_neg, safe_unary_union
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import buffer_pos
 from brdr.geometry_utils import fill_and_remove_gaps
@@ -225,7 +224,7 @@ class Aligner:
         self.threshold_overlap_percentage = threshold_overlap_percentage
         buffer_distance = relevant_distance/2
         # combine all parts of the input geometry to one polygon
-        input_geometry = unary_union(get_parts(input_geometry))
+        input_geometry = safe_unary_union(get_parts(input_geometry))
 
         # array with all relevant parts of a thematic geometry; initial empty Polygon
         (
@@ -264,10 +263,10 @@ class Aligner:
                 relevant_diff, relevant_diff_array
             )
         # UNION INTERMEDIATE LAYERS
-        relevant_intersection = unary_union(relevant_intersection_array)
+        relevant_intersection = safe_unary_union(relevant_intersection_array)
         if relevant_intersection is None or relevant_intersection.is_empty:
             relevant_intersection = Polygon()
-        relevant_diff = unary_union(relevant_diff_array)
+        relevant_diff = safe_unary_union(relevant_diff_array)
         if relevant_diff is None or relevant_diff.is_empty:
             relevant_diff = Polygon()
 
@@ -281,7 +280,7 @@ class Aligner:
         for key in ProcessResult.__annotations__:
             geometry = result_dict.get(key, Polygon())  # noqa
             if not geometry.is_empty:
-                geometry = unary_union(geometry)
+                geometry = safe_unary_union(geometry)
             result_dict[key] = geometry  # noqa
 
         return result_dict
@@ -289,6 +288,7 @@ class Aligner:
 
     def process(
         self,
+        dict_thematic =None,
         relevant_distances: Iterable[float] = None,
         relevant_distance=1,
         od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
@@ -326,34 +326,56 @@ class Aligner:
         dict_series = {}
         dict_series_queue = {}
         futures = []
-        dict_thematic = self.dict_thematic
+        if dict_thematic is None:
+            dict_thematic = self.dict_thematic
 
         if self.multi_as_single_modus:
             dict_thematic = multipolygons_to_singles(dict_thematic)
-        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:#max_workers=5
+        if self.max_workers!=-1:
+            with ThreadPoolExecutor(max_workers=self.max_workers) as executor:#max_workers=5
+                for key, geometry in dict_thematic.items():
+                    self.logger.feedback_info(
+                        f"thematic id {str(key)} processed with relevant distances (m) [{str(self.relevant_distances)}]"
+                    )
+                    dict_series[key] = {}
+                    dict_series_queue[key] = {}
+                    for relevant_distance in self.relevant_distances:
+                        try:
+                            future = executor.submit(self.process_geometry, geometry,
+                                relevant_distance,
+                                od_strategy,
+                                threshold_overlap_percentage,)
+                            futures.append(future)
+                            dict_series_queue[key][relevant_distance]  = future
+                        except ValueError as e:
+                            self.logger.feedback_warning("error for" + f"thematic id {str(key)} processed with relevant distances (m) [{str(self.relevant_distances)}]")
+                            dict_series_queue[key][relevant_distance] = None
+                            self.logger.feedback_warning(str(e))
+            self.logger.feedback_debug ("waiting all started RD calculations")
+            wait(futures)
+            for id_theme,dict_dist in dict_series_queue.items():
+                for reldist,future in dict_dist.items():
+                    dict_series[id_theme][reldist] = future.result()
+        else:
             for key, geometry in dict_thematic.items():
                 self.logger.feedback_info(
                     f"thematic id {str(key)} processed with relevant distances (m) [{str(self.relevant_distances)}]"
                 )
                 dict_series[key] = {}
-                dict_series_queue[key] = {}
                 for relevant_distance in self.relevant_distances:
                     try:
-                        future = executor.submit(self.process_geometry, geometry,
-                            relevant_distance,
+                        self.relevant_distance = relevant_distance
+                        processed_result = self.process_geometry(
+                            geometry,
+                            self.relevant_distance,
                             od_strategy,
-                            threshold_overlap_percentage,)
-                        futures.append(future)
-                        dict_series_queue[key][relevant_distance]  = future
+                            threshold_overlap_percentage,
+                        )
                     except ValueError as e:
-                        self.logger.feedback_warning("error for" + f"thematic id {str(key)} processed with relevant distances (m) [{str(self.relevant_distances)}]")
-                        dict_series_queue[key][relevant_distance] = None
                         self.logger.feedback_warning(str(e))
-        self.logger.feedback_debug ("waiting all started RD calculations")
-        wait(futures)
-        for id_theme,dict_dist in dict_series_queue.items():
-            for reldist,future in dict_dist.items():
-                dict_series[id_theme][reldist] = future.result()
+                        processed_result = None
+
+                    dict_series[key][self.relevant_distance] = processed_result
 
         if self.multi_as_single_modus:
             dict_series = merge_process_results(dict_series)
@@ -368,6 +390,7 @@ class Aligner:
 
     def predictor(
         self,
+        dict_thematic=None,
         relevant_distances=np.arange(0, 300, 10, dtype=int) / 100,
         od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
         threshold_overlap_percentage=50,
@@ -435,13 +458,15 @@ class Aligner:
         Logs:
             - Debug logs the thematic element key being processed.
         """
+        if dict_thematic is None:
+            dict_thematic=self.dict_thematic
         dict_predictions = defaultdict(dict)
         dict_series = self.process(
             relevant_distances=relevant_distances,
             od_strategy=od_strategy,
             threshold_overlap_percentage=threshold_overlap_percentage,
         )
-        dict_thematic = self.dict_thematic
+
 
         diffs_dict = diffs_from_dict_series(dict_series, dict_thematic)
 
@@ -490,102 +515,142 @@ class Aligner:
             diffs_dict,
         )
 
+    # def compare(
+    #     self,
+    #     threshold_area=5,
+    #     threshold_percentage=1,
+    #     dict_unchanged=None,
+    # ):
+    #     """
+    #     Compares input-geometries (with formula) and evaluates these geometries: An attribute is added to evaluate and decide if new
+    #     proposals can be used
+    #     """
+    #     dict_series, dict_predictions, diffs = self.predictor(self.relevant_distances)
+    #     if dict_unchanged is None:
+    #         dict_unchanged = {}
+    #     theme_ids = list(dict_series.keys())
+    #     dict_evaluated_result = {}
+    #     prop_dictionary = {}
+    #     # Fill the dictionary-structure with empty values
+    #     for theme_id in theme_ids:
+    #         dict_evaluated_result[theme_id] = {}
+    #         prop_dictionary[theme_id] = {}
+    #         for dist in dict_series[theme_id].keys():
+    #             prop_dictionary[theme_id][dist] = {}
+    #     for theme_id in dict_unchanged.keys():
+    #         dict_evaluated_result[theme_id]={}
+    #         prop_dictionary[theme_id] = {}
+    #
+    #     for theme_id, dict_results in dict_predictions.items():
+    #         equality = False
+    #         for dist in sorted(dict_results.keys()):
+    #             if equality:
+    #                 break
+    #             geomresult = dict_results[dist]["result"]
+    #             actual_formula = self.get_brdr_formula(geomresult)
+    #             prop_dictionary[theme_id][dist][FORMULA_FIELD_NAME] = json.dumps(
+    #                 actual_formula
+    #             )
+    #             base_formula = None
+    #             if (
+    #                 theme_id in self.dict_thematic_properties
+    #                 and FORMULA_FIELD_NAME in self.dict_thematic_properties[theme_id]
+    #             ):
+    #                 base_formula = self.dict_thematic_properties[theme_id][
+    #                     FORMULA_FIELD_NAME
+    #                 ]
+    #             equality, prop = _check_equality(
+    #                 base_formula,
+    #                 actual_formula,
+    #                 threshold_area,
+    #                 threshold_percentage,
+    #             )
+    #             if equality:
+    #                 dict_evaluated_result[theme_id][dist] = dict_predictions[theme_id][
+    #                     dist
+    #                 ]
+    #                 prop_dictionary[theme_id][dist][EVALUATION_FIELD_NAME] = prop
+    #                 break
+    #
+    #     evaluated_theme_ids = [
+    #         theme_id for theme_id, value in dict_evaluated_result.items() if value != {}
+    #     ]
+    #
+    #     # fill where no equality is found/ The biggest predicted distance is returned as
+    #     # proposal
+    #     for theme_id in theme_ids:
+    #         if theme_id not in evaluated_theme_ids:
+    #             if len(dict_predictions[theme_id].keys()) == 0:
+    #                 result = dict_series[theme_id][0]
+    #                 dict_evaluated_result[theme_id][0] = result
+    #                 prop_dictionary[theme_id][0][FORMULA_FIELD_NAME] = json.dumps(
+    #                     self.get_brdr_formula(result["result"])
+    #                 )
+    #                 prop_dictionary[theme_id][0][
+    #                     EVALUATION_FIELD_NAME
+    #                 ] = Evaluation.NO_PREDICTION_5
+    #                 continue
+    #             # Add all predicted features so they can be manually checked
+    #             for dist in dict_predictions[theme_id].keys():
+    #                 predicted_resultset = dict_predictions[theme_id][dist]
+    #                 dict_evaluated_result[theme_id][dist] = predicted_resultset
+    #                 prop_dictionary[theme_id][dist][FORMULA_FIELD_NAME] = json.dumps(
+    #                     self.get_brdr_formula(predicted_resultset["result"])
+    #                 )
+    #                 prop_dictionary[theme_id][dist][
+    #                     EVALUATION_FIELD_NAME
+    #                 ] = Evaluation.TO_CHECK_4
+    #
+    #     for theme_id, geom in dict_unchanged.items():
+    #         dict_evaluated_result[theme_id] = {0: {"result": geom}}
+    #         prop_dictionary[theme_id] = {
+    #             0: {
+    #                 #"result": geom,
+    #                 EVALUATION_FIELD_NAME: Evaluation.NO_CHANGE_6,
+    #                 FORMULA_FIELD_NAME: json.dumps(self.get_brdr_formula(geom)),
+    #             }
+    #         }
+    #     return dict_evaluated_result, prop_dictionary
+
     def compare(
         self,
-        threshold_area=5,
-        threshold_percentage=1,
-        dict_unchanged=None,
+        affected=None,
     ):
         """
-        Compares input-geometries (with formula) and evaluates these geometries: An attribute is added to evaluate and decide if new
+        Compares and evaluate input-geometries (with formula).Attributes are added to evaluate and decide if new
         proposals can be used
         """
-        dict_series, dict_predictions, diffs = self.predictor(self.relevant_distances)
-        if dict_unchanged is None:
-            dict_unchanged = {}
-        theme_ids = list(dict_series.keys())
-        dict_evaluated_result = {}
+        if affected is None:
+            affected =list(self.dict_thematic.keys())
+        dict_affected={}
+        dict_unaffected={}
+        for id_theme,geom in self.dict_thematic.items():
+            if id_theme in affected:
+                dict_affected[id_theme] = geom
+            else:
+                dict_unaffected[id_theme] = geom
+        self.dict_thematic=dict_affected
+        #AFFECTED
+        dict_series, dict_affected_predictions, diffs = self.predictor(dict_thematic=dict_affected,relevant_distances=self.relevant_distances)
+        dict_predictions_evaluated = {}
         prop_dictionary = {}
-        # Fill the dictionary-structure with empty values
-        for theme_id in theme_ids:
-            dict_evaluated_result[theme_id] = {}
+        for theme_id, dict_predictions_results in dict_affected_predictions.items():
+            dict_predictions_evaluated[theme_id] = {}
             prop_dictionary[theme_id] = {}
-            for dist in dict_series[theme_id].keys():
+            for dist in sorted(dict_predictions_results.keys()):
                 prop_dictionary[theme_id][dist] = {}
-        for theme_id in dict_unchanged.keys():
-            dict_evaluated_result[theme_id]={}
-            prop_dictionary[theme_id] = {}
-
-        for theme_id, dict_results in dict_predictions.items():
-            equality = False
-            for dist in sorted(dict_results.keys()):
-                if equality:
-                    break
-                geomresult = dict_results[dist]["result"]
-                actual_formula = self.get_brdr_formula(geomresult)
-                prop_dictionary[theme_id][dist][FORMULA_FIELD_NAME] = json.dumps(
-                    actual_formula
-                )
-                base_formula = None
-                if (
-                    theme_id in self.dict_thematic_properties
-                    and FORMULA_FIELD_NAME in self.dict_thematic_properties[theme_id]
-                ):
-                    base_formula = self.dict_thematic_properties[theme_id][
-                        FORMULA_FIELD_NAME
-                    ]
-                equality, prop = _check_equality(
-                    base_formula,
-                    actual_formula,
-                    threshold_area,
-                    threshold_percentage,
-                )
-                if equality:
-                    dict_evaluated_result[theme_id][dist] = dict_predictions[theme_id][
-                        dist
-                    ]
-                    prop_dictionary[theme_id][dist][EVALUATION_FIELD_NAME] = prop
-                    break
-
-        evaluated_theme_ids = [
-            theme_id for theme_id, value in dict_evaluated_result.items() if value != {}
-        ]
-
-        # fill where no equality is found/ The biggest predicted distance is returned as
-        # proposal
-        for theme_id in theme_ids:
-            if theme_id not in evaluated_theme_ids:
-                if len(dict_predictions[theme_id].keys()) == 0:
-                    result = dict_series[theme_id][0]
-                    dict_evaluated_result[theme_id][0] = result
-                    prop_dictionary[theme_id][0][FORMULA_FIELD_NAME] = json.dumps(
-                        self.get_brdr_formula(result["result"])
-                    )
-                    prop_dictionary[theme_id][0][
-                        EVALUATION_FIELD_NAME
-                    ] = Evaluation.NO_PREDICTION_5
-                    continue
-                # Add all predicted features so they can be manually checked
-                for dist in dict_predictions[theme_id].keys():
-                    predicted_resultset = dict_predictions[theme_id][dist]
-                    dict_evaluated_result[theme_id][dist] = predicted_resultset
-                    prop_dictionary[theme_id][dist][FORMULA_FIELD_NAME] = json.dumps(
-                        self.get_brdr_formula(predicted_resultset["result"])
-                    )
-                    prop_dictionary[theme_id][dist][
-                        EVALUATION_FIELD_NAME
-                    ] = Evaluation.TO_CHECK_4
-
-        for theme_id, geom in dict_unchanged.items():
-            dict_evaluated_result[theme_id] = {0: {"result": geom}}
-            prop_dictionary[theme_id] = {
-                0: {
-                    #"result": geom,
-                    EVALUATION_FIELD_NAME: Evaluation.NO_CHANGE_6,
-                    FORMULA_FIELD_NAME: json.dumps(self.get_brdr_formula(geom)),
-                }
-            }
-        return dict_evaluated_result, prop_dictionary
+                props = _evaluate(self,id_theme=theme_id,geom_predicted=dict_predictions_results[dist]["result"])
+                dict_predictions_evaluated[theme_id][dist] = dict_affected_predictions[theme_id][dist]
+                prop_dictionary[theme_id][dist] = props
+        #UNAFFECTED
+        dict_unaffected_series = self.process(dict_thematic=dict_unaffected,relevant_distances=[0])
+        for theme_id, dict_unaffected_results in dict_unaffected_series.items():
+            dict_predictions_evaluated[theme_id] = {}
+            prop_dictionary[theme_id] = {0:{}}
+            props = _evaluate(self,id_theme=theme_id,geom_predicted=dict_unaffected_results[0]["result"])
+            dict_predictions_evaluated[theme_id][0] = dict_affected_predictions[theme_id][0]
+            prop_dictionary[theme_id][0] = props
+        return dict_predictions_evaluated, prop_dictionary
 
     def get_brdr_formula(self, geometry: BaseGeometry, with_geom=False):
         """
@@ -612,6 +677,7 @@ class Aligner:
             "brdr_version": str(__version__),
             "reference_source": self.dict_reference_source,
             "full": True,
+            "area": round(geometry.area, 2),
             "reference_features": {},
             "reference_od": None,
         }
@@ -679,7 +745,7 @@ class Aligner:
             dict_formula[LAST_VERSION_DATE] = last_version_date.strftime(DATE_FORMAT)
         geom_od = buffer_pos(
             buffer_neg(
-                safe_difference(geometry, make_valid(unary_union(intersected))),
+                safe_difference(geometry, safe_unary_union(intersected)),
                 CORR_DISTANCE,
             ),
             CORR_DISTANCE,
@@ -801,8 +867,7 @@ class Aligner:
 
     def get_thematic_union(self):
         if self.thematic_union is None:
-            self.thematic_union = make_valid(
-                unary_union(list(self.dict_thematic.values()))
+            self.thematic_union = safe_unary_union(list(self.dict_thematic.values())
             )
         return self.thematic_union
 
@@ -1011,8 +1076,7 @@ class Aligner:
 
     def _get_reference_union(self):
         if self.reference_union is None:
-            self.reference_union = make_valid(
-                unary_union(list(self.dict_reference.values()))
+            self.reference_union = safe_unary_union(list(self.dict_reference.values())
             )
         return self.reference_union
 
@@ -1043,7 +1107,7 @@ class Aligner:
         # Process array
         buffer_distance = relevant_distance/2
         result = []
-        geom_preresult = make_valid(unary_union(preresult))
+        geom_preresult = safe_unary_union(preresult)
         geom_thematic = make_valid(geom_thematic)
 
         if not (geom_thematic is None or geom_thematic.is_empty):
@@ -1115,14 +1179,15 @@ class Aligner:
             self.logger.feedback_warning(
                 "Empty result: -->resulting geometry = empty geometry"
             )
+
             # geom_thematic_result = geom_thematic
-            geom_thematic_result = Polygon()
+            geom_thematic_result = Polygon() #TODO : this results in disappearance of objects -> instead, return original geometry
 
         # group all initial multipolygons into a new resulting dictionary
         result.append(geom_thematic_result)
 
         # create all resulting geometries
-        geom_thematic_result = make_valid(unary_union(result))
+        geom_thematic_result = safe_unary_union(result)
 
         # negative and positive buffer is added to the difference-calculations, to
         # remove 'very small' differences (smaller than the correction distance)
@@ -1303,7 +1368,7 @@ def _get_relevant_polygons_from_geom(geometry: BaseGeometry, buffer_distance: fl
         # If the input geometry is empty or None, do nothing.
         return geometry
     else:
-        geometry = make_valid(unary_union(geometry))
+        geometry = safe_unary_union(geometry)
         # Create a GeometryCollection from the input geometry.
         geometry_collection = GeometryCollection(geometry)
         array = []
@@ -1314,7 +1379,7 @@ def _get_relevant_polygons_from_geom(geometry: BaseGeometry, buffer_distance: fl
                 relevant_geom = buffer_neg(g, buffer_distance)
                 if relevant_geom is not None and not relevant_geom.is_empty:
                     array.append(g)
-    return make_valid(unary_union(array))
+    return safe_unary_union(array)
 
 
 def _equal_geom_in_array(geom, geom_array):
@@ -1358,7 +1423,7 @@ def _check_equality(
         == actual_formula["reference_features"].keys()
         and od_alike
     ):
-        if base_formula["full"] and base_formula["full"]:
+        if base_formula["full"] and actual_formula["full"]:
             return True, Evaluation.EQUALITY_FORMULA_GEOM_1
 
         equal_reference_features = True
@@ -1390,6 +1455,104 @@ def _check_equality(
                 equal_reference_features = False
         if equal_reference_features:
             return True, Evaluation.EQUALITY_FORMULA_2
-    if base_formula["full"] and base_formula["full"] and od_alike:
+    if base_formula["full"] and actual_formula["full"] and od_alike:
         return True, Evaluation.EQUALITY_GEOM_3
     return False, Evaluation.NO_PREDICTION_5
+
+def _evaluate(self,id_theme,geom_predicted):
+    """
+    function that evaluates a predicted geometry and returns a properties-dictionary
+    """
+    threshold_od_percentage = 1
+    threshold_area = 5
+    threshold_percentage = 1
+    properties = {
+        FORMULA_FIELD_NAME:"",
+                  EVALUATION_FIELD_NAME: Evaluation.TO_CHECK_4,
+                  FULL_BASE_FIELD_NAME: None,
+                  FULL_ACTUAL_FIELD_NAME: None,
+                EQUAL_REFERENCE_FEATURES_FIELD_NAME: None,
+                  DIFF_PERCENTAGE_FIELD_NAME: None,
+                  DIFF_AREA_FIELD_NAME: None,
+                OD_ALIKE_FIELD_NAME: None,
+                  }
+    actual_formula = self.get_brdr_formula(geom_predicted)
+    properties[FORMULA_FIELD_NAME] = json.dumps(
+        actual_formula
+    )
+    base_formula = None
+    if (
+            id_theme in self.dict_thematic_properties
+            and FORMULA_FIELD_NAME in self.dict_thematic_properties[id_theme]
+    ):
+        base_formula = self.dict_thematic_properties[id_theme][
+            FORMULA_FIELD_NAME
+        ]
+
+    if base_formula is None or actual_formula is None:
+        properties[EVALUATION_FIELD_NAME]= Evaluation.NO_PREDICTION_5
+        return properties
+    properties[FULL_BASE_FIELD_NAME] = base_formula["full"]
+    properties[FULL_ACTUAL_FIELD_NAME] = actual_formula["full"]
+    od_alike = False
+    if base_formula["reference_od"] is None and actual_formula["reference_od"] is None:
+        od_alike = True
+    elif base_formula["reference_od"] is None or actual_formula["reference_od"] is None:
+        od_alike = False
+    elif (
+        abs(
+            base_formula["reference_od"]["area"]
+            - actual_formula["reference_od"]["area"]
+        )
+        * 100
+        / base_formula["reference_od"]["area"]
+    ) < threshold_od_percentage:
+        od_alike = True
+    properties[OD_ALIKE_FIELD_NAME] = od_alike
+
+    if (
+        base_formula["reference_features"].keys()
+        == actual_formula["reference_features"].keys()
+        and od_alike
+    ):
+        equal_reference_features = True
+
+        if base_formula["full"] and base_formula["full"]:
+            properties[EVALUATION_FIELD_NAME] =  Evaluation.EQUALITY_FORMULA_GEOM_1
+
+        max_diff_area_reference_feature = 0
+        max_diff_percentage_reference_feature = 0
+        for key in base_formula["reference_features"].keys():
+
+            if (
+                    base_formula["reference_features"][key]["full"]
+                    != actual_formula["reference_features"][key]["full"]
+            ):
+                equal_reference_features = False
+
+
+            diff_area_reference_feature = abs(
+                base_formula["reference_features"][key]["area"]
+                - actual_formula["reference_features"][key]["area"]
+            )
+            diff_percentage_reference_feature =(
+                    abs(
+                        base_formula["reference_features"][key]["area"]
+                        - actual_formula["reference_features"][key]["area"]
+                    )
+                    * 100
+                    / base_formula["reference_features"][key]["area"]
+            )
+            if diff_area_reference_feature>max_diff_area_reference_feature:
+                max_diff_area_reference_feature=diff_area_reference_feature
+            if diff_percentage_reference_feature>max_diff_percentage_reference_feature:
+                max_diff_percentage_reference_feature=diff_percentage_reference_feature
+        properties[EQUAL_REFERENCE_FEATURES_FIELD_NAME] = equal_reference_features
+        properties[DIFF_AREA_FIELD_NAME] = max_diff_area_reference_feature
+        properties[DIFF_PERCENTAGE_FIELD_NAME] = max_diff_percentage_reference_feature
+        if equal_reference_features:
+            properties[EVALUATION_FIELD_NAME]=  Evaluation.EQUALITY_FORMULA_2
+    if base_formula["full"] and actual_formula["full"] and od_alike:
+        properties[EVALUATION_FIELD_NAME]=  Evaluation.EQUALITY_GEOM_3
+    return properties
+

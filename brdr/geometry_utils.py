@@ -13,9 +13,11 @@ from shapely import get_num_interior_rings
 from shapely import get_parts
 from shapely import intersection
 from shapely import is_empty
+from shapely import make_valid
 from shapely import polygons
 from shapely import symmetric_difference
 from shapely import to_wkt
+from shapely import unary_union
 from shapely import union
 from shapely.geometry.base import BaseGeometry
 from shapely.prepared import prep
@@ -507,6 +509,8 @@ def fill_and_remove_gaps(input_geometry, buffer_value):
         ix_part = ix_part + 1
     return cleaned_geometry
 
+def safe_unary_union(geometries):
+    return make_valid(unary_union(geometries))
 
 def get_bbox(geometry):
     """

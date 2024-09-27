@@ -1,4 +1,4 @@
-import logging
+import os
 from datetime import datetime
 
 from brdr.aligner import Aligner
@@ -6,6 +6,7 @@ from brdr.constants import EVALUATION_FIELD_NAME, RELEVANT_DISTANCE_FIELD_NAME
 from brdr.grb import GRBFiscalParcelLoader
 from brdr.grb import update_to_actual_grb
 from brdr.oe import OnroerendErfgoedLoader
+from brdr.utils import write_geojson
 
 # This code shows an example how the aligner can be used inside a flow of
 # parcel change detection:
@@ -84,6 +85,8 @@ fcs = update_to_actual_grb(
     base_aligner.name_thematic_id,
     max_distance_for_actualisation=max_distance_for_actualisation,
 )
+
+write_geojson(os.path.join("output/", "parcel_change_detector_with.geojson"), fcs["result"])
 
 
 counter_equality = 0

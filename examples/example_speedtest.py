@@ -4,6 +4,7 @@ from datetime import datetime
 from brdr.aligner import Aligner
 from brdr.loader import GeoJsonFileLoader
 
+
 def main():
     # Initiate brdr
     aligner = Aligner(relevant_distance=2,max_workers=None)
