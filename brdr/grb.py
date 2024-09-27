@@ -428,7 +428,7 @@ def update_to_actual_grb(
     actual_aligner.relevant_distances = (
         np.arange(0, max_distance_for_actualisation * 100, 10, dtype=int) / 100
     )
-    dict_evaluated, prop_dictionary = actual_aligner.compare(affected = affected)
+    dict_evaluated, prop_dictionary = actual_aligner.compare(ids_to_compare= affected)
 
     return get_series_geojson_dict(
         dict_evaluated,

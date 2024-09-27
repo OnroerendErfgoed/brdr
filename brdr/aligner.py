@@ -150,6 +150,10 @@ class Aligner:
         self.dict_processresults: dict[str, dict[float, ProcessResult]] = {}
         # dictionary with the 'predicted' results, grouped by theme_id and relevant_distance
         self.dict_predictions: dict[str, dict[float, ProcessResult]] = {}
+        # dictionary with the 'evaluated predicted' results, grouped by theme_id and relevant_distance
+        self.dict_evaluated_predictions: dict[str, dict[float, ProcessResult]] = {}
+        # dictionary with the 'evaluated predicted' properties, grouped by theme_id and relevant_distance
+        self.dict_evaluated_predictions_properties: dict[str, dict[float, {}]] = {}
 
         # Coordinate reference system
         # thematic geometries and reference geometries are assumed to be in the same CRS
@@ -614,18 +618,19 @@ class Aligner:
 
     def compare(
         self,
-        affected=None,
+        ids_to_compare=None,
     ):
         """
         Compares and evaluate input-geometries (with formula).Attributes are added to evaluate and decide if new
         proposals can be used
+        affected: list with all IDs to evaluate. all other IDs will be unchanged. If None (default), all self.dict_thematic will be evaluated.
         """
-        if affected is None:
-            affected =list(self.dict_thematic.keys())
+        if ids_to_compare is None:
+            ids_to_compare =list(self.dict_thematic.keys())
         dict_affected={}
         dict_unaffected={}
         for id_theme,geom in self.dict_thematic.items():
-            if id_theme in affected:
+            if id_theme in ids_to_compare:
                 dict_affected[id_theme] = geom
             else:
                 dict_unaffected[id_theme] = geom
@@ -639,17 +644,22 @@ class Aligner:
             prop_dictionary[theme_id] = {}
             for dist in sorted(dict_predictions_results.keys()):
                 prop_dictionary[theme_id][dist] = {}
-                props = _evaluate(self,id_theme=theme_id,geom_predicted=dict_predictions_results[dist]["result"])
+                props = self._evaluate(id_theme=theme_id,geom_predicted=dict_predictions_results[dist]["result"])
                 dict_predictions_evaluated[theme_id][dist] = dict_affected_predictions[theme_id][dist]
                 prop_dictionary[theme_id][dist] = props
         #UNAFFECTED
-        dict_unaffected_series = self.process(dict_thematic=dict_unaffected,relevant_distances=[0])
-        for theme_id, dict_unaffected_results in dict_unaffected_series.items():
+        relevant_distance=0
+        #dict_unaffected_series = self.process(dict_thematic=dict_unaffected,relevant_distances=[relevant_distance])
+        #for theme_id, dict_unaffected_results in dict_unaffected_series.items():
+        for theme_id, geom in dict_unaffected.items():
             dict_predictions_evaluated[theme_id] = {}
-            prop_dictionary[theme_id] = {0:{}}
-            props = _evaluate(self,id_theme=theme_id,geom_predicted=dict_unaffected_results[0]["result"])
-            dict_predictions_evaluated[theme_id][0] = dict_affected_predictions[theme_id][0]
-            prop_dictionary[theme_id][0] = props
+            prop_dictionary[theme_id] = {relevant_distance:{}}
+            props = self._evaluate(id_theme=theme_id,geom_predicted=geom)
+            props[EVALUATION_FIELD_NAME]=Evaluation.NO_CHANGE_6
+            dict_predictions_evaluated[theme_id][relevant_distance] = {"result":geom}
+            prop_dictionary[theme_id][relevant_distance] = props
+        self.dict_evaluated_predictions = dict_predictions_evaluated
+        self.dict_evaluated_predictions_properties = prop_dictionary
         return dict_predictions_evaluated, prop_dictionary
 
     def get_brdr_formula(self, geometry: BaseGeometry, with_geom=False):
@@ -769,11 +779,14 @@ class Aligner:
         get a geojson of  a dictionary containing the resulting geometries for all
             'serial' relevant distances. If no dict_series is given, the dict_result returned.
         Optional: The descriptive formula is added as an attribute to the result"""
-
+        prop_dictionary = None
         if resulttype == AlignerResultType.PROCESSRESULTS:
             dict_series = self.dict_processresults
         elif resulttype == AlignerResultType.PREDICTIONS:
             dict_series = self.dict_predictions
+        elif resulttype == AlignerResultType.EVALUATED_PREDICTIONS:
+            dict_series = self.dict_evaluated_predictions
+            prop_dictionary = self.dict_evaluated_predictions_properties
         else:
             raise (ValueError, "AlignerResultType unknown")
         if dict_series is None or dict_series == {}:
@@ -781,8 +794,8 @@ class Aligner:
                 "Empty results: No calculated results to export."
             )
             return {}
-
-        prop_dictionary = defaultdict(dict)
+        if prop_dictionary is None:
+            prop_dictionary = defaultdict(dict)
 
         for theme_id, results_dict in dict_series.items():
             for relevant_distance, process_results in results_dict.items():
@@ -791,7 +804,7 @@ class Aligner:
                     formula = self.get_brdr_formula(result)
                     prop_dictionary[theme_id][relevant_distance] = {
                         FORMULA_FIELD_NAME: json.dumps(formula)
-                    }
+                    }#TODO check if formula all available in properties
 
         return get_series_geojson_dict(
             dict_series,
@@ -1222,6 +1235,105 @@ class Aligner:
             "result_diff_min": geom_result_diff_min,
         }
 
+    def _evaluate(self, id_theme, geom_predicted):
+        """
+        function that evaluates a predicted geometry and returns a properties-dictionary
+        """
+        threshold_od_percentage = 1
+        threshold_area = 5
+        threshold_percentage = 1
+        properties = {
+            FORMULA_FIELD_NAME: "",
+            EVALUATION_FIELD_NAME: Evaluation.TO_CHECK_4,
+            FULL_BASE_FIELD_NAME: None,
+            FULL_ACTUAL_FIELD_NAME: None,
+            OD_ALIKE_FIELD_NAME: None,
+            EQUAL_REFERENCE_FEATURES_FIELD_NAME: None,
+            DIFF_PERCENTAGE_FIELD_NAME: None,
+            DIFF_AREA_FIELD_NAME: None,
+
+        }
+        actual_formula = self.get_brdr_formula(geom_predicted)
+        properties[FORMULA_FIELD_NAME] = json.dumps(
+            actual_formula
+        )
+        base_formula = None
+        if (
+                id_theme in self.dict_thematic_properties
+                and FORMULA_FIELD_NAME in self.dict_thematic_properties[id_theme]
+        ):
+            base_formula = self.dict_thematic_properties[id_theme][
+                FORMULA_FIELD_NAME
+            ]
+
+        if base_formula is None or actual_formula is None:
+            properties[EVALUATION_FIELD_NAME] = Evaluation.NO_PREDICTION_5
+            return properties
+        properties[FULL_BASE_FIELD_NAME] = base_formula["full"]
+        properties[FULL_ACTUAL_FIELD_NAME] = actual_formula["full"]
+        od_alike = False
+        if base_formula["reference_od"] is None and actual_formula["reference_od"] is None:
+            od_alike = True
+        elif base_formula["reference_od"] is None or actual_formula["reference_od"] is None:
+            od_alike = False
+        elif (
+                abs(
+                    base_formula["reference_od"]["area"]
+                    - actual_formula["reference_od"]["area"]
+                )
+                * 100
+                / base_formula["reference_od"]["area"]
+        ) < threshold_od_percentage:
+            od_alike = True
+        properties[OD_ALIKE_FIELD_NAME] = od_alike
+
+        equal_reference_features = True
+        if (
+                base_formula["reference_features"].keys()
+                == actual_formula["reference_features"].keys()
+        ):
+            equal_reference_features = True
+            max_diff_area_reference_feature = 0
+            max_diff_percentage_reference_feature = 0
+            for key in base_formula["reference_features"].keys():
+                if (
+                        base_formula["reference_features"][key]["full"]
+                        != actual_formula["reference_features"][key]["full"]
+                ):
+                    equal_reference_features = False
+
+                diff_area_reference_feature = abs(
+                    base_formula["reference_features"][key]["area"]
+                    - actual_formula["reference_features"][key]["area"]
+                )
+                diff_percentage_reference_feature = (
+                        abs(
+                            base_formula["reference_features"][key]["area"]
+                            - actual_formula["reference_features"][key]["area"]
+                        )
+                        * 100
+                        / base_formula["reference_features"][key]["area"]
+                )
+                if diff_area_reference_feature > max_diff_area_reference_feature:
+                    max_diff_area_reference_feature = diff_area_reference_feature
+                if diff_percentage_reference_feature > max_diff_percentage_reference_feature:
+                    max_diff_percentage_reference_feature = diff_percentage_reference_feature
+            properties[EQUAL_REFERENCE_FEATURES_FIELD_NAME] = equal_reference_features
+            properties[DIFF_AREA_FIELD_NAME] = max_diff_area_reference_feature
+            properties[DIFF_PERCENTAGE_FIELD_NAME] = max_diff_percentage_reference_feature
+        #EVALUATION
+        if equal_reference_features and od_alike and base_formula["full"] and actual_formula["full"]:
+            properties[EVALUATION_FIELD_NAME] = Evaluation.EQUALITY_EQUAL_FORMULA_FULL_1
+        elif equal_reference_features and od_alike and base_formula["full"] == actual_formula["full"]:
+            properties[EVALUATION_FIELD_NAME] = Evaluation.EQUALITY_EQUAL_FORMULA_2
+        elif base_formula["full"] and actual_formula["full"] and od_alike:
+            properties[EVALUATION_FIELD_NAME] = Evaluation.EQUALITY_FULL_3
+        #elif base_formula["full"] == actual_formula["full"] and od_alike:#TODO evaluate when not-full-parcels?
+        #    properties[EVALUATION_FIELD_NAME] = Evaluation.EQUALITY_NON_FULL
+        else:
+            properties[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_4
+        return properties
+
     @staticmethod
     def _add_multi_polygons_from_geom_to_array(geom: BaseGeometry, array):
         """
@@ -1424,7 +1536,7 @@ def _check_equality(
         and od_alike
     ):
         if base_formula["full"] and actual_formula["full"]:
-            return True, Evaluation.EQUALITY_FORMULA_GEOM_1
+            return True, Evaluation.EQUALITY_EQUAL_FORMULA_FULL_1
 
         equal_reference_features = True
         for key in base_formula["reference_features"].keys():
@@ -1456,103 +1568,8 @@ def _check_equality(
         if equal_reference_features:
             return True, Evaluation.EQUALITY_FORMULA_2
     if base_formula["full"] and actual_formula["full"] and od_alike:
-        return True, Evaluation.EQUALITY_GEOM_3
+        return True, Evaluation.EQUALITY_FULL_3
     return False, Evaluation.NO_PREDICTION_5
 
-def _evaluate(self,id_theme,geom_predicted):
-    """
-    function that evaluates a predicted geometry and returns a properties-dictionary
-    """
-    threshold_od_percentage = 1
-    threshold_area = 5
-    threshold_percentage = 1
-    properties = {
-        FORMULA_FIELD_NAME:"",
-                  EVALUATION_FIELD_NAME: Evaluation.TO_CHECK_4,
-                  FULL_BASE_FIELD_NAME: None,
-                  FULL_ACTUAL_FIELD_NAME: None,
-                EQUAL_REFERENCE_FEATURES_FIELD_NAME: None,
-                  DIFF_PERCENTAGE_FIELD_NAME: None,
-                  DIFF_AREA_FIELD_NAME: None,
-                OD_ALIKE_FIELD_NAME: None,
-                  }
-    actual_formula = self.get_brdr_formula(geom_predicted)
-    properties[FORMULA_FIELD_NAME] = json.dumps(
-        actual_formula
-    )
-    base_formula = None
-    if (
-            id_theme in self.dict_thematic_properties
-            and FORMULA_FIELD_NAME in self.dict_thematic_properties[id_theme]
-    ):
-        base_formula = self.dict_thematic_properties[id_theme][
-            FORMULA_FIELD_NAME
-        ]
 
-    if base_formula is None or actual_formula is None:
-        properties[EVALUATION_FIELD_NAME]= Evaluation.NO_PREDICTION_5
-        return properties
-    properties[FULL_BASE_FIELD_NAME] = base_formula["full"]
-    properties[FULL_ACTUAL_FIELD_NAME] = actual_formula["full"]
-    od_alike = False
-    if base_formula["reference_od"] is None and actual_formula["reference_od"] is None:
-        od_alike = True
-    elif base_formula["reference_od"] is None or actual_formula["reference_od"] is None:
-        od_alike = False
-    elif (
-        abs(
-            base_formula["reference_od"]["area"]
-            - actual_formula["reference_od"]["area"]
-        )
-        * 100
-        / base_formula["reference_od"]["area"]
-    ) < threshold_od_percentage:
-        od_alike = True
-    properties[OD_ALIKE_FIELD_NAME] = od_alike
-
-    if (
-        base_formula["reference_features"].keys()
-        == actual_formula["reference_features"].keys()
-        and od_alike
-    ):
-        equal_reference_features = True
-
-        if base_formula["full"] and base_formula["full"]:
-            properties[EVALUATION_FIELD_NAME] =  Evaluation.EQUALITY_FORMULA_GEOM_1
-
-        max_diff_area_reference_feature = 0
-        max_diff_percentage_reference_feature = 0
-        for key in base_formula["reference_features"].keys():
-
-            if (
-                    base_formula["reference_features"][key]["full"]
-                    != actual_formula["reference_features"][key]["full"]
-            ):
-                equal_reference_features = False
-
-
-            diff_area_reference_feature = abs(
-                base_formula["reference_features"][key]["area"]
-                - actual_formula["reference_features"][key]["area"]
-            )
-            diff_percentage_reference_feature =(
-                    abs(
-                        base_formula["reference_features"][key]["area"]
-                        - actual_formula["reference_features"][key]["area"]
-                    )
-                    * 100
-                    / base_formula["reference_features"][key]["area"]
-            )
-            if diff_area_reference_feature>max_diff_area_reference_feature:
-                max_diff_area_reference_feature=diff_area_reference_feature
-            if diff_percentage_reference_feature>max_diff_percentage_reference_feature:
-                max_diff_percentage_reference_feature=diff_percentage_reference_feature
-        properties[EQUAL_REFERENCE_FEATURES_FIELD_NAME] = equal_reference_features
-        properties[DIFF_AREA_FIELD_NAME] = max_diff_area_reference_feature
-        properties[DIFF_PERCENTAGE_FIELD_NAME] = max_diff_percentage_reference_feature
-        if equal_reference_features:
-            properties[EVALUATION_FIELD_NAME]=  Evaluation.EQUALITY_FORMULA_2
-    if base_formula["full"] and actual_formula["full"] and od_alike:
-        properties[EVALUATION_FIELD_NAME]=  Evaluation.EQUALITY_GEOM_3
-    return properties
 

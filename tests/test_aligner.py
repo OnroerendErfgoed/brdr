@@ -401,7 +401,7 @@ class TestAligner(unittest.TestCase):
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=actual_aligner)
         )
         actual_aligner.relevant_distances = np.arange(0, 200, 10, dtype=int) / 100
-        dict_evaluated, prop_dictionary = actual_aligner.compare(affected=affected)
+        dict_evaluated, prop_dictionary = actual_aligner.compare(ids_to_compare=affected)
 
         fc = get_series_geojson_dict(
             dict_evaluated,

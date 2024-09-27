@@ -5,12 +5,11 @@ from shapely import from_wkt
 
 from brdr.aligner import Aligner
 from brdr.constants import FORMULA_FIELD_NAME, EVALUATION_FIELD_NAME
-from brdr.enums import GRBType
+from brdr.enums import GRBType, AlignerResultType
 from brdr.grb import GRBActualLoader
 from brdr.grb import GRBFiscalParcelLoader
 from brdr.grb import get_affected_by_grb_change
 from brdr.loader import DictLoader, GeoJsonFileLoader
-from brdr.utils import get_series_geojson_dict
 
 thematic_dict = {
     "theme_id_1": from_wkt(
@@ -56,16 +55,10 @@ actual_aligner.load_reference_data(
     GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=actual_aligner)
 )
 actual_aligner.relevant_distances = np.arange(0, 200, 10, dtype=int) / 100
-dict_evaluated, prop_dictionary = actual_aligner.compare(affected=affected)
+dict_evaluated, prop_dictionary = actual_aligner.compare(ids_to_compare=affected)
 
-fc = get_series_geojson_dict(
-    dict_evaluated,
-    crs=actual_aligner.CRS,
-    id_field=actual_aligner.name_thematic_id,
-    series_prop_dict=prop_dictionary,
-)
+fc = actual_aligner.get_results_as_geojson(resulttype=AlignerResultType.EVALUATED_PREDICTIONS)
 print(fc["result"])
-fcs = actual_aligner.get_results_as_geojson(formula=True)
 
 for feature in fc["result"]["features"]:
     id = feature["properties"][actual_aligner.name_thematic_id]
