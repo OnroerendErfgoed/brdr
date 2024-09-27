@@ -9,7 +9,7 @@ from brdr.enums import GRBType, Evaluation
 from brdr.grb import (
     get_last_version_date,
     is_grb_changed,
-    get_geoms_affected_by_grb_change,
+    get_affected_by_grb_change,
     GRBSpecificDateParcelLoader,
     update_to_actual_grb,
 )
@@ -68,25 +68,25 @@ class TestGrb(unittest.TestCase):
         }
         aligner = Aligner()
         aligner.load_thematic_data(DictLoader(thematic_dict))
-        dict_affected, dict_unchanged = get_geoms_affected_by_grb_change(
-            aligner=aligner,
+        affected, unaffected = get_affected_by_grb_change(
+            dict_thematic=thematic_dict,
             grb_type=GRBType.ADP,
             date_start=date.today() - timedelta(days=30),
             date_end=date.today(),
             one_by_one=False,
             border_distance=0,
         )
-        assert len(dict_affected.keys()) > 0
+        assert len(affected) > 0
 
-        dict_affected, dict_unchanged = get_geoms_affected_by_grb_change(
-            aligner=aligner,
+        affected, unaffected = get_affected_by_grb_change(
+            dict_thematic=thematic_dict,
             grb_type=GRBType.ADP,
             date_start=date.today() - timedelta(days=30),
             date_end=date.today(),
             one_by_one=False,
             border_distance=10,
         )
-        assert len(dict_affected.keys()) == 0
+        assert len(affected) == 0
 
     def test_get_geoms_affected_by_grb_change(self):
         thematic_dict = {
@@ -101,23 +101,23 @@ class TestGrb(unittest.TestCase):
         }
         aligner = Aligner()
         aligner.load_thematic_data(DictLoader(thematic_dict))
-        dict_affected, dict_unchanged = get_geoms_affected_by_grb_change(
-            aligner=aligner,
+        affected,unaffected = get_affected_by_grb_change(
+            dict_thematic=thematic_dict,
             grb_type=GRBType.ADP,
             date_start=date.today() - timedelta(days=1),
             date_end=date.today(),
             one_by_one=True,
         )
-        assert len(dict_affected.keys()) == 0
+        assert len(affected) == 0
 
-        dict_affected, dict_unchanged = get_geoms_affected_by_grb_change(
-            aligner=aligner,
+        affected,unaffected  = get_affected_by_grb_change(
+            dict_thematic=thematic_dict,
             grb_type=GRBType.ADP,
             date_start=date.today() - timedelta(days=1000),
             date_end=date.today(),
             one_by_one=True,
         )
-        assert len(dict_affected.keys()) == 0
+        assert len(affected) == 0
         thematic_dict2 = {
             "theme_id_2": from_wkt(
                 "MultiPolygon (((174180.20077791667426936 171966.14649116666987538, "
@@ -130,14 +130,14 @@ class TestGrb(unittest.TestCase):
         }
         aligner2 = Aligner()
         aligner2.load_thematic_data(DictLoader(thematic_dict2))
-        dict_affected, dict_unchanged = get_geoms_affected_by_grb_change(
-            aligner=aligner2,
+        affected,unaffected = get_affected_by_grb_change(
+            dict_thematic=thematic_dict2,
             grb_type=GRBType.ADP,
             date_start=date.today() - timedelta(days=1000),
             date_end=date.today(),
             one_by_one=True,
         )
-        assert len(dict_affected.keys()) > 0
+        assert len(affected) > 0
 
     def test_get_geoms_affected_by_grb_change_bulk(self):
         thematic_dict = {
@@ -152,23 +152,23 @@ class TestGrb(unittest.TestCase):
         }
         aligner = Aligner()
         aligner.load_thematic_data(DictLoader(thematic_dict))
-        dict_affected, dict_unchanged = get_geoms_affected_by_grb_change(
-            aligner=aligner,
+        affected,unaffected = get_affected_by_grb_change(
+            dict_thematic=thematic_dict,
             grb_type=GRBType.ADP,
             date_start=date.today() - timedelta(days=1),
             date_end=date.today(),
             one_by_one=False,
         )
-        assert len(dict_affected.keys()) == 0
+        assert len(affected) == 0
 
-        dict_affected, dict_unchanged = get_geoms_affected_by_grb_change(
-            aligner=aligner,
+        affected,unaffected = get_affected_by_grb_change(
+            dict_thematic=thematic_dict,
             grb_type=GRBType.ADP,
             date_start=date.today() - timedelta(days=1000),
             date_end=date.today(),
             one_by_one=False,
         )
-        assert len(dict_affected.keys()) > 0
+        assert len(affected) > 0
 
     def test_grbspecificdateparcelloader(self):
         thematic_dict = {

@@ -17,7 +17,7 @@ from brdr.geometry_utils import buffer_neg_pos
 from brdr.grb import (
     GRBActualLoader,
     GRBFiscalParcelLoader,
-    get_geoms_affected_by_grb_change,
+    get_affected_by_grb_change,
 )
 from brdr.loader import GeoJsonLoader, DictLoader
 from brdr.typings import FeatureCollection, ProcessResult
@@ -374,46 +374,45 @@ class TestAligner(unittest.TestCase):
         thematic_dict_formula = {}
         thematic_dict_result = {}
         for key in base_process_result:
-            thematic_dict_result[key] = base_process_result[key][relevant_distance][
-                "result"
-            ]
+            thematic_dict_result[key] = base_process_result[key][relevant_distance]["result"]
             thematic_dict_formula[key] = {
-                FORMULA_FIELD_NAME: base_aligner.get_brdr_formula(
-                    thematic_dict_result[key]
-                )
+                FORMULA_FIELD_NAME: base_aligner.get_brdr_formula(thematic_dict_result[key])
             }
-        aligner_result = Aligner()
-        aligner_result.load_thematic_data(DictLoader(thematic_dict_result))
-        dict_affected, dict_unchanged = get_geoms_affected_by_grb_change(
-            aligner=aligner_result,
+            print(key + ": " + thematic_dict_result[key].wkt)
+            print(key + ": " + str(thematic_dict_formula[key]))
+        base_aligner_result = Aligner()
+        base_aligner_result.load_thematic_data(DictLoader(thematic_dict_result))
+        affected, unaffected = get_affected_by_grb_change(
+            dict_thematic=thematic_dict_result,
             grb_type=GRBType.ADP,
             date_start=date(2022, 1, 1),
             date_end=date.today(),
             one_by_one=False,
         )
-
+        if len(affected) == 0:
+            print("No affected dicts")
+            exit()
+        print("Affected_IDs: " + str(affected))
         actual_aligner = Aligner()
         actual_aligner.load_thematic_data(
-            DictLoader(
-                data_dict=dict_affected, data_dict_properties=thematic_dict_formula
-            )
+            DictLoader(data_dict=thematic_dict_result, data_dict_properties=thematic_dict_formula)
         )
-        loader = GRBActualLoader(
-            grb_type=GRBType.ADP, partition=1000, aligner=actual_aligner
+        actual_aligner.load_reference_data(
+            GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=actual_aligner)
         )
-        actual_aligner.load_reference_data(loader)
-        series = np.arange(0, 200, 10, dtype=int) / 100
+        actual_aligner.relevant_distances = np.arange(0, 200, 10, dtype=int) / 100
+        dict_evaluated, prop_dictionary = actual_aligner.compare(ids_to_compare=affected)
 
-        dict_evaluated, prop_dictionary = actual_aligner.compare(
-            threshold_area=5,
-            threshold_percentage=1,
-        )
         fc = get_series_geojson_dict(
             dict_evaluated,
             crs=actual_aligner.CRS,
             id_field=actual_aligner.name_thematic_id,
             series_prop_dict=prop_dictionary,
         )
+        print(fc["result"])
+        fcs = actual_aligner.get_results_as_geojson(formula=True)
+
+
 
     def test_fully_aligned_geojson_output(self):
         aligned_shape = from_wkt(

@@ -45,6 +45,7 @@ class AlignerResultType(str, Enum):
     """
 
     PREDICTIONS = "predictions"
+    EVALUATED_PREDICTIONS = "evaluated_predictions"
     PROCESSRESULTS = "processresults"
 
 
@@ -95,17 +96,17 @@ class Evaluation(str, Enum):
     """
     Enum to evaluate an automatically updated geometry:
 
-    * EQUALITY_FORMULA_GEOM_1 = "equality_formula_geom_1"
-    * EQUALITY_FORMULA_2 = "equality_formula_2"
-    * EQUALITY_GEOM_3 = "equality_geom_3"
-    * TO_CHECK_4 = "to_check_4"
-    * NO_PREDICTION_5 = "no_prediction_5"
-    * NO_CHANGE_6 = "no_change_6"
+    EQUALITY_EQUAL_FORMULA_FULL_1 = "equality_equal_formula_full_1"
+    EQUALITY_EQUAL_FORMULA_2 = "equality_equal_formula_2"
+    EQUALITY_FULL_3 = "equality_full_3"
+    TO_CHECK_4 = "to_check_4"
+    NO_PREDICTION_5 = "no_prediction_5"
+    NO_CHANGE_6 = "no_change_6"
     """
 
-    EQUALITY_FORMULA_GEOM_1 = "equality_formula_geom_1"
-    EQUALITY_FORMULA_2 = "equality_formula_2"
-    EQUALITY_GEOM_3 = "equality_geom_3"
+    EQUALITY_EQUAL_FORMULA_FULL_1 = "equality_equal_formula_full_1"
+    EQUALITY_EQUAL_FORMULA_2 = "equality_equal_formula_2"
+    EQUALITY_FULL_3 = "equality_full_3"
     TO_CHECK_4 = "to_check_4"
     NO_PREDICTION_5 = "no_prediction_5"
     NO_CHANGE_6 = "no_change_6"
