@@ -191,7 +191,9 @@ class TestExamples(unittest.TestCase):
 
         # Example how to use a series (for histogram)
         series = np.arange(0, 300, 10, dtype=int) / 100
-        dict_series = aligner.process(relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50)
+        dict_series = aligner.process(
+            relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
+        )
         resulting_areas = diffs_from_dict_series(dict_series, aligner.dict_thematic)
         for key in resulting_areas:
             if len(resulting_areas[key]) == len(series):

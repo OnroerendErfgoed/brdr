@@ -19,7 +19,7 @@ from brdr.constants import (
     DEFAULT_CRS,
     DOWNLOAD_LIMIT,
     RELEVANT_DISTANCE_FIELD_NAME,
-    NR_CALCULATION_FIELD_NAME,
+    NR_CALCULATION_FIELD_NAME, REMARK_FIELD_NAME,
 )
 from brdr.enums import DiffMetric
 from brdr.geometry_utils import get_partitions, get_bbox
@@ -46,8 +46,12 @@ def get_series_geojson_dict(
             properties[id_field] = theme_id
             properties[NR_CALCULATION_FIELD_NAME] = nr_calculations
             properties[RELEVANT_DISTANCE_FIELD_NAME] = relative_distance
+            if "remark" in process_result:
+                properties[REMARK_FIELD_NAME] = process_result["remark"]
 
             for results_type, geom in process_result.items():
+                if not isinstance(geom,BaseGeometry):
+                    continue
                 if results_type not in features_list_dict:
                     features_list_dict[results_type] = []
 
@@ -493,13 +497,13 @@ def merge_process_results(
     result_dict: dict[str, dict[float, ProcessResult]]
 ) -> dict[str, dict[float, ProcessResult]]:
     """
-     Merges geometries in a dictionary from multiple themes into a single theme.
+     Merges processresults in a dictionary from multiple themeIDs into a single themeID.
 
     Args: result_dict (dict): A dictionary where keys are theme IDs and values are
         process results
 
-    Returns: dict: A new dictionary with merged geometries, where keys are global
-        theme IDs and values are merged geometries.
+    Returns: dict: A new dictionary with merged geometries and remarks (processresults, where keys are global
+        theme IDs and values are merged geometries and remarks.
 
     """
     grouped_results: dict[str, dict[float, ProcessResult]] = {}
@@ -511,13 +515,19 @@ def merge_process_results(
         else:
             for rel_dist, process_result in dict_results.items():
                 for key in process_result:
-                    geom: BaseGeometry = process_result[key]  # noqa
-                    if geom.is_empty or geom is None:
+                    value = process_result[key]  # noqa
+                    if isinstance(value,str):
+                        existing_remark: str = grouped_results[id_theme_global][rel_dist][ key]  # noqa
+                        grouped_results[id_theme_global][rel_dist][key] = existing_remark + '|' + str(value)
                         continue
-                    existing: BaseGeometry = grouped_results[id_theme_global][rel_dist][
-                        key
-                    ]  # noqa
-                    grouped_results[id_theme_global][rel_dist][key] = unary_union(
-                        [existing, geom]
-                    )  # noqa
+                    elif isinstance(value,BaseGeometry):
+                        geom = value
+                        if geom.is_empty or geom is None:
+                            continue
+                        existing: BaseGeometry = grouped_results[id_theme_global][rel_dist][
+                            key
+                        ]  # noqa
+                        grouped_results[id_theme_global][rel_dist][key] = unary_union(
+                            [existing, geom]
+                        )  # noqa
     return grouped_results
