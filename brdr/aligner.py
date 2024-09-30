@@ -307,7 +307,7 @@ class Aligner:
         # make a unary union for each key value in the result dict
         for key in ProcessResult.__annotations__:
             geometry = result_dict.get(key, Polygon())  # noqa
-            if not geometry.is_empty:
+            if isinstance(geometry,BaseGeometry) and not geometry.is_empty:
                 geometry = safe_unary_union(geometry)
             result_dict[key] = geometry  # noqa
 
@@ -382,8 +382,8 @@ class Aligner:
             self.logger.feedback_debug ("waiting all started RD calculations")
             wait(futures)
             for id_theme,dict_dist in dict_series_queue.items():
-                for reldist,future in dict_dist.items():
-                    dict_series[id_theme][reldist] = future.result()
+                for relevant_distance,future in dict_dist.items():
+                    dict_series[id_theme][relevant_distance] = future.result()
         else:
             for key, geometry in dict_thematic.items():
                 self.logger.feedback_info(
@@ -392,10 +392,9 @@ class Aligner:
                 dict_series[key] = {}
                 for relevant_distance in self.relevant_distances:
                     try:
-                        self.relevant_distance = relevant_distance
                         processed_result = self.process_geometry(
                             geometry,
-                            self.relevant_distance,
+                            relevant_distance,
                             od_strategy,
                             threshold_overlap_percentage,
                         )
@@ -403,7 +402,7 @@ class Aligner:
                         self.logger.feedback_warning(str(e))
                         processed_result = None
 
-                    dict_series[key][self.relevant_distance] = processed_result
+                    dict_series[key][relevant_distance] = processed_result
 
         if self.multi_as_single_modus:
             dict_series = merge_process_results(dict_series)
@@ -1047,6 +1046,7 @@ class Aligner:
                 geometry
         """
         # Process array
+        remark = ""
         buffer_distance = relevant_distance/2
         result = []
         geom_preresult = safe_unary_union(preresult)
@@ -1060,14 +1060,15 @@ class Aligner:
                 4 * pi * (geom_thematic.area / (geom_thematic.length**2))
                 > self.threshold_circle_ratio
             ):
-                self.logger.feedback_debug(
-                    "Circle: -->resulting geometry = original geometry"
-                )
-                return {"result": geom_thematic}
+                remark = "Circle detected: -->resulting geometry = original geometry"
+                self.logger.feedback_debug(remark)
+                return {"result": geom_thematic,"remark": remark}
 
             # Correction for unchanged geometries
             if geom_preresult == geom_thematic:
-                return {"result": geom_thematic}
+                remark = "Unchanged geometry: -->resulting geometry = original geometry"
+                self.logger.feedback_debug(remark)
+                return {"result": geom_thematic,"remark": remark}
 
         # Corrections for areas that differ more than the relevant distance
         geom_thematic_dissolved = buffer_pos(
@@ -1118,9 +1119,8 @@ class Aligner:
 
         # Correction for empty preresults
         if geom_thematic_result.is_empty or geom_thematic_result is None:
-            self.logger.feedback_warning(
-                "Empty result: -->resulting geometry = original geometry returned"
-            )
+            remark = "Calculated empty result: -->original geometry returned"
+            self.logger.feedback_warning(remark)
 
             geom_thematic_result = geom_thematic
             # geom_thematic_result = Polygon() #If we return an empty geometry, the feature disappears, so we return the original geometry
@@ -1157,11 +1157,13 @@ class Aligner:
         # geom_result_diff_plus = safe_difference(geom_thematic_result, geom_thematic)
         # geom_result_diff_min = safe_difference(geom_thematic, geom_thematic_result)
 
+
         return {
             "result": geom_thematic_result,
             "result_diff": geom_result_diff,
             "result_diff_plus": geom_result_diff_plus,
             "result_diff_min": geom_result_diff_min,
+            "remark": remark
         }
 
     def _evaluate(self, id_theme, geom_predicted):
