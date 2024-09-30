@@ -7,7 +7,7 @@ from brdr.loader import GeoJsonFileLoader
 
 def main():
     # Initiate brdr
-    aligner = Aligner(relevant_distance=2,max_workers=None)
+    aligner = Aligner(relevant_distance=2, max_workers=None)
     iterations = 10
     aligner.multi_as_single_modus = True
     # Load local thematic data and reference data
@@ -43,6 +43,7 @@ def main():
     print("Median: " + str(statistics.median(times)))
     print("Stdv: " + str(statistics.stdev(times)))
 
+
 # #BEFORE REFACTORING dict_series
 # duration: [25.652311, 27.894154, 19.641618, 19.929254, 44.754033, 25.218422, 23.167992, 18.649832, 22.899336, 52.108296]
 # Min: 18.649832
@@ -59,5 +60,5 @@ def main():
 # Median: 17.8996155
 # Stdv: 1.504459449440969
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

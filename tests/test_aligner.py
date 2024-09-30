@@ -374,9 +374,13 @@ class TestAligner(unittest.TestCase):
         thematic_dict_formula = {}
         thematic_dict_result = {}
         for key in base_process_result:
-            thematic_dict_result[key] = base_process_result[key][relevant_distance]["result"]
+            thematic_dict_result[key] = base_process_result[key][relevant_distance][
+                "result"
+            ]
             thematic_dict_formula[key] = {
-                FORMULA_FIELD_NAME: base_aligner.get_brdr_formula(thematic_dict_result[key])
+                FORMULA_FIELD_NAME: base_aligner.get_brdr_formula(
+                    thematic_dict_result[key]
+                )
             }
             print(key + ": " + thematic_dict_result[key].wkt)
             print(key + ": " + str(thematic_dict_formula[key]))
@@ -395,13 +399,20 @@ class TestAligner(unittest.TestCase):
         print("Affected_IDs: " + str(affected))
         actual_aligner = Aligner()
         actual_aligner.load_thematic_data(
-            DictLoader(data_dict=thematic_dict_result, data_dict_properties=thematic_dict_formula)
+            DictLoader(
+                data_dict=thematic_dict_result,
+                data_dict_properties=thematic_dict_formula,
+            )
         )
         actual_aligner.load_reference_data(
-            GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=actual_aligner)
+            GRBActualLoader(
+                grb_type=GRBType.ADP, partition=1000, aligner=actual_aligner
+            )
         )
         actual_aligner.relevant_distances = np.arange(0, 200, 10, dtype=int) / 100
-        dict_evaluated, prop_dictionary = actual_aligner.compare(ids_to_compare=affected)
+        dict_evaluated, prop_dictionary = actual_aligner.compare(
+            ids_to_compare=affected
+        )
 
         fc = get_series_geojson_dict(
             dict_evaluated,
@@ -411,8 +422,6 @@ class TestAligner(unittest.TestCase):
         )
         print(fc["result"])
         fcs = actual_aligner.get_results_as_geojson(formula=True)
-
-
 
     def test_fully_aligned_geojson_output(self):
         aligned_shape = from_wkt(

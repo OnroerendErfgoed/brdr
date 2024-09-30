@@ -22,11 +22,8 @@ from shapely import union
 from shapely.geometry.base import BaseGeometry
 from shapely.prepared import prep
 
-from brdr.constants import MITRE_LIMIT
-from brdr.constants import QUAD_SEGMENTS
 
-
-def buffer_neg_pos(geometry, buffer_value):
+def buffer_neg_pos(geometry, buffer_value,mitre_limit=5):
     """
     Computes two buffers accordingly: one with a negative buffer value and another with
     a positive buffer value. This function can be used the check where relevant areas
@@ -59,18 +56,18 @@ def buffer_neg_pos(geometry, buffer_value):
         buffer(
             geometry,
             -buffer_value,
-            quad_segs=QUAD_SEGMENTS,
+            #quad_segs=QUAD_SEGMENTS,
             join_style="mitre",
-            mitre_limit=MITRE_LIMIT,
+            mitre_limit=mitre_limit,
         ),
         buffer_value,
-        quad_segs=QUAD_SEGMENTS,
+        #quad_segs=QUAD_SEGMENTS,
         join_style="mitre",
-        mitre_limit=MITRE_LIMIT,
+        mitre_limit=mitre_limit,
     )
 
 
-def buffer_neg(geometry, buffer_value):
+def buffer_neg(geometry, buffer_value,mitre_limit=5):
     """
     Computes the negative buffer of a given geometric object.
 
@@ -97,13 +94,13 @@ def buffer_neg(geometry, buffer_value):
     return buffer(
         geometry,
         -buffer_value,
-        quad_segs=QUAD_SEGMENTS,
+        #quad_segs=QUAD_SEGMENTS,
         join_style="mitre",
-        mitre_limit=MITRE_LIMIT,
+        mitre_limit=mitre_limit,
     )
 
 
-def buffer_pos(geometry, buffer_value):
+def buffer_pos(geometry, buffer_value,mitre_limit=5):
     """
     Computes the positive buffer of a given geometric object.
 
@@ -130,9 +127,9 @@ def buffer_pos(geometry, buffer_value):
     return buffer(
         geometry,
         buffer_value,
-        quad_segs=QUAD_SEGMENTS,
+        #quad_segs=QUAD_SEGMENTS,
         join_style="mitre",
-        mitre_limit=MITRE_LIMIT,
+        mitre_limit=mitre_limit,
     )
 
 
