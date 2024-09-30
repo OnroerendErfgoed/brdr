@@ -19,19 +19,14 @@ from shapely import to_geojson
 from shapely.geometry.base import BaseGeometry
 
 from brdr import __version__
+from brdr.constants import DEFAULT_CRS
 from brdr.constants import (
-    BUFFER_MULTIPLICATION_FACTOR,
     LAST_VERSION_DATE,
     VERSION_DATE,
     DATE_FORMAT,
-    THRESHOLD_EXCLUSION_PERCENTAGE,
-    THRESHOLD_EXCLUSION_AREA,
     FORMULA_FIELD_NAME, EVALUATION_FIELD_NAME, FULL_BASE_FIELD_NAME, FULL_ACTUAL_FIELD_NAME, DIFF_PERCENTAGE_FIELD_NAME,
     DIFF_AREA_FIELD_NAME, OD_ALIKE_FIELD_NAME, EQUAL_REFERENCE_FEATURES_FIELD_NAME,
 )
-from brdr.constants import CORR_DISTANCE
-from brdr.constants import DEFAULT_CRS
-from brdr.constants import THRESHOLD_CIRCLE_RATIO
 from brdr.enums import (
     OpenbaarDomeinStrategy,
     Evaluation,
@@ -78,6 +73,12 @@ class Aligner:
         threshold_overlap_percentage=50,
         od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
         crs=DEFAULT_CRS,
+        threshold_exclusion_area=0,
+        threshold_exclusion_percentage=0,
+        buffer_multiplication_factor=1.01,
+        threshold_circle_ratio=0.98,
+        correction_distance=0.01,
+        mitre_limit=10,
         area_limit=None,
         max_workers=None,
     ):
@@ -113,8 +114,29 @@ class Aligner:
         self.relevant_distances = relevant_distances
         self.od_strategy = od_strategy
         self.threshold_overlap_percentage = threshold_overlap_percentage
+        # Area in m² for excluding candidate reference when overlap(m²) is smaller than the
+        # threshold
+        self.threshold_exclusion_area = threshold_exclusion_area
+        # Percentage for excluding candidate reference when overlap(%) is smaller than the
+        # threshold
+        self.threshold_exclusion_percentage = threshold_exclusion_percentage
         self.area_limit = area_limit
         self.max_workers = max_workers
+        # Multiplication-factor used in OD-strategy 2 (SNAP-BOTH SIDED) when calculating
+        # OD-area to take into account
+        self.buffer_multiplication_factor=buffer_multiplication_factor
+        # Threshold-value to exclude circles getting processed (perfect circle = 1) based on
+        # POLSPY-POPPER algorithm
+        self.threshold_circle_ratio=threshold_circle_ratio
+        # Distance used in a pos_neg_buffer to remove slivers (technical correction)
+        self.correction_distance = correction_distance
+        # Buffer parameters:
+        # Distance to limit a buffered corner (MITER-join-style parameter)
+        #   Explanation and examples:
+        #   https://shapely.readthedocs.io/en/stable/reference/shapely.buffer.html
+        #   https://postgis.net/docs/ST_Buffer.html
+        self.mitre_limit=mitre_limit
+        #quad_segments = 8 (by default in shapely)
 
         # PROCESSING DEFAULTS
         # thematic
@@ -257,6 +279,8 @@ class Aligner:
                 False,
                 buffer_distance,
                 self.threshold_overlap_percentage,
+                self.threshold_exclusion_percentage,
+                self.threshold_exclusion_area,self.mitre_limit
             )
             self.logger.feedback_debug("intersection calculated")
             preresult = self._add_multi_polygons_from_geom_to_array(geom, preresult)
@@ -332,9 +356,9 @@ class Aligner:
         futures = []
         if dict_thematic is None:
             dict_thematic = self.dict_thematic
-
         if self.multi_as_single_modus:
             dict_thematic = multipolygons_to_singles(dict_thematic)
+
         if self.max_workers!=-1:
             with ThreadPoolExecutor(max_workers=self.max_workers) as executor:#max_workers=5
                 for key, geometry in dict_thematic.items():
@@ -502,7 +526,7 @@ class Aligner:
             for rel_dist, processresults in dist_results.items():
                 predicted_geom = processresults["result"]
                 if not _equal_geom_in_array(
-                    predicted_geom, predicted_geoms_for_theme_id
+                    predicted_geom, predicted_geoms_for_theme_id,self.correction_distance,self.mitre_limit
                 ):
                     dict_predictions_unique[theme_id][rel_dist] = processresults
                     predicted_geoms_for_theme_id.append(processresults["result"])
@@ -660,9 +684,9 @@ class Aligner:
         geom_od = buffer_pos(
             buffer_neg(
                 safe_difference(geometry, safe_unary_union(intersected)),
-                CORR_DISTANCE,
+                self.correction_distance,mitre_limit=self.mitre_limit,
             ),
-            CORR_DISTANCE,
+            self.correction_distance,mitre_limit=self.mitre_limit,
         )
         if geom_od is not None:
             area_od = round(geom_od.area, 2)
@@ -846,11 +870,11 @@ class Aligner:
             # geom of OD
             geom_od = safe_difference(geometry, self._get_reference_union())
             # only the relevant parts of OD
-            geom_od_neg_pos = buffer_neg_pos(geom_od, buffer_distance)
+            geom_od_neg_pos = buffer_neg_pos(geom_od, buffer_distance,mitre_limit=self.mitre_limit,)
             # geom_thematic_od = safe_intersection(geom_od_neg_pos,geom_od)# resulting
             # thematic OD
             geom_od_neg_pos_buffered = buffer_pos(
-                geom_od_neg_pos, buffer_distance
+                geom_od_neg_pos, buffer_distance,mitre_limit=self.mitre_limit,
             )  # include parts
             geom_thematic_od = safe_intersection(
                 geom_od_neg_pos_buffered, geom_od
@@ -908,7 +932,7 @@ class Aligner:
             # geom of OD
             geom_od = safe_difference(geometry, self._get_reference_union())
             # only the relevant parts of OD
-            geom_od_neg_pos = buffer_neg_pos(geom_od, buffer_distance)
+            geom_od_neg_pos = buffer_neg_pos(geom_od, buffer_distance,mitre_limit=self.mitre_limit,)
             # resulting thematic OD
             geom_thematic_od = safe_intersection(geom_od_neg_pos, geom_od)
         elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE_VARIANT_2:
@@ -935,16 +959,16 @@ class Aligner:
         geom_theme_od = safe_difference(geometry, self._get_reference_union())
         geom_theme_min_buffered = buffer_neg(
             buffer_pos(
-                buffer_neg(geometry, relevant_distance),
-                buffer_distance,
+                buffer_neg(geometry, relevant_distance,mitre_limit=self.mitre_limit,),
+                buffer_distance,mitre_limit=self.mitre_limit,
             ),
-            buffer_distance,
+            buffer_distance,mitre_limit=self.mitre_limit,
         )
         geom_theme_od_clipped_min_buffered = safe_intersection(
             geom_theme_min_buffered, geom_theme_od
         )
         geom_theme_od_min_clipped_plus_buffered = buffer_pos(
-            geom_theme_od_clipped_min_buffered, relevant_distance
+            geom_theme_od_clipped_min_buffered, relevant_distance,mitre_limit=self.mitre_limit,
         )
         geom_theme_od_min_clipped_plus_buffered_clipped = safe_intersection(
             geom_theme_od_min_clipped_plus_buffered, geom_theme_od
@@ -957,7 +981,7 @@ class Aligner:
         relevant_difference_array = []
         relevant_intersection_array = []
         geom_thematic_buffered = make_valid(
-            buffer_pos(geometry, BUFFER_MULTIPLICATION_FACTOR * relevant_distance)
+            buffer_pos(geometry, self.buffer_multiplication_factor * relevant_distance,mitre_limit=self.mitre_limit,)
         )
         clip_ref_thematic_buffered = safe_intersection(
             self._get_reference_union(), geom_thematic_buffered
@@ -980,6 +1004,9 @@ class Aligner:
                 True,
                 buffer_distance,
                 self.threshold_overlap_percentage,
+                self.threshold_exclusion_percentage,
+                self.threshold_exclusion_area,
+                self.mitre_limit
             )
             relevant_intersection_array = self._add_multi_polygons_from_geom_to_array(
                 geom_relevant_intersection, []
@@ -1031,7 +1058,7 @@ class Aligner:
             #  if a circle: (Polsby-popper score)
             if (
                 4 * pi * (geom_thematic.area / (geom_thematic.length**2))
-                > THRESHOLD_CIRCLE_RATIO
+                > self.threshold_circle_ratio
             ):
                 self.logger.feedback_debug(
                     "Circle: -->resulting geometry = original geometry"
@@ -1045,10 +1072,10 @@ class Aligner:
         # Corrections for areas that differ more than the relevant distance
         geom_thematic_dissolved = buffer_pos(
             buffer_neg(
-                buffer_pos(geom_preresult, CORR_DISTANCE),
-                2 * CORR_DISTANCE,
+                buffer_pos(geom_preresult, self.correction_distance,mitre_limit=self.mitre_limit,),
+                2 * self.correction_distance,mitre_limit=self.mitre_limit,
             ),
-            CORR_DISTANCE,
+            self.correction_distance,mitre_limit=self.mitre_limit,
         )
         # geom_symdiff = self._safe_symmetric_difference(geom_thematic,
         # geom_thematic_dissolved)
@@ -1058,22 +1085,22 @@ class Aligner:
             geom_thematic_dissolved,
             safe_intersection(
                 geom_diff_delete,
-                buffer_neg_pos(geom_diff_delete, buffer_distance),
+                buffer_neg_pos(geom_diff_delete, buffer_distance,mitre_limit=self.mitre_limit,),
             ),
         )
         geom_diff_removed_added = safe_union(
             geom_diff_removed,
             safe_intersection(
                 geom_diff_add,
-                buffer_neg_pos(geom_diff_add, buffer_distance),
+                buffer_neg_pos(geom_diff_add, buffer_distance,mitre_limit=self.mitre_limit,),
             ),
         )
         geom_thematic_preresult = buffer_pos(
             buffer_neg(
-                buffer_pos(geom_diff_removed_added, CORR_DISTANCE),
-                2 * CORR_DISTANCE,
+                buffer_pos(geom_diff_removed_added, self.correction_distance,mitre_limit=self.mitre_limit,),
+                2 * self.correction_distance,mitre_limit=self.mitre_limit,
             ),
-            CORR_DISTANCE,
+            self.correction_distance,mitre_limit=self.mitre_limit,
         )
         # Correction for Inner holes(donuts) / multipolygons
         # fill and remove gaps
@@ -1082,10 +1109,10 @@ class Aligner:
         )
         geom_thematic_result = buffer_pos(
             buffer_neg(
-                buffer_pos(geom_thematic_cleaned_holes, CORR_DISTANCE),
-                2 * CORR_DISTANCE,
+                buffer_pos(geom_thematic_cleaned_holes, self.correction_distance,mitre_limit=self.mitre_limit,),
+                2 * self.correction_distance,mitre_limit=self.mitre_limit,
             ),
-            CORR_DISTANCE,
+            self.correction_distance,mitre_limit=self.mitre_limit,
         )
         geom_thematic_result = make_valid(remove_repeated_points(geom_thematic_result))
 
@@ -1108,24 +1135,24 @@ class Aligner:
         # remove 'very small' differences (smaller than the correction distance)
         geom_result_diff = buffer_pos(
             buffer_neg(
-                safe_symmetric_difference(geom_thematic_result, geom_thematic),
-                CORR_DISTANCE,
+                safe_symmetric_difference(geom_thematic_result, geom_thematic,),
+                self.correction_distance,mitre_limit=self.mitre_limit,
             ),
-            CORR_DISTANCE,
+            self.correction_distance,mitre_limit=self.mitre_limit,
         )
         geom_result_diff_plus = buffer_pos(
             buffer_neg(
-                safe_difference(geom_thematic_result, geom_thematic),
-                CORR_DISTANCE,
+                safe_difference(geom_thematic_result, geom_thematic,),
+                self.correction_distance,mitre_limit=self.mitre_limit,
             ),
-            CORR_DISTANCE,
+            self.correction_distance,mitre_limit=self.mitre_limit,
         )
         geom_result_diff_min = buffer_pos(
             buffer_neg(
-                safe_difference(geom_thematic, geom_thematic_result),
-                CORR_DISTANCE,
+                safe_difference(geom_thematic, geom_thematic_result,),
+                self.correction_distance,mitre_limit=self.mitre_limit,
             ),
-            CORR_DISTANCE,
+            self.correction_distance,mitre_limit=self.mitre_limit,
         )
         # geom_result_diff_plus = safe_difference(geom_thematic_result, geom_thematic)
         # geom_result_diff_min = safe_difference(geom_thematic, geom_thematic_result)
@@ -1142,8 +1169,8 @@ class Aligner:
         function that evaluates a predicted geometry and returns a properties-dictionary
         """
         threshold_od_percentage = 1
-        threshold_area = 5
-        threshold_percentage = 1
+        #threshold_area = 5
+        #threshold_percentage = 1
         properties = {
             FORMULA_FIELD_NAME: "",
             EVALUATION_FIELD_NAME: Evaluation.TO_CHECK_4,
@@ -1271,8 +1298,9 @@ def _calculate_geom_by_intersection_and_reference(
     is_openbaar_domein,
     buffer_distance,
     threshold_overlap_percentage,
-    threshold_exclusion_percentage=THRESHOLD_EXCLUSION_PERCENTAGE,
-    threshold_exclusion_area=THRESHOLD_EXCLUSION_AREA,
+    threshold_exclusion_percentage,
+    threshold_exclusion_area,
+        mitre_limit,
 ):
     """
     Calculates the geometry based on intersection and reference geometries.
@@ -1322,8 +1350,8 @@ def _calculate_geom_by_intersection_and_reference(
         return Polygon(), Polygon(), Polygon()
 
     geom_difference = safe_difference(geom_reference, geom_intersection)
-    geom_relevant_intersection = buffer_neg(geom_intersection, buffer_distance)
-    geom_relevant_difference = buffer_neg(geom_difference, buffer_distance)
+    geom_relevant_intersection = buffer_neg(geom_intersection, buffer_distance,mitre_limit=mitre_limit,)
+    geom_relevant_difference = buffer_neg(geom_difference, buffer_distance,mitre_limit=mitre_limit,)
     if (
         not geom_relevant_intersection.is_empty
         and not geom_relevant_difference.is_empty
@@ -1335,15 +1363,15 @@ def _calculate_geom_by_intersection_and_reference(
                 geom_reference,
                 safe_intersection(
                     geom_difference,
-                    buffer_neg_pos(geom_difference, buffer_distance),
+                    buffer_neg_pos(geom_difference, buffer_distance,mitre_limit=mitre_limit,),
                 ),
             ),
         )
         geom = safe_intersection(
             geom_x,
             buffer_pos(
-                buffer_neg_pos(geom_x, buffer_distance),
-                buffer_distance,
+                buffer_neg_pos(geom_x, buffer_distance,mitre_limit=mitre_limit,),
+                buffer_distance,mitre_limit=mitre_limit,
             ),
         )
         # when calculating for OD, we create a 'virtual parcel'. When calculating this
@@ -1352,7 +1380,7 @@ def _calculate_geom_by_intersection_and_reference(
         # in the result. The function below tries to exclude these non-logical parts.
         # see eo_id 206363 with relevant distance=0.2m and SNAP_ALL_SIDE
         if is_openbaar_domein:
-            geom = _get_relevant_polygons_from_geom(geom, buffer_distance)
+            geom = _get_relevant_polygons_from_geom(geom, buffer_distance,mitre_limit)
     elif not geom_relevant_intersection.is_empty and geom_relevant_difference.is_empty:
         geom = geom_reference
     elif geom_relevant_intersection.is_empty and not geom_relevant_difference.is_empty:
@@ -1372,7 +1400,7 @@ def _calculate_geom_by_intersection_and_reference(
     return geom, geom_relevant_intersection, geom_relevant_difference
 
 
-def _get_relevant_polygons_from_geom(geometry: BaseGeometry, buffer_distance: float):
+def _get_relevant_polygons_from_geom(geometry: BaseGeometry, buffer_distance: float,mitre_limit):
     """
     Get only the relevant parts (polygon) from a geometry.
     Points, Lines and Polygons smaller than relevant distance are excluded from the
@@ -1390,13 +1418,13 @@ def _get_relevant_polygons_from_geom(geometry: BaseGeometry, buffer_distance: fl
             # Ensure each sub-geometry is valid.
             g = make_valid(g)
             if str(g.geom_type) in ["Polygon", "MultiPolygon"]:
-                relevant_geom = buffer_neg(g, buffer_distance)
+                relevant_geom = buffer_neg(g, buffer_distance,mitre_limit=mitre_limit,)
                 if relevant_geom is not None and not relevant_geom.is_empty:
                     array.append(g)
     return safe_unary_union(array)
 
 
-def _equal_geom_in_array(geom, geom_array):
+def _equal_geom_in_array(geom, geom_array,correction_distance,mitre_limit):
     """
     Check if a predicted geometry is equal to other predicted geometries in a list.
     Equality is defined as there is the symmetrical difference is smaller than the CORRECTION DISTANCE
@@ -1404,7 +1432,7 @@ def _equal_geom_in_array(geom, geom_array):
     """
     for g in geom_array:
         # if safe_equals(geom,g):
-        if buffer_neg(safe_symmetric_difference(geom, g), CORR_DISTANCE).is_empty:
+        if buffer_neg(safe_symmetric_difference(geom, g), correction_distance,mitre_limit=mitre_limit,).is_empty:
             return True
     return False
 
@@ -1468,7 +1496,7 @@ def _check_equality(
             ):
                 equal_reference_features = False
         if equal_reference_features:
-            return True, Evaluation.EQUALITY_FORMULA_2
+            return True, Evaluation.EQUALITY_EQUAL_FORMULA_2
     if base_formula["full"] and actual_formula["full"] and od_alike:
         return True, Evaluation.EQUALITY_FULL_3
     return False, Evaluation.NO_PREDICTION_5

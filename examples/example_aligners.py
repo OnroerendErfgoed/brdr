@@ -40,7 +40,9 @@ if __name__ == "__main__":
 
     # Example how to use a series (for histogram)
     series = [0.1, 0.2, 0.3, 0.4, 0.5, 1, 2]
-    dict_series = aligner.process(series, 2, 50)
+    dict_series = aligner.process(
+        relevant_distances=series, od_strategy=2, threshold_overlap_percentage=50
+    )
     resulting_areas = diffs_from_dict_series(dict_series, aligner.dict_thematic)
     plot_series(series, resulting_areas)
 

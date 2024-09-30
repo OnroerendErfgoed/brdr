@@ -21,9 +21,9 @@ from brdr.constants import GRB_BUILDING_ID
 from brdr.constants import GRB_FEATURE_URL
 from brdr.constants import GRB_FISCAL_PARCELS_URL
 from brdr.constants import GRB_KNW_ID
+from brdr.constants import GRB_MAX_REFERENCE_BUFFER
 from brdr.constants import GRB_PARCEL_ID
 from brdr.constants import GRB_VERSION_DATE
-from brdr.constants import MAX_REFERENCE_BUFFER
 from brdr.enums import GRBType
 from brdr.geometry_utils import buffer_pos, safe_intersection, safe_unary_union
 from brdr.geometry_utils import create_donut
@@ -450,7 +450,7 @@ class GRBActualLoader(GeoJsonLoader):
     def load_data(self):
         if not self.aligner.dict_thematic:
             raise ValueError("Thematic data not loaded")
-        geom_union = buffer_pos(self.aligner.get_thematic_union(), MAX_REFERENCE_BUFFER)
+        geom_union = buffer_pos(self.aligner.get_thematic_union(), GRB_MAX_REFERENCE_BUFFER)
         collection, id_property = get_collection_grb_actual(
             grb_type=self.grb_type,
             geometry=geom_union,
@@ -479,7 +479,7 @@ class GRBFiscalParcelLoader(GeoJsonLoader):
     def load_data(self):
         if not self.aligner.dict_thematic:
             raise ValueError("Thematic data not loaded")
-        geom_union = buffer_pos(self.aligner.get_thematic_union(), MAX_REFERENCE_BUFFER)
+        geom_union = buffer_pos(self.aligner.get_thematic_union(), GRB_MAX_REFERENCE_BUFFER)
         collection = get_collection_grb_fiscal_parcels(
             year=self.year,
             geometry=geom_union,
@@ -515,7 +515,7 @@ class GRBSpecificDateParcelLoader(GeoJsonLoader):
     def load_data(self):
         if not self.aligner.dict_thematic:
             raise ValueError("Thematic data not loaded")
-        geom_union = buffer_pos(self.aligner.get_thematic_union(), MAX_REFERENCE_BUFFER)
+        geom_union = buffer_pos(self.aligner.get_thematic_union(), GRB_MAX_REFERENCE_BUFFER)
         collection = get_collection_grb_parcels_by_date(
             date=self.date,
             geometry=geom_union,
