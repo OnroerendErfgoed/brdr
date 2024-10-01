@@ -9,7 +9,7 @@ from shapely.geometry import Polygon
 from shapely.geometry import shape
 
 from brdr.aligner import Aligner
-from brdr.constants import FORMULA_FIELD_NAME
+from brdr.constants import NEW_FORMULA_FIELD_NAME
 from brdr.enums import GRBType, AlignerResultType
 from brdr.enums import OpenbaarDomeinStrategy
 from brdr.geometry_utils import _grid_bounds
@@ -378,7 +378,7 @@ class TestAligner(unittest.TestCase):
                 "result"
             ]
             thematic_dict_formula[key] = {
-                FORMULA_FIELD_NAME: base_aligner.get_brdr_formula(
+                NEW_FORMULA_FIELD_NAME: base_aligner.get_brdr_formula(
                     thematic_dict_result[key]
                 )
             }

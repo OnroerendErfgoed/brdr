@@ -1,10 +1,11 @@
+import json
 from datetime import date
 
 import numpy as np
 from shapely import from_wkt
 
 from brdr.aligner import Aligner
-from brdr.constants import FORMULA_FIELD_NAME, EVALUATION_FIELD_NAME
+from brdr.constants import EVALUATION_FIELD_NAME, BASE_FORMULA_FIELD_NAME
 from brdr.enums import GRBType, AlignerResultType
 from brdr.grb import GRBActualLoader
 from brdr.grb import GRBFiscalParcelLoader
@@ -30,7 +31,7 @@ thematic_dict_result = {}
 for key in base_process_result:
     thematic_dict_result[key] = base_process_result[key][relevant_distance]["result"]
     thematic_dict_formula[key] = {
-        FORMULA_FIELD_NAME: base_aligner.get_brdr_formula(thematic_dict_result[key])
+        BASE_FORMULA_FIELD_NAME: json.dumps(base_aligner.get_brdr_formula(thematic_dict_result[key]))
     }
     print(key + ": " + thematic_dict_result[key].wkt)
     print(key + ": " + str(thematic_dict_formula[key]))
@@ -57,7 +58,7 @@ actual_aligner.load_reference_data(
 actual_aligner.relevant_distances = np.arange(0, 200, 10, dtype=int) / 100
 dict_evaluated, prop_dictionary = actual_aligner.compare(ids_to_compare=affected)
 
-fc = actual_aligner.get_results_as_geojson(resulttype=AlignerResultType.EVALUATED_PREDICTIONS)
+fc = actual_aligner.get_results_as_geojson(resulttype=AlignerResultType.EVALUATED_PREDICTIONS,formula=True, attributes=True)
 print(fc["result"])
 
 for feature in fc["result"]["features"]:
