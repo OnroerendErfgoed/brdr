@@ -1,5 +1,5 @@
 from brdr.aligner import Aligner
-from brdr.constants import EVALUATION_FIELD_NAME
+from brdr.constants import EVALUATION_FIELD_NAME, NEW_FORMULA_FIELD_NAME
 from brdr.grb import GRBFiscalParcelLoader
 from brdr.grb import update_to_actual_grb
 from brdr.loader import GeoJsonLoader
@@ -17,6 +17,7 @@ loader = GeoJsonLoader(
             {
                 "type": "Feature",
                 "properties": {
+                    "testattribute": "test",
                     "nr_calculations": 1,
                     "ID": "206285",
                     "relevant_distance": 2.0,
@@ -58,12 +59,12 @@ base_aligner.load_reference_data(
     GRBFiscalParcelLoader(year=base_year, aligner=base_aligner)
 )
 base_process_result = base_aligner.process(relevant_distance=2)
-fcs = base_aligner.get_results_as_geojson(formula=True)
+fcs = base_aligner.get_results_as_geojson(formula=True,attributes=True)
 featurecollection_base_result = fcs["result"]
 print(featurecollection_base_result)
 # Update Featurecollection to actual version
 featurecollection = update_to_actual_grb(
-    featurecollection_base_result, base_aligner.name_thematic_id
+    featurecollection_base_result, base_aligner.name_thematic_id,base_formula_field=NEW_FORMULA_FIELD_NAME
 )
 # Print results
 for feature in featurecollection["result"]["features"]:

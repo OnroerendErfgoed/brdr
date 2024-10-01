@@ -218,7 +218,7 @@ class TestGrb(unittest.TestCase):
                     },
                     "properties": {
                         "area": 503.67736346047064,
-                        "brdr_formula": '{"alignment_date": "2024-09-19", "brdr_version": "0.2.1", "reference_source": {"source": "Adpf", "version_date": "2022-01-01"}, "full": true, "reference_features": {"12034A0181/00K000": {"full": true, "area": 503.68, "percentage": 100, "version_date": "2019-08-30"}}, "reference_od": null, "last_version_date": "2019-08-30"}',
+                        "brdr_base_formula": '{"alignment_date": "2024-09-19", "brdr_version": "0.2.1", "reference_source": {"source": "Adpf", "version_date": "2022-01-01"}, "full": true, "reference_features": {"12034A0181/00K000": {"full": true, "area": 503.68, "percentage": 100, "version_date": "2019-08-30"}}, "reference_od": null, "last_version_date": "2019-08-30"}',
                         "nr_calculations": 1,
                         "perimeter": 125.74541473322422,
                         "relevant_distance": 2,
@@ -233,7 +233,7 @@ class TestGrb(unittest.TestCase):
 
         # Update Featurecollection to actual version
         featurecollection = update_to_actual_grb(
-            featurecollection_base_result, name_thematic_id
+            featurecollection_base_result, name_thematic_id,base_formula_field="brdr_base_formula"
         )
         # Print results
         for feature in featurecollection["result"]["features"]:

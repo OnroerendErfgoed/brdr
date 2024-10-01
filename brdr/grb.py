@@ -5,7 +5,7 @@ from datetime import date
 from datetime import datetime
 
 import numpy as np
-from shapely import intersects, Polygon
+from shapely import intersects
 from shapely.geometry import shape
 
 from brdr.aligner import Aligner
@@ -14,7 +14,7 @@ from brdr.constants import (
     LAST_VERSION_DATE,
     DATE_FORMAT,
     VERSION_DATE,
-    FORMULA_FIELD_NAME,
+    BASE_FORMULA_FIELD_NAME,
 )
 from brdr.constants import DOWNLOAD_LIMIT
 from brdr.constants import GRB_BUILDING_ID
@@ -24,7 +24,7 @@ from brdr.constants import GRB_KNW_ID
 from brdr.constants import GRB_MAX_REFERENCE_BUFFER
 from brdr.constants import GRB_PARCEL_ID
 from brdr.constants import GRB_VERSION_DATE
-from brdr.enums import GRBType
+from brdr.enums import GRBType, AlignerResultType
 from brdr.geometry_utils import buffer_pos, safe_intersection, safe_unary_union
 from brdr.geometry_utils import create_donut
 from brdr.geometry_utils import features_by_geometric_operation
@@ -34,7 +34,6 @@ from brdr.logger import Logger
 from brdr.utils import geojson_to_dicts
 from brdr.utils import get_collection
 from brdr.utils import get_collection_by_partition
-from brdr.utils import get_series_geojson_dict
 
 log = logging.getLogger(__name__)
 
@@ -341,9 +340,10 @@ def get_collection_grb_parcels_by_date(
 def update_to_actual_grb(
     featurecollection,
     id_theme_fieldname,
-    formula_field=FORMULA_FIELD_NAME,
+    base_formula_field=BASE_FORMULA_FIELD_NAME,
     max_distance_for_actualisation=2,
     feedback=None,
+    attributes=True,
 ):
     """
     Function to update a thematic featurecollection to the most actual version of GRB.
@@ -357,30 +357,27 @@ def update_to_actual_grb(
     last_version_date = datetime.now().date()
     for feature in featurecollection["features"]:
         id_theme = feature["properties"][id_theme_fieldname]
-        try:
-            geom = shape(feature["geometry"])
-        except Exception:
-            geom = Polygon()
-        logger.feedback_debug("id theme: " + id_theme)
-        logger.feedback_debug("geometry (wkt): " + geom.wkt)
+        geom = shape(feature["geometry"])
+        #logger.feedback_debug("id theme: " + id_theme)
+        #logger.feedback_debug("geometry (wkt): " + geom.wkt)
         dict_thematic[id_theme] = geom
+        dict_thematic_props[id_theme] = feature["properties"]
         try:
-            dict_thematic_props[id_theme] = {
-                FORMULA_FIELD_NAME: json.loads(feature["properties"][formula_field])
-            }
-            logger.feedback_debug("formula: " + str(dict_thematic_props[id_theme]))
+            dict_thematic_props[id_theme][BASE_FORMULA_FIELD_NAME] =feature["properties"][base_formula_field]
+            base_formula = json.loads(dict_thematic_props[id_theme][BASE_FORMULA_FIELD_NAME])
+            logger.feedback_debug("formula: " + str(base_formula))
         except Exception:
             raise Exception("Formula -attribute-field (json) cannot be loaded")
         try:
             logger.feedback_debug(str(dict_thematic_props[id_theme]))
             if (
-                LAST_VERSION_DATE in dict_thematic_props[id_theme][FORMULA_FIELD_NAME]
-                and dict_thematic_props[id_theme][FORMULA_FIELD_NAME][LAST_VERSION_DATE]
+                LAST_VERSION_DATE in base_formula
+                and base_formula[LAST_VERSION_DATE]
                 is not None
-                and dict_thematic_props[id_theme][FORMULA_FIELD_NAME][LAST_VERSION_DATE]
+                and base_formula[LAST_VERSION_DATE]
                 != ""
             ):
-                str_lvd = dict_thematic_props[id_theme][FORMULA_FIELD_NAME][
+                str_lvd = base_formula[
                     LAST_VERSION_DATE
                 ]
                 lvd = datetime.strptime(str_lvd, DATE_FORMAT).date()
@@ -414,7 +411,7 @@ def update_to_actual_grb(
         )
         return {}
     logger.feedback_debug(str(datetime_start))
-    logger.feedback_debug(str(formula_field))
+    logger.feedback_debug(str(base_formula_field))
 
     # Initiate a Aligner to reference thematic features to the actual borders
     actual_aligner = Aligner(feedback=feedback,max_workers=None)
@@ -430,12 +427,7 @@ def update_to_actual_grb(
     )
     dict_evaluated, prop_dictionary = actual_aligner.compare(ids_to_compare= affected)
 
-    return get_series_geojson_dict(
-        dict_evaluated,
-        crs=actual_aligner.CRS,
-        id_field=actual_aligner.name_thematic_id,
-        series_prop_dict=prop_dictionary,
-    )
+    return actual_aligner.get_results_as_geojson(resulttype=AlignerResultType.EVALUATED_PREDICTIONS,formula=True,attributes=attributes)
 
 
 class GRBActualLoader(GeoJsonLoader):
