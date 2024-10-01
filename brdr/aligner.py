@@ -17,6 +17,7 @@ from shapely import make_valid
 from shapely import remove_repeated_points
 from shapely import to_geojson
 from shapely.geometry.base import BaseGeometry
+from shapely.geometry.multipolygon import MultiPolygon
 
 from brdr import __version__
 from brdr.constants import DEFAULT_CRS
@@ -406,6 +407,25 @@ class Aligner:
 
         if self.multi_as_single_modus:
             dict_series = merge_process_results(dict_series)
+        # Check if geom changes from polygon to multipolygon or vice versa
+        for theme_id, dict_dist_results in dict_series.items():
+            original_geometry = self.dict_thematic[theme_id]
+            original_geometry_length =-1
+            if original_geometry.geom_type =="Polygon":
+                original_geometry_length=1
+            elif original_geometry.geom_type =="MultiPolygon":
+                original_geometry_length = len(original_geometry.geoms)
+            for relevant_distance, process_result in dict_dist_results.items():
+                resulting_geom = process_result["result"]
+                resulting_geometry_length =-1
+                if resulting_geom.geom_type == "Polygon":
+                    resulting_geometry_length = 1
+                elif resulting_geom.geom_type == "MultiPolygon":
+                    resulting_geometry_length = len(resulting_geom.geoms)
+                if original_geometry_length != resulting_geometry_length:
+                    msg = "Difference in amount of polygons"
+                    self.logger.feedback_debug(msg)
+                    process_result["remark"] = process_result["remark"]  + " / " + msg
 
         self.logger.feedback_info(
             "End of processing series: " + str(self.relevant_distances)
@@ -1154,8 +1174,6 @@ class Aligner:
             ),
             self.correction_distance,mitre_limit=self.mitre_limit,
         )
-        # geom_result_diff_plus = safe_difference(geom_thematic_result, geom_thematic)
-        # geom_result_diff_min = safe_difference(geom_thematic, geom_thematic_result)
 
 
         return {
