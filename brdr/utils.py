@@ -144,6 +144,7 @@ def multipolygons_to_singles(dict_geoms):
             message printed.
     """
     resulting_dict_geoms = {}
+    dict_multi_as_single = {}
     for key in dict_geoms:
         geom = dict_geoms[key]
         if str(geom.geom_type) == "Polygon":
@@ -156,11 +157,12 @@ def multipolygons_to_singles(dict_geoms):
             i = 0
             for p in polygons:
                 new_key = str(key) + MULTI_SINGLE_ID_SEPARATOR + str(i)
+                dict_multi_as_single[new_key] = key
                 resulting_dict_geoms[new_key] = p
                 i = i + 1
         else:
             logging.debug("geom excluded: " + str(geom) + " for key: " + str(key))
-    return resulting_dict_geoms
+    return resulting_dict_geoms,dict_multi_as_single
 
 
 def polygonize_reference_data(dict_ref):
@@ -494,7 +496,8 @@ def _add_bbox_to_url(url, crs=DEFAULT_CRS, bbox=None):
 
 
 def merge_process_results(
-    result_dict: dict[str, dict[float, ProcessResult]]
+    result_dict: dict[str, dict[float, ProcessResult]],
+        dict_multi_as_single:dict
 ) -> dict[str, dict[float, ProcessResult]]:
     """
      Merges processresults in a dictionary from multiple themeIDs into a single themeID.
@@ -509,7 +512,10 @@ def merge_process_results(
     grouped_results: dict[str, dict[float, ProcessResult]] = {}
 
     for id_theme, dict_results in result_dict.items():
-        id_theme_global = id_theme.split(MULTI_SINGLE_ID_SEPARATOR)[0]
+        if id_theme in dict_multi_as_single.keys():
+            id_theme_global = dict_multi_as_single[id_theme]
+        else:
+            id_theme_global=id_theme
         if id_theme_global not in grouped_results:
             grouped_results[id_theme_global] = dict_results
         else:

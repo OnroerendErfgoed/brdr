@@ -17,15 +17,15 @@ from shapely import make_valid
 from shapely import remove_repeated_points
 from shapely import to_geojson
 from shapely.geometry.base import BaseGeometry
-from shapely.geometry.multipolygon import MultiPolygon
 
 from brdr import __version__
-from brdr.constants import DEFAULT_CRS
+from brdr.constants import DEFAULT_CRS, BASE_FORMULA_FIELD_NAME
 from brdr.constants import (
     LAST_VERSION_DATE,
     VERSION_DATE,
     DATE_FORMAT,
-    FORMULA_FIELD_NAME, EVALUATION_FIELD_NAME, FULL_BASE_FIELD_NAME, FULL_ACTUAL_FIELD_NAME, DIFF_PERCENTAGE_FIELD_NAME,
+    NEW_FORMULA_FIELD_NAME, EVALUATION_FIELD_NAME, FULL_BASE_FIELD_NAME, FULL_ACTUAL_FIELD_NAME,
+    DIFF_PERCENTAGE_FIELD_NAME,
     DIFF_AREA_FIELD_NAME, OD_ALIKE_FIELD_NAME, EQUAL_REFERENCE_FEATURES_FIELD_NAME,
 )
 from brdr.enums import (
@@ -144,11 +144,11 @@ class Aligner:
         # name of the identifier-field of the thematic data (id has to be unique)
         self.name_thematic_id = "theme_identifier"
         # dictionary to store all thematic geometries to handle
-        self.dict_thematic: dict[str, BaseGeometry] = {}
+        self.dict_thematic: dict[any, BaseGeometry] = {}
         # dictionary to store properties of the reference-features (optional)
-        self.dict_thematic_properties: dict[str, dict] = {}
+        self.dict_thematic_properties: dict[any, dict] = {}
         # Dict to store source-information of the thematic dictionary
-        self.dict_thematic_source: dict[str, str] = {}
+        self.dict_thematic_source: dict[any, str] = {}
         # dictionary to store all unioned thematic geometries
         self.thematic_union = None
 
@@ -158,11 +158,11 @@ class Aligner:
         # CAPAKEY for GRB-parcels)
         self.name_reference_id = "ref_identifier"
         # dictionary to store all reference geometries
-        self.dict_reference: dict[str, BaseGeometry] = {}
+        self.dict_reference: dict[any, BaseGeometry] = {}
         # dictionary to store properties of the reference-features (optional)
-        self.dict_reference_properties: dict[str, dict] = {}
+        self.dict_reference_properties: dict[any, dict] = {}
         # Dict to store source-information of the reference dictionary
-        self.dict_reference_source: dict[str, str] = {}
+        self.dict_reference_source: dict[any, str] = {}
         # to save a unioned geometry of all reference polygons; needed for calculation
         # in most OD-strategies
         self.reference_union = None
@@ -170,13 +170,13 @@ class Aligner:
         # results
 
         # output-dictionaries (all results of process()), grouped by theme_id and relevant_distance
-        self.dict_processresults: dict[str, dict[float, ProcessResult]] = {}
+        self.dict_processresults: dict[any, dict[float, ProcessResult]] = {}
         # dictionary with the 'predicted' results, grouped by theme_id and relevant_distance
-        self.dict_predictions: dict[str, dict[float, ProcessResult]] = {}
+        self.dict_predictions: dict[any, dict[float, ProcessResult]] = {}
         # dictionary with the 'evaluated predicted' results, grouped by theme_id and relevant_distance
-        self.dict_evaluated_predictions: dict[str, dict[float, ProcessResult]] = {}
+        self.dict_evaluated_predictions: dict[any, dict[float, ProcessResult]] = {}
         # dictionary with the 'evaluated predicted' properties, grouped by theme_id and relevant_distance
-        self.dict_evaluated_predictions_properties: dict[str, dict[float, {}]] = {}
+        self.dict_evaluated_predictions_properties: dict[any, dict[float, {}]] = {}
 
         # Coordinate reference system
         # thematic geometries and reference geometries are assumed to be in the same CRS
@@ -322,7 +322,7 @@ class Aligner:
         relevant_distance=1,
         od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
         threshold_overlap_percentage=50,
-    ) -> dict[str, dict[float, ProcessResult]]:
+    ) -> dict[any, dict[float, ProcessResult]]:
         """
         Calculates the resulting dictionaries for thematic data based on a series of
             relevant distances.
@@ -357,8 +357,9 @@ class Aligner:
         futures = []
         if dict_thematic is None:
             dict_thematic = self.dict_thematic
+        dict_multi_as_single = {}
         if self.multi_as_single_modus:
-            dict_thematic = multipolygons_to_singles(dict_thematic)
+            dict_thematic, dict_multi_as_single = multipolygons_to_singles(dict_thematic)
 
         if self.max_workers!=-1:
             with ThreadPoolExecutor(max_workers=self.max_workers) as executor:#max_workers=5
@@ -406,26 +407,7 @@ class Aligner:
                     dict_series[key][relevant_distance] = processed_result
 
         if self.multi_as_single_modus:
-            dict_series = merge_process_results(dict_series)
-        # Check if geom changes from polygon to multipolygon or vice versa
-        for theme_id, dict_dist_results in dict_series.items():
-            original_geometry = self.dict_thematic[theme_id]
-            original_geometry_length =-1
-            if original_geometry.geom_type =="Polygon":
-                original_geometry_length=1
-            elif original_geometry.geom_type =="MultiPolygon":
-                original_geometry_length = len(original_geometry.geoms)
-            for relevant_distance, process_result in dict_dist_results.items():
-                resulting_geom = process_result["result"]
-                resulting_geometry_length =-1
-                if resulting_geom.geom_type == "Polygon":
-                    resulting_geometry_length = 1
-                elif resulting_geom.geom_type == "MultiPolygon":
-                    resulting_geometry_length = len(resulting_geom.geoms)
-                if original_geometry_length != resulting_geometry_length:
-                    msg = "Difference in amount of polygons"
-                    self.logger.feedback_debug(msg)
-                    process_result["remark"] = process_result["remark"]  + " / " + msg
+            dict_series = merge_process_results(dict_series,dict_multi_as_single)
 
         self.logger.feedback_info(
             "End of processing series: " + str(self.relevant_distances)
@@ -720,7 +702,7 @@ class Aligner:
     ###########################################
 
     def get_results_as_geojson(
-        self, resulttype=AlignerResultType.PROCESSRESULTS, formula=False
+        self, resulttype=AlignerResultType.PROCESSRESULTS, formula=False, attributes=False
     ):
         """
         get a geojson of  a dictionary containing the resulting geometries for all
@@ -746,12 +728,15 @@ class Aligner:
 
         for theme_id, results_dict in dict_series.items():
             for relevant_distance, process_results in results_dict.items():
-                if formula and not (theme_id in prop_dictionary and relevant_distance in prop_dictionary[theme_id] and FORMULA_FIELD_NAME in prop_dictionary[theme_id][relevant_distance]):
+                if relevant_distance not in prop_dictionary[theme_id]:
+                    prop_dictionary[theme_id][relevant_distance]={}
+                if attributes:
+                    for attr,value in self.dict_thematic_properties[theme_id].items():
+                        prop_dictionary[theme_id][relevant_distance][attr] = value
+                if formula: #and not (theme_id in prop_dictionary and relevant_distance in prop_dictionary[theme_id] and NEW_FORMULA_FIELD_NAME in prop_dictionary[theme_id][relevant_distance]):
                     result = process_results["result"]
                     formula = self.get_brdr_formula(result)
-                    prop_dictionary[theme_id][relevant_distance] = {
-                        FORMULA_FIELD_NAME: json.dumps(formula)
-                    }
+                    prop_dictionary[theme_id][relevant_distance][NEW_FORMULA_FIELD_NAME] =  json.dumps(formula)
         return get_series_geojson_dict(
             dict_series,
             crs=self.CRS,
@@ -1174,6 +1159,8 @@ class Aligner:
             ),
             self.correction_distance,mitre_limit=self.mitre_limit,
         )
+        # geom_result_diff_plus = safe_difference(geom_thematic_result, geom_thematic)
+        # geom_result_diff_min = safe_difference(geom_thematic, geom_thematic_result)
 
 
         return {
@@ -1192,7 +1179,7 @@ class Aligner:
         #threshold_area = 5
         #threshold_percentage = 1
         properties = {
-            FORMULA_FIELD_NAME: "",
+            NEW_FORMULA_FIELD_NAME: "",
             EVALUATION_FIELD_NAME: Evaluation.TO_CHECK_4,
             FULL_BASE_FIELD_NAME: None,
             FULL_ACTUAL_FIELD_NAME: None,
@@ -1203,17 +1190,17 @@ class Aligner:
 
         }
         actual_formula = self.get_brdr_formula(geom_predicted)
-        properties[FORMULA_FIELD_NAME] = json.dumps(
+        properties[NEW_FORMULA_FIELD_NAME] = json.dumps(
             actual_formula
         )
         base_formula = None
         if (
                 id_theme in self.dict_thematic_properties
-                and FORMULA_FIELD_NAME in self.dict_thematic_properties[id_theme]
+                and BASE_FORMULA_FIELD_NAME in self.dict_thematic_properties[id_theme]
         ):
-            base_formula = self.dict_thematic_properties[id_theme][
-                FORMULA_FIELD_NAME
-            ]
+            base_formula = json.loads(self.dict_thematic_properties[id_theme][
+                BASE_FORMULA_FIELD_NAME
+            ])
 
         if base_formula is None or actual_formula is None:
             properties[EVALUATION_FIELD_NAME] = Evaluation.NO_PREDICTION_5
