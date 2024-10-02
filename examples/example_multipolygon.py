@@ -13,7 +13,9 @@ aligner0 = Aligner()
 aligner0.load_thematic_data(
     GeoJsonFileLoader("../tests/testdata/multipolygon.geojson", "theme_identifier")
 )
-aligner0.dict_thematic,dict_multi_as_single = multipolygons_to_singles(aligner0.dict_thematic)
+aligner0.dict_thematic, dict_multi_as_single = multipolygons_to_singles(
+    aligner0.dict_thematic
+)
 aligner0.load_thematic_data(
     DictLoader(
         aligner0.dict_thematic,

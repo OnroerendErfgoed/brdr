@@ -24,9 +24,14 @@ from brdr.constants import (
     LAST_VERSION_DATE,
     VERSION_DATE,
     DATE_FORMAT,
-    NEW_FORMULA_FIELD_NAME, EVALUATION_FIELD_NAME, FULL_BASE_FIELD_NAME, FULL_ACTUAL_FIELD_NAME,
+    NEW_FORMULA_FIELD_NAME,
+    EVALUATION_FIELD_NAME,
+    FULL_BASE_FIELD_NAME,
+    FULL_ACTUAL_FIELD_NAME,
     DIFF_PERCENTAGE_FIELD_NAME,
-    DIFF_AREA_FIELD_NAME, OD_ALIKE_FIELD_NAME, EQUAL_REFERENCE_FEATURES_FIELD_NAME,
+    DIFF_AREA_FIELD_NAME,
+    OD_ALIKE_FIELD_NAME,
+    EQUAL_REFERENCE_FEATURES_FIELD_NAME,
 )
 from brdr.enums import (
     OpenbaarDomeinStrategy,
@@ -74,6 +79,7 @@ class Aligner:
         threshold_overlap_percentage=50,
         od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
         crs=DEFAULT_CRS,
+        multi_as_single_modus=True,
         threshold_exclusion_area=0,
         threshold_exclusion_percentage=0,
         buffer_multiplication_factor=1.01,
@@ -125,10 +131,10 @@ class Aligner:
         self.max_workers = max_workers
         # Multiplication-factor used in OD-strategy 2 (SNAP-BOTH SIDED) when calculating
         # OD-area to take into account
-        self.buffer_multiplication_factor=buffer_multiplication_factor
+        self.buffer_multiplication_factor = buffer_multiplication_factor
         # Threshold-value to exclude circles getting processed (perfect circle = 1) based on
         # POLSPY-POPPER algorithm
-        self.threshold_circle_ratio=threshold_circle_ratio
+        self.threshold_circle_ratio = threshold_circle_ratio
         # Distance used in a pos_neg_buffer to remove slivers (technical correction)
         self.correction_distance = correction_distance
         # Buffer parameters:
@@ -136,8 +142,8 @@ class Aligner:
         #   Explanation and examples:
         #   https://shapely.readthedocs.io/en/stable/reference/shapely.buffer.html
         #   https://postgis.net/docs/ST_Buffer.html
-        self.mitre_limit=mitre_limit
-        #quad_segments = 8 (by default in shapely)
+        self.mitre_limit = mitre_limit
+        # quad_segments = 8 (by default in shapely)
 
         # PROCESSING DEFAULTS
         # thematic
@@ -187,7 +193,7 @@ class Aligner:
         self.CRS = crs
         # this parameter is used to treat multipolygon as single polygons. So polygons
         # with ID splitter are separately evaluated and merged on result.
-        self.multi_as_single_modus = True
+        self.multi_as_single_modus = multi_as_single_modus
         self.logger.feedback_info("Aligner initialized")
 
     ##########LOADERS##########################
@@ -208,7 +214,6 @@ class Aligner:
 
     ##########PROCESSORS#######################
     ###########################################
-
 
     def process_geometry(
         self,
@@ -249,7 +254,7 @@ class Aligner:
         self.logger.feedback_debug("process geometry")
         self.od_strategy = od_strategy
         self.threshold_overlap_percentage = threshold_overlap_percentage
-        buffer_distance = relevant_distance/2
+        buffer_distance = relevant_distance / 2
         # combine all parts of the input geometry to one polygon
         input_geometry = safe_unary_union(get_parts(input_geometry))
 
@@ -259,7 +264,9 @@ class Aligner:
             preresult,
             relevant_intersection_array,
             relevant_diff_array,
-        ) = self._calculate_intersection_between_geometry_and_od(input_geometry,relevant_distance)
+        ) = self._calculate_intersection_between_geometry_and_od(
+            input_geometry, relevant_distance
+        )
         # get a list of all ref_ids that are intersecting the thematic geometry
         ref_intersections = self.reference_items.take(
             self.reference_tree.query(geometry)
@@ -281,7 +288,8 @@ class Aligner:
                 buffer_distance,
                 self.threshold_overlap_percentage,
                 self.threshold_exclusion_percentage,
-                self.threshold_exclusion_area,self.mitre_limit
+                self.threshold_exclusion_area,
+                self.mitre_limit,
             )
             self.logger.feedback_debug("intersection calculated")
             preresult = self._add_multi_polygons_from_geom_to_array(geom, preresult)
@@ -300,7 +308,9 @@ class Aligner:
             relevant_diff = Polygon()
 
         # POSTPROCESSING
-        result_dict = self._postprocess_preresult(preresult, geometry,relevant_distance)
+        result_dict = self._postprocess_preresult(
+            preresult, geometry, relevant_distance
+        )
 
         result_dict["result_relevant_intersection"] = relevant_intersection
         result_dict["result_relevant_diff"] = relevant_diff
@@ -308,16 +318,15 @@ class Aligner:
         # make a unary union for each key value in the result dict
         for key in ProcessResult.__annotations__:
             geometry = result_dict.get(key, Polygon())  # noqa
-            if isinstance(geometry,BaseGeometry) and not geometry.is_empty:
+            if isinstance(geometry, BaseGeometry) and not geometry.is_empty:
                 geometry = safe_unary_union(geometry)
             result_dict[key] = geometry  # noqa
 
         return result_dict
 
-
     def process(
         self,
-        dict_thematic =None,
+        dict_thematic=None,
         relevant_distances: Iterable[float] = None,
         relevant_distance=1,
         od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
@@ -359,10 +368,14 @@ class Aligner:
             dict_thematic = self.dict_thematic
         dict_multi_as_single = {}
         if self.multi_as_single_modus:
-            dict_thematic, dict_multi_as_single = multipolygons_to_singles(dict_thematic)
+            dict_thematic, dict_multi_as_single = multipolygons_to_singles(
+                dict_thematic
+            )
 
-        if self.max_workers!=-1:
-            with ThreadPoolExecutor(max_workers=self.max_workers) as executor:#max_workers=5
+        if self.max_workers != -1:
+            with ThreadPoolExecutor(
+                max_workers=self.max_workers
+            ) as executor:  # max_workers=5
                 for key, geometry in dict_thematic.items():
                     self.logger.feedback_info(
                         f"thematic id {str(key)} processed with relevant distances (m) [{str(self.relevant_distances)}]"
@@ -371,20 +384,26 @@ class Aligner:
                     dict_series_queue[key] = {}
                     for relevant_distance in self.relevant_distances:
                         try:
-                            future = executor.submit(self.process_geometry, geometry,
+                            future = executor.submit(
+                                self.process_geometry,
+                                geometry,
                                 relevant_distance,
                                 od_strategy,
-                                threshold_overlap_percentage,)
+                                threshold_overlap_percentage,
+                            )
                             futures.append(future)
-                            dict_series_queue[key][relevant_distance]  = future
+                            dict_series_queue[key][relevant_distance] = future
                         except ValueError as e:
-                            self.logger.feedback_warning("error for" + f"thematic id {str(key)} processed with relevant distances (m) [{str(self.relevant_distances)}]")
+                            self.logger.feedback_warning(
+                                "error for"
+                                + f"thematic id {str(key)} processed with relevant distances (m) [{str(self.relevant_distances)}]"
+                            )
                             dict_series_queue[key][relevant_distance] = None
                             self.logger.feedback_warning(str(e))
-            self.logger.feedback_debug ("waiting all started RD calculations")
+            self.logger.feedback_debug("waiting all started RD calculations")
             wait(futures)
-            for id_theme,dict_dist in dict_series_queue.items():
-                for relevant_distance,future in dict_dist.items():
+            for id_theme, dict_dist in dict_series_queue.items():
+                for relevant_distance, future in dict_dist.items():
                     dict_series[id_theme][relevant_distance] = future.result()
         else:
             for key, geometry in dict_thematic.items():
@@ -407,19 +426,19 @@ class Aligner:
                     dict_series[key][relevant_distance] = processed_result
 
         if self.multi_as_single_modus:
-            dict_series = merge_process_results(dict_series,dict_multi_as_single)
+            dict_series = merge_process_results(dict_series, dict_multi_as_single)
 
         # Check if geom changes from polygon to multipolygon or vice versa
         for theme_id, dict_dist_results in dict_series.items():
             original_geometry = self.dict_thematic[theme_id]
-            original_geometry_length =-1
-            if original_geometry.geom_type =="Polygon":
-                original_geometry_length=1
-            elif original_geometry.geom_type =="MultiPolygon":
+            original_geometry_length = -1
+            if original_geometry.geom_type == "Polygon":
+                original_geometry_length = 1
+            elif original_geometry.geom_type == "MultiPolygon":
                 original_geometry_length = len(original_geometry.geoms)
             for relevant_distance, process_result in dict_dist_results.items():
                 resulting_geom = process_result["result"]
-                resulting_geometry_length =-1
+                resulting_geometry_length = -1
                 if resulting_geom.geom_type == "Polygon":
                     resulting_geometry_length = 1
                 elif resulting_geom.geom_type == "MultiPolygon":
@@ -427,7 +446,7 @@ class Aligner:
                 if original_geometry_length != resulting_geometry_length:
                     msg = "Difference in amount of polygons"
                     self.logger.feedback_debug(msg)
-                    process_result["remark"] = process_result["remark"]  + " / " + msg
+                    process_result["remark"] = process_result["remark"] + " | " + msg
 
         self.logger.feedback_info(
             "End of processing series: " + str(self.relevant_distances)
@@ -435,7 +454,6 @@ class Aligner:
         self.dict_processresults = dict_series
 
         return self.dict_processresults
-
 
     def predictor(
         self,
@@ -508,14 +526,13 @@ class Aligner:
             - Debug logs the thematic element key being processed.
         """
         if dict_thematic is None:
-            dict_thematic=self.dict_thematic
+            dict_thematic = self.dict_thematic
         dict_predictions = defaultdict(dict)
         dict_series = self.process(
             relevant_distances=relevant_distances,
             od_strategy=od_strategy,
             threshold_overlap_percentage=threshold_overlap_percentage,
         )
-
 
         diffs_dict = diffs_from_dict_series(dict_series, dict_thematic)
 
@@ -547,7 +564,10 @@ class Aligner:
             for rel_dist, processresults in dist_results.items():
                 predicted_geom = processresults["result"]
                 if not _equal_geom_in_array(
-                    predicted_geom, predicted_geoms_for_theme_id,self.correction_distance,self.mitre_limit
+                    predicted_geom,
+                    predicted_geoms_for_theme_id,
+                    self.correction_distance,
+                    self.mitre_limit,
                 ):
                     dict_predictions_unique[theme_id][rel_dist] = processresults
                     predicted_geoms_for_theme_id.append(processresults["result"])
@@ -564,7 +584,6 @@ class Aligner:
             diffs_dict,
         )
 
-
     def compare(
         self,
         ids_to_compare=None,
@@ -575,17 +594,19 @@ class Aligner:
         affected: list with all IDs to evaluate. all other IDs will be unchanged. If None (default), all self.dict_thematic will be evaluated.
         """
         if ids_to_compare is None:
-            ids_to_compare =list(self.dict_thematic.keys())
-        dict_affected={}
-        dict_unaffected={}
-        for id_theme,geom in self.dict_thematic.items():
+            ids_to_compare = list(self.dict_thematic.keys())
+        dict_affected = {}
+        dict_unaffected = {}
+        for id_theme, geom in self.dict_thematic.items():
             if id_theme in ids_to_compare:
                 dict_affected[id_theme] = geom
             else:
                 dict_unaffected[id_theme] = geom
-        self.dict_thematic=dict_affected
-        #AFFECTED
-        dict_series, dict_affected_predictions, diffs = self.predictor(dict_thematic=dict_affected,relevant_distances=self.relevant_distances)
+        self.dict_thematic = dict_affected
+        # AFFECTED
+        dict_series, dict_affected_predictions, diffs = self.predictor(
+            dict_thematic=dict_affected, relevant_distances=self.relevant_distances
+        )
         dict_predictions_evaluated = {}
         prop_dictionary = {}
         for theme_id, dict_predictions_results in dict_affected_predictions.items():
@@ -593,19 +614,24 @@ class Aligner:
             prop_dictionary[theme_id] = {}
             for dist in sorted(dict_predictions_results.keys()):
                 prop_dictionary[theme_id][dist] = {}
-                props = self._evaluate(id_theme=theme_id,geom_predicted=dict_predictions_results[dist]["result"])
-                dict_predictions_evaluated[theme_id][dist] = dict_affected_predictions[theme_id][dist]
+                props = self._evaluate(
+                    id_theme=theme_id,
+                    geom_predicted=dict_predictions_results[dist]["result"],
+                )
+                dict_predictions_evaluated[theme_id][dist] = dict_affected_predictions[
+                    theme_id
+                ][dist]
                 prop_dictionary[theme_id][dist] = props
-        #UNAFFECTED
-        relevant_distance=0
-        #dict_unaffected_series = self.process(dict_thematic=dict_unaffected,relevant_distances=[relevant_distance])
-        #for theme_id, dict_unaffected_results in dict_unaffected_series.items():
+        # UNAFFECTED
+        relevant_distance = 0
+        # dict_unaffected_series = self.process(dict_thematic=dict_unaffected,relevant_distances=[relevant_distance])
+        # for theme_id, dict_unaffected_results in dict_unaffected_series.items():
         for theme_id, geom in dict_unaffected.items():
             dict_predictions_evaluated[theme_id] = {}
-            prop_dictionary[theme_id] = {relevant_distance:{}}
-            props = self._evaluate(id_theme=theme_id,geom_predicted=geom)
-            props[EVALUATION_FIELD_NAME]=Evaluation.NO_CHANGE_6
-            dict_predictions_evaluated[theme_id][relevant_distance] = {"result":geom}
+            prop_dictionary[theme_id] = {relevant_distance: {}}
+            props = self._evaluate(id_theme=theme_id, geom_predicted=geom)
+            props[EVALUATION_FIELD_NAME] = Evaluation.NO_CHANGE_6
+            dict_predictions_evaluated[theme_id][relevant_distance] = {"result": geom}
             prop_dictionary[theme_id][relevant_distance] = props
         self.dict_evaluated_predictions = dict_predictions_evaluated
         self.dict_evaluated_predictions_properties = prop_dictionary
@@ -666,7 +692,7 @@ class Aligner:
                 and VERSION_DATE in self.dict_reference_properties[key_ref]
             ):
                 str_version_date = self.dict_reference_properties[key_ref][VERSION_DATE]
-                version_date = datetime.strptime(str_version_date,DATE_FORMAT)
+                version_date = datetime.strptime(str_version_date, DATE_FORMAT)
                 if last_version_date is None and version_date is not None:
                     last_version_date = version_date
                 if version_date is not None and version_date > last_version_date:
@@ -705,9 +731,11 @@ class Aligner:
         geom_od = buffer_pos(
             buffer_neg(
                 safe_difference(geometry, safe_unary_union(intersected)),
-                self.correction_distance,mitre_limit=self.mitre_limit,
+                self.correction_distance,
+                mitre_limit=self.mitre_limit,
             ),
-            self.correction_distance,mitre_limit=self.mitre_limit,
+            self.correction_distance,
+            mitre_limit=self.mitre_limit,
         )
         if geom_od is not None:
             area_od = round(geom_od.area, 2)
@@ -722,7 +750,10 @@ class Aligner:
     ###########################################
 
     def get_results_as_geojson(
-        self, resulttype=AlignerResultType.PROCESSRESULTS, formula=False, attributes=False
+        self,
+        resulttype=AlignerResultType.PROCESSRESULTS,
+        formula=False,
+        attributes=False,
     ):
         """
         get a geojson of  a dictionary containing the resulting geometries for all
@@ -749,14 +780,18 @@ class Aligner:
         for theme_id, results_dict in dict_series.items():
             for relevant_distance, process_results in results_dict.items():
                 if relevant_distance not in prop_dictionary[theme_id]:
-                    prop_dictionary[theme_id][relevant_distance]={}
+                    prop_dictionary[theme_id][relevant_distance] = {}
                 if attributes:
-                    for attr,value in self.dict_thematic_properties[theme_id].items():
+                    for attr, value in self.dict_thematic_properties[theme_id].items():
                         prop_dictionary[theme_id][relevant_distance][attr] = value
-                if formula: #and not (theme_id in prop_dictionary and relevant_distance in prop_dictionary[theme_id] and NEW_FORMULA_FIELD_NAME in prop_dictionary[theme_id][relevant_distance]):
+                if (
+                    formula
+                ):  # and not (theme_id in prop_dictionary and relevant_distance in prop_dictionary[theme_id] and NEW_FORMULA_FIELD_NAME in prop_dictionary[theme_id][relevant_distance]):
                     result = process_results["result"]
                     formula = self.get_brdr_formula(result)
-                    prop_dictionary[theme_id][relevant_distance][NEW_FORMULA_FIELD_NAME] =  json.dumps(formula)
+                    prop_dictionary[theme_id][relevant_distance][
+                        NEW_FORMULA_FIELD_NAME
+                    ] = json.dumps(formula)
         return get_series_geojson_dict(
             dict_series,
             crs=self.CRS,
@@ -830,8 +865,7 @@ class Aligner:
 
     def get_thematic_union(self):
         if self.thematic_union is None:
-            self.thematic_union = safe_unary_union(list(self.dict_thematic.values())
-            )
+            self.thematic_union = safe_unary_union(list(self.dict_thematic.values()))
         return self.thematic_union
 
     def _prepare_reference_data(self):
@@ -865,9 +899,11 @@ class Aligner:
         self.reference_union = None
         return
 
-    def _calculate_intersection_between_geometry_and_od(self, geometry,relevant_distance):
+    def _calculate_intersection_between_geometry_and_od(
+        self, geometry, relevant_distance
+    ):
         # Calculate the intersection between thematic and Openbaar Domein
-        buffer_distance = relevant_distance/2
+        buffer_distance = relevant_distance / 2
         relevant_intersection_array = []
         relevant_difference_array = []
         geom_thematic_od = Polygon()
@@ -894,11 +930,17 @@ class Aligner:
             # geom of OD
             geom_od = safe_difference(geometry, self._get_reference_union())
             # only the relevant parts of OD
-            geom_od_neg_pos = buffer_neg_pos(geom_od, buffer_distance,mitre_limit=self.mitre_limit,)
+            geom_od_neg_pos = buffer_neg_pos(
+                geom_od,
+                buffer_distance,
+                mitre_limit=self.mitre_limit,
+            )
             # geom_thematic_od = safe_intersection(geom_od_neg_pos,geom_od)# resulting
             # thematic OD
             geom_od_neg_pos_buffered = buffer_pos(
-                geom_od_neg_pos, buffer_distance,mitre_limit=self.mitre_limit,
+                geom_od_neg_pos,
+                buffer_distance,
+                mitre_limit=self.mitre_limit,
             )  # include parts
             geom_thematic_od = safe_intersection(
                 geom_od_neg_pos_buffered, geom_od
@@ -912,7 +954,7 @@ class Aligner:
                 geom_thematic_od,
                 relevant_difference_array,
                 relevant_intersection_array,
-            ) = self._od_snap_all_side(geometry,relevant_distance)
+            ) = self._od_snap_all_side(geometry, relevant_distance)
         elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_FULL_AREA_SINGLE_SIDE:
             # Strategy useful for bigger areas.
             # integrates the entire inner area of the input geometry,
@@ -921,7 +963,7 @@ class Aligner:
             self.logger.feedback_debug(
                 "OD-strategy Full-area-variant of OD-SNAP_SINGLE_SIDE"
             )
-            geom_thematic_od = self._od_full_area(geometry,relevant_distance)
+            geom_thematic_od = self._od_full_area(geometry, relevant_distance)
         elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_FULL_AREA_ALL_SIDE:
             # Strategy useful for bigger areas.
             # integrates the entire inner area of the input geometry,
@@ -935,10 +977,10 @@ class Aligner:
                 geom_thematic_od,
                 relevant_difference_array,
                 relevant_intersection_array,
-            ) = self._od_snap_all_side(geometry,relevant_distance)
+            ) = self._od_snap_all_side(geometry, relevant_distance)
             # This part is a copy of SNAP_FULL_AREA_SINGLE_SIDE
             geom_theme_od_min_clipped_plus_buffered_clipped = self._od_full_area(
-                geometry,relevant_distance
+                geometry, relevant_distance
             )
             # UNION the calculation of  OD-SNAP_ALL_SIDE with FULL AREA of
             # OD-SNAP_FULL_AREA_SINGLE_SIDE
@@ -956,7 +998,11 @@ class Aligner:
             # geom of OD
             geom_od = safe_difference(geometry, self._get_reference_union())
             # only the relevant parts of OD
-            geom_od_neg_pos = buffer_neg_pos(geom_od, buffer_distance,mitre_limit=self.mitre_limit,)
+            geom_od_neg_pos = buffer_neg_pos(
+                geom_od,
+                buffer_distance,
+                mitre_limit=self.mitre_limit,
+            )
             # resulting thematic OD
             geom_thematic_od = safe_intersection(geom_od_neg_pos, geom_od)
         elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE_VARIANT_2:
@@ -978,21 +1024,29 @@ class Aligner:
             relevant_difference_array,
         )
 
-    def _od_full_area(self, geometry,relevant_distance):
-        buffer_distance=relevant_distance/2
+    def _od_full_area(self, geometry, relevant_distance):
+        buffer_distance = relevant_distance / 2
         geom_theme_od = safe_difference(geometry, self._get_reference_union())
         geom_theme_min_buffered = buffer_neg(
             buffer_pos(
-                buffer_neg(geometry, relevant_distance,mitre_limit=self.mitre_limit,),
-                buffer_distance,mitre_limit=self.mitre_limit,
+                buffer_neg(
+                    geometry,
+                    relevant_distance,
+                    mitre_limit=self.mitre_limit,
+                ),
+                buffer_distance,
+                mitre_limit=self.mitre_limit,
             ),
-            buffer_distance,mitre_limit=self.mitre_limit,
+            buffer_distance,
+            mitre_limit=self.mitre_limit,
         )
         geom_theme_od_clipped_min_buffered = safe_intersection(
             geom_theme_min_buffered, geom_theme_od
         )
         geom_theme_od_min_clipped_plus_buffered = buffer_pos(
-            geom_theme_od_clipped_min_buffered, relevant_distance,mitre_limit=self.mitre_limit,
+            geom_theme_od_clipped_min_buffered,
+            relevant_distance,
+            mitre_limit=self.mitre_limit,
         )
         geom_theme_od_min_clipped_plus_buffered_clipped = safe_intersection(
             geom_theme_od_min_clipped_plus_buffered, geom_theme_od
@@ -1000,12 +1054,16 @@ class Aligner:
         geom_thematic_od = geom_theme_od_min_clipped_plus_buffered_clipped
         return geom_thematic_od
 
-    def _od_snap_all_side(self, geometry,relevant_distance):
-        buffer_distance = relevant_distance/2
+    def _od_snap_all_side(self, geometry, relevant_distance):
+        buffer_distance = relevant_distance / 2
         relevant_difference_array = []
         relevant_intersection_array = []
         geom_thematic_buffered = make_valid(
-            buffer_pos(geometry, self.buffer_multiplication_factor * relevant_distance,mitre_limit=self.mitre_limit,)
+            buffer_pos(
+                geometry,
+                self.buffer_multiplication_factor * relevant_distance,
+                mitre_limit=self.mitre_limit,
+            )
         )
         clip_ref_thematic_buffered = safe_intersection(
             self._get_reference_union(), geom_thematic_buffered
@@ -1030,7 +1088,7 @@ class Aligner:
                 self.threshold_overlap_percentage,
                 self.threshold_exclusion_percentage,
                 self.threshold_exclusion_area,
-                self.mitre_limit
+                self.mitre_limit,
             )
             relevant_intersection_array = self._add_multi_polygons_from_geom_to_array(
                 geom_relevant_intersection, []
@@ -1042,11 +1100,12 @@ class Aligner:
 
     def _get_reference_union(self):
         if self.reference_union is None:
-            self.reference_union = safe_unary_union(list(self.dict_reference.values())
-            )
+            self.reference_union = safe_unary_union(list(self.dict_reference.values()))
         return self.reference_union
 
-    def _postprocess_preresult(self, preresult, geom_thematic,relevant_distance) -> ProcessResult:
+    def _postprocess_preresult(
+        self, preresult, geom_thematic, relevant_distance
+    ) -> ProcessResult:
         """
         Postprocess the preresult with the following actions to create the final result
         *Corrections for areas that differ more than the relevant distance
@@ -1072,7 +1131,7 @@ class Aligner:
         """
         # Process array
         remark = ""
-        buffer_distance = relevant_distance/2
+        buffer_distance = relevant_distance / 2
         result = []
         geom_preresult = safe_unary_union(preresult)
         geom_thematic = make_valid(geom_thematic)
@@ -1087,21 +1146,27 @@ class Aligner:
             ):
                 remark = "Circle detected: -->resulting geometry = original geometry"
                 self.logger.feedback_debug(remark)
-                return {"result": geom_thematic,"remark": remark}
+                return {"result": geom_thematic, "remark": remark}
 
             # Correction for unchanged geometries
             if geom_preresult == geom_thematic:
                 remark = "Unchanged geometry: -->resulting geometry = original geometry"
                 self.logger.feedback_debug(remark)
-                return {"result": geom_thematic,"remark": remark}
+                return {"result": geom_thematic, "remark": remark}
 
         # Corrections for areas that differ more than the relevant distance
         geom_thematic_dissolved = buffer_pos(
             buffer_neg(
-                buffer_pos(geom_preresult, self.correction_distance,mitre_limit=self.mitre_limit,),
-                2 * self.correction_distance,mitre_limit=self.mitre_limit,
+                buffer_pos(
+                    geom_preresult,
+                    self.correction_distance,
+                    mitre_limit=self.mitre_limit,
+                ),
+                2 * self.correction_distance,
+                mitre_limit=self.mitre_limit,
             ),
-            self.correction_distance,mitre_limit=self.mitre_limit,
+            self.correction_distance,
+            mitre_limit=self.mitre_limit,
         )
         # geom_symdiff = self._safe_symmetric_difference(geom_thematic,
         # geom_thematic_dissolved)
@@ -1111,22 +1176,36 @@ class Aligner:
             geom_thematic_dissolved,
             safe_intersection(
                 geom_diff_delete,
-                buffer_neg_pos(geom_diff_delete, buffer_distance,mitre_limit=self.mitre_limit,),
+                buffer_neg_pos(
+                    geom_diff_delete,
+                    buffer_distance,
+                    mitre_limit=self.mitre_limit,
+                ),
             ),
         )
         geom_diff_removed_added = safe_union(
             geom_diff_removed,
             safe_intersection(
                 geom_diff_add,
-                buffer_neg_pos(geom_diff_add, buffer_distance,mitre_limit=self.mitre_limit,),
+                buffer_neg_pos(
+                    geom_diff_add,
+                    buffer_distance,
+                    mitre_limit=self.mitre_limit,
+                ),
             ),
         )
         geom_thematic_preresult = buffer_pos(
             buffer_neg(
-                buffer_pos(geom_diff_removed_added, self.correction_distance,mitre_limit=self.mitre_limit,),
-                2 * self.correction_distance,mitre_limit=self.mitre_limit,
+                buffer_pos(
+                    geom_diff_removed_added,
+                    self.correction_distance,
+                    mitre_limit=self.mitre_limit,
+                ),
+                2 * self.correction_distance,
+                mitre_limit=self.mitre_limit,
             ),
-            self.correction_distance,mitre_limit=self.mitre_limit,
+            self.correction_distance,
+            mitre_limit=self.mitre_limit,
         )
         # Correction for Inner holes(donuts) / multipolygons
         # fill and remove gaps
@@ -1135,10 +1214,16 @@ class Aligner:
         )
         geom_thematic_result = buffer_pos(
             buffer_neg(
-                buffer_pos(geom_thematic_cleaned_holes, self.correction_distance,mitre_limit=self.mitre_limit,),
-                2 * self.correction_distance,mitre_limit=self.mitre_limit,
+                buffer_pos(
+                    geom_thematic_cleaned_holes,
+                    self.correction_distance,
+                    mitre_limit=self.mitre_limit,
+                ),
+                2 * self.correction_distance,
+                mitre_limit=self.mitre_limit,
             ),
-            self.correction_distance,mitre_limit=self.mitre_limit,
+            self.correction_distance,
+            mitre_limit=self.mitre_limit,
         )
         geom_thematic_result = make_valid(remove_repeated_points(geom_thematic_result))
 
@@ -1160,35 +1245,49 @@ class Aligner:
         # remove 'very small' differences (smaller than the correction distance)
         geom_result_diff = buffer_pos(
             buffer_neg(
-                safe_symmetric_difference(geom_thematic_result, geom_thematic,),
-                self.correction_distance,mitre_limit=self.mitre_limit,
+                safe_symmetric_difference(
+                    geom_thematic_result,
+                    geom_thematic,
+                ),
+                self.correction_distance,
+                mitre_limit=self.mitre_limit,
             ),
-            self.correction_distance,mitre_limit=self.mitre_limit,
+            self.correction_distance,
+            mitre_limit=self.mitre_limit,
         )
         geom_result_diff_plus = buffer_pos(
             buffer_neg(
-                safe_difference(geom_thematic_result, geom_thematic,),
-                self.correction_distance,mitre_limit=self.mitre_limit,
+                safe_difference(
+                    geom_thematic_result,
+                    geom_thematic,
+                ),
+                self.correction_distance,
+                mitre_limit=self.mitre_limit,
             ),
-            self.correction_distance,mitre_limit=self.mitre_limit,
+            self.correction_distance,
+            mitre_limit=self.mitre_limit,
         )
         geom_result_diff_min = buffer_pos(
             buffer_neg(
-                safe_difference(geom_thematic, geom_thematic_result,),
-                self.correction_distance,mitre_limit=self.mitre_limit,
+                safe_difference(
+                    geom_thematic,
+                    geom_thematic_result,
+                ),
+                self.correction_distance,
+                mitre_limit=self.mitre_limit,
             ),
-            self.correction_distance,mitre_limit=self.mitre_limit,
+            self.correction_distance,
+            mitre_limit=self.mitre_limit,
         )
         # geom_result_diff_plus = safe_difference(geom_thematic_result, geom_thematic)
         # geom_result_diff_min = safe_difference(geom_thematic, geom_thematic_result)
-
 
         return {
             "result": geom_thematic_result,
             "result_diff": geom_result_diff,
             "result_diff_plus": geom_result_diff_plus,
             "result_diff_min": geom_result_diff_min,
-            "remark": remark
+            "remark": remark,
         }
 
     def _evaluate(self, id_theme, geom_predicted):
@@ -1196,8 +1295,8 @@ class Aligner:
         function that evaluates a predicted geometry and returns a properties-dictionary
         """
         threshold_od_percentage = 1
-        #threshold_area = 5
-        #threshold_percentage = 1
+        # threshold_area = 5
+        # threshold_percentage = 1
         properties = {
             NEW_FORMULA_FIELD_NAME: "",
             EVALUATION_FIELD_NAME: Evaluation.TO_CHECK_4,
@@ -1207,20 +1306,17 @@ class Aligner:
             EQUAL_REFERENCE_FEATURES_FIELD_NAME: None,
             DIFF_PERCENTAGE_FIELD_NAME: None,
             DIFF_AREA_FIELD_NAME: None,
-
         }
         actual_formula = self.get_brdr_formula(geom_predicted)
-        properties[NEW_FORMULA_FIELD_NAME] = json.dumps(
-            actual_formula
-        )
+        properties[NEW_FORMULA_FIELD_NAME] = json.dumps(actual_formula)
         base_formula = None
         if (
-                id_theme in self.dict_thematic_properties
-                and BASE_FORMULA_FIELD_NAME in self.dict_thematic_properties[id_theme]
+            id_theme in self.dict_thematic_properties
+            and BASE_FORMULA_FIELD_NAME in self.dict_thematic_properties[id_theme]
         ):
-            base_formula = json.loads(self.dict_thematic_properties[id_theme][
-                BASE_FORMULA_FIELD_NAME
-            ])
+            base_formula = json.loads(
+                self.dict_thematic_properties[id_theme][BASE_FORMULA_FIELD_NAME]
+            )
 
         if base_formula is None or actual_formula is None:
             properties[EVALUATION_FIELD_NAME] = Evaluation.NO_PREDICTION_5
@@ -1228,33 +1324,39 @@ class Aligner:
         properties[FULL_BASE_FIELD_NAME] = base_formula["full"]
         properties[FULL_ACTUAL_FIELD_NAME] = actual_formula["full"]
         od_alike = False
-        if base_formula["reference_od"] is None and actual_formula["reference_od"] is None:
+        if (
+            base_formula["reference_od"] is None
+            and actual_formula["reference_od"] is None
+        ):
             od_alike = True
-        elif base_formula["reference_od"] is None or actual_formula["reference_od"] is None:
+        elif (
+            base_formula["reference_od"] is None
+            or actual_formula["reference_od"] is None
+        ):
             od_alike = False
         elif (
-                abs(
-                    base_formula["reference_od"]["area"]
-                    - actual_formula["reference_od"]["area"]
-                )
-                * 100
-                / base_formula["reference_od"]["area"]
+            abs(
+                base_formula["reference_od"]["area"]
+                - actual_formula["reference_od"]["area"]
+            )
+            * 100
+            / base_formula["reference_od"]["area"]
         ) < threshold_od_percentage:
             od_alike = True
         properties[OD_ALIKE_FIELD_NAME] = od_alike
 
         equal_reference_features = True
         if (
-                base_formula["reference_features"].keys()
-                == actual_formula["reference_features"].keys()
+            base_formula["reference_features"].keys()
+            == actual_formula["reference_features"].keys()
         ):
             equal_reference_features = True
             max_diff_area_reference_feature = 0
             max_diff_percentage_reference_feature = 0
             for key in base_formula["reference_features"].keys():
                 if (
-                        base_formula["reference_features"][key]["full"]
-                        != actual_formula["reference_features"][key]["full"]
+                    base_formula["reference_features"][key]["full"]
+                    != actual_formula["reference_features"][key]["full"]
                 ):
                     equal_reference_features = False
 
@@ -1263,28 +1365,44 @@ class Aligner:
                     - actual_formula["reference_features"][key]["area"]
                 )
                 diff_percentage_reference_feature = (
-                        abs(
-                            base_formula["reference_features"][key]["area"]
-                            - actual_formula["reference_features"][key]["area"]
-                        )
-                        * 100
-                        / base_formula["reference_features"][key]["area"]
+                    abs(
+                        base_formula["reference_features"][key]["area"]
+                        - actual_formula["reference_features"][key]["area"]
+                    )
+                    * 100
+                    / base_formula["reference_features"][key]["area"]
                 )
                 if diff_area_reference_feature > max_diff_area_reference_feature:
                     max_diff_area_reference_feature = diff_area_reference_feature
-                if diff_percentage_reference_feature > max_diff_percentage_reference_feature:
-                    max_diff_percentage_reference_feature = diff_percentage_reference_feature
+                if (
+                    diff_percentage_reference_feature
+                    > max_diff_percentage_reference_feature
+                ):
+                    max_diff_percentage_reference_feature = (
+                        diff_percentage_reference_feature
+                    )
             properties[EQUAL_REFERENCE_FEATURES_FIELD_NAME] = equal_reference_features
             properties[DIFF_AREA_FIELD_NAME] = max_diff_area_reference_feature
-            properties[DIFF_PERCENTAGE_FIELD_NAME] = max_diff_percentage_reference_feature
-        #EVALUATION
-        if equal_reference_features and od_alike and base_formula["full"] and actual_formula["full"]:
+            properties[DIFF_PERCENTAGE_FIELD_NAME] = (
+                max_diff_percentage_reference_feature
+            )
+        # EVALUATION
+        if (
+            equal_reference_features
+            and od_alike
+            and base_formula["full"]
+            and actual_formula["full"]
+        ):
             properties[EVALUATION_FIELD_NAME] = Evaluation.EQUALITY_EQUAL_FORMULA_FULL_1
-        elif equal_reference_features and od_alike and base_formula["full"] == actual_formula["full"]:
+        elif (
+            equal_reference_features
+            and od_alike
+            and base_formula["full"] == actual_formula["full"]
+        ):
             properties[EVALUATION_FIELD_NAME] = Evaluation.EQUALITY_EQUAL_FORMULA_2
         elif base_formula["full"] and actual_formula["full"] and od_alike:
             properties[EVALUATION_FIELD_NAME] = Evaluation.EQUALITY_FULL_3
-        #elif base_formula["full"] == actual_formula["full"] and od_alike:#TODO evaluate when not-full-parcels?
+        # elif base_formula["full"] == actual_formula["full"] and od_alike:#TODO evaluate when not-full-parcels?
         #    properties[EVALUATION_FIELD_NAME] = Evaluation.EQUALITY_NON_FULL
         else:
             properties[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_4
@@ -1327,7 +1445,7 @@ def _calculate_geom_by_intersection_and_reference(
     threshold_overlap_percentage,
     threshold_exclusion_percentage,
     threshold_exclusion_area,
-        mitre_limit,
+    mitre_limit,
 ):
     """
     Calculates the geometry based on intersection and reference geometries.
@@ -1377,8 +1495,16 @@ def _calculate_geom_by_intersection_and_reference(
         return Polygon(), Polygon(), Polygon()
 
     geom_difference = safe_difference(geom_reference, geom_intersection)
-    geom_relevant_intersection = buffer_neg(geom_intersection, buffer_distance,mitre_limit=mitre_limit,)
-    geom_relevant_difference = buffer_neg(geom_difference, buffer_distance,mitre_limit=mitre_limit,)
+    geom_relevant_intersection = buffer_neg(
+        geom_intersection,
+        buffer_distance,
+        mitre_limit=mitre_limit,
+    )
+    geom_relevant_difference = buffer_neg(
+        geom_difference,
+        buffer_distance,
+        mitre_limit=mitre_limit,
+    )
     if (
         not geom_relevant_intersection.is_empty
         and not geom_relevant_difference.is_empty
@@ -1390,15 +1516,24 @@ def _calculate_geom_by_intersection_and_reference(
                 geom_reference,
                 safe_intersection(
                     geom_difference,
-                    buffer_neg_pos(geom_difference, buffer_distance,mitre_limit=mitre_limit,),
+                    buffer_neg_pos(
+                        geom_difference,
+                        buffer_distance,
+                        mitre_limit=mitre_limit,
+                    ),
                 ),
             ),
         )
         geom = safe_intersection(
             geom_x,
             buffer_pos(
-                buffer_neg_pos(geom_x, buffer_distance,mitre_limit=mitre_limit,),
-                buffer_distance,mitre_limit=mitre_limit,
+                buffer_neg_pos(
+                    geom_x,
+                    buffer_distance,
+                    mitre_limit=mitre_limit,
+                ),
+                buffer_distance,
+                mitre_limit=mitre_limit,
             ),
         )
         # when calculating for OD, we create a 'virtual parcel'. When calculating this
@@ -1407,7 +1542,7 @@ def _calculate_geom_by_intersection_and_reference(
         # in the result. The function below tries to exclude these non-logical parts.
         # see eo_id 206363 with relevant distance=0.2m and SNAP_ALL_SIDE
         if is_openbaar_domein:
-            geom = _get_relevant_polygons_from_geom(geom, buffer_distance,mitre_limit)
+            geom = _get_relevant_polygons_from_geom(geom, buffer_distance, mitre_limit)
     elif not geom_relevant_intersection.is_empty and geom_relevant_difference.is_empty:
         geom = geom_reference
     elif geom_relevant_intersection.is_empty and not geom_relevant_difference.is_empty:
@@ -1427,7 +1562,9 @@ def _calculate_geom_by_intersection_and_reference(
     return geom, geom_relevant_intersection, geom_relevant_difference
 
 
-def _get_relevant_polygons_from_geom(geometry: BaseGeometry, buffer_distance: float,mitre_limit):
+def _get_relevant_polygons_from_geom(
+    geometry: BaseGeometry, buffer_distance: float, mitre_limit
+):
     """
     Get only the relevant parts (polygon) from a geometry.
     Points, Lines and Polygons smaller than relevant distance are excluded from the
@@ -1445,13 +1582,17 @@ def _get_relevant_polygons_from_geom(geometry: BaseGeometry, buffer_distance: fl
             # Ensure each sub-geometry is valid.
             g = make_valid(g)
             if str(g.geom_type) in ["Polygon", "MultiPolygon"]:
-                relevant_geom = buffer_neg(g, buffer_distance,mitre_limit=mitre_limit,)
+                relevant_geom = buffer_neg(
+                    g,
+                    buffer_distance,
+                    mitre_limit=mitre_limit,
+                )
                 if relevant_geom is not None and not relevant_geom.is_empty:
                     array.append(g)
     return safe_unary_union(array)
 
 
-def _equal_geom_in_array(geom, geom_array,correction_distance,mitre_limit):
+def _equal_geom_in_array(geom, geom_array, correction_distance, mitre_limit):
     """
     Check if a predicted geometry is equal to other predicted geometries in a list.
     Equality is defined as there is the symmetrical difference is smaller than the CORRECTION DISTANCE
@@ -1459,7 +1600,11 @@ def _equal_geom_in_array(geom, geom_array,correction_distance,mitre_limit):
     """
     for g in geom_array:
         # if safe_equals(geom,g):
-        if buffer_neg(safe_symmetric_difference(geom, g), correction_distance,mitre_limit=mitre_limit,).is_empty:
+        if buffer_neg(
+            safe_symmetric_difference(geom, g),
+            correction_distance,
+            mitre_limit=mitre_limit,
+        ).is_empty:
             return True
     return False
 

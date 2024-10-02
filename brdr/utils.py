@@ -522,9 +522,9 @@ def merge_process_results(
             for rel_dist, process_result in dict_results.items():
                 for key in process_result:
                     value = process_result[key]  # noqa
-                    if isinstance(value,str):
+                    if isinstance(value,str) and value !="":
                         existing_remark: str = grouped_results[id_theme_global][rel_dist][ key]  # noqa
-                        grouped_results[id_theme_global][rel_dist][key] = existing_remark + '|' + str(value)
+                        grouped_results[id_theme_global][rel_dist][key] = existing_remark + " | " + str(value)
                         continue
                     elif isinstance(value,BaseGeometry):
                         geom = value

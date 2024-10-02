@@ -148,7 +148,11 @@ def get_affected_by_grb_change(
         )
         logging.info("Number of filtered features: " + str(len(thematic_intersections)))
         for key, geom in dict_thematic.items():
-            affected.append(key) if key in thematic_intersections else unaffected.append(key)
+            (
+                affected.append(key)
+                if key in thematic_intersections
+                else unaffected.append(key)
+            )
     return affected, unaffected
 
 
@@ -358,13 +362,17 @@ def update_to_actual_grb(
     for feature in featurecollection["features"]:
         id_theme = feature["properties"][id_theme_fieldname]
         geom = shape(feature["geometry"])
-        #logger.feedback_debug("id theme: " + id_theme)
-        #logger.feedback_debug("geometry (wkt): " + geom.wkt)
+        # logger.feedback_debug("id theme: " + id_theme)
+        # logger.feedback_debug("geometry (wkt): " + geom.wkt)
         dict_thematic[id_theme] = geom
         dict_thematic_props[id_theme] = feature["properties"]
         try:
-            dict_thematic_props[id_theme][BASE_FORMULA_FIELD_NAME] =feature["properties"][base_formula_field]
-            base_formula = json.loads(dict_thematic_props[id_theme][BASE_FORMULA_FIELD_NAME])
+            dict_thematic_props[id_theme][BASE_FORMULA_FIELD_NAME] = feature[
+                "properties"
+            ][base_formula_field]
+            base_formula = json.loads(
+                dict_thematic_props[id_theme][BASE_FORMULA_FIELD_NAME]
+            )
             logger.feedback_debug("formula: " + str(base_formula))
         except Exception:
             raise Exception("Formula -attribute-field (json) cannot be loaded")
@@ -372,14 +380,10 @@ def update_to_actual_grb(
             logger.feedback_debug(str(dict_thematic_props[id_theme]))
             if (
                 LAST_VERSION_DATE in base_formula
-                and base_formula[LAST_VERSION_DATE]
-                is not None
-                and base_formula[LAST_VERSION_DATE]
-                != ""
+                and base_formula[LAST_VERSION_DATE] is not None
+                and base_formula[LAST_VERSION_DATE] != ""
             ):
-                str_lvd = base_formula[
-                    LAST_VERSION_DATE
-                ]
+                str_lvd = base_formula[LAST_VERSION_DATE]
                 lvd = datetime.strptime(str_lvd, DATE_FORMAT).date()
                 if lvd < last_version_date:
                     last_version_date = lvd
@@ -400,10 +404,9 @@ def update_to_actual_grb(
         one_by_one=False,
         geometry_thematic_union=base_aligner_result.get_thematic_union(),
         crs=base_aligner_result.CRS,
-        )
+    )
     logger.feedback_info(
-        "Number of possible affected OE-thematic during timespan: "
-        + str(len(affected))
+        "Number of possible affected OE-thematic during timespan: " + str(len(affected))
     )
     if len(affected) == 0:
         logger.feedback_info(
@@ -414,7 +417,7 @@ def update_to_actual_grb(
     logger.feedback_debug(str(base_formula_field))
 
     # Initiate a Aligner to reference thematic features to the actual borders
-    actual_aligner = Aligner(feedback=feedback,max_workers=None)
+    actual_aligner = Aligner(feedback=feedback, max_workers=None)
     actual_aligner.load_thematic_data(
         DictLoader(data_dict=dict_thematic, data_dict_properties=dict_thematic_props)
     )
@@ -425,9 +428,13 @@ def update_to_actual_grb(
     actual_aligner.relevant_distances = (
         np.arange(0, max_distance_for_actualisation * 100, 10, dtype=int) / 100
     )
-    dict_evaluated, prop_dictionary = actual_aligner.compare(ids_to_compare= affected)
+    dict_evaluated, prop_dictionary = actual_aligner.compare(ids_to_compare=affected)
 
-    return actual_aligner.get_results_as_geojson(resulttype=AlignerResultType.EVALUATED_PREDICTIONS,formula=True,attributes=attributes)
+    return actual_aligner.get_results_as_geojson(
+        resulttype=AlignerResultType.EVALUATED_PREDICTIONS,
+        formula=True,
+        attributes=attributes,
+    )
 
 
 class GRBActualLoader(GeoJsonLoader):
@@ -442,7 +449,9 @@ class GRBActualLoader(GeoJsonLoader):
     def load_data(self):
         if not self.aligner.dict_thematic:
             raise ValueError("Thematic data not loaded")
-        geom_union = buffer_pos(self.aligner.get_thematic_union(), GRB_MAX_REFERENCE_BUFFER)
+        geom_union = buffer_pos(
+            self.aligner.get_thematic_union(), GRB_MAX_REFERENCE_BUFFER
+        )
         collection, id_property = get_collection_grb_actual(
             grb_type=self.grb_type,
             geometry=geom_union,
@@ -471,7 +480,9 @@ class GRBFiscalParcelLoader(GeoJsonLoader):
     def load_data(self):
         if not self.aligner.dict_thematic:
             raise ValueError("Thematic data not loaded")
-        geom_union = buffer_pos(self.aligner.get_thematic_union(), GRB_MAX_REFERENCE_BUFFER)
+        geom_union = buffer_pos(
+            self.aligner.get_thematic_union(), GRB_MAX_REFERENCE_BUFFER
+        )
         collection = get_collection_grb_fiscal_parcels(
             year=self.year,
             geometry=geom_union,
@@ -485,7 +496,9 @@ class GRBFiscalParcelLoader(GeoJsonLoader):
 
 class GRBSpecificDateParcelLoader(GeoJsonLoader):
     def __init__(self, date, aligner, partition=1000):
-        logging.warning("Loader for GRB parcel-situation on specific date (experimental); Use it with care!!!")
+        logging.warning(
+            "Loader for GRB parcel-situation on specific date (experimental); Use it with care!!!"
+        )
         try:
             date = datetime.strptime(date, DATE_FORMAT).date()
             if date.year >= datetime.now().year:
@@ -507,7 +520,9 @@ class GRBSpecificDateParcelLoader(GeoJsonLoader):
     def load_data(self):
         if not self.aligner.dict_thematic:
             raise ValueError("Thematic data not loaded")
-        geom_union = buffer_pos(self.aligner.get_thematic_union(), GRB_MAX_REFERENCE_BUFFER)
+        geom_union = buffer_pos(
+            self.aligner.get_thematic_union(), GRB_MAX_REFERENCE_BUFFER
+        )
         collection = get_collection_grb_parcels_by_date(
             date=self.date,
             geometry=geom_union,

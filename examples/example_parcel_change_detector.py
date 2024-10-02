@@ -2,8 +2,7 @@ import os
 from datetime import datetime
 
 from brdr.aligner import Aligner
-from brdr.constants import EVALUATION_FIELD_NAME, RELEVANT_DISTANCE_FIELD_NAME, BASE_FORMULA_FIELD_NAME, \
-    NEW_FORMULA_FIELD_NAME
+from brdr.constants import EVALUATION_FIELD_NAME, RELEVANT_DISTANCE_FIELD_NAME, NEW_FORMULA_FIELD_NAME
 from brdr.grb import GRBFiscalParcelLoader
 from brdr.grb import update_to_actual_grb
 from brdr.oe import OnroerendErfgoedLoader

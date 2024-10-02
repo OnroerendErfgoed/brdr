@@ -7,7 +7,6 @@ from shapely import Point
 from shapely import from_wkt
 from shapely.geometry import Polygon
 from shapely.geometry import shape
-from shapely.geometry.multipolygon import MultiPolygon
 from shapely.predicates import equals
 
 from brdr.aligner import Aligner
