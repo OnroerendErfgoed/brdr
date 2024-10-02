@@ -14,10 +14,10 @@ from brdr.utils import geojson_to_dicts
 
 class Loader(ABC):
     def __init__(self):
-        self.data_dict: dict[str, BaseGeometry] = {}
-        self.data_dict_properties: dict[str, dict] = {}
-        self.data_dict_source: dict[str, str] = {}
-        self.versiondate_info: dict[str, str] = None
+        self.data_dict: dict[any, BaseGeometry] = {}
+        self.data_dict_properties: dict[any, dict] = {}
+        self.data_dict_source: dict[any, str] = {}
+        self.versiondate_info: dict[any, str] = None
 
     def load_data(self):
         self.data_dict = {x: make_valid(self.data_dict[x]) for x in self.data_dict}

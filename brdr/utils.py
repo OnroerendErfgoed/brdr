@@ -27,10 +27,10 @@ from brdr.typings import ProcessResult
 
 
 def get_series_geojson_dict(
-    series_dict: dict[str, dict[float, ProcessResult]],
+    series_dict: dict[any, dict[float, ProcessResult]],
     crs: str,
     id_field: str,
-    series_prop_dict: dict[str, dict[float, any]] = None,
+    series_prop_dict: dict[any, dict[float, any]] = None,
     geom_attributes=True,
 ):
     """
@@ -317,8 +317,8 @@ def _numerical_derivative(x, y):
 
 
 def diffs_from_dict_series(
-    dict_series: dict[str, dict[float, ProcessResult]],
-    dict_thematic: dict[str, BaseGeometry],
+    dict_series: dict[any, dict[float, ProcessResult]],
+    dict_thematic: dict[any, BaseGeometry],
     diff_metric: DiffMetric = DiffMetric.CHANGES_AREA,
 ):
     """
@@ -496,9 +496,9 @@ def _add_bbox_to_url(url, crs=DEFAULT_CRS, bbox=None):
 
 
 def merge_process_results(
-    result_dict: dict[str, dict[float, ProcessResult]],
+    result_dict: dict[any, dict[float, ProcessResult]],
         dict_multi_as_single:dict
-) -> dict[str, dict[float, ProcessResult]]:
+) -> dict[any, dict[float, ProcessResult]]:
     """
      Merges processresults in a dictionary from multiple themeIDs into a single themeID.
 
@@ -509,7 +509,7 @@ def merge_process_results(
         theme IDs and values are merged geometries and remarks.
 
     """
-    grouped_results: dict[str, dict[float, ProcessResult]] = {}
+    grouped_results: dict[any, dict[float, ProcessResult]] = {}
 
     for id_theme, dict_results in result_dict.items():
         if id_theme in dict_multi_as_single.keys():
