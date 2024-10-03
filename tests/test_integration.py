@@ -55,7 +55,11 @@ class TestExamples(unittest.TestCase):
 
         series = np.arange(0, 61, 1, dtype=float) / 10
 
-        dict_series = aligner.process(relevant_distances=series, od_strategy=openbaardomein_strategy, threshold_overlap_percentage=50)
+        dict_series = aligner.process(
+            relevant_distances=series,
+            od_strategy=openbaardomein_strategy,
+            threshold_overlap_percentage=50,
+        )
         dict_diffs = diffs_from_dict_series(
             dict_series, aligner.dict_thematic, DiffMetric.CHANGES_AREA
         )

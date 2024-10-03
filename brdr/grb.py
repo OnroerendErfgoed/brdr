@@ -14,7 +14,8 @@ from brdr.constants import (
     LAST_VERSION_DATE,
     DATE_FORMAT,
     VERSION_DATE,
-    FORMULA_FIELD_NAME, BASE_FORMULA_FIELD_NAME,
+    FORMULA_FIELD_NAME,
+    BASE_FORMULA_FIELD_NAME,
 )
 from brdr.constants import DOWNLOAD_LIMIT
 from brdr.constants import GRB_BUILDING_ID
@@ -434,7 +435,9 @@ def update_to_actual_grb(
     actual_aligner.relevant_distances = (
         np.arange(0, max_distance_for_actualisation * 100, 10, dtype=int) / 100
     )
-    dict_evaluated, prop_dictionary = actual_aligner.evaluate(ids_to_evaluate=affected,base_formula_field=BASE_FORMULA_FIELD_NAME)
+    dict_evaluated, prop_dictionary = actual_aligner.evaluate(
+        ids_to_evaluate=affected, base_formula_field=BASE_FORMULA_FIELD_NAME
+    )
 
     return actual_aligner.get_results_as_geojson(
         resulttype=AlignerResultType.EVALUATED_PREDICTIONS,

@@ -37,9 +37,13 @@ if __name__ == "__main__":
 
     # Example how to use a series (for histogram)
     series = np.arange(0, 300, 10, dtype=int) / 100
-    x_dict_series = aligner_x.process(relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50)
+    x_dict_series = aligner_x.process(
+        relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
+    )
     x_resulting_areas = diffs_from_dict_series(x_dict_series, aligner_x.dict_thematic)
-    y_dict_series = aligner_y.process(relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50)
+    y_dict_series = aligner_y.process(
+        relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
+    )
     y_resulting_areas = diffs_from_dict_series(y_dict_series, aligner_y.dict_thematic)
     # plot_diffs(series,x_resulting_areas)
     # plot_diffs(series,y_resulting_areas)

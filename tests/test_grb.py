@@ -101,7 +101,7 @@ class TestGrb(unittest.TestCase):
         }
         aligner = Aligner()
         aligner.load_thematic_data(DictLoader(thematic_dict))
-        affected,unaffected = get_affected_by_grb_change(
+        affected, unaffected = get_affected_by_grb_change(
             dict_thematic=thematic_dict,
             grb_type=GRBType.ADP,
             date_start=date.today() - timedelta(days=1),
@@ -110,7 +110,7 @@ class TestGrb(unittest.TestCase):
         )
         assert len(affected) == 0
 
-        affected,unaffected  = get_affected_by_grb_change(
+        affected, unaffected = get_affected_by_grb_change(
             dict_thematic=thematic_dict,
             grb_type=GRBType.ADP,
             date_start=date.today() - timedelta(days=1000),
@@ -130,7 +130,7 @@ class TestGrb(unittest.TestCase):
         }
         aligner2 = Aligner()
         aligner2.load_thematic_data(DictLoader(thematic_dict2))
-        affected,unaffected = get_affected_by_grb_change(
+        affected, unaffected = get_affected_by_grb_change(
             dict_thematic=thematic_dict2,
             grb_type=GRBType.ADP,
             date_start=date.today() - timedelta(days=1000),
@@ -152,7 +152,7 @@ class TestGrb(unittest.TestCase):
         }
         aligner = Aligner()
         aligner.load_thematic_data(DictLoader(thematic_dict))
-        affected,unaffected = get_affected_by_grb_change(
+        affected, unaffected = get_affected_by_grb_change(
             dict_thematic=thematic_dict,
             grb_type=GRBType.ADP,
             date_start=date.today() - timedelta(days=1),
@@ -161,7 +161,7 @@ class TestGrb(unittest.TestCase):
         )
         assert len(affected) == 0
 
-        affected,unaffected = get_affected_by_grb_change(
+        affected, unaffected = get_affected_by_grb_change(
             dict_thematic=thematic_dict,
             grb_type=GRBType.ADP,
             date_start=date.today() - timedelta(days=1000),
@@ -233,7 +233,9 @@ class TestGrb(unittest.TestCase):
 
         # Update Featurecollection to actual version
         featurecollection = update_to_actual_grb(
-            featurecollection_base_result, name_thematic_id,base_formula_field="brdr_base_formula"
+            featurecollection_base_result,
+            name_thematic_id,
+            base_formula_field="brdr_base_formula",
         )
         # Print results
         for feature in featurecollection["result"]["features"]:

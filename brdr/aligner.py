@@ -623,10 +623,7 @@ class Aligner:
             diffs_dict,
         )
 
-    def evaluate(
-        self,
-        ids_to_evaluate=None, base_formula_field= FORMULA_FIELD_NAME
-    ):
+    def evaluate(self, ids_to_evaluate=None, base_formula_field=FORMULA_FIELD_NAME):
         """
 
         Compares and evaluate input-geometries (with formula). Attributes are added to evaluate and decide if new
@@ -657,7 +654,7 @@ class Aligner:
                 props = self._evaluate(
                     id_theme=theme_id,
                     geom_predicted=dict_predictions_results[dist]["result"],
-                base_formula_field=base_formula_field,
+                    base_formula_field=base_formula_field,
                 )
                 dict_predictions_evaluated[theme_id][dist] = dict_affected_predictions[
                     theme_id
@@ -670,7 +667,11 @@ class Aligner:
         for theme_id, geom in dict_unaffected.items():
             dict_predictions_evaluated[theme_id] = {}
             prop_dictionary[theme_id] = {relevant_distance: {}}
-            props = self._evaluate(id_theme=theme_id, geom_predicted=geom,base_formula_field=base_formula_field)
+            props = self._evaluate(
+                id_theme=theme_id,
+                geom_predicted=geom,
+                base_formula_field=base_formula_field,
+            )
             props[EVALUATION_FIELD_NAME] = Evaluation.NO_CHANGE_6
             dict_predictions_evaluated[theme_id][relevant_distance] = {"result": geom}
             prop_dictionary[theme_id][relevant_distance] = props
@@ -840,9 +841,9 @@ class Aligner:
                 ):  # and not (theme_id in prop_dictionary and relevant_distance in prop_dictionary[theme_id] and NEW_FORMULA_FIELD_NAME in prop_dictionary[theme_id][relevant_distance]):
                     result = process_results["result"]
                     formula = self.get_brdr_formula(result)
-                    prop_dictionary[theme_id][relevant_distance][
-                        FORMULA_FIELD_NAME
-                    ] = json.dumps(formula)
+                    prop_dictionary[theme_id][relevant_distance][FORMULA_FIELD_NAME] = (
+                        json.dumps(formula)
+                    )
         return get_series_geojson_dict(
             dict_series,
             crs=self.CRS,
@@ -1354,7 +1355,9 @@ class Aligner:
             "remark": remark,
         }
 
-    def _evaluate(self, id_theme, geom_predicted,base_formula_field=FORMULA_FIELD_NAME):
+    def _evaluate(
+        self, id_theme, geom_predicted, base_formula_field=FORMULA_FIELD_NAME
+    ):
         """
         function that evaluates a predicted geometry and returns a properties-dictionary
         """
