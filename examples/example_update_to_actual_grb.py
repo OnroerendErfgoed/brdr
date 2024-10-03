@@ -1,5 +1,5 @@
 from brdr.aligner import Aligner
-from brdr.constants import EVALUATION_FIELD_NAME, NEW_FORMULA_FIELD_NAME
+from brdr.constants import EVALUATION_FIELD_NAME, FORMULA_FIELD_NAME
 from brdr.grb import GRBFiscalParcelLoader
 from brdr.grb import update_to_actual_grb
 from brdr.loader import GeoJsonLoader
@@ -66,7 +66,7 @@ print(featurecollection_base_result)
 featurecollection = update_to_actual_grb(
     featurecollection_base_result,
     base_aligner.name_thematic_id,
-    base_formula_field=NEW_FORMULA_FIELD_NAME,
+    base_formula_field=FORMULA_FIELD_NAME,
 )
 # Print results
 for feature in featurecollection["result"]["features"]:

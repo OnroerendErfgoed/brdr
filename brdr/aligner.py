@@ -24,7 +24,7 @@ from brdr.constants import (
     LAST_VERSION_DATE,
     VERSION_DATE,
     DATE_FORMAT,
-    NEW_FORMULA_FIELD_NAME,
+    FORMULA_FIELD_NAME,
     EVALUATION_FIELD_NAME,
     FULL_BASE_FIELD_NAME,
     FULL_ACTUAL_FIELD_NAME,
@@ -63,11 +63,11 @@ from brdr.utils import write_geojson
 
 class Aligner:
     """
-    This class is used to compare the thematic data with the reference data.
+    This class is used to compare and align the thematic data with the reference data.
     The reference data can be loaded in different ways, for example by using the GRB
     data.
-    The thematic data can be loaded by using a geojson file.
-    The class can be used to compare the thematic data with the reference data.
+    The thematic data can be loaded by using different Loaders: DictLoader, GeojsonLoader,...
+    The class can be used to compare and aligne the thematic data with the reference data.
     """
 
     def __init__(
@@ -790,7 +790,7 @@ class Aligner:
                     result = process_results["result"]
                     formula = self.get_brdr_formula(result)
                     prop_dictionary[theme_id][relevant_distance][
-                        NEW_FORMULA_FIELD_NAME
+                        FORMULA_FIELD_NAME
                     ] = json.dumps(formula)
         return get_series_geojson_dict(
             dict_series,
@@ -1298,7 +1298,7 @@ class Aligner:
         # threshold_area = 5
         # threshold_percentage = 1
         properties = {
-            NEW_FORMULA_FIELD_NAME: "",
+            FORMULA_FIELD_NAME: "",
             EVALUATION_FIELD_NAME: Evaluation.TO_CHECK_4,
             FULL_BASE_FIELD_NAME: None,
             FULL_ACTUAL_FIELD_NAME: None,
@@ -1308,7 +1308,7 @@ class Aligner:
             DIFF_AREA_FIELD_NAME: None,
         }
         actual_formula = self.get_brdr_formula(geom_predicted)
-        properties[NEW_FORMULA_FIELD_NAME] = json.dumps(actual_formula)
+        properties[FORMULA_FIELD_NAME] = json.dumps(actual_formula)
         base_formula = None
         if (
             id_theme in self.dict_thematic_properties
