@@ -1,3 +1,4 @@
+import json
 import os
 import unittest
 from datetime import date
@@ -379,8 +380,8 @@ class TestAligner(unittest.TestCase):
                 "result"
             ]
             thematic_dict_formula[key] = {
-                FORMULA_FIELD_NAME: base_aligner.get_brdr_formula(
-                    thematic_dict_result[key]
+                FORMULA_FIELD_NAME: json.dumps(base_aligner.get_brdr_formula(
+                    thematic_dict_result[key])
                 )
             }
             print(key + ": " + thematic_dict_result[key].wkt)
@@ -412,7 +413,7 @@ class TestAligner(unittest.TestCase):
         )
         actual_aligner.relevant_distances = np.arange(0, 200, 10, dtype=int) / 100
         dict_evaluated, prop_dictionary = actual_aligner.evaluate(
-            ids_to_compare=affected
+            ids_to_evaluate=affected,base_formula_field=FORMULA_FIELD_NAME
         )
 
         fc = get_series_geojson_dict(

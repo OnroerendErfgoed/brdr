@@ -4,7 +4,7 @@ from datetime import date
 import numpy as np
 
 from brdr.aligner import Aligner
-from brdr.constants import EVALUATION_FIELD_NAME, BASE_FORMULA_FIELD_NAME
+from brdr.constants import EVALUATION_FIELD_NAME
 from brdr.enums import GRBType, AlignerResultType
 from brdr.grb import GRBActualLoader
 from brdr.grb import GRBFiscalParcelLoader
@@ -22,6 +22,7 @@ if __name__ == "__main__":
     loader = GeoJsonFileLoader("themelayer.geojson", "theme_identifier")
     base_aligner.load_thematic_data(loader)
     base_year = "2022"
+    name_formula = "base_formula"
     #Load reference data
     base_aligner.load_reference_data(
         GRBFiscalParcelLoader(year=base_year, aligner=base_aligner)
@@ -36,7 +37,7 @@ if __name__ == "__main__":
     for key in base_process_result:
         thematic_dict_result[key] = base_process_result[key][relevant_distance]["result"]
         thematic_dict_formula[key] = {
-            BASE_FORMULA_FIELD_NAME: json.dumps(base_aligner.get_brdr_formula(thematic_dict_result[key]))
+            name_formula: json.dumps(base_aligner.get_brdr_formula(thematic_dict_result[key]))
         }
         print(key + ": " + thematic_dict_result[key].wkt)
         print(key + ": " + str(thematic_dict_formula[key]))
@@ -65,7 +66,7 @@ if __name__ == "__main__":
         GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=actual_aligner)
     )
     #Use the EVALUATE-function
-    dict_evaluated, prop_dictionary = actual_aligner.evaluate(ids_to_compare=affected)
+    dict_evaluated, prop_dictionary = actual_aligner.evaluate(ids_to_evaluate=affected,base_formula_field=name_formula)
 
     # SHOW the EVALUATED results
     fc = actual_aligner.get_results_as_geojson(resulttype=AlignerResultType.EVALUATED_PREDICTIONS,formula=True, attributes=True)

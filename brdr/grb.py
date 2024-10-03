@@ -14,7 +14,7 @@ from brdr.constants import (
     LAST_VERSION_DATE,
     DATE_FORMAT,
     VERSION_DATE,
-    BASE_FORMULA_FIELD_NAME,
+    FORMULA_FIELD_NAME, BASE_FORMULA_FIELD_NAME,
 )
 from brdr.constants import DOWNLOAD_LIMIT
 from brdr.constants import GRB_BUILDING_ID
@@ -344,7 +344,7 @@ def get_collection_grb_parcels_by_date(
 def update_to_actual_grb(
     featurecollection,
     id_theme_fieldname,
-    base_formula_field=BASE_FORMULA_FIELD_NAME,
+    base_formula_field=FORMULA_FIELD_NAME,
     max_distance_for_actualisation=2,
     feedback=None,
     attributes=True,
@@ -375,12 +375,10 @@ def update_to_actual_grb(
         dict_thematic[id_theme] = geom
         dict_thematic_props[id_theme] = feature["properties"]
         try:
-            dict_thematic_props[id_theme][BASE_FORMULA_FIELD_NAME] = feature[
-                "properties"
-            ][base_formula_field]
-            base_formula = json.loads(
-                dict_thematic_props[id_theme][BASE_FORMULA_FIELD_NAME]
-            )
+            base_formula_string = feature["properties"][base_formula_field]
+            dict_thematic_props[id_theme][BASE_FORMULA_FIELD_NAME] = base_formula_string
+            base_formula = json.loads(base_formula_string)
+
             logger.feedback_debug("formula: " + str(base_formula))
         except Exception:
             raise Exception("Formula -attribute-field (json) cannot be loaded")
@@ -436,7 +434,7 @@ def update_to_actual_grb(
     actual_aligner.relevant_distances = (
         np.arange(0, max_distance_for_actualisation * 100, 10, dtype=int) / 100
     )
-    dict_evaluated, prop_dictionary = actual_aligner.evaluate(ids_to_compare=affected)
+    dict_evaluated, prop_dictionary = actual_aligner.evaluate(ids_to_evaluate=affected,base_formula_field=BASE_FORMULA_FIELD_NAME)
 
     return actual_aligner.get_results_as_geojson(
         resulttype=AlignerResultType.EVALUATED_PREDICTIONS,

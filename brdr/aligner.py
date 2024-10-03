@@ -19,7 +19,7 @@ from shapely import to_geojson
 from shapely.geometry.base import BaseGeometry
 
 from brdr import __version__
-from brdr.constants import DEFAULT_CRS, BASE_FORMULA_FIELD_NAME
+from brdr.constants import DEFAULT_CRS
 from brdr.constants import (
     LAST_VERSION_DATE,
     VERSION_DATE,
@@ -625,19 +625,20 @@ class Aligner:
 
     def evaluate(
         self,
-        ids_to_compare=None,
+        ids_to_evaluate=None, base_formula_field= FORMULA_FIELD_NAME
     ):
         """
+
         Compares and evaluate input-geometries (with formula). Attributes are added to evaluate and decide if new
         proposals can be used
         affected: list with all IDs to evaluate. all other IDs will be unchanged. If None (default), all self.dict_thematic will be evaluated.
         """
-        if ids_to_compare is None:
-            ids_to_compare = list(self.dict_thematic.keys())
+        if ids_to_evaluate is None:
+            ids_to_evaluate = list(self.dict_thematic.keys())
         dict_affected = {}
         dict_unaffected = {}
         for id_theme, geom in self.dict_thematic.items():
-            if id_theme in ids_to_compare:
+            if id_theme in ids_to_evaluate:
                 dict_affected[id_theme] = geom
             else:
                 dict_unaffected[id_theme] = geom
@@ -656,6 +657,7 @@ class Aligner:
                 props = self._evaluate(
                     id_theme=theme_id,
                     geom_predicted=dict_predictions_results[dist]["result"],
+                base_formula_field=base_formula_field,
                 )
                 dict_predictions_evaluated[theme_id][dist] = dict_affected_predictions[
                     theme_id
@@ -668,7 +670,7 @@ class Aligner:
         for theme_id, geom in dict_unaffected.items():
             dict_predictions_evaluated[theme_id] = {}
             prop_dictionary[theme_id] = {relevant_distance: {}}
-            props = self._evaluate(id_theme=theme_id, geom_predicted=geom)
+            props = self._evaluate(id_theme=theme_id, geom_predicted=geom,base_formula_field=base_formula_field)
             props[EVALUATION_FIELD_NAME] = Evaluation.NO_CHANGE_6
             dict_predictions_evaluated[theme_id][relevant_distance] = {"result": geom}
             prop_dictionary[theme_id][relevant_distance] = props
@@ -1352,7 +1354,7 @@ class Aligner:
             "remark": remark,
         }
 
-    def _evaluate(self, id_theme, geom_predicted):
+    def _evaluate(self, id_theme, geom_predicted,base_formula_field=FORMULA_FIELD_NAME):
         """
         function that evaluates a predicted geometry and returns a properties-dictionary
         """
@@ -1372,10 +1374,10 @@ class Aligner:
         base_formula = None
         if (
             id_theme in self.dict_thematic_properties
-            and BASE_FORMULA_FIELD_NAME in self.dict_thematic_properties[id_theme]
+            and base_formula_field in self.dict_thematic_properties[id_theme]
         ):
             base_formula = json.loads(
-                self.dict_thematic_properties[id_theme][BASE_FORMULA_FIELD_NAME]
+                self.dict_thematic_properties[id_theme][base_formula_field]
             )
 
         if base_formula is None or actual_formula is None:
