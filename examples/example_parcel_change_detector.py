@@ -8,14 +8,16 @@ from brdr.grb import update_to_actual_grb
 from brdr.oe import OnroerendErfgoedLoader
 from brdr.utils import write_geojson
 
-# This code shows an example how the aligner can be used inside a flow of
-# parcel change detection:
-# * it can be used to do a first alignment of the original features
-#       (in this case, based on parcel version adpF2023 (1st January 2023)
-# * it can be used to do a new alignment on the actual version of the parcels adp
-# * it can be used to convert the geometries to a formula, to compare and
-#       evaluate if equality is detected after alignement
-
+if __name__ == "__main__":
+    """
+    # This code shows an example how the aligner can be used inside a flow of
+    # parcel change detection:
+    # * it can be used to do a first alignment of the original features
+    #       (in this case, based on parcel version adpF2022 (1st January 2022)
+    # * it can be used to do a new alignment on the actual version of the parcels adp
+    # * it can be used to convert the geometries to a formula, to compare and
+    #       evaluate if equality is detected after alignement
+    """
 counter_excluded = 0
 # PARAMS
 # =========
@@ -23,10 +25,6 @@ crs = "EPSG:31370"
 limit = 10000
 bbox = [172800, 170900, 173000, 171100]
 bbox = [172000, 172000, 174000, 174000]
-# bbox = "170000,170000,175000,174900"
-# bbox = "100000,195000,105000,195900"
-# bbox = "150000,210000,155000,214900"
-# bbox = "173500,173500,174000,174000" # example "aanduid_id" = 34195
 base_year = "2022"
 # relevant distance that is used to align the original geometries to the
 # reference-polygons of the base-year

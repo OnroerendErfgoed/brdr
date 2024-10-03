@@ -148,8 +148,7 @@ def multipolygons_to_singles(dict_geoms):
     """
     resulting_dict_geoms = {}
     dict_multi_as_single = {}
-    for key in dict_geoms:
-        geom = dict_geoms[key]
+    for key, geom in dict_geoms.items():
         if str(geom.geom_type) == "Polygon":
             resulting_dict_geoms[key] = geom
         elif str(geom.geom_type) == "MultiPolygon":

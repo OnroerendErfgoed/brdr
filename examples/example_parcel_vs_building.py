@@ -7,9 +7,11 @@ from brdr.loader import GeoJsonFileLoader
 from brdr.utils import diffs_from_dict_series
 from examples import plot_series
 
-# example to check if we can notice if it is better to align to a building instead of a
-# parcel
 if __name__ == "__main__":
+    """
+    # example to check if we can notice if it is better to align to a building instead of a
+    # parcel
+    """
     # Initiate brdr
     aligner_x = Aligner()
     # Load thematic data & reference data (parcels)

@@ -6,6 +6,10 @@ from brdr.loader import GeoJsonFileLoader
 
 
 def main():
+    """
+    EXAMPLE of a test to measure the speed of the aligner
+    :return:
+    """
     # Initiate brdr
     aligner = Aligner(relevant_distance=2, max_workers=None)
     iterations = 10
