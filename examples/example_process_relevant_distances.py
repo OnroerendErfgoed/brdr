@@ -2,12 +2,14 @@ from brdr.aligner import Aligner
 from brdr.enums import OpenbaarDomeinStrategy, GRBType
 from brdr.grb import GRBActualLoader
 from brdr.loader import GeoJsonLoader
+from brdr.utils import diffs_from_dict_series
+from examples import plot_series
 from examples import show_map
 
 if __name__ == "__main__":
+    # EXAMPLE to process a series of relevant distances
     # Initiate brdr
     aligner = Aligner()
-
     # Load thematic data
     thematic_json = {
         "type": "FeatureCollection",
@@ -45,14 +47,18 @@ if __name__ == "__main__":
 
     loader = GeoJsonLoader(_input=thematic_json, id_property="theme_identifier")
     aligner.load_thematic_data(loader)
-    loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
-    aligner.load_reference_data(loader)
-
-    # Example how to use the Aligner
-    rel_dist = 6
-    dict_results = aligner.process(
-        relevant_distance=rel_dist,
-        od_strategy=OpenbaarDomeinStrategy.SNAP_FULL_AREA_ALL_SIDE,
+    # Load reference data: The actual GRB-parcels
+    aligner.load_reference_data(
+        GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
     )
-    aligner.save_results("output/")
+    # PROCESS a series of relevant distances
+    relevant_distances = [0.5, 1, 3, 6]
+    dict_results = aligner.process(
+        relevant_distances=relevant_distances,
+        od_strategy=OpenbaarDomeinStrategy.SNAP_ALL_SIDE,
+        threshold_overlap_percentage=50,
+    )
+    # SHOW results: map and plotted changes
     show_map(dict_results, aligner.dict_thematic, aligner.dict_reference)
+    resulting_areas = diffs_from_dict_series(dict_results, aligner.dict_thematic)
+    plot_series(relevant_distances, resulting_areas)

@@ -13,18 +13,17 @@ from shapely import get_num_interior_rings
 from shapely import get_parts
 from shapely import intersection
 from shapely import is_empty
+from shapely import make_valid
 from shapely import polygons
 from shapely import symmetric_difference
 from shapely import to_wkt
+from shapely import unary_union
 from shapely import union
 from shapely.geometry.base import BaseGeometry
 from shapely.prepared import prep
 
-from brdr.constants import MITRE_LIMIT
-from brdr.constants import QUAD_SEGMENTS
 
-
-def buffer_neg_pos(geometry, buffer_value):
+def buffer_neg_pos(geometry, buffer_value, mitre_limit=5):
     """
     Computes two buffers accordingly: one with a negative buffer value and another with
     a positive buffer value. This function can be used the check where relevant areas
@@ -57,18 +56,18 @@ def buffer_neg_pos(geometry, buffer_value):
         buffer(
             geometry,
             -buffer_value,
-            quad_segs=QUAD_SEGMENTS,
+            # quad_segs=QUAD_SEGMENTS,
             join_style="mitre",
-            mitre_limit=MITRE_LIMIT,
+            mitre_limit=mitre_limit,
         ),
         buffer_value,
-        quad_segs=QUAD_SEGMENTS,
+        # quad_segs=QUAD_SEGMENTS,
         join_style="mitre",
-        mitre_limit=MITRE_LIMIT,
+        mitre_limit=mitre_limit,
     )
 
 
-def buffer_neg(geometry, buffer_value):
+def buffer_neg(geometry, buffer_value, mitre_limit=5):
     """
     Computes the negative buffer of a given geometric object.
 
@@ -95,13 +94,13 @@ def buffer_neg(geometry, buffer_value):
     return buffer(
         geometry,
         -buffer_value,
-        quad_segs=QUAD_SEGMENTS,
+        # quad_segs=QUAD_SEGMENTS,
         join_style="mitre",
-        mitre_limit=MITRE_LIMIT,
+        mitre_limit=mitre_limit,
     )
 
 
-def buffer_pos(geometry, buffer_value):
+def buffer_pos(geometry, buffer_value, mitre_limit=5):
     """
     Computes the positive buffer of a given geometric object.
 
@@ -128,9 +127,9 @@ def buffer_pos(geometry, buffer_value):
     return buffer(
         geometry,
         buffer_value,
-        quad_segs=QUAD_SEGMENTS,
+        # quad_segs=QUAD_SEGMENTS,
         join_style="mitre",
-        mitre_limit=MITRE_LIMIT,
+        mitre_limit=mitre_limit,
     )
 
 
@@ -506,6 +505,10 @@ def fill_and_remove_gaps(input_geometry, buffer_value):
                 ix = ix + 1
         ix_part = ix_part + 1
     return cleaned_geometry
+
+
+def safe_unary_union(geometries):
+    return make_valid(unary_union(geometries))
 
 
 def get_bbox(geometry):

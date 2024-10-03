@@ -14,28 +14,31 @@ from brdr.utils import geojson_to_dicts
 
 class Loader(ABC):
     def __init__(self):
-        self.data_dict: dict[str, BaseGeometry] = {}
-        self.data_dict_properties: dict[str, dict] = {}
-        self.data_dict_source: dict[str, str] = {}
-        self.versiondate_info: dict[str, str] = None
+        self.data_dict: dict[any, BaseGeometry] = {}
+        self.data_dict_properties: dict[any, dict] = {}
+        self.data_dict_source: dict[any, str] = {}
+        self.versiondate_info: dict[any, str] = None
 
     def load_data(self):
         self.data_dict = {x: make_valid(self.data_dict[x]) for x in self.data_dict}
         if self.versiondate_info is not None:
             for key in self.data_dict_properties.keys():
                 try:
-                    self.data_dict_properties[key][VERSION_DATE] = datetime.strptime(
+                    date = datetime.strptime(
                         self.data_dict_properties[key][self.versiondate_info["name"]],
                         self.versiondate_info["format"],
                     )
                 except:
                     # Catch, to try extracting only the date with default -date format if specific format does not work
-                    self.data_dict_properties[key][VERSION_DATE] = datetime.strptime(
+                    date = datetime.strptime(
                         self.data_dict_properties[key][self.versiondate_info["name"]][
                             :10
                         ],
                         DATE_FORMAT,
                     )
+                self.data_dict_properties[key][VERSION_DATE] = datetime.strftime(
+                    date, DATE_FORMAT
+                )
 
         return self.data_dict, self.data_dict_properties, self.data_dict_source
 

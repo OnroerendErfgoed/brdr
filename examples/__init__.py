@@ -89,7 +89,7 @@ def _make_map(ax, processresult, thematic_dict, reference_dict):
 
 
 def show_map(
-    dict_results: dict[str, dict[float, ProcessResult]],
+    dict_results: dict[any, dict[float, ProcessResult]],
     dict_thematic,
     dict_reference,
 ):

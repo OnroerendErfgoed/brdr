@@ -37,3 +37,4 @@ class ProcessResult(TypedDict, total=False):
     result_diff_min: BaseGeometry
     result_relevant_intersection: BaseGeometry
     result_relevant_diff: BaseGeometry
+    remark: str

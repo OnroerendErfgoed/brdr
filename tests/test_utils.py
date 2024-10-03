@@ -42,26 +42,26 @@ class TestUtils(unittest.TestCase):
 
     def test_multipolygons_to_singles_empty_dict(self):
         data = {}
-        result = multipolygons_to_singles(data)
+        result, dict_multi_as_single = multipolygons_to_singles(data)
         self.assertEqual(result, {})
 
     def test_multipolygons_to_singles_with_point(self):
         geometry1 = shapely.geometry.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
         geometry2 = shapely.geometry.Point(0, 0)
         data = {"test_id1": geometry1, "test_id2": geometry2}
-        result = multipolygons_to_singles(data)
+        result, dict_multi_as_single = multipolygons_to_singles(data)
         self.assertEqual(result, {"test_id1": geometry1})
 
     def test_multipolygons_to_singles_single_polygon(self):
         geometry = shapely.geometry.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
         data = {"test_id": geometry}
-        result = multipolygons_to_singles(data)
+        result, dict_multi_as_single = multipolygons_to_singles(data)
         self.assertEqual(result, data)
 
     def test_multipolygons_to_singles_multipolygon_single_poly(self):
         geometry = shapely.geometry.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
         data = {"test_id": shapely.geometry.MultiPolygon([geometry])}
-        result = multipolygons_to_singles(data)
+        result, dict_multi_as_single = multipolygons_to_singles(data)
         self.assertEqual(result, {"test_id": geometry})
 
     def test_polygonize_reference_data_no_overlap(self):
@@ -169,6 +169,7 @@ class TestUtils(unittest.TestCase):
         key_1 = "key" + MULTI_SINGLE_ID_SEPARATOR + "1"
         key_2 = "key" + MULTI_SINGLE_ID_SEPARATOR + "2"
         key_3 = "key_3"
+        dict_multi_as_single = {key_1: "key", key_2: "key"}
         process_result_1 = ProcessResult()
         process_result_1["result"] = Polygon([(0, 0), (10, 0), (10, 10), (0, 10)])
         process_result_2 = ProcessResult()
@@ -180,5 +181,7 @@ class TestUtils(unittest.TestCase):
             key_2: {0: process_result_2},
             key_3: {0: process_result_3},
         }
-        merged_testdict = merge_process_results(testdict)
+        merged_testdict = merge_process_results(
+            result_dict=testdict, dict_multi_as_single=dict_multi_as_single
+        )
         assert len(merged_testdict.keys()) == 2

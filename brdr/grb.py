@@ -5,9 +5,8 @@ from datetime import date
 from datetime import datetime
 
 import numpy as np
-from shapely import intersects, Polygon
+from shapely import intersects
 from shapely.geometry import shape
-from shapely.geometry.base import BaseGeometry
 
 from brdr.aligner import Aligner
 from brdr.constants import (
@@ -16,17 +15,18 @@ from brdr.constants import (
     DATE_FORMAT,
     VERSION_DATE,
     FORMULA_FIELD_NAME,
+    BASE_FORMULA_FIELD_NAME,
 )
 from brdr.constants import DOWNLOAD_LIMIT
 from brdr.constants import GRB_BUILDING_ID
 from brdr.constants import GRB_FEATURE_URL
 from brdr.constants import GRB_FISCAL_PARCELS_URL
 from brdr.constants import GRB_KNW_ID
+from brdr.constants import GRB_MAX_REFERENCE_BUFFER
 from brdr.constants import GRB_PARCEL_ID
 from brdr.constants import GRB_VERSION_DATE
-from brdr.constants import MAX_REFERENCE_BUFFER
-from brdr.enums import GRBType
-from brdr.geometry_utils import buffer_pos, safe_intersection
+from brdr.enums import GRBType, AlignerResultType
+from brdr.geometry_utils import buffer_pos, safe_intersection, safe_unary_union
 from brdr.geometry_utils import create_donut
 from brdr.geometry_utils import features_by_geometric_operation
 from brdr.geometry_utils import get_bbox
@@ -35,7 +35,6 @@ from brdr.logger import Logger
 from brdr.utils import geojson_to_dicts
 from brdr.utils import get_collection
 from brdr.utils import get_collection_by_partition
-from brdr.utils import get_series_geojson_dict
 
 log = logging.getLogger(__name__)
 
@@ -78,20 +77,22 @@ def is_grb_changed(
     return False
 
 
-def get_geoms_affected_by_grb_change(
-    aligner,
+def get_affected_by_grb_change(
+    dict_thematic,
     grb_type=GRBType.ADP,
     date_start=date.today(),
     date_end=date.today(),
     one_by_one=False,
     border_distance=0,
+    geometry_thematic_union=None,
+    crs=DEFAULT_CRS,
 ):
     """
-    Get a dictionary of thematic geometries that are affected bij GRB-changes in a
+    Get a list of affected and unaffected IDs by GRB-changes in a
     specific timespan
 
     Args:
-        aligner: Aligner instance
+        dict_thematic: dictionary if thematicID & Geometry
         grb_type: Type of GRB: parcels, buildings,...
         date_start: start-date to check changes in GRB
         date_end: end-date to check changes in GRB
@@ -106,12 +107,9 @@ def get_geoms_affected_by_grb_change(
         dictionary of affected geometries
 
     """
-    dict_thematic = aligner.dict_thematic
-    # if aligner.multi_as_single_modus:
-    #     dict_thematic = merge_dict(dict_thematic)
-    crs = aligner.CRS
-    affected_dict: dict[str, BaseGeometry] = {}
-    unchanged_dict: dict[str, BaseGeometry] = {}
+
+    affected = []
+    unaffected = []
     if border_distance > 0:
         for key in dict_thematic.keys():
             dict_thematic[key] = create_donut(dict_thematic[key], border_distance)
@@ -119,15 +117,16 @@ def get_geoms_affected_by_grb_change(
         for key in dict_thematic:
             geom = dict_thematic[key]
             if is_grb_changed(geom, grb_type, date_start, date_end):
-                affected_dict[key] = geom
+                affected.append(key)
             else:
-                unchanged_dict[key] = geom
-        return affected_dict, unchanged_dict
+                unaffected.append(key)
+        return affected, unaffected
     else:
         # Temporal filter on VERDATUM
-        geometry = aligner.get_thematic_union()
+        if geometry_thematic_union is None:
+            geometry_thematic_union = safe_unary_union(list(dict_thematic.values()))
         coll_changed_grb, name_reference_id = get_collection_grb_actual(
-            geometry,
+            geometry_thematic_union,
             grb_type=grb_type,
             partition=1000,
             date_start=date_start,
@@ -140,7 +139,7 @@ def get_geoms_affected_by_grb_change(
 
         if len(dict_changed_grb) == 0:
             logging.info("No detected changes")
-            return affected_dict, dict_thematic  # empty affected dict
+            return affected, list(dict_thematic.keys())  # empty affected dict
         logging.info("Changed parcels in timespan: " + str(len(dict_changed_grb)))
         thematic_intersections = features_by_geometric_operation(
             list(dict_thematic.values()),
@@ -150,11 +149,12 @@ def get_geoms_affected_by_grb_change(
         )
         logging.info("Number of filtered features: " + str(len(thematic_intersections)))
         for key, geom in dict_thematic.items():
-            if key in thematic_intersections:
-                affected_dict[key] = geom
-            else:
-                unchanged_dict[key] = geom
-    return affected_dict, unchanged_dict
+            (
+                affected.append(key)
+                if key in thematic_intersections
+                else unaffected.append(key)
+            )
+    return affected, unaffected
 
 
 def get_last_version_date(
@@ -345,13 +345,22 @@ def get_collection_grb_parcels_by_date(
 def update_to_actual_grb(
     featurecollection,
     id_theme_fieldname,
-    formula_field=FORMULA_FIELD_NAME,
+    base_formula_field=FORMULA_FIELD_NAME,
     max_distance_for_actualisation=2,
     feedback=None,
+    attributes=True,
 ):
     """
     Function to update a thematic featurecollection to the most actual version of GRB.
     Important to notice that the featurecollection needs a 'formula' for the base-alignment.
+
+    :param featurecollection: Thematic featurecollection
+    :param id_theme_fieldname: property-fieldname that states which property has to be used as unique ID
+    :param base_formula_field: Name of the property-field that holds the original/base formula of the geometry, that has to be compared with the actual formula.
+    :param max_distance_for_actualisation: Maximum relevant distance that is used to search and evaluate resulting geometries. All relevant distance between 0 and this max_distance are used to search, with a interval of 0.1m.
+    :param feedback:  (default None): a QGIS feedback can be added to push all the logging to QGIS
+    :param attributes: (boolean, default=True): States of all original attributes has to be added to the result
+    :return: featurecollection
     """
     logger = Logger(feedback)
     # Load featurecollection into a shapely_dict:
@@ -361,32 +370,27 @@ def update_to_actual_grb(
     last_version_date = datetime.now().date()
     for feature in featurecollection["features"]:
         id_theme = feature["properties"][id_theme_fieldname]
-        try:
-            geom = shape(feature["geometry"])
-        except Exception:
-            geom = Polygon()
-        logger.feedback_debug("id theme: " + id_theme)
-        logger.feedback_debug("geometry (wkt): " + geom.wkt)
+        geom = shape(feature["geometry"])
+        # logger.feedback_debug("id theme: " + id_theme)
+        # logger.feedback_debug("geometry (wkt): " + geom.wkt)
         dict_thematic[id_theme] = geom
+        dict_thematic_props[id_theme] = feature["properties"]
         try:
-            dict_thematic_props[id_theme] = {
-                FORMULA_FIELD_NAME: json.loads(feature["properties"][formula_field])
-            }
-            logger.feedback_debug("formula: " + str(dict_thematic_props[id_theme]))
+            base_formula_string = feature["properties"][base_formula_field]
+            dict_thematic_props[id_theme][BASE_FORMULA_FIELD_NAME] = base_formula_string
+            base_formula = json.loads(base_formula_string)
+
+            logger.feedback_debug("formula: " + str(base_formula))
         except Exception:
             raise Exception("Formula -attribute-field (json) cannot be loaded")
         try:
             logger.feedback_debug(str(dict_thematic_props[id_theme]))
             if (
-                LAST_VERSION_DATE in dict_thematic_props[id_theme][FORMULA_FIELD_NAME]
-                and dict_thematic_props[id_theme][FORMULA_FIELD_NAME][LAST_VERSION_DATE]
-                is not None
-                and dict_thematic_props[id_theme][FORMULA_FIELD_NAME][LAST_VERSION_DATE]
-                != ""
+                LAST_VERSION_DATE in base_formula
+                and base_formula[LAST_VERSION_DATE] is not None
+                and base_formula[LAST_VERSION_DATE] != ""
             ):
-                str_lvd = dict_thematic_props[id_theme][FORMULA_FIELD_NAME][
-                    LAST_VERSION_DATE
-                ]
+                str_lvd = base_formula[LAST_VERSION_DATE]
                 lvd = datetime.strptime(str_lvd, DATE_FORMAT).date()
                 if lvd < last_version_date:
                     last_version_date = lvd
@@ -399,29 +403,30 @@ def update_to_actual_grb(
     base_aligner_result.load_thematic_data(DictLoader(dict_thematic))
     base_aligner_result.name_thematic_id = id_theme_fieldname
 
-    dict_affected, dict_unchanged = get_geoms_affected_by_grb_change(
-        base_aligner_result,
+    affected, unaffected = get_affected_by_grb_change(
+        dict_thematic=base_aligner_result.dict_thematic,
         grb_type=GRBType.ADP,
         date_start=datetime_start,
         date_end=datetime_end,
         one_by_one=False,
+        geometry_thematic_union=base_aligner_result.get_thematic_union(),
+        crs=base_aligner_result.CRS,
     )
     logger.feedback_info(
-        "Number of possible affected OE-thematic during timespan: "
-        + str(len(dict_affected))
+        "Number of possible affected OE-thematic during timespan: " + str(len(affected))
     )
-    if len(dict_affected) == 0:
+    if len(affected) == 0:
         logger.feedback_info(
             "No change detected in referencelayer during timespan. Script is finished"
         )
         return {}
     logger.feedback_debug(str(datetime_start))
-    logger.feedback_debug(str(formula_field))
+    logger.feedback_debug(str(base_formula_field))
 
     # Initiate a Aligner to reference thematic features to the actual borders
-    actual_aligner = Aligner(feedback=feedback)
+    actual_aligner = Aligner(feedback=feedback, max_workers=None)
     actual_aligner.load_thematic_data(
-        DictLoader(data_dict=dict_affected, data_dict_properties=dict_thematic_props)
+        DictLoader(data_dict=dict_thematic, data_dict_properties=dict_thematic_props)
     )
     actual_aligner.load_reference_data(
         GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=actual_aligner)
@@ -430,15 +435,14 @@ def update_to_actual_grb(
     actual_aligner.relevant_distances = (
         np.arange(0, max_distance_for_actualisation * 100, 10, dtype=int) / 100
     )
-    dict_evaluated, prop_dictionary = actual_aligner.compare(
-        threshold_area=5, threshold_percentage=1, dict_unchanged=dict_unchanged
+    dict_evaluated, prop_dictionary = actual_aligner.evaluate(
+        ids_to_evaluate=affected, base_formula_field=BASE_FORMULA_FIELD_NAME
     )
 
-    return get_series_geojson_dict(
-        dict_evaluated,
-        crs=actual_aligner.CRS,
-        id_field=actual_aligner.name_thematic_id,
-        series_prop_dict=prop_dictionary,
+    return actual_aligner.get_results_as_geojson(
+        resulttype=AlignerResultType.EVALUATED_PREDICTIONS,
+        formula=True,
+        attributes=attributes,
     )
 
 
@@ -454,7 +458,9 @@ class GRBActualLoader(GeoJsonLoader):
     def load_data(self):
         if not self.aligner.dict_thematic:
             raise ValueError("Thematic data not loaded")
-        geom_union = buffer_pos(self.aligner.get_thematic_union(), MAX_REFERENCE_BUFFER)
+        geom_union = buffer_pos(
+            self.aligner.get_thematic_union(), GRB_MAX_REFERENCE_BUFFER
+        )
         collection, id_property = get_collection_grb_actual(
             grb_type=self.grb_type,
             geometry=geom_union,
@@ -483,7 +489,9 @@ class GRBFiscalParcelLoader(GeoJsonLoader):
     def load_data(self):
         if not self.aligner.dict_thematic:
             raise ValueError("Thematic data not loaded")
-        geom_union = buffer_pos(self.aligner.get_thematic_union(), MAX_REFERENCE_BUFFER)
+        geom_union = buffer_pos(
+            self.aligner.get_thematic_union(), GRB_MAX_REFERENCE_BUFFER
+        )
         collection = get_collection_grb_fiscal_parcels(
             year=self.year,
             geometry=geom_union,
@@ -497,7 +505,9 @@ class GRBFiscalParcelLoader(GeoJsonLoader):
 
 class GRBSpecificDateParcelLoader(GeoJsonLoader):
     def __init__(self, date, aligner, partition=1000):
-        logging.warning("experimental loader; use with care!!!")
+        logging.warning(
+            "Loader for GRB parcel-situation on specific date (experimental); Use it with care!!!"
+        )
         try:
             date = datetime.strptime(date, DATE_FORMAT).date()
             if date.year >= datetime.now().year:
@@ -519,7 +529,9 @@ class GRBSpecificDateParcelLoader(GeoJsonLoader):
     def load_data(self):
         if not self.aligner.dict_thematic:
             raise ValueError("Thematic data not loaded")
-        geom_union = buffer_pos(self.aligner.get_thematic_union(), MAX_REFERENCE_BUFFER)
+        geom_union = buffer_pos(
+            self.aligner.get_thematic_union(), GRB_MAX_REFERENCE_BUFFER
+        )
         collection = get_collection_grb_parcels_by_date(
             date=self.date,
             geometry=geom_union,

@@ -5,17 +5,18 @@ from brdr.loader import GeoJsonFileLoader, DictLoader
 from brdr.utils import polygonize_reference_data, geojson_to_dicts
 from examples import show_map, print_brdr_formula
 
-# example to test what happens if we combine borders
-# (so thematic data can use both polygons)
-
-# If we just combine sets of polygons (fe parcels and buildings) these polygons will
-# overlap, and gives some unwanted/unexpected results. The reference data can be
-# preprocessed with 'shapely-polygonize', to create a new set of non-overlapping
-# polygons. These non-overlapping polygons can be used as reference-data to align the
-# theme-data.
-
 
 if __name__ == "__main__":
+    """
+    # example to test what happens if we combine borders
+    # (so thematic data can use both polygons)
+
+    # If we just combine sets of polygons (fe parcels and buildings) these polygons will
+    # overlap, and gives some unwanted/unexpected results. The reference data can be
+    # preprocessed with 'shapely-polygonize', to create a new set of non-overlapping
+    # polygons. These non-overlapping polygons can be used as reference-data to align the
+    # theme-data.
+    """
     # Initiate brdr
     aligner = Aligner()
 

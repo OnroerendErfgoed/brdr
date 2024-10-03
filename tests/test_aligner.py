@@ -1,3 +1,4 @@
+import json
 import os
 import unittest
 from datetime import date
@@ -7,6 +8,7 @@ from shapely import Point
 from shapely import from_wkt
 from shapely.geometry import Polygon
 from shapely.geometry import shape
+from shapely.predicates import equals
 
 from brdr.aligner import Aligner
 from brdr.constants import FORMULA_FIELD_NAME
@@ -17,7 +19,7 @@ from brdr.geometry_utils import buffer_neg_pos
 from brdr.grb import (
     GRBActualLoader,
     GRBFiscalParcelLoader,
-    get_geoms_affected_by_grb_change,
+    get_affected_by_grb_change,
 )
 from brdr.loader import GeoJsonLoader, DictLoader
 from brdr.typings import FeatureCollection, ProcessResult
@@ -240,7 +242,7 @@ class TestAligner(unittest.TestCase):
                 od_strategy=od_strategy,
                 threshold_overlap_percentage=50,
             )
-            self.assertEqual(len(process_result["theme_id_1"][relevant_distance]), 6)
+            self.assertEqual(len(process_result["theme_id_1"][relevant_distance]), 7)
 
     def test_process_interior_ring(self):
         thematic_dict = {
@@ -269,8 +271,8 @@ class TestAligner(unittest.TestCase):
         self.assertEqual(len(result_dict), len(thematic_dict))
 
     def test_process_circle(self):
-        # TODO
         geometry = Point(0, 0).buffer(3)
+        # geometry = MultiPolygon([geometry])
         thematic_dict = {"key": geometry}
         self.sample_aligner.load_thematic_data(DictLoader(thematic_dict))
         # LOAD REFERENCE DICTIONARY
@@ -336,7 +338,7 @@ class TestAligner(unittest.TestCase):
         self.sample_aligner.get_input_as_geojson()
 
     def test_fully_aligned_input(self):
-        aligned_shape = from_wkt("POLYGON ((0 0, 0 9, 5 10, 10 0, 0 0))")
+        aligned_shape = from_wkt("MULTIPOLYGON (((0 0, 0 9, 5 10, 10 0, 0 0)))")
         loader = DictLoader({"theme_id_1": aligned_shape})
         self.sample_aligner.load_thematic_data(
             DictLoader({"theme_id_1": aligned_shape})
@@ -344,14 +346,12 @@ class TestAligner(unittest.TestCase):
         self.sample_aligner.load_reference_data(DictLoader({"ref_id_1": aligned_shape}))
         relevant_distance = 1
         result = self.sample_aligner.process(relevant_distance=relevant_distance)
-        assert result["theme_id_1"][relevant_distance].get("result") == aligned_shape
-        assert result["theme_id_1"][relevant_distance].get("result_diff") == Polygon()
-        assert (
-            result["theme_id_1"][relevant_distance].get("result_diff_min") == Polygon()
+        assert equals(
+            result["theme_id_1"][relevant_distance].get("result"), aligned_shape
         )
-        assert (
-            result["theme_id_1"][relevant_distance].get("result_diff_plus") == Polygon()
-        )
+        assert result["theme_id_1"][relevant_distance].get("result_diff").is_empty
+        assert result["theme_id_1"][relevant_distance].get("result_diff_min").is_empty
+        assert result["theme_id_1"][relevant_distance].get("result_diff_plus").is_empty
 
     def test_evaluate(self):
         thematic_dict = {
@@ -378,42 +378,63 @@ class TestAligner(unittest.TestCase):
                 "result"
             ]
             thematic_dict_formula[key] = {
-                FORMULA_FIELD_NAME: base_aligner.get_brdr_formula(
-                    thematic_dict_result[key]
+                FORMULA_FIELD_NAME: json.dumps(
+                    base_aligner.get_brdr_formula(thematic_dict_result[key])
                 )
             }
-        aligner_result = Aligner()
-        aligner_result.load_thematic_data(DictLoader(thematic_dict_result))
-        dict_affected, dict_unchanged = get_geoms_affected_by_grb_change(
-            aligner=aligner_result,
+            print(key + ": " + thematic_dict_result[key].wkt)
+            print(key + ": " + str(thematic_dict_formula[key]))
+        base_aligner_result = Aligner()
+        base_aligner_result.load_thematic_data(DictLoader(thematic_dict_result))
+        affected, unaffected = get_affected_by_grb_change(
+            dict_thematic=thematic_dict_result,
             grb_type=GRBType.ADP,
             date_start=date(2022, 1, 1),
             date_end=date.today(),
             one_by_one=False,
         )
-
+        if len(affected) == 0:
+            print("No affected dicts")
+            exit()
+        print("Affected_IDs: " + str(affected))
         actual_aligner = Aligner()
         actual_aligner.load_thematic_data(
             DictLoader(
-                data_dict=dict_affected, data_dict_properties=thematic_dict_formula
+                data_dict=thematic_dict_result,
+                data_dict_properties=thematic_dict_formula,
             )
         )
-        loader = GRBActualLoader(
-            grb_type=GRBType.ADP, partition=1000, aligner=actual_aligner
+        actual_aligner.load_reference_data(
+            GRBActualLoader(
+                grb_type=GRBType.ADP, partition=1000, aligner=actual_aligner
+            )
         )
-        actual_aligner.load_reference_data(loader)
-        series = np.arange(0, 200, 10, dtype=int) / 100
+        actual_aligner.relevant_distances = np.arange(0, 200, 10, dtype=int) / 100
+        dict_evaluated, prop_dictionary = actual_aligner.evaluate(
+            ids_to_evaluate=affected, base_formula_field=FORMULA_FIELD_NAME
+        )
 
-        dict_evaluated, prop_dictionary = actual_aligner.compare(
-            threshold_area=5,
-            threshold_percentage=1,
-        )
         fc = get_series_geojson_dict(
             dict_evaluated,
             crs=actual_aligner.CRS,
             id_field=actual_aligner.name_thematic_id,
             series_prop_dict=prop_dictionary,
         )
+        print(fc["result"])
+        fcs = actual_aligner.get_results_as_geojson(formula=True)
+
+    def test_remark_for_poly_multipoly(self):
+        shape = from_wkt(
+            "MultiPolygon(((48893.03662109375 214362.93756103515625, 48890.8258056640625 214368.482666015625, 48890.7159423828125 214368.44110107421875, 48887.6488037109375 214367.2845458984375, 48886.3800048828125 214368.68017578125, 48885.1068115234375 214370.08062744140625, 48884.3330078125 214369.782470703125, 48882.563720703125 214369.10064697265625, 48882.1116943359375 214370.1346435546875, 48878.5626220703125 214368.70196533203125, 48877.839111328125 214368.40997314453125, 48877.2352294921875 214369.79376220703125, 48876.7911376953125 214369.60687255859375, 48875.0850830078125 214373.62353515625, 48875.478759765625 214373.8182373046875, 48881.5286865234375 214376.81109619140625, 48885.10546875 214372.36151123046875, 48887.0050048828125 214370.08538818359375, 48888.4698486328125 214368.330078125, 48890.366943359375 214369.2685546875, 48901.0638427734375 214374.56024169921875, 48905.0159912109375 214369.61175537109375, 48904.472900390625 214367.53851318359375, 48893.03662109375 214362.93756103515625)))"
+        )
+        self.sample_aligner.load_thematic_data(DictLoader({"theme_id_1": shape}))
+        self.sample_aligner.load_reference_data(
+            GRBActualLoader(
+                grb_type=GRBType.ADP, partition=1000, aligner=self.sample_aligner
+            )
+        )
+        self.sample_aligner.process(relevant_distances=[2])
+        assert self.sample_aligner.dict_processresults["theme_id_1"][2]["remark"] != ""
 
     def test_fully_aligned_geojson_output(self):
         aligned_shape = from_wkt(
