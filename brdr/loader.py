@@ -36,7 +36,9 @@ class Loader(ABC):
                         ],
                         DATE_FORMAT,
                     )
-                self.data_dict_properties[key][VERSION_DATE] = datetime.strftime(date,DATE_FORMAT)
+                self.data_dict_properties[key][VERSION_DATE] = datetime.strftime(
+                    date, DATE_FORMAT
+                )
 
         return self.data_dict, self.data_dict_properties, self.data_dict_source
 
