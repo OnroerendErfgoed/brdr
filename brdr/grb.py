@@ -352,6 +352,14 @@ def update_to_actual_grb(
     """
     Function to update a thematic featurecollection to the most actual version of GRB.
     Important to notice that the featurecollection needs a 'formula' for the base-alignment.
+
+    :param featurecollection: Thematic featurecollection
+    :param id_theme_fieldname: property-fieldname that states which property has to be used as unique ID
+    :param base_formula_field: Name of the property-field that holds the original/base formula of the geometry, that has to be compared with the actual formula.
+    :param max_distance_for_actualisation: Maximum relevant distance that is used to search and evaluate resulting geometries. All relevant distance between 0 and this max_distance are used to search, with a interval of 0.1m.
+    :param feedback:  (default None): a QGIS feedback can be added to push all the logging to QGIS
+    :param attributes: (boolean, default=True): States of all original attributes has to be added to the result
+    :return: featurecollection
     """
     logger = Logger(feedback)
     # Load featurecollection into a shapely_dict:
@@ -428,7 +436,7 @@ def update_to_actual_grb(
     actual_aligner.relevant_distances = (
         np.arange(0, max_distance_for_actualisation * 100, 10, dtype=int) / 100
     )
-    dict_evaluated, prop_dictionary = actual_aligner.compare(ids_to_compare=affected)
+    dict_evaluated, prop_dictionary = actual_aligner.evaluate(ids_to_compare=affected)
 
     return actual_aligner.get_results_as_geojson(
         resulttype=AlignerResultType.EVALUATED_PREDICTIONS,

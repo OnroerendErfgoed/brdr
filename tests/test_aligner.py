@@ -411,7 +411,7 @@ class TestAligner(unittest.TestCase):
             )
         )
         actual_aligner.relevant_distances = np.arange(0, 200, 10, dtype=int) / 100
-        dict_evaluated, prop_dictionary = actual_aligner.compare(
+        dict_evaluated, prop_dictionary = actual_aligner.evaluate(
             ids_to_compare=affected
         )
 

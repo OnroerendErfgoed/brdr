@@ -77,7 +77,7 @@ class Aligner:
         relevant_distance=1,
         relevant_distances=np.arange(0, 200, 10, dtype=int) / 100,
         threshold_overlap_percentage=50,
-        od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
+        od_strategy=OpenbaarDomeinStrategy.SNAP_FULL_AREA_ALL_SIDE,
         crs=DEFAULT_CRS,
         multi_as_single_modus=True,
         threshold_exclusion_area=0,
@@ -97,22 +97,31 @@ class Aligner:
                 feedback in QGIS. Defaults to None.
             relevant_distance (int, optional): The relevant distance (in meters) for
                 processing. Defaults to 1.
+            relevant_distances ([],optional): Relevant distances (in meters) for
+                processing
             od_strategy (int, optional): The strategy to determine how to handle
                 information outside the reference polygons (Openbaar Domein)
-                (default 1: SNAP_SINGLE_SIDE)
+                (default: SNAP_FULL_AREA_ALL_SIDE)
             threshold_overlap_percentage (int, optional): Threshold (%) to determine
                 from which overlapping-percentage a reference-polygon has to be included
                 when there aren't relevant intersections or relevant differences
                 (default 50%).
                 When setting this parameter to '-1' the original border for will be returned for cases where nor relevant intersections and relevant differences are found
-            od_strategy (int, optional): Determines how the algorithm deals with parts
-                of the geometry that are not on the
-                reference (default 1: SNAP_SINGLE_SIDE)
             crs (str, optional): Coordinate Reference System (CRS) of the data.
                 (default EPSG:31370)
+            multi_as_single_modus (boolean, optional): Modus to handle multipolygons (Default=True):
+                True: input-multipolygons will be split-up into single polygons and handled by the algorithm. After executing the algorithm, the results are merged together.
+                False: Multipolygons are directly processed by the algorithm
+            threshold_exclusion_percentage (int, optional): Percentage for excluding candidate reference-polygons when overlap(%) is smaller than the threshold(Default=0)
+            threshold_exclusion_area (int, optional):Area in m² for excluding candidate reference-polygons when overlap(m²) is smaller than the threshold (Default=0)
+            buffer_multiplication_factor (float, optional): Multiplication factor, used to buffer the thematic objects searching for reference borders (buffer= buffer_multiplication_factor*relevant_distance)(Default=1.01)
+            threshold_circle_ratio (float, optional): Threshold-value to exclude circles getting processed (perfect circle = 1) based on POLSPY-POPPER algorithm(Default=0.98)
+            correction_distance (float, optional): Distance used in a pos_neg_buffer to remove slivers (technical correction) (Default= 0.01 = 1cm )
+            mitre_limit (int, optional):buffer-parameter - The mitre ratio is the ratio of the distance from the corner to the end of the mitred offset corner.
+                When two line segments meet at a sharp angle, a miter join will extend far beyond the original geometry. (and in the extreme case will be infinitely far.) To prevent unreasonable geometry, the mitre limit allows controlling the maximum length of the join corner.
+                Corners with a ratio which exceed the limit will be beveled(Default=10)
             area_limit (int, optional): Maximum area for processing. (default 100000)
-            max_workers (int, optional): Amount of workers that is used in ThreadPoolExecutor when processing objects for multiple relevant distances. (default None)
-
+            max_workers (int, optional): Amount of workers that is used in ThreadPoolExecutor (for parallel execution) when processing objects for multiple relevant distances. (default None). If set to -1, no parallel exececution is used.
 
         """
         self.logger = Logger(feedback)
@@ -121,10 +130,10 @@ class Aligner:
         self.relevant_distances = relevant_distances
         self.od_strategy = od_strategy
         self.threshold_overlap_percentage = threshold_overlap_percentage
-        # Area in m² for excluding candidate reference when overlap(m²) is smaller than the
+        # Area in m² for excluding candidate reference-polygons when overlap(m²) is smaller than the
         # threshold
         self.threshold_exclusion_area = threshold_exclusion_area
-        # Percentage for excluding candidate reference when overlap(%) is smaller than the
+        # Percentage for excluding candidate reference-polygons when overlap(%) is smaller than the
         # threshold
         self.threshold_exclusion_percentage = threshold_exclusion_percentage
         self.area_limit = area_limit
@@ -200,11 +209,21 @@ class Aligner:
     ###########################################
 
     def load_thematic_data(self, loader: Loader):
+        """
+        Loads the thematic features into the aligner
+        :param loader:
+        :return:
+        """
         self.dict_thematic, self.dict_thematic_properties, self.dict_thematic_source = (
             loader.load_data()
         )
 
     def load_reference_data(self, loader: Loader):
+        """
+        Loads the reference features into the aligner, and prepares the reference-data for processing
+        :param loader:
+        :return:
+        """
         (
             self.dict_reference,
             self.dict_reference_properties,
@@ -219,7 +238,7 @@ class Aligner:
         self,
         input_geometry: BaseGeometry,
         relevant_distance: float = 1,
-        od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
+        od_strategy=OpenbaarDomeinStrategy.SNAP_FULL_AREA_ALL_SIDE,
         threshold_overlap_percentage=50,
     ) -> ProcessResult:
         """
@@ -227,10 +246,16 @@ class Aligner:
 
         Args:
             input_geometry (BaseGeometry): The input geometric object.
-            relevant_distance
-            od_strategy
-            threshold_overlap_percentage (int): The buffer distance (positive
-                or negative).
+            relevant_distance: The relevant distance (in meters) for processing
+            od_strategy (int, optional): The strategy to determine how to handle
+                information outside the reference polygons (Openbaar Domein)
+                (default: SNAP_FULL_AREA_ALL_SIDE)
+            threshold_overlap_percentage (int, optional): Threshold (%) to determine
+                from which overlapping-percentage a reference-polygon has to be included
+                when there aren't relevant intersections or relevant differences
+                (default 50%).
+                When setting this parameter to '-1' the original border for will be returned for cases where nor relevant intersections and relevant differences are found
+
 
         Returns:
             ProcessResult : A dict containing the resulting geometries:
@@ -243,9 +268,7 @@ class Aligner:
                 geometry
             *   relevant_intersection (BaseGeometry): The relevant_intersection
             *   relevant_difference (BaseGeometry): The relevant_difference
-        Notes:
-            -
-        Example:
+            *   remark (str): remarks collected when processing the geoemetry
         """
         if self.area_limit and input_geometry.area > self.area_limit:
             message = "The input geometry is too large to process."
@@ -329,7 +352,7 @@ class Aligner:
         dict_thematic=None,
         relevant_distances: Iterable[float] = None,
         relevant_distance=1,
-        od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
+        od_strategy=OpenbaarDomeinStrategy.SNAP_FULL_AREA_ALL_SIDE,
         threshold_overlap_percentage=50,
     ) -> dict[any, dict[float, ProcessResult]]:
         """
@@ -339,10 +362,15 @@ class Aligner:
         Args:
             relevant_distances (Iterable[float]): A series of relevant distances
                 (in meters) to process
-            od_strategy (int, optional): The strategy for overlap detection.
-                Defaults to 1.
-            threshold_overlap_percentage (float, optional): The threshold percentage for
-                considering full overlap. Defaults to 50.
+            od_strategy (int, optional): The strategy to determine how to handle
+                information outside the reference polygons (Openbaar Domein)
+                (default: SNAP_FULL_AREA_ALL_SIDE)
+            threshold_overlap_percentage (int, optional): Threshold (%) to determine
+                from which overlapping-percentage a reference-polygon has to be included
+                when there aren't relevant intersections or relevant differences
+                (default 50%).
+                When setting this parameter to '-1' the original border for will be returned for cases where nor relevant intersections and relevant differences are found
+
 
         Returns:
             dict: A dictionary, for every thematic ID a dictionary with the results for all distances
@@ -459,7 +487,7 @@ class Aligner:
         self,
         dict_thematic=None,
         relevant_distances=np.arange(0, 300, 10, dtype=int) / 100,
-        od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
+        od_strategy=OpenbaarDomeinStrategy.SNAP_FULL_AREA_ALL_SIDE,
         threshold_overlap_percentage=50,
     ):
         """
@@ -501,11 +529,24 @@ class Aligner:
               element based on the element key (using `filter_resulting_series_by_key`).
 
         Args:
+
+            relevant_distances (np.ndarray, optional): A series of relevant distances
+                (in meters) to process. : A NumPy array of distances to
+              be analyzed.
+            od_strategy (int, optional): The strategy to determine how to handle
+                information outside the reference polygons (Openbaar Domein)
+                (default: SNAP_FULL_AREA_ALL_SIDE)
+            threshold_overlap_percentage (int, optional): Threshold (%) to determine
+                from which overlapping-percentage a reference-polygon has to be included
+                when there aren't relevant intersections or relevant differences
+                (default 50%).
+                When setting this parameter to '-1' the original border for will be returned for cases where nor relevant intersections and relevant differences are found
+
             relevant_distances (np.ndarray, optional): A NumPy array of distances to
               be analyzed. Defaults to np.arange(0.1, 5.05, 0.1).
             od_strategy (OpenbaarDomeinStrategy, optional): A strategy for handling
               open data in the processing (implementation specific). Defaults to
-             OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE.
+             OpenbaarDomeinStrategy.SNAP_FULL_AREA_ALL_SIDE.
             threshold_overlap_percentage (int, optional): A percentage threshold for
               considering full overlap in the processing (implementation specific).
              Defaults to 50.
@@ -521,10 +562,8 @@ class Aligner:
                     - Values: dicts containing results (likely specific to
                     your implementation) from the distance series for the
                     corresponding distance.
-
-        Logs:
-            - Debug logs the thematic element key being processed.
         """
+
         if dict_thematic is None:
             dict_thematic = self.dict_thematic
         dict_predictions = defaultdict(dict)
@@ -584,12 +623,12 @@ class Aligner:
             diffs_dict,
         )
 
-    def compare(
+    def evaluate(
         self,
         ids_to_compare=None,
     ):
         """
-        Compares and evaluate input-geometries (with formula).Attributes are added to evaluate and decide if new
+        Compares and evaluate input-geometries (with formula). Attributes are added to evaluate and decide if new
         proposals can be used
         affected: list with all IDs to evaluate. all other IDs will be unchanged. If None (default), all self.dict_thematic will be evaluated.
         """
@@ -649,13 +688,21 @@ class Aligner:
         Returns:
             dict: A dictionary containing formula-related data:
 
-                -   'full': True if the intersection is the same as the reference
-                    geometry, else False.
-                -   'area': Area of the intersection or reference geometry.
-                -   'percentage': Percentage of intersection area relative to the
-                    reference geometry.
-                -   'geometry': GeoJSON representation of the intersection (if
-                    with_geom is True).
+            - "alignment_date": datetime.now().strftime(DATE_FORMAT),
+            - "brdr_version": str(__version__),
+            - "reference_source": self.dict_reference_source,
+            - "full": True if the geometry exists out of all full reference-polygons, else False.
+            - "area": Area of the geometry.
+            - "reference_features": {
+                array of all the reference features the geometry is composed of:
+                    -   'full': True if the intersection is the same as the reference
+                        geometry, else False.
+                    -   'area': Area of the intersection or reference geometry.
+                    -   'percentage': Percentage of intersection area relative to the
+                        reference geometry.
+                    -   'geometry': GeoJSON representation of the intersection (if
+                        with_geom is True).},
+            - "reference_od": Discription of the OD-part of the geometry (= not covered by reference-features),
         """
         dict_formula = {
             "alignment_date": datetime.now().strftime(DATE_FORMAT),
@@ -756,9 +803,11 @@ class Aligner:
         attributes=False,
     ):
         """
-        get a geojson of  a dictionary containing the resulting geometries for all
-            'serial' relevant distances. If no dict_series is given, the dict_result returned.
-        Optional: The descriptive formula is added as an attribute to the result"""
+        get a geojson of a dictionary containing the resulting geometries for all
+            'serial' relevant distances. The resulttype can be chosen.
+        formula (boolean, Optional): The descriptive formula is added as an attribute to the result
+        attributes (boolean, Optional): The original attributes/properties are added to the result
+        """
         prop_dictionary = None
         if resulttype == AlignerResultType.PROCESSRESULTS:
             dict_series = self.dict_processresults
@@ -801,7 +850,7 @@ class Aligner:
 
     def get_input_as_geojson(self, inputtype=AlignerInputType.REFERENCE):
         """
-        get a geojson of the reference polygons
+        get a geojson of the input polygons (thematic or reference-polygons)
         """
 
         if inputtype == AlignerInputType.THEMATIC:
@@ -829,7 +878,7 @@ class Aligner:
         self, path, resulttype=AlignerResultType.PROCESSRESULTS, formula=True
     ):
         """
-        Exports analysis results as GeoJSON files.
+        Exports analysis results (as geojson) to path.
 
         This function exports 6 GeoJSON files containing the analysis results to the
         specified `path`.
@@ -864,6 +913,10 @@ class Aligner:
             )
 
     def get_thematic_union(self):
+        """
+        returns a unary_unioned geometry from all the thematic geometries
+        :return:
+        """
         if self.thematic_union is None:
             self.thematic_union = safe_unary_union(list(self.dict_thematic.values()))
         return self.thematic_union
@@ -871,9 +924,7 @@ class Aligner:
     def _prepare_reference_data(self):
         """
         Prepares reference data for spatial queries and analysis.
-
         It performs the following tasks:
-
         1. **Optimizes spatial queries:**
             - Creates a Spatial Relationship Tree (STRtree) using `STRtree` for
               efficient spatial queries against the reference data in
@@ -902,6 +953,12 @@ class Aligner:
     def _calculate_intersection_between_geometry_and_od(
         self, geometry, relevant_distance
     ):
+        """
+        Calculates the intersecting parts between a thematic geometry and the openbaardomein( domain, not coverd by reference-polygons)
+        :param geometry:
+        :param relevant_distance:
+        :return:
+        """
         # Calculate the intersection between thematic and Openbaar Domein
         buffer_distance = relevant_distance / 2
         relevant_intersection_array = []
@@ -1099,6 +1156,10 @@ class Aligner:
         return geom_thematic_od, relevant_difference_array, relevant_intersection_array
 
     def _get_reference_union(self):
+        """
+        returns a unary_unioned geometry from all the referene geometries
+        :return:
+        """
         if self.reference_union is None:
             self.reference_union = safe_unary_union(list(self.dict_reference.values()))
         return self.reference_union
@@ -1128,6 +1189,7 @@ class Aligner:
                 output geometry
             *   result_diff_min (BaseGeometry): The resulting negative difference output
                 geometry
+            *   remark (str): Remark when processing the geometry
         """
         # Process array
         remark = ""
@@ -1295,8 +1357,6 @@ class Aligner:
         function that evaluates a predicted geometry and returns a properties-dictionary
         """
         threshold_od_percentage = 1
-        # threshold_area = 5
-        # threshold_percentage = 1
         properties = {
             FORMULA_FIELD_NAME: "",
             EVALUATION_FIELD_NAME: Evaluation.TO_CHECK_4,

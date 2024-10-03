@@ -13,7 +13,8 @@ from brdr.constants import (
     DEFAULT_CRS,
     DOWNLOAD_LIMIT,
     RELEVANT_DISTANCE_FIELD_NAME,
-    NR_CALCULATION_FIELD_NAME, REMARK_FIELD_NAME,
+    NR_CALCULATION_FIELD_NAME,
+    REMARK_FIELD_NAME,
 )
 from brdr.enums import DiffMetric
 from brdr.geometry_utils import get_partitions, get_bbox
@@ -449,15 +450,15 @@ def get_collection_by_partition(
 
 def _add_bbox_to_url(url, crs=DEFAULT_CRS, bbox=None):
     """
-        Adds a bounding box (bbox) parameter to the URL for geographic data requests.
+    Adds a bounding box (bbox) parameter to the URL for geographic data requests.
 
-        Parameters:
-        url (str): The base URL for the data source.
-        crs (str, optional): The coordinate reference system to use. Default is DEFAULT_CRS.
-        bbox (str, optional): The bounding box coordinates to add to the URL. If None, no bbox is added.
+    Parameters:
+    url (str): The base URL for the data source.
+    crs (str, optional): The coordinate reference system to use. Default is DEFAULT_CRS.
+    bbox (str, optional): The bounding box coordinates to add to the URL. If None, no bbox is added.
 
-        Returns:
-        str: The updated URL with the bbox parameter included, if provided.
+    Returns:
+    str: The updated URL with the bbox parameter included, if provided.
     """
     # Load the Base reference data
     if bbox is not None:
@@ -466,8 +467,7 @@ def _add_bbox_to_url(url, crs=DEFAULT_CRS, bbox=None):
 
 
 def merge_process_results(
-    result_dict: dict[any, dict[float, ProcessResult]],
-        dict_multi_as_single:dict
+    result_dict: dict[any, dict[float, ProcessResult]], dict_multi_as_single: dict
 ) -> dict[any, dict[float, ProcessResult]]:
     """
      Merges processresults in a dictionary from multiple themeIDs into a single themeID.
@@ -485,22 +485,30 @@ def merge_process_results(
         if id_theme in dict_multi_as_single.keys():
             id_theme_global = dict_multi_as_single[id_theme]
         else:
-            id_theme_global=id_theme
+            id_theme_global = id_theme
         if id_theme_global not in grouped_results:
             grouped_results[id_theme_global] = dict_results
         else:
             for rel_dist, process_result in dict_results.items():
                 for key in process_result:
                     value = process_result[key]  # noqa
-                    if isinstance(value,str) and value !="":
-                        existing_remark: str = grouped_results[id_theme_global][rel_dist][ key]  # noqa
-                        grouped_results[id_theme_global][rel_dist][key] = existing_remark + " | " + str(value)
+                    if isinstance(value, str) and value != "":
+                        existing_remark: str = grouped_results[id_theme_global][
+                            rel_dist
+                        ][
+                            key
+                        ]  # noqa
+                        grouped_results[id_theme_global][rel_dist][key] = (
+                            existing_remark + " | " + str(value)
+                        )
                         continue
-                    elif isinstance(value,BaseGeometry):
+                    elif isinstance(value, BaseGeometry):
                         geom = value
                         if geom.is_empty or geom is None:
                             continue
-                        existing: BaseGeometry = grouped_results[id_theme_global][rel_dist][
+                        existing: BaseGeometry = grouped_results[id_theme_global][
+                            rel_dist
+                        ][
                             key
                         ]  # noqa
                         grouped_results[id_theme_global][rel_dist][key] = unary_union(

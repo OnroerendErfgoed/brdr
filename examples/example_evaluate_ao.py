@@ -53,7 +53,7 @@ actual_aligner.load_reference_data(
     GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=actual_aligner)
 )
 actual_aligner.relevant_distances = np.arange(0, 200, 10, dtype=int) / 100
-dict_evaluated, prop_dictionary = actual_aligner.compare(ids_to_compare=affected)
+dict_evaluated, prop_dictionary = actual_aligner.evaluate(ids_to_compare=affected)
 
 fc = actual_aligner.get_results_as_geojson(resulttype=AlignerResultType.EVALUATED_PREDICTIONS,formula=True, attributes=True)
 print(fc["result"])
