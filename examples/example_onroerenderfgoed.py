@@ -11,7 +11,7 @@ if __name__ == "__main__":
     # Initiate brdr
     aligner = Aligner()
     # Load thematic data from Onroerend Erfgoed
-    loader = OnroerendErfgoedLoader( objectids = [131635] , oetype=OEType.AO)
+    loader = OnroerendErfgoedLoader(objectids=[131635], oetype=OEType.AO)
     aligner.load_thematic_data(loader)
     # Load reference data: The actual GRB-parcels
     loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)

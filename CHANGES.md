@@ -40,7 +40,24 @@
 - Bugfixing:
     - adding a safe_equals-function to catch GEOsException bug [#71]
 
+# 0.4.0
 
+! Not Backwards compatable !
+
+- Refactoring:
+    - Possibility for parallel processing [#97]
+    - Changed Aligner constants to init-settings [#83]
+    - Refactored ID-handling so strings,integers,... can be used as ID[#110]
+    - Cleaned examples [#100]
+
+    - Functionalities:
+        - Added evaluation-attributes to evaluate()-function [#99]
+        - processing-remarks available in geojson-output [#103]
+        - Added warning when input/output changed from polygon/multipolygon [#107]
+
+- Bugfixing:
+    - Bugfix on version_date [#96]
+    - Bugfix on disappearing features [#105]
 
 
 

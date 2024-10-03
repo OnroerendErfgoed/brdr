@@ -9,7 +9,6 @@ if __name__ == "__main__":
     #EXAMPLE of a Geojson, aligned by 'brdr'
     """
 
-
     # Initiate brdr
     aligner = Aligner()
     # Load thematic data
@@ -56,7 +55,7 @@ if __name__ == "__main__":
     # Example how to use the Aligner
     dict_results = aligner.process(relevant_distance=6)
 
-    #show results
+    # show results
     aligner.save_results("output/")
     show_map(dict_results, aligner.dict_thematic, aligner.dict_reference)
     print_brdr_formula(dict_results, aligner)
