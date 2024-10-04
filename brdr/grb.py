@@ -363,7 +363,8 @@ def update_to_actual_grb(
     :return: featurecollection
     """
     logger = Logger(feedback)
-    # Load featurecollection into a shapely_dict:
+    
+    # Load featurecollection into a shapely_dict
     dict_thematic = {}
     dict_thematic_props = {}
 
@@ -371,8 +372,6 @@ def update_to_actual_grb(
     for feature in featurecollection["features"]:
         id_theme = feature["properties"][id_theme_fieldname]
         geom = shape(feature["geometry"])
-        # logger.feedback_debug("id theme: " + id_theme)
-        # logger.feedback_debug("geometry (wkt): " + geom.wkt)
         dict_thematic[id_theme] = geom
         dict_thematic_props[id_theme] = feature["properties"]
         try:
@@ -419,9 +418,6 @@ def update_to_actual_grb(
         logger.feedback_info(
             "No change detected in referencelayer during timespan. Script is finished"
         )
-        return {}
-    logger.feedback_debug(str(datetime_start))
-    logger.feedback_debug(str(base_formula_field))
 
     # Initiate a Aligner to reference thematic features to the actual borders
     actual_aligner = Aligner(feedback=feedback, max_workers=None)
@@ -435,7 +431,8 @@ def update_to_actual_grb(
     actual_aligner.relevant_distances = (
         np.arange(0, max_distance_for_actualisation * 100, 10, dtype=int) / 100
     )
-    dict_evaluated, prop_dictionary = actual_aligner.evaluate(
+    #EXECUTE evaluation
+    actual_aligner.evaluate(
         ids_to_evaluate=affected, base_formula_field=BASE_FORMULA_FIELD_NAME
     )
 
