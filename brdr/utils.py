@@ -14,7 +14,7 @@ from brdr.constants import (
     DOWNLOAD_LIMIT,
     RELEVANT_DISTANCE_FIELD_NAME,
     NR_CALCULATION_FIELD_NAME,
-    REMARK_FIELD_NAME,
+    REMARK_FIELD_NAME, PERIMETER_ATTRIBUTE, SHAPE_INDEX_ATTRIBUTE, AREA_ATTRIBUTE,
 )
 from brdr.enums import DiffMetric
 from brdr.geometry_utils import get_partitions, get_bbox
@@ -90,9 +90,9 @@ def _feature_from_geom(
     if geom_attributes:
         area = geom.area
         perimeter = geom.length
-        properties["area"] = area
-        properties["perimeter"] = perimeter
-        properties["shape_index"] = perimeter / area if area != 0 else -1
+        properties[AREA_ATTRIBUTE] = area
+        properties[PERIMETER_ATTRIBUTE] = perimeter
+        properties[SHAPE_INDEX_ATTRIBUTE] = perimeter / area if area != 0 else -1
     return Feature(geometry=geom, properties=properties)
 
 

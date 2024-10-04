@@ -11,7 +11,7 @@ from shapely.geometry import shape
 from shapely.predicates import equals
 
 from brdr.aligner import Aligner
-from brdr.constants import FORMULA_FIELD_NAME
+from brdr.constants import FORMULA_FIELD_NAME, AREA_ATTRIBUTE
 from brdr.enums import GRBType, AlignerResultType
 from brdr.enums import OpenbaarDomeinStrategy
 from brdr.geometry_utils import _grid_bounds
@@ -461,7 +461,7 @@ class TestAligner(unittest.TestCase):
         self.sample_aligner.load_reference_data(DictLoader({"ref_id_1": aligned_shape}))
         self.sample_aligner.process()
         fcs = self.sample_aligner.get_results_as_geojson(formula=True)
-        assert fcs["result"]["features"][0]["properties"]["area"] > 0
-        assert fcs["result_diff"]["features"][0]["properties"]["area"] == 0
-        assert fcs["result_diff_min"]["features"][0]["properties"]["area"] == 0
-        assert fcs["result_diff_plus"]["features"][0]["properties"]["area"] == 0
+        assert fcs["result"]["features"][0]["properties"][AREA_ATTRIBUTE] > 0
+        assert fcs["result_diff"]["features"][0]["properties"][AREA_ATTRIBUTE] == 0
+        assert fcs["result_diff_min"]["features"][0]["properties"][AREA_ATTRIBUTE] == 0
+        assert fcs["result_diff_plus"]["features"][0]["properties"][AREA_ATTRIBUTE] == 0
