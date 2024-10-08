@@ -1,5 +1,4 @@
 import json
-import logging
 import os
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
@@ -577,7 +576,7 @@ class Aligner:
 
         for theme_id, diffs in diffs_dict.items():
             if len(diffs) != len(relevant_distances):
-                logging.warning(
+                self.logger.feedback_warning(
                     f"Number of computed diffs for thematic element {theme_id} does "
                     f"not match the number of relevant distances."
                 )
@@ -586,12 +585,12 @@ class Aligner:
             breakpoints, zero_streaks = get_breakpoints_zerostreak(
                 relevant_distances, diff_values
             )
-            logging.debug(str(theme_id))
+            self.logger.feedback_debug(str(theme_id))
             if len(zero_streaks) == 0:
                 dict_predictions[theme_id][relevant_distances[0]] = dict_series[
                     theme_id
                 ][relevant_distances[0]]
-                logging.info("No zero-streaks found for: " + str(theme_id))
+                self.logger.feedback_debug("No zero-streaks found for: " + str(theme_id))
             for zs in zero_streaks:
                 dict_predictions[theme_id][zs[0]] = dict_series[theme_id][zs[0]]
 

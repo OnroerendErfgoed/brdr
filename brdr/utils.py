@@ -131,7 +131,7 @@ def write_geojson(path_to_file, geojson):
     parent = os.path.dirname(path_to_file)
     os.makedirs(parent, exist_ok=True)
     with open(path_to_file, "w") as f:
-        dump(geojson, f)
+        dump(geojson, f, default=str)
 
 
 def multipolygons_to_singles(dict_geoms):
