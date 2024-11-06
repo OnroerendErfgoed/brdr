@@ -216,6 +216,7 @@ class Aligner:
         self.dict_thematic, self.dict_thematic_properties, self.dict_thematic_source = (
             loader.load_data()
         )
+        self.thematic_union = None
 
     def load_reference_data(self, loader: Loader):
         """
