@@ -588,9 +588,6 @@ class Aligner:
             )
             self.logger.feedback_debug(str(theme_id))
             if len(zero_streaks) == 0:
-                dict_predictions[theme_id][relevant_distances[0]] = dict_series[
-                    theme_id
-                ][relevant_distances[0]]
                 self.logger.feedback_debug("No zero-streaks found for: " + str(theme_id))
             for zs in zero_streaks:
                 dict_predictions[theme_id][zs[0]] = dict_series[theme_id][zs[0]]
