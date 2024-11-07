@@ -128,7 +128,7 @@ class TestAligner(unittest.TestCase):
         self.sample_aligner.load_thematic_data(DictLoader(thematic_dict))
         # LOAD REFERENCE DICTIONARY
         self.sample_aligner.load_reference_data(DictLoader(reference_dict))
-        series = np.arange(0, 300, 10, dtype=int) / 100
+        series = np.arange(0, 310, 10, dtype=int) / 100
         # predict which relevant distances are interesting to propose as resulting
         # geometry
 
@@ -156,7 +156,7 @@ class TestAligner(unittest.TestCase):
         loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         aligner.load_reference_data(loader)
 
-        series = np.arange(0, 800, 10, dtype=int) / 100
+        series = np.arange(0, 810, 10, dtype=int) / 100
         # predict which relevant distances are interesting to propose as resulting geometry
         dict_series, dict_predictions, diffs = aligner.predictor(
             relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
@@ -435,7 +435,7 @@ class TestAligner(unittest.TestCase):
                 grb_type=GRBType.ADP, partition=1000, aligner=actual_aligner
             )
         )
-        actual_aligner.relevant_distances = np.arange(0, 200, 10, dtype=int) / 100
+        actual_aligner.relevant_distances = np.arange(0, 210, 10, dtype=int) / 100
         dict_evaluated, prop_dictionary = actual_aligner.evaluate(
             ids_to_evaluate=affected, base_formula_field=FORMULA_FIELD_NAME
         )

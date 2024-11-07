@@ -36,7 +36,7 @@ if __name__ == "__main__":
     )  # gebruik de actuele adp-percelen adp= administratieve percelen
 
     # Example how to use a series (for histogram)
-    series = np.arange(0, 300, 10, dtype=int) / 100
+    series = np.arange(0, 310, 10, dtype=int) / 100
     x_dict_series = aligner_x.process(
         relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
     )

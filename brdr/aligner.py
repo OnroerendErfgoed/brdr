@@ -74,7 +74,7 @@ class Aligner:
         *,
         feedback=None,
         relevant_distance=1,
-        relevant_distances=np.arange(0, 200, 10, dtype=int) / 100,
+        relevant_distances=np.arange(0, 210, 10, dtype=int) / 100,
         threshold_overlap_percentage=50,
         od_strategy=OpenbaarDomeinStrategy.SNAP_FULL_AREA_ALL_SIDE,
         crs=DEFAULT_CRS,
@@ -486,7 +486,7 @@ class Aligner:
     def predictor(
         self,
         dict_thematic=None,
-        relevant_distances=np.arange(0, 300, 10, dtype=int) / 100,
+        relevant_distances=np.arange(0, 310, 10, dtype=int) / 100,
         od_strategy=OpenbaarDomeinStrategy.SNAP_FULL_AREA_ALL_SIDE,
         threshold_overlap_percentage=50,
     ):

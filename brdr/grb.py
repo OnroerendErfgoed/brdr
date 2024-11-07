@@ -427,9 +427,9 @@ def update_to_actual_grb(
     actual_aligner.load_reference_data(
         GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=actual_aligner)
     )
-
+    rd_step = 10
     actual_aligner.relevant_distances = (
-        np.arange(0, max_distance_for_actualisation * 100, 10, dtype=int) / 100
+        np.arange(0, max_distance_for_actualisation * 100 +rd_step, rd_step, dtype=int) / 100
     )
     #EXECUTE evaluation
     actual_aligner.evaluate(
