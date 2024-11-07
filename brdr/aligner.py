@@ -74,7 +74,7 @@ class Aligner:
         *,
         feedback=None,
         relevant_distance=1,
-        relevant_distances=np.arange(0, 210, 10, dtype=int) / 100,
+        relevant_distances=[round(k,1) for k in np.arange(0, 210, 10, dtype=int) / 100],
         threshold_overlap_percentage=50,
         od_strategy=OpenbaarDomeinStrategy.SNAP_FULL_AREA_ALL_SIDE,
         crs=DEFAULT_CRS,
@@ -486,7 +486,7 @@ class Aligner:
     def predictor(
         self,
         dict_thematic=None,
-        relevant_distances=np.arange(0, 310, 10, dtype=int) / 100,
+        relevant_distances=[round(k,1) for k in np.arange(0, 310, 10, dtype=int) / 100],
         od_strategy=OpenbaarDomeinStrategy.SNAP_FULL_AREA_ALL_SIDE,
         threshold_overlap_percentage=50,
     ):
@@ -643,9 +643,25 @@ class Aligner:
         )
         dict_predictions_evaluated = {}
         prop_dictionary = {}
-        for theme_id, dict_predictions_results in dict_affected_predictions.items():
+
+        for theme_id in dict_affected.keys():
             dict_predictions_evaluated[theme_id] = {}
             prop_dictionary[theme_id] = {}
+            if theme_id not in dict_affected_predictions.keys():
+                dist = self.relevant_distances[0]
+                prop_dictionary[theme_id][dist] = {}
+                props = self._evaluate(
+                    id_theme=theme_id,
+                    geom_predicted=dict_affected[theme_id],
+                    base_formula_field=base_formula_field,
+                )
+                props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION_5
+                dict_predictions_evaluated[theme_id][dist] = dict_series[
+                    theme_id
+                ][dist]
+                prop_dictionary[theme_id][dist] = props
+                continue
+            dict_predictions_results = dict_affected_predictions[theme_id]
             for dist in sorted(dict_predictions_results.keys()):
                 prop_dictionary[theme_id][dist] = {}
                 props = self._evaluate(
@@ -658,7 +674,7 @@ class Aligner:
                 ][dist]
                 prop_dictionary[theme_id][dist] = props
         # UNAFFECTED
-        relevant_distance = 0
+        relevant_distance = 0.0
         # dict_unaffected_series = self.process(dict_thematic=dict_unaffected,relevant_distances=[relevant_distance])
         # for theme_id, dict_unaffected_results in dict_unaffected_series.items():
         for theme_id, geom in dict_unaffected.items():
@@ -1361,7 +1377,7 @@ class Aligner:
         threshold_od_percentage = 1
         properties = {
             FORMULA_FIELD_NAME: "",
-            EVALUATION_FIELD_NAME: Evaluation.TO_CHECK_4,
+            EVALUATION_FIELD_NAME: Evaluation.TO_CHECK_PREDICTION_4,
             FULL_BASE_FIELD_NAME: None,
             FULL_ACTUAL_FIELD_NAME: None,
             OD_ALIKE_FIELD_NAME: None,
@@ -1381,7 +1397,7 @@ class Aligner:
             )
 
         if base_formula is None or actual_formula is None:
-            properties[EVALUATION_FIELD_NAME] = Evaluation.NO_PREDICTION_5
+            properties[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION_5
             return properties
         properties[FULL_BASE_FIELD_NAME] = base_formula["full"]
         properties[FULL_ACTUAL_FIELD_NAME] = actual_formula["full"]
@@ -1467,7 +1483,7 @@ class Aligner:
         # elif base_formula["full"] == actual_formula["full"] and od_alike:#TODO evaluate when not-full-parcels?
         #    properties[EVALUATION_FIELD_NAME] = Evaluation.EQUALITY_NON_FULL
         else:
-            properties[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_4
+            properties[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_PREDICTION_4
         return properties
 
     @staticmethod
@@ -1678,7 +1694,7 @@ def _check_equality(
     function that checks if 2 formulas are equal (True,False) and adds an Evaluation
     """
     if base_formula is None or actual_formula is None:
-        return False, Evaluation.NO_PREDICTION_5
+        return False, Evaluation.TO_CHECK_NO_PREDICTION_5
     od_alike = False
     if base_formula["reference_od"] is None and actual_formula["reference_od"] is None:
         od_alike = True
@@ -1733,4 +1749,4 @@ def _check_equality(
             return True, Evaluation.EQUALITY_EQUAL_FORMULA_2
     if base_formula["full"] and actual_formula["full"] and od_alike:
         return True, Evaluation.EQUALITY_FULL_3
-    return False, Evaluation.NO_PREDICTION_5
+    return False, Evaluation.TO_CHECK_NO_PREDICTION_5
