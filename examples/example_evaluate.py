@@ -60,7 +60,7 @@ if __name__ == "__main__":
     print("Affected_IDs: " + str(affected))
 
     # Start an aligner to align thematic objects on the actual parcels
-    actual_aligner = Aligner(relevant_distances=np.arange(0, 200, 10, dtype=int) / 100)
+    actual_aligner = Aligner(relevant_distances=np.arange(0, 210, 10, dtype=int) / 100)
     # Load the thematic objects (aligned on 2022) and also give the brdr_formula from 2022 as property
     actual_aligner.load_thematic_data(
         DictLoader(

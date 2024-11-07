@@ -190,7 +190,7 @@ class TestExamples(unittest.TestCase):
         aligner.process(relevant_distance=rel_dist, od_strategy=4)
 
         # Example how to use a series (for histogram)
-        series = np.arange(0, 300, 10, dtype=int) / 100
+        series = np.arange(0, 310, 10, dtype=int) / 100
         dict_series = aligner.process(
             relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
         )

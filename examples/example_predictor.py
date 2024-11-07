@@ -25,7 +25,7 @@ if __name__ == "__main__":
     aligner.load_reference_data(loader)
 
     # PREDICT the 'stable' relevant distances, for a series of relevant distances
-    series = np.arange(0, 300, 10, dtype=int) / 100
+    series = np.arange(0, 310, 10, dtype=int) / 100
     # predict which relevant distances are interesting to propose as resulting geometry
     dict_series, dict_predictions, diffs = aligner.predictor(
         relevant_distances=series,
