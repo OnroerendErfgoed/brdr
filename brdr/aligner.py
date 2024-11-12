@@ -332,7 +332,7 @@ class Aligner:
 
         # POSTPROCESSING
         result_dict = self._postprocess_preresult(
-            preresult, geometry, relevant_distance
+            preresult, geometry, relevant_distance,input_geometry
         )
 
         result_dict["result_relevant_intersection"] = relevant_intersection
@@ -1181,7 +1181,7 @@ class Aligner:
         return self.reference_union
 
     def _postprocess_preresult(
-        self, preresult, geom_thematic, relevant_distance
+        self, preresult, geom_thematic, relevant_distance,input_geometry
     ) -> ProcessResult:
         """
         Postprocess the preresult with the following actions to create the final result
@@ -1211,8 +1211,13 @@ class Aligner:
         remark = ""
         buffer_distance = relevant_distance / 2
         result = []
-        geom_preresult = safe_unary_union(preresult)
         geom_thematic = make_valid(geom_thematic)
+        input_geometry_inner = buffer_neg(input_geometry, relevant_distance)
+        if self.od_strategy==OpenbaarDomeinStrategy.EXCLUDE:
+            input_geometry_inner = safe_intersection(input_geometry_inner,self._get_reference_union())
+        preresult.append(input_geometry_inner)
+        geom_preresult = safe_unary_union(preresult)
+
 
         if not (geom_thematic is None or geom_thematic.is_empty):
             # Correction for circles
@@ -1588,6 +1593,8 @@ def _calculate_geom_by_intersection_and_reference(
         and not geom_relevant_difference.is_empty
     ):
         # relevant intersection and relevant difference
+
+        #An intermediate geometry geom_x is calculated
         geom_x = safe_intersection(
             geom_reference,
             safe_difference(
@@ -1602,29 +1609,39 @@ def _calculate_geom_by_intersection_and_reference(
                 ),
             ),
         )
-        geom = safe_intersection(
-            geom_x,
-            buffer_pos(
-                buffer_neg_pos(
-                    geom_x,
-                    buffer_distance,
-                    mitre_limit=mitre_limit,
-                ),
-                buffer_distance,
-                mitre_limit=mitre_limit,
-            ),
-        )
+        #Start #119 - Amelioration of the algorithm
+        #The 'else' below is added to give preference to intersections above differences: So we will exclude the (relevant) differences so all parts that are 'in between' are added as intersection
+        geom =geom_x
+        #End #119 - Amelioration of the algorithm
+
         # when calculating for OD, we create a 'virtual parcel'. When calculating this
         # virtual parcel, it is buffered to take outer boundaries into account.
         # This results in a side effect that there are extra non-logical parts included
         # in the result. The function below tries to exclude these non-logical parts.
         # see eo_id 206363 with relevant distance=0.2m and SNAP_ALL_SIDE
         if is_openbaar_domein:
+            geom = safe_intersection(
+                geom_x,
+                buffer_pos(
+                    buffer_neg_pos(
+                        geom_x,
+                        buffer_distance,
+                        mitre_limit=mitre_limit,
+                    ),
+                    buffer_distance,
+                    mitre_limit=mitre_limit,
+                ),
+            )
             geom = _get_relevant_polygons_from_geom(geom, buffer_distance, mitre_limit)
+
     elif not geom_relevant_intersection.is_empty and geom_relevant_difference.is_empty:
         geom = geom_reference
     elif geom_relevant_intersection.is_empty and not geom_relevant_difference.is_empty:
-        geom = geom_relevant_intersection  # (=empty geometry)
+        #geom = geom_relevant_intersection  # (=empty geometry)
+        #TEST #119
+        #test if this a better approach when only relevant difference is available
+        geom = safe_difference(geom_intersection,buffer_pos(geom_relevant_difference,2*buffer_distance))
+        #END TEST #119
     else:
         if is_openbaar_domein:
             geom = geom_relevant_intersection  # (=empty geometry)
