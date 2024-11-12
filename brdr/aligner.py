@@ -38,7 +38,7 @@ from brdr.enums import (
     AlignerResultType,
     AlignerInputType,
 )
-from brdr.geometry_utils import buffer_neg, safe_unary_union
+from brdr.geometry_utils import buffer_neg, safe_unary_union, safe_equals
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import buffer_pos
 from brdr.geometry_utils import fill_and_remove_gaps
@@ -331,8 +331,11 @@ class Aligner:
             relevant_diff = Polygon()
 
         # POSTPROCESSING
+        input_geometry_inner = buffer_neg(input_geometry, relevant_distance) #inner part of the input that must be always available
+        if self.od_strategy==OpenbaarDomeinStrategy.EXCLUDE:
+            input_geometry_inner = safe_intersection(input_geometry_inner,self._get_reference_union())
         result_dict = self._postprocess_preresult(
-            preresult, geometry, relevant_distance
+            preresult, geometry,input_geometry_inner, relevant_distance
         )
 
         result_dict["result_relevant_intersection"] = relevant_intersection
@@ -1181,7 +1184,7 @@ class Aligner:
         return self.reference_union
 
     def _postprocess_preresult(
-        self, preresult, geom_thematic, relevant_distance
+        self, preresult, geom_thematic,input_geometry_inner,relevant_distance
     ) -> ProcessResult:
         """
         Postprocess the preresult with the following actions to create the final result
@@ -1211,8 +1214,10 @@ class Aligner:
         remark = ""
         buffer_distance = relevant_distance / 2
         result = []
-        geom_preresult = safe_unary_union(preresult)
         geom_thematic = make_valid(geom_thematic)
+        preresult.append(input_geometry_inner)
+        geom_preresult = safe_unary_union(preresult)
+
 
         if not (geom_thematic is None or geom_thematic.is_empty):
             # Correction for circles
@@ -1227,7 +1232,7 @@ class Aligner:
                 return {"result": geom_thematic, "remark": remark}
 
             # Correction for unchanged geometries
-            if geom_preresult == geom_thematic:
+            if safe_symmetric_difference(geom_preresult,geom_thematic).is_empty:
                 remark = "Unchanged geometry: -->resulting geometry = original geometry"
                 self.logger.feedback_debug(remark)
                 return {"result": geom_thematic, "remark": remark}

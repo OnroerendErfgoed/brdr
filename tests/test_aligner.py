@@ -8,13 +8,13 @@ from shapely import Point
 from shapely import from_wkt
 from shapely.geometry import Polygon
 from shapely.geometry import shape
-from shapely.predicates import equals
+from shapely import make_valid
 
 from brdr.aligner import Aligner
 from brdr.constants import FORMULA_FIELD_NAME, AREA_ATTRIBUTE
 from brdr.enums import GRBType, AlignerResultType
 from brdr.enums import OpenbaarDomeinStrategy
-from brdr.geometry_utils import _grid_bounds
+from brdr.geometry_utils import _grid_bounds, safe_equals, buffer_pos, safe_symmetric_difference
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.grb import (
     GRBActualLoader,
@@ -364,15 +364,14 @@ class TestAligner(unittest.TestCase):
         self.sample_aligner.get_input_as_geojson()
 
     def test_fully_aligned_input(self):
-        aligned_shape = from_wkt("MULTIPOLYGON (((0 0, 0 9, 5 10, 10 0, 0 0)))")
-        loader = DictLoader({"theme_id_1": aligned_shape})
+        aligned_shape = from_wkt("POLYGON ((0 0, 0 9, 5 10, 10 0, 0 0))")
         self.sample_aligner.load_thematic_data(
             DictLoader({"theme_id_1": aligned_shape})
         )
         self.sample_aligner.load_reference_data(DictLoader({"ref_id_1": aligned_shape}))
         relevant_distance = 1
         result = self.sample_aligner.process(relevant_distance=relevant_distance)
-        assert equals(
+        assert safe_equals(
             result["theme_id_1"][relevant_distance].get("result"), aligned_shape
         )
         assert result["theme_id_1"][relevant_distance].get("result_diff").is_empty
