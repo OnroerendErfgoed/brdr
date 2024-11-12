@@ -36,19 +36,19 @@ Issues = "https://github.com/OnroerendErfgoed/brdr/issues"
 
 [project.optional-dependencies]
 test = [
-    "pytest-cov==5.0.0",
-    "pytest==8.1.1",
+    "pytest-cov==6.0.0",
+    "pytest==8.3.3",
     "responses==0.25.3",
     "toml==0.10.2",
 ]
 dev = [
     "brdr[test]",
-    "black==24.4.0",
-    "flake8==7.0.0",
-    "geopandas==0.14.3",
-    "hatchling==1.24.2",
+    "black==24.10.0",
+    "flake8==7.1.1",
+    "geopandas==1.0.1",
+    "hatchling==1.26.1",
     "matplotlib==3.8.4",
-    "mypy==1.9.0",
+    "mypy==1.13.0",
     "pip-tools==7.4.1",
     "types-requests==2.31.0.20240406",
 ]
