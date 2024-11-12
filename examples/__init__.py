@@ -20,8 +20,8 @@ def _make_map(ax, processresult, thematic_dict, reference_dict):
     try:
         dicts = _processresult_to_dicts(processresult)
         results = dicts[0]
-        results_diff_pos = dicts[1]
-        results_diff_neg = dicts[2]
+        results_diff_pos = dicts[2]
+        results_diff_neg = dicts[3]
         if ax is None:
             ax = plt.subplot(1, 1, 1)
         # ax_result =
