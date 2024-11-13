@@ -14,6 +14,7 @@ from shapely import STRtree
 from shapely import get_parts
 from shapely import make_valid
 from shapely import remove_repeated_points
+from shapely import snap
 from shapely import to_geojson
 from shapely.geometry.base import BaseGeometry
 
@@ -38,7 +39,7 @@ from brdr.enums import (
     AlignerResultType,
     AlignerInputType,
 )
-from brdr.geometry_utils import buffer_neg, safe_unary_union, safe_equals
+from brdr.geometry_utils import buffer_neg, safe_unary_union
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import buffer_pos
 from brdr.geometry_utils import fill_and_remove_gaps
@@ -280,6 +281,9 @@ class Aligner:
         buffer_distance = relevant_distance / 2
         # combine all parts of the input geometry to one polygon
         input_geometry = safe_unary_union(get_parts(input_geometry))
+        input_geometry_inner = buffer_neg(input_geometry, relevant_distance) #inner part of the input that must be always available
+        if self.od_strategy==OpenbaarDomeinStrategy.EXCLUDE:
+            input_geometry_inner = safe_intersection(input_geometry_inner,self._get_reference_union())
 
         # array with all relevant parts of a thematic geometry; initial empty Polygon
         (
@@ -288,13 +292,15 @@ class Aligner:
             relevant_intersection_array,
             relevant_diff_array,
         ) = self._calculate_intersection_between_geometry_and_od(
-            input_geometry, relevant_distance
+            input_geometry,input_geometry_inner, relevant_distance
         )
         # get a list of all ref_ids that are intersecting the thematic geometry
         ref_intersections = self.reference_items.take(
             self.reference_tree.query(geometry)
         ).tolist()
         for key_ref in ref_intersections:
+            if key_ref == "24126B0031/00H005":
+                pass
             geom_reference = self.dict_reference[key_ref]
             geom_intersection = safe_intersection(geometry, geom_reference)
             if geom_intersection.is_empty or geom_intersection is None:
@@ -307,6 +313,7 @@ class Aligner:
             ) = _calculate_geom_by_intersection_and_reference(
                 geom_intersection,
                 geom_reference,
+                input_geometry_inner,
                 False,
                 buffer_distance,
                 self.threshold_overlap_percentage,
@@ -331,9 +338,6 @@ class Aligner:
             relevant_diff = Polygon()
 
         # POSTPROCESSING
-        input_geometry_inner = buffer_neg(input_geometry, relevant_distance) #inner part of the input that must be always available
-        if self.od_strategy==OpenbaarDomeinStrategy.EXCLUDE:
-            input_geometry_inner = safe_intersection(input_geometry_inner,self._get_reference_union())
         result_dict = self._postprocess_preresult(
             preresult, geometry,input_geometry_inner, relevant_distance
         )
@@ -970,7 +974,7 @@ class Aligner:
         return
 
     def _calculate_intersection_between_geometry_and_od(
-        self, geometry, relevant_distance
+        self, geometry,input_geometry_inner, relevant_distance
     ):
         """
         Calculates the intersecting parts between a thematic geometry and the openbaardomein( domain, not coverd by reference-polygons)
@@ -1030,7 +1034,7 @@ class Aligner:
                 geom_thematic_od,
                 relevant_difference_array,
                 relevant_intersection_array,
-            ) = self._od_snap_all_side(geometry, relevant_distance)
+            ) = self._od_snap_all_side(geometry,input_geometry_inner, relevant_distance)
         elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_FULL_AREA_SINGLE_SIDE:
             # Strategy useful for bigger areas.
             # integrates the entire inner area of the input geometry,
@@ -1053,7 +1057,7 @@ class Aligner:
                 geom_thematic_od,
                 relevant_difference_array,
                 relevant_intersection_array,
-            ) = self._od_snap_all_side(geometry, relevant_distance)
+            ) = self._od_snap_all_side(geometry,input_geometry_inner, relevant_distance)
             # This part is a copy of SNAP_FULL_AREA_SINGLE_SIDE
             geom_theme_od_min_clipped_plus_buffered_clipped = self._od_full_area(
                 geometry, relevant_distance
@@ -1130,7 +1134,7 @@ class Aligner:
         geom_thematic_od = geom_theme_od_min_clipped_plus_buffered_clipped
         return geom_thematic_od
 
-    def _od_snap_all_side(self, geometry, relevant_distance):
+    def _od_snap_all_side(self, geometry,input_geometry_inner, relevant_distance):
         buffer_distance = relevant_distance / 2
         relevant_difference_array = []
         relevant_intersection_array = []
@@ -1159,6 +1163,7 @@ class Aligner:
             ) = _calculate_geom_by_intersection_and_reference(
                 geom_intersection,
                 geom_reference,
+                input_geometry_inner,
                 True,
                 buffer_distance,
                 self.threshold_overlap_percentage,
@@ -1523,6 +1528,7 @@ class Aligner:
 def _calculate_geom_by_intersection_and_reference(
     geom_intersection: BaseGeometry,
     geom_reference: BaseGeometry,
+    input_geometry_inner: BaseGeometry,
     is_openbaar_domein,
     buffer_distance,
     threshold_overlap_percentage,
@@ -1565,6 +1571,7 @@ def _calculate_geom_by_intersection_and_reference(
         -   If only relevant difference is non-empty, the result is None.
     """
 
+
     if geom_reference.area == 0:
         overlap = 100
 
@@ -1583,16 +1590,24 @@ def _calculate_geom_by_intersection_and_reference(
         buffer_distance,
         mitre_limit=mitre_limit,
     )
+    geom_intersection_inner = safe_intersection(geom_intersection ,input_geometry_inner)
+
     geom_relevant_difference = buffer_neg(
         geom_difference,
         buffer_distance,
         mitre_limit=mitre_limit,
     )
-    if (
+    if not geom_intersection_inner.is_empty and geom_relevant_intersection.is_empty and not geom_relevant_difference.is_empty:
+        geom_x = safe_intersection(geom_intersection,buffer_pos(geom_intersection_inner,1*buffer_distance))
+        geom_x = snap (geom_x,geom_reference,1*buffer_distance)
+        geom = safe_intersection(geom_intersection,geom_x)
+    elif (
         not geom_relevant_intersection.is_empty
         and not geom_relevant_difference.is_empty
     ):
         # relevant intersection and relevant difference
+
+        #calculate part where difference is removed
         geom_x = safe_intersection(
             geom_reference,
             safe_difference(
@@ -1607,9 +1622,8 @@ def _calculate_geom_by_intersection_and_reference(
                 ),
             ),
         )
-        geom = safe_intersection(
-            geom_x,
-            buffer_pos(
+        #calculate part that is relevant
+        geom_y = buffer_pos(
                 buffer_neg_pos(
                     geom_x,
                     buffer_distance,
@@ -1617,7 +1631,11 @@ def _calculate_geom_by_intersection_and_reference(
                 ),
                 buffer_distance,
                 mitre_limit=mitre_limit,
-            ),
+            )
+        geom_y = safe_unary_union([geom_y,geom_intersection_inner]) #add inner part that has to be present
+        geom = safe_intersection(
+            geom_x,geom_y
+,
         )
         # when calculating for OD, we create a 'virtual parcel'. When calculating this
         # virtual parcel, it is buffered to take outer boundaries into account.

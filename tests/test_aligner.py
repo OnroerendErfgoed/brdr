@@ -8,13 +8,12 @@ from shapely import Point
 from shapely import from_wkt
 from shapely.geometry import Polygon
 from shapely.geometry import shape
-from shapely import make_valid
 
 from brdr.aligner import Aligner
 from brdr.constants import FORMULA_FIELD_NAME, AREA_ATTRIBUTE
 from brdr.enums import GRBType, AlignerResultType
 from brdr.enums import OpenbaarDomeinStrategy
-from brdr.geometry_utils import _grid_bounds, safe_equals, buffer_pos, safe_symmetric_difference
+from brdr.geometry_utils import _grid_bounds, safe_equals
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.grb import (
     GRBActualLoader,
