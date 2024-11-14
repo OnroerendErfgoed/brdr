@@ -447,7 +447,7 @@ def features_by_geometric_operation(
     thematic_items = np.array(list_input_ids)
     arr_indices = thematic_tree.query(list_geometries, predicate=predicate)
     thematic_intersections = list(set(thematic_items.take(arr_indices[1])))
-    #thematic_intersections = [str(element) for element in thematic_intersections]
+    # thematic_intersections = [str(element) for element in thematic_intersections]
     return thematic_intersections
 
 

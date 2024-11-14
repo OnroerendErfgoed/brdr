@@ -14,7 +14,10 @@ from brdr.constants import (
     DOWNLOAD_LIMIT,
     RELEVANT_DISTANCE_FIELD_NAME,
     NR_CALCULATION_FIELD_NAME,
-    REMARK_FIELD_NAME, PERIMETER_ATTRIBUTE, SHAPE_INDEX_ATTRIBUTE, AREA_ATTRIBUTE,
+    REMARK_FIELD_NAME,
+    PERIMETER_ATTRIBUTE,
+    SHAPE_INDEX_ATTRIBUTE,
+    AREA_ATTRIBUTE,
 )
 from brdr.enums import DiffMetric
 from brdr.geometry_utils import get_partitions, get_bbox

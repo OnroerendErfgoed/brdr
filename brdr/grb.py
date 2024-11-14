@@ -363,7 +363,7 @@ def update_to_actual_grb(
     :return: featurecollection
     """
     logger = Logger(feedback)
-    
+
     # Load featurecollection into a shapely_dict
     dict_thematic = {}
     dict_thematic_props = {}
@@ -391,11 +391,11 @@ def update_to_actual_grb(
             ):
                 str_lvd = base_formula[LAST_VERSION_DATE]
                 lvd = datetime.strptime(str_lvd, DATE_FORMAT).date()
-                if last_version_date is None or  lvd < last_version_date:
+                if last_version_date is None or lvd < last_version_date:
                     last_version_date = lvd
         except:
             raise Exception(f"Problem with {LAST_VERSION_DATE}")
-    #als lastversiondate nog altijd 'now' is dan is r eigenlijk geen versiedate aanwezig in de data, en dan zetten we alle features op affected
+    # als lastversiondate nog altijd 'now' is dan is r eigenlijk geen versiedate aanwezig in de data, en dan zetten we alle features op affected
     if last_version_date is not None:
         datetime_start = last_version_date
         datetime_end = datetime.now().date()
@@ -413,7 +413,8 @@ def update_to_actual_grb(
             crs=base_aligner_result.CRS,
         )
         logger.feedback_info(
-            "Number of possible affected OE-thematic during timespan: " + str(len(affected))
+            "Number of possible affected OE-thematic during timespan: "
+            + str(len(affected))
         )
         if len(affected) == 0:
             logger.feedback_info(
@@ -432,8 +433,14 @@ def update_to_actual_grb(
         GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=actual_aligner)
     )
     rd_step = 10
-    actual_aligner.relevant_distances = [round(k,1) for k in np.arange(0,max_distance_for_actualisation * 100 +rd_step, rd_step, dtype=int) / 100]
-    #EXECUTE evaluation
+    actual_aligner.relevant_distances = [
+        round(k, 1)
+        for k in np.arange(
+            0, max_distance_for_actualisation * 100 + rd_step, rd_step, dtype=int
+        )
+        / 100
+    ]
+    # EXECUTE evaluation
     actual_aligner.evaluate(
         ids_to_evaluate=affected, base_formula_field=BASE_FORMULA_FIELD_NAME
     )
