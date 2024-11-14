@@ -56,7 +56,7 @@ The figure below shows:
       distance or a range of relevant distances
     * aligner.predictor(): Searches all 'stable' (=predicted) processresults in a range of relevant distances
     * aligner.get_brdr_formula(): Calculating a descriptive formula of a thematic boundary based on a reference layer
-    * compare(): Compares input geometries with another version and adds a EVALUATION_FIELD_NAME
+    * evaluate(): Compares & evaluates input geometries with another version and adds a EVALUATION_FIELD_NAME
 * Exporters:
     * aligner.get_results_as_geojson(): Returns a collection of geojson-dictionaries with the processresults (resulting
       geometry, differences,...): This can be used for all processresults or only the 'predicted' results

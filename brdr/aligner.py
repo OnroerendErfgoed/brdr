@@ -1,5 +1,4 @@
 import json
-import logging
 import os
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
@@ -15,6 +14,7 @@ from shapely import STRtree
 from shapely import get_parts
 from shapely import make_valid
 from shapely import remove_repeated_points
+from shapely import snap
 from shapely import to_geojson
 from shapely.geometry.base import BaseGeometry
 
@@ -75,7 +75,9 @@ class Aligner:
         *,
         feedback=None,
         relevant_distance=1,
-        relevant_distances=np.arange(0, 200, 10, dtype=int) / 100,
+        relevant_distances=[
+            round(k, 1) for k in np.arange(0, 210, 10, dtype=int) / 100
+        ],
         threshold_overlap_percentage=50,
         od_strategy=OpenbaarDomeinStrategy.SNAP_FULL_AREA_ALL_SIDE,
         crs=DEFAULT_CRS,
@@ -217,6 +219,7 @@ class Aligner:
         self.dict_thematic, self.dict_thematic_properties, self.dict_thematic_source = (
             loader.load_data()
         )
+        self.thematic_union = None
 
     def load_reference_data(self, loader: Loader):
         """
@@ -280,6 +283,13 @@ class Aligner:
         buffer_distance = relevant_distance / 2
         # combine all parts of the input geometry to one polygon
         input_geometry = safe_unary_union(get_parts(input_geometry))
+        input_geometry_inner = buffer_neg(
+            input_geometry, relevant_distance
+        )  # inner part of the input that must be always available
+        if self.od_strategy == OpenbaarDomeinStrategy.EXCLUDE:
+            input_geometry_inner = safe_intersection(
+                input_geometry_inner, self._get_reference_union()
+            )
 
         # array with all relevant parts of a thematic geometry; initial empty Polygon
         (
@@ -288,13 +298,15 @@ class Aligner:
             relevant_intersection_array,
             relevant_diff_array,
         ) = self._calculate_intersection_between_geometry_and_od(
-            input_geometry, relevant_distance
+            input_geometry, input_geometry_inner, relevant_distance
         )
         # get a list of all ref_ids that are intersecting the thematic geometry
         ref_intersections = self.reference_items.take(
             self.reference_tree.query(geometry)
         ).tolist()
         for key_ref in ref_intersections:
+            if key_ref == "24126B0031/00H005":
+                pass
             geom_reference = self.dict_reference[key_ref]
             geom_intersection = safe_intersection(geometry, geom_reference)
             if geom_intersection.is_empty or geom_intersection is None:
@@ -307,6 +319,7 @@ class Aligner:
             ) = _calculate_geom_by_intersection_and_reference(
                 geom_intersection,
                 geom_reference,
+                input_geometry_inner,
                 False,
                 buffer_distance,
                 self.threshold_overlap_percentage,
@@ -332,7 +345,7 @@ class Aligner:
 
         # POSTPROCESSING
         result_dict = self._postprocess_preresult(
-            preresult, geometry, relevant_distance
+            preresult, geometry, input_geometry_inner, relevant_distance
         )
 
         result_dict["result_relevant_intersection"] = relevant_intersection
@@ -486,7 +499,9 @@ class Aligner:
     def predictor(
         self,
         dict_thematic=None,
-        relevant_distances=np.arange(0, 300, 10, dtype=int) / 100,
+        relevant_distances=[
+            round(k, 1) for k in np.arange(0, 310, 10, dtype=int) / 100
+        ],
         od_strategy=OpenbaarDomeinStrategy.SNAP_FULL_AREA_ALL_SIDE,
         threshold_overlap_percentage=50,
     ):
@@ -577,7 +592,7 @@ class Aligner:
 
         for theme_id, diffs in diffs_dict.items():
             if len(diffs) != len(relevant_distances):
-                logging.warning(
+                self.logger.feedback_warning(
                     f"Number of computed diffs for thematic element {theme_id} does "
                     f"not match the number of relevant distances."
                 )
@@ -586,12 +601,11 @@ class Aligner:
             breakpoints, zero_streaks = get_breakpoints_zerostreak(
                 relevant_distances, diff_values
             )
-            logging.debug(str(theme_id))
+            self.logger.feedback_debug(str(theme_id))
             if len(zero_streaks) == 0:
-                dict_predictions[theme_id][relevant_distances[0]] = dict_series[
-                    theme_id
-                ][relevant_distances[0]]
-                logging.info("No zero-streaks found for: " + str(theme_id))
+                self.logger.feedback_debug(
+                    "No zero-streaks found for: " + str(theme_id)
+                )
             for zs in zero_streaks:
                 dict_predictions[theme_id][zs[0]] = dict_series[theme_id][zs[0]]
 
@@ -646,9 +660,23 @@ class Aligner:
         )
         dict_predictions_evaluated = {}
         prop_dictionary = {}
-        for theme_id, dict_predictions_results in dict_affected_predictions.items():
+
+        for theme_id in dict_affected.keys():
             dict_predictions_evaluated[theme_id] = {}
             prop_dictionary[theme_id] = {}
+            if theme_id not in dict_affected_predictions.keys():
+                dist = self.relevant_distances[0]
+                prop_dictionary[theme_id][dist] = {}
+                props = self._evaluate(
+                    id_theme=theme_id,
+                    geom_predicted=dict_affected[theme_id],
+                    base_formula_field=base_formula_field,
+                )
+                props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION_5
+                dict_predictions_evaluated[theme_id][dist] = dict_series[theme_id][dist]
+                prop_dictionary[theme_id][dist] = props
+                continue
+            dict_predictions_results = dict_affected_predictions[theme_id]
             for dist in sorted(dict_predictions_results.keys()):
                 prop_dictionary[theme_id][dist] = {}
                 props = self._evaluate(
@@ -661,7 +689,7 @@ class Aligner:
                 ][dist]
                 prop_dictionary[theme_id][dist] = props
         # UNAFFECTED
-        relevant_distance = 0
+        relevant_distance = 0.0
         # dict_unaffected_series = self.process(dict_thematic=dict_unaffected,relevant_distances=[relevant_distance])
         # for theme_id, dict_unaffected_results in dict_unaffected_series.items():
         for theme_id, geom in dict_unaffected.items():
@@ -954,7 +982,7 @@ class Aligner:
         return
 
     def _calculate_intersection_between_geometry_and_od(
-        self, geometry, relevant_distance
+        self, geometry, input_geometry_inner, relevant_distance
     ):
         """
         Calculates the intersecting parts between a thematic geometry and the openbaardomein( domain, not coverd by reference-polygons)
@@ -1014,7 +1042,9 @@ class Aligner:
                 geom_thematic_od,
                 relevant_difference_array,
                 relevant_intersection_array,
-            ) = self._od_snap_all_side(geometry, relevant_distance)
+            ) = self._od_snap_all_side(
+                geometry, input_geometry_inner, relevant_distance
+            )
         elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_FULL_AREA_SINGLE_SIDE:
             # Strategy useful for bigger areas.
             # integrates the entire inner area of the input geometry,
@@ -1037,7 +1067,9 @@ class Aligner:
                 geom_thematic_od,
                 relevant_difference_array,
                 relevant_intersection_array,
-            ) = self._od_snap_all_side(geometry, relevant_distance)
+            ) = self._od_snap_all_side(
+                geometry, input_geometry_inner, relevant_distance
+            )
             # This part is a copy of SNAP_FULL_AREA_SINGLE_SIDE
             geom_theme_od_min_clipped_plus_buffered_clipped = self._od_full_area(
                 geometry, relevant_distance
@@ -1114,7 +1146,7 @@ class Aligner:
         geom_thematic_od = geom_theme_od_min_clipped_plus_buffered_clipped
         return geom_thematic_od
 
-    def _od_snap_all_side(self, geometry, relevant_distance):
+    def _od_snap_all_side(self, geometry, input_geometry_inner, relevant_distance):
         buffer_distance = relevant_distance / 2
         relevant_difference_array = []
         relevant_intersection_array = []
@@ -1143,6 +1175,7 @@ class Aligner:
             ) = _calculate_geom_by_intersection_and_reference(
                 geom_intersection,
                 geom_reference,
+                input_geometry_inner,
                 True,
                 buffer_distance,
                 self.threshold_overlap_percentage,
@@ -1168,7 +1201,7 @@ class Aligner:
         return self.reference_union
 
     def _postprocess_preresult(
-        self, preresult, geom_thematic, relevant_distance
+        self, preresult, geom_thematic, input_geometry_inner, relevant_distance
     ) -> ProcessResult:
         """
         Postprocess the preresult with the following actions to create the final result
@@ -1198,8 +1231,9 @@ class Aligner:
         remark = ""
         buffer_distance = relevant_distance / 2
         result = []
-        geom_preresult = safe_unary_union(preresult)
         geom_thematic = make_valid(geom_thematic)
+        preresult.append(input_geometry_inner)
+        geom_preresult = safe_unary_union(preresult)
 
         if not (geom_thematic is None or geom_thematic.is_empty):
             # Correction for circles
@@ -1214,7 +1248,7 @@ class Aligner:
                 return {"result": geom_thematic, "remark": remark}
 
             # Correction for unchanged geometries
-            if geom_preresult == geom_thematic:
+            if safe_symmetric_difference(geom_preresult, geom_thematic).is_empty:
                 remark = "Unchanged geometry: -->resulting geometry = original geometry"
                 self.logger.feedback_debug(remark)
                 return {"result": geom_thematic, "remark": remark}
@@ -1364,7 +1398,7 @@ class Aligner:
         threshold_od_percentage = 1
         properties = {
             FORMULA_FIELD_NAME: "",
-            EVALUATION_FIELD_NAME: Evaluation.TO_CHECK_4,
+            EVALUATION_FIELD_NAME: Evaluation.TO_CHECK_PREDICTION_4,
             FULL_BASE_FIELD_NAME: None,
             FULL_ACTUAL_FIELD_NAME: None,
             OD_ALIKE_FIELD_NAME: None,
@@ -1384,7 +1418,7 @@ class Aligner:
             )
 
         if base_formula is None or actual_formula is None:
-            properties[EVALUATION_FIELD_NAME] = Evaluation.NO_PREDICTION_5
+            properties[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION_5
             return properties
         properties[FULL_BASE_FIELD_NAME] = base_formula["full"]
         properties[FULL_ACTUAL_FIELD_NAME] = actual_formula["full"]
@@ -1470,7 +1504,7 @@ class Aligner:
         # elif base_formula["full"] == actual_formula["full"] and od_alike:#TODO evaluate when not-full-parcels?
         #    properties[EVALUATION_FIELD_NAME] = Evaluation.EQUALITY_NON_FULL
         else:
-            properties[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_4
+            properties[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_PREDICTION_4
         return properties
 
     @staticmethod
@@ -1505,6 +1539,7 @@ class Aligner:
 def _calculate_geom_by_intersection_and_reference(
     geom_intersection: BaseGeometry,
     geom_reference: BaseGeometry,
+    input_geometry_inner: BaseGeometry,
     is_openbaar_domein,
     buffer_distance,
     threshold_overlap_percentage,
@@ -1565,16 +1600,30 @@ def _calculate_geom_by_intersection_and_reference(
         buffer_distance,
         mitre_limit=mitre_limit,
     )
+    geom_intersection_inner = safe_intersection(geom_intersection, input_geometry_inner)
+
     geom_relevant_difference = buffer_neg(
         geom_difference,
         buffer_distance,
         mitre_limit=mitre_limit,
     )
     if (
+        not geom_intersection_inner.is_empty
+        and geom_relevant_intersection.is_empty
+        and not geom_relevant_difference.is_empty
+    ):
+        geom_x = safe_intersection(
+            geom_intersection, buffer_pos(geom_intersection_inner, 1 * buffer_distance)
+        )
+        geom_x = snap(geom_x, geom_reference, 1 * buffer_distance)
+        geom = safe_intersection(geom_intersection, geom_x)
+    elif (
         not geom_relevant_intersection.is_empty
         and not geom_relevant_difference.is_empty
     ):
         # relevant intersection and relevant difference
+
+        # calculate part where difference is removed
         geom_x = safe_intersection(
             geom_reference,
             safe_difference(
@@ -1589,17 +1638,22 @@ def _calculate_geom_by_intersection_and_reference(
                 ),
             ),
         )
-        geom = safe_intersection(
-            geom_x,
-            buffer_pos(
-                buffer_neg_pos(
-                    geom_x,
-                    buffer_distance,
-                    mitre_limit=mitre_limit,
-                ),
+        # calculate part that is relevant
+        geom_y = buffer_pos(
+            buffer_neg_pos(
+                geom_x,
                 buffer_distance,
                 mitre_limit=mitre_limit,
             ),
+            buffer_distance,
+            mitre_limit=mitre_limit,
+        )
+        geom_y = safe_unary_union(
+            [geom_y, geom_intersection_inner]
+        )  # add inner part that has to be present
+        geom = safe_intersection(
+            geom_x,
+            geom_y,
         )
         # when calculating for OD, we create a 'virtual parcel'. When calculating this
         # virtual parcel, it is buffered to take outer boundaries into account.
@@ -1681,7 +1735,7 @@ def _check_equality(
     function that checks if 2 formulas are equal (True,False) and adds an Evaluation
     """
     if base_formula is None or actual_formula is None:
-        return False, Evaluation.NO_PREDICTION_5
+        return False, Evaluation.TO_CHECK_NO_PREDICTION_5
     od_alike = False
     if base_formula["reference_od"] is None and actual_formula["reference_od"] is None:
         od_alike = True
@@ -1736,4 +1790,4 @@ def _check_equality(
             return True, Evaluation.EQUALITY_EQUAL_FORMULA_2
     if base_formula["full"] and actual_formula["full"] and od_alike:
         return True, Evaluation.EQUALITY_FULL_3
-    return False, Evaluation.NO_PREDICTION_5
+    return False, Evaluation.TO_CHECK_NO_PREDICTION_5

@@ -8,13 +8,12 @@ from shapely import Point
 from shapely import from_wkt
 from shapely.geometry import Polygon
 from shapely.geometry import shape
-from shapely.predicates import equals
 
 from brdr.aligner import Aligner
-from brdr.constants import FORMULA_FIELD_NAME
+from brdr.constants import FORMULA_FIELD_NAME, AREA_ATTRIBUTE
 from brdr.enums import GRBType, AlignerResultType
 from brdr.enums import OpenbaarDomeinStrategy
-from brdr.geometry_utils import _grid_bounds
+from brdr.geometry_utils import _grid_bounds, safe_equals
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.grb import (
     GRBActualLoader,
@@ -128,7 +127,7 @@ class TestAligner(unittest.TestCase):
         self.sample_aligner.load_thematic_data(DictLoader(thematic_dict))
         # LOAD REFERENCE DICTIONARY
         self.sample_aligner.load_reference_data(DictLoader(reference_dict))
-        series = np.arange(0, 300, 10, dtype=int) / 100
+        series = np.arange(0, 310, 10, dtype=int) / 100
         # predict which relevant distances are interesting to propose as resulting
         # geometry
 
@@ -156,12 +155,34 @@ class TestAligner(unittest.TestCase):
         loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         aligner.load_reference_data(loader)
 
-        series = np.arange(0, 800, 10, dtype=int) / 100
+        series = np.arange(0, 810, 10, dtype=int) / 100
         # predict which relevant distances are interesting to propose as resulting geometry
         dict_series, dict_predictions, diffs = aligner.predictor(
             relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
         )
         self.assertEqual(len(dict_predictions["id1"]), 3)
+
+    def test_predictor_no_prediction(self):
+        """
+        Test if no prediction is returned when there are no stable geometries (=no zerostreaks) in the range of relevent_distances
+        This testdata has no prediction between 0 and 1 meter, constantly increasing diff (first stable geometry at relevant_distances>2)
+        """
+        # Initiate an Aligner
+        aligner = Aligner()
+        # Load thematic data & reference data
+        wkt = "Polygon ((174125.66583829143201001 179320.36133541050367057, 174125.66583829294540919 179320.36133543887990527, 174123.56114244047785178 179320.47114562886417843, 174123.60579274909105152 179320.9312379399780184, 174123.65622600910137407 179321.4509197928418871, 174130.00431616476271302 179386.86384879014804028, 174131.20465914410306141 179386.55606853921199217, 174131.47325675669708289 179386.48719735653139651, 174131.4777007331722416 179386.48605787538690493, 174131.48166125148418359 179386.48504236005828716, 174131.56964346842141822 179386.46248281505540945, 174145.93543933291221038 179382.77894541397108696, 174153.73543597472598776 179380.77894627506611869, 174155.22223844396648929 179380.39771487266989425, 174155.31905292189912871 179380.37289064755896106, 174158.08159073328715749 179379.66454761903150938, 174162.78046076380996965 179378.45970914987265132, 174162.77348954943590797 179378.41265345277497545, 174162.76924267943832092 179378.38398708027671091, 174162.76793666195590049 179378.37517146224854514, 174158.29825295542832464 179348.20480644324561581, 174158.06896705977851525 179348.24847994712763466, 174157.82196880917763337 179348.29552723292727023, 174152.4153556079545524 179349.32535831883433275, 174151.38357602406176738 179340.0393457512545865, 174150.45438929076772183 179331.6766651498619467, 174155.32298101272317581 179329.59012584027368575, 174155.97540604253299534 179329.31051516399020329, 174156.06587580699124373 179329.27174254972487688, 174156.3372870393213816 179329.15542325720889494, 174155.77701106332824565 179318.79031770044821315, 174154.96588003114447929 179318.83263741704286076, 174154.95658402171102352 179318.83312241756357253, 174151.97826524809352122 179318.98851313433260657, 174146.5353382924804464 179319.27249193197349086, 174125.66583829143201001 179320.36133541050367057))"
+
+        loader = DictLoader({"id1": from_wkt(wkt)})
+        aligner.load_thematic_data(loader)
+        loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
+        aligner.load_reference_data(loader)
+
+        series = np.arange(0, 110, 10, dtype=int) / 100
+        # predict which relevant distances are interesting to propose as resulting geometry
+        dict_series, dict_predictions, diffs = aligner.predictor(
+            relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
+        )
+        self.assertEqual(len(dict_predictions["id1"]), 0)
 
     def test_load_reference_data_grb_actual_adp(self):
         thematic_dict = {
@@ -338,15 +359,14 @@ class TestAligner(unittest.TestCase):
         self.sample_aligner.get_input_as_geojson()
 
     def test_fully_aligned_input(self):
-        aligned_shape = from_wkt("MULTIPOLYGON (((0 0, 0 9, 5 10, 10 0, 0 0)))")
-        loader = DictLoader({"theme_id_1": aligned_shape})
+        aligned_shape = from_wkt("POLYGON ((0 0, 0 9, 5 10, 10 0, 0 0))")
         self.sample_aligner.load_thematic_data(
             DictLoader({"theme_id_1": aligned_shape})
         )
         self.sample_aligner.load_reference_data(DictLoader({"ref_id_1": aligned_shape}))
         relevant_distance = 1
         result = self.sample_aligner.process(relevant_distance=relevant_distance)
-        assert equals(
+        assert safe_equals(
             result["theme_id_1"][relevant_distance].get("result"), aligned_shape
         )
         assert result["theme_id_1"][relevant_distance].get("result_diff").is_empty
@@ -409,7 +429,7 @@ class TestAligner(unittest.TestCase):
                 grb_type=GRBType.ADP, partition=1000, aligner=actual_aligner
             )
         )
-        actual_aligner.relevant_distances = np.arange(0, 200, 10, dtype=int) / 100
+        actual_aligner.relevant_distances = np.arange(0, 210, 10, dtype=int) / 100
         dict_evaluated, prop_dictionary = actual_aligner.evaluate(
             ids_to_evaluate=affected, base_formula_field=FORMULA_FIELD_NAME
         )
@@ -461,7 +481,7 @@ class TestAligner(unittest.TestCase):
         self.sample_aligner.load_reference_data(DictLoader({"ref_id_1": aligned_shape}))
         self.sample_aligner.process()
         fcs = self.sample_aligner.get_results_as_geojson(formula=True)
-        assert fcs["result"]["features"][0]["properties"]["area"] > 0
-        assert fcs["result_diff"]["features"][0]["properties"]["area"] == 0
-        assert fcs["result_diff_min"]["features"][0]["properties"]["area"] == 0
-        assert fcs["result_diff_plus"]["features"][0]["properties"]["area"] == 0
+        assert fcs["result"]["features"][0]["properties"][AREA_ATTRIBUTE] > 0
+        assert fcs["result_diff"]["features"][0]["properties"][AREA_ATTRIBUTE] == 0
+        assert fcs["result_diff_min"]["features"][0]["properties"][AREA_ATTRIBUTE] == 0
+        assert fcs["result_diff_plus"]["features"][0]["properties"][AREA_ATTRIBUTE] == 0

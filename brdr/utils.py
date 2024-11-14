@@ -15,6 +15,9 @@ from brdr.constants import (
     RELEVANT_DISTANCE_FIELD_NAME,
     NR_CALCULATION_FIELD_NAME,
     REMARK_FIELD_NAME,
+    PERIMETER_ATTRIBUTE,
+    SHAPE_INDEX_ATTRIBUTE,
+    AREA_ATTRIBUTE,
 )
 from brdr.enums import DiffMetric
 from brdr.geometry_utils import get_partitions, get_bbox
@@ -90,9 +93,9 @@ def _feature_from_geom(
     if geom_attributes:
         area = geom.area
         perimeter = geom.length
-        properties["area"] = area
-        properties["perimeter"] = perimeter
-        properties["shape_index"] = perimeter / area if area != 0 else -1
+        properties[AREA_ATTRIBUTE] = area
+        properties[PERIMETER_ATTRIBUTE] = perimeter
+        properties[SHAPE_INDEX_ATTRIBUTE] = perimeter / area if area != 0 else -1
     return Feature(geometry=geom, properties=properties)
 
 
@@ -131,7 +134,7 @@ def write_geojson(path_to_file, geojson):
     parent = os.path.dirname(path_to_file)
     os.makedirs(parent, exist_ok=True)
     with open(path_to_file, "w") as f:
-        dump(geojson, f)
+        dump(geojson, f, default=str)
 
 
 def multipolygons_to_singles(dict_geoms):

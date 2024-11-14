@@ -363,16 +363,15 @@ def update_to_actual_grb(
     :return: featurecollection
     """
     logger = Logger(feedback)
-    # Load featurecollection into a shapely_dict:
+
+    # Load featurecollection into a shapely_dict
     dict_thematic = {}
     dict_thematic_props = {}
 
-    last_version_date = datetime.now().date()
+    last_version_date = None
     for feature in featurecollection["features"]:
         id_theme = feature["properties"][id_theme_fieldname]
         geom = shape(feature["geometry"])
-        # logger.feedback_debug("id theme: " + id_theme)
-        # logger.feedback_debug("geometry (wkt): " + geom.wkt)
         dict_thematic[id_theme] = geom
         dict_thematic_props[id_theme] = feature["properties"]
         try:
@@ -392,36 +391,38 @@ def update_to_actual_grb(
             ):
                 str_lvd = base_formula[LAST_VERSION_DATE]
                 lvd = datetime.strptime(str_lvd, DATE_FORMAT).date()
-                if lvd < last_version_date:
+                if last_version_date is None or lvd < last_version_date:
                     last_version_date = lvd
         except:
             raise Exception(f"Problem with {LAST_VERSION_DATE}")
+    # als lastversiondate nog altijd 'now' is dan is r eigenlijk geen versiedate aanwezig in de data, en dan zetten we alle features op affected
+    if last_version_date is not None:
+        datetime_start = last_version_date
+        datetime_end = datetime.now().date()
+        base_aligner_result = Aligner(feedback=feedback)
+        base_aligner_result.load_thematic_data(DictLoader(dict_thematic))
+        base_aligner_result.name_thematic_id = id_theme_fieldname
 
-    datetime_start = last_version_date
-    datetime_end = datetime.now().date()
-    base_aligner_result = Aligner(feedback=feedback)
-    base_aligner_result.load_thematic_data(DictLoader(dict_thematic))
-    base_aligner_result.name_thematic_id = id_theme_fieldname
-
-    affected, unaffected = get_affected_by_grb_change(
-        dict_thematic=base_aligner_result.dict_thematic,
-        grb_type=GRBType.ADP,
-        date_start=datetime_start,
-        date_end=datetime_end,
-        one_by_one=False,
-        geometry_thematic_union=base_aligner_result.get_thematic_union(),
-        crs=base_aligner_result.CRS,
-    )
-    logger.feedback_info(
-        "Number of possible affected OE-thematic during timespan: " + str(len(affected))
-    )
-    if len(affected) == 0:
-        logger.feedback_info(
-            "No change detected in referencelayer during timespan. Script is finished"
+        affected, unaffected = get_affected_by_grb_change(
+            dict_thematic=base_aligner_result.dict_thematic,
+            grb_type=GRBType.ADP,
+            date_start=datetime_start,
+            date_end=datetime_end,
+            one_by_one=False,
+            geometry_thematic_union=base_aligner_result.get_thematic_union(),
+            crs=base_aligner_result.CRS,
         )
-        return {}
-    logger.feedback_debug(str(datetime_start))
-    logger.feedback_debug(str(base_formula_field))
+        logger.feedback_info(
+            "Number of possible affected OE-thematic during timespan: "
+            + str(len(affected))
+        )
+        if len(affected) == 0:
+            logger.feedback_info(
+                "No change detected in referencelayer during timespan. Script is finished"
+            )
+    else:
+        unaffected = []
+        affected = list(dict_thematic.keys())
 
     # Initiate a Aligner to reference thematic features to the actual borders
     actual_aligner = Aligner(feedback=feedback, max_workers=None)
@@ -431,11 +432,16 @@ def update_to_actual_grb(
     actual_aligner.load_reference_data(
         GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=actual_aligner)
     )
-
-    actual_aligner.relevant_distances = (
-        np.arange(0, max_distance_for_actualisation * 100, 10, dtype=int) / 100
-    )
-    dict_evaluated, prop_dictionary = actual_aligner.evaluate(
+    rd_step = 10
+    actual_aligner.relevant_distances = [
+        round(k, 1)
+        for k in np.arange(
+            0, max_distance_for_actualisation * 100 + rd_step, rd_step, dtype=int
+        )
+        / 100
+    ]
+    # EXECUTE evaluation
+    actual_aligner.evaluate(
         ids_to_evaluate=affected, base_formula_field=BASE_FORMULA_FIELD_NAME
     )
 
