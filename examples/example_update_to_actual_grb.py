@@ -75,9 +75,9 @@ if __name__ == "__main__":
         featurecollection_base_result,
         base_aligner.name_thematic_id,
         base_formula_field=FORMULA_FIELD_NAME,
-        max_distance_for_actualisation=0
+        max_distance_for_actualisation=0,
     )
-    if len(featurecollection)==0:
+    if len(featurecollection) == 0:
         print("empty featurecolection, no updates")
     else:
         # Print results

@@ -75,7 +75,9 @@ class Aligner:
         *,
         feedback=None,
         relevant_distance=1,
-        relevant_distances=[round(k,1) for k in np.arange(0, 210, 10, dtype=int) / 100],
+        relevant_distances=[
+            round(k, 1) for k in np.arange(0, 210, 10, dtype=int) / 100
+        ],
         threshold_overlap_percentage=50,
         od_strategy=OpenbaarDomeinStrategy.SNAP_FULL_AREA_ALL_SIDE,
         crs=DEFAULT_CRS,
@@ -281,9 +283,13 @@ class Aligner:
         buffer_distance = relevant_distance / 2
         # combine all parts of the input geometry to one polygon
         input_geometry = safe_unary_union(get_parts(input_geometry))
-        input_geometry_inner = buffer_neg(input_geometry, relevant_distance) #inner part of the input that must be always available
-        if self.od_strategy==OpenbaarDomeinStrategy.EXCLUDE:
-            input_geometry_inner = safe_intersection(input_geometry_inner,self._get_reference_union())
+        input_geometry_inner = buffer_neg(
+            input_geometry, relevant_distance
+        )  # inner part of the input that must be always available
+        if self.od_strategy == OpenbaarDomeinStrategy.EXCLUDE:
+            input_geometry_inner = safe_intersection(
+                input_geometry_inner, self._get_reference_union()
+            )
 
         # array with all relevant parts of a thematic geometry; initial empty Polygon
         (
@@ -292,7 +298,7 @@ class Aligner:
             relevant_intersection_array,
             relevant_diff_array,
         ) = self._calculate_intersection_between_geometry_and_od(
-            input_geometry,input_geometry_inner, relevant_distance
+            input_geometry, input_geometry_inner, relevant_distance
         )
         # get a list of all ref_ids that are intersecting the thematic geometry
         ref_intersections = self.reference_items.take(
@@ -339,7 +345,7 @@ class Aligner:
 
         # POSTPROCESSING
         result_dict = self._postprocess_preresult(
-            preresult, geometry,input_geometry_inner, relevant_distance
+            preresult, geometry, input_geometry_inner, relevant_distance
         )
 
         result_dict["result_relevant_intersection"] = relevant_intersection
@@ -493,7 +499,9 @@ class Aligner:
     def predictor(
         self,
         dict_thematic=None,
-        relevant_distances=[round(k,1) for k in np.arange(0, 310, 10, dtype=int) / 100],
+        relevant_distances=[
+            round(k, 1) for k in np.arange(0, 310, 10, dtype=int) / 100
+        ],
         od_strategy=OpenbaarDomeinStrategy.SNAP_FULL_AREA_ALL_SIDE,
         threshold_overlap_percentage=50,
     ):
@@ -595,7 +603,9 @@ class Aligner:
             )
             self.logger.feedback_debug(str(theme_id))
             if len(zero_streaks) == 0:
-                self.logger.feedback_debug("No zero-streaks found for: " + str(theme_id))
+                self.logger.feedback_debug(
+                    "No zero-streaks found for: " + str(theme_id)
+                )
             for zs in zero_streaks:
                 dict_predictions[theme_id][zs[0]] = dict_series[theme_id][zs[0]]
 
@@ -663,9 +673,7 @@ class Aligner:
                     base_formula_field=base_formula_field,
                 )
                 props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION_5
-                dict_predictions_evaluated[theme_id][dist] = dict_series[
-                    theme_id
-                ][dist]
+                dict_predictions_evaluated[theme_id][dist] = dict_series[theme_id][dist]
                 prop_dictionary[theme_id][dist] = props
                 continue
             dict_predictions_results = dict_affected_predictions[theme_id]
@@ -974,7 +982,7 @@ class Aligner:
         return
 
     def _calculate_intersection_between_geometry_and_od(
-        self, geometry,input_geometry_inner, relevant_distance
+        self, geometry, input_geometry_inner, relevant_distance
     ):
         """
         Calculates the intersecting parts between a thematic geometry and the openbaardomein( domain, not coverd by reference-polygons)
@@ -1034,7 +1042,9 @@ class Aligner:
                 geom_thematic_od,
                 relevant_difference_array,
                 relevant_intersection_array,
-            ) = self._od_snap_all_side(geometry,input_geometry_inner, relevant_distance)
+            ) = self._od_snap_all_side(
+                geometry, input_geometry_inner, relevant_distance
+            )
         elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_FULL_AREA_SINGLE_SIDE:
             # Strategy useful for bigger areas.
             # integrates the entire inner area of the input geometry,
@@ -1057,7 +1067,9 @@ class Aligner:
                 geom_thematic_od,
                 relevant_difference_array,
                 relevant_intersection_array,
-            ) = self._od_snap_all_side(geometry,input_geometry_inner, relevant_distance)
+            ) = self._od_snap_all_side(
+                geometry, input_geometry_inner, relevant_distance
+            )
             # This part is a copy of SNAP_FULL_AREA_SINGLE_SIDE
             geom_theme_od_min_clipped_plus_buffered_clipped = self._od_full_area(
                 geometry, relevant_distance
@@ -1134,7 +1146,7 @@ class Aligner:
         geom_thematic_od = geom_theme_od_min_clipped_plus_buffered_clipped
         return geom_thematic_od
 
-    def _od_snap_all_side(self, geometry,input_geometry_inner, relevant_distance):
+    def _od_snap_all_side(self, geometry, input_geometry_inner, relevant_distance):
         buffer_distance = relevant_distance / 2
         relevant_difference_array = []
         relevant_intersection_array = []
@@ -1189,7 +1201,7 @@ class Aligner:
         return self.reference_union
 
     def _postprocess_preresult(
-        self, preresult, geom_thematic,input_geometry_inner,relevant_distance
+        self, preresult, geom_thematic, input_geometry_inner, relevant_distance
     ) -> ProcessResult:
         """
         Postprocess the preresult with the following actions to create the final result
@@ -1223,7 +1235,6 @@ class Aligner:
         preresult.append(input_geometry_inner)
         geom_preresult = safe_unary_union(preresult)
 
-
         if not (geom_thematic is None or geom_thematic.is_empty):
             # Correction for circles
             # calculate ratio to see if it is a circle, and keep the original geometry
@@ -1237,7 +1248,7 @@ class Aligner:
                 return {"result": geom_thematic, "remark": remark}
 
             # Correction for unchanged geometries
-            if safe_symmetric_difference(geom_preresult,geom_thematic).is_empty:
+            if safe_symmetric_difference(geom_preresult, geom_thematic).is_empty:
                 remark = "Unchanged geometry: -->resulting geometry = original geometry"
                 self.logger.feedback_debug(remark)
                 return {"result": geom_thematic, "remark": remark}
@@ -1571,7 +1582,6 @@ def _calculate_geom_by_intersection_and_reference(
         -   If only relevant difference is non-empty, the result is None.
     """
 
-
     if geom_reference.area == 0:
         overlap = 100
 
@@ -1590,24 +1600,30 @@ def _calculate_geom_by_intersection_and_reference(
         buffer_distance,
         mitre_limit=mitre_limit,
     )
-    geom_intersection_inner = safe_intersection(geom_intersection ,input_geometry_inner)
+    geom_intersection_inner = safe_intersection(geom_intersection, input_geometry_inner)
 
     geom_relevant_difference = buffer_neg(
         geom_difference,
         buffer_distance,
         mitre_limit=mitre_limit,
     )
-    if not geom_intersection_inner.is_empty and geom_relevant_intersection.is_empty and not geom_relevant_difference.is_empty:
-        geom_x = safe_intersection(geom_intersection,buffer_pos(geom_intersection_inner,1*buffer_distance))
-        geom_x = snap (geom_x,geom_reference,1*buffer_distance)
-        geom = safe_intersection(geom_intersection,geom_x)
+    if (
+        not geom_intersection_inner.is_empty
+        and geom_relevant_intersection.is_empty
+        and not geom_relevant_difference.is_empty
+    ):
+        geom_x = safe_intersection(
+            geom_intersection, buffer_pos(geom_intersection_inner, 1 * buffer_distance)
+        )
+        geom_x = snap(geom_x, geom_reference, 1 * buffer_distance)
+        geom = safe_intersection(geom_intersection, geom_x)
     elif (
         not geom_relevant_intersection.is_empty
         and not geom_relevant_difference.is_empty
     ):
         # relevant intersection and relevant difference
 
-        #calculate part where difference is removed
+        # calculate part where difference is removed
         geom_x = safe_intersection(
             geom_reference,
             safe_difference(
@@ -1622,20 +1638,22 @@ def _calculate_geom_by_intersection_and_reference(
                 ),
             ),
         )
-        #calculate part that is relevant
+        # calculate part that is relevant
         geom_y = buffer_pos(
-                buffer_neg_pos(
-                    geom_x,
-                    buffer_distance,
-                    mitre_limit=mitre_limit,
-                ),
+            buffer_neg_pos(
+                geom_x,
                 buffer_distance,
                 mitre_limit=mitre_limit,
-            )
-        geom_y = safe_unary_union([geom_y,geom_intersection_inner]) #add inner part that has to be present
+            ),
+            buffer_distance,
+            mitre_limit=mitre_limit,
+        )
+        geom_y = safe_unary_union(
+            [geom_y, geom_intersection_inner]
+        )  # add inner part that has to be present
         geom = safe_intersection(
-            geom_x,geom_y
-,
+            geom_x,
+            geom_y,
         )
         # when calculating for OD, we create a 'virtual parcel'. When calculating this
         # virtual parcel, it is buffered to take outer boundaries into account.

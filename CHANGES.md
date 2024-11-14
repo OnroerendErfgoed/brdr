@@ -50,16 +50,32 @@
     - Refactored ID-handling so strings,integers,... can be used as ID[#110]
     - Cleaned examples [#100]
 
-    - Functionalities:
-        - Added evaluation-attributes to evaluate()-function [#99]
-        - processing-remarks available in geojson-output [#103]
-        - Added warning when input/output changed from polygon/multipolygon [#107]
+- Functionalities:
+    - Added evaluation-attributes to evaluate()-function [#99]
+    - processing-remarks available in geojson-output [#103]
+    - Added warning when input/output changed from polygon/multipolygon [#107]
 
 - Bugfixing:
     - Bugfix on version_date [#96]
     - Bugfix on disappearing features [#105]
 
+# 0.5.0
 
+- Refactoring:
+    - Updated dependencies [#127]
+    - Improvement of the brdr-algorithm implementation [#119]
+
+- Functionalities:
+    - *no new functionalities*
+
+- Bugfixing:
+    - Bugfix needed when using non-textual identifiers (f.e. integers) when searching for GRB changes [#115]
+    - Bugfix in predicted geometries: When no stable geometries found an empty list has to be returned instead of
+      0.0 [#118]
+    - Bugfix when reloading new thematic dictionary; the thematic union has to be recalculated [#122]
+    - Bugfix for default list of relevant distances; Range-calculation omits the upper value [#117]
+    - Bugfix when using 0m as relevant distance for GRB-actualisation [#121]
+    - Bugfix so GRB-actualisation also works with local layers [#120]
 
 
 
