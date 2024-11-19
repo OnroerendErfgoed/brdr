@@ -14,7 +14,7 @@ if __name__ == "__main__":
     relevant distances of 'no-change')
     """
     # Initiate an Aligner
-    aligner = Aligner()
+    aligner = Aligner(max_workers=-1)
     # Load thematic data & reference data
     loader = GeoJsonFileLoader(
         "../tests/testdata/test_wanted_changes.geojson", "theme_id"

@@ -539,12 +539,8 @@ class Aligner:
             - Additionally, the corresponding results from the distance series for
               those distances are included.
 
-        5. **Filter Results:**
-            - The function might further filter the predicted results for each thematic
-              element based on the element key (using `filter_resulting_series_by_key`).
-
         Args:
-
+            dict_thematic: the dictionary with the thematic geometries to 'predict'. Default is None, so all thematic geometries inside the aligner will be processed.
             relevant_distances (np.ndarray, optional): A series of relevant distances
                 (in meters) to process. : A NumPy array of distances to
               be analyzed.
@@ -567,7 +563,8 @@ class Aligner:
              Defaults to 50.
 
         Returns:
-            dict: A dictionary containing predicted interesting distances for each
+            dict_series: A dictionary containing the resultset for all relevant distances for each thematic element.
+            dict_predictions: A dictionary containing predicted interesting distances for each
             thematic element.
                 - Keys: Thematic element identifiers from `self.dict_thematic`.
                 - Values: Dictionaries with the following structure for each
@@ -577,6 +574,7 @@ class Aligner:
                     - Values: dicts containing results (likely specific to
                     your implementation) from the distance series for the
                     corresponding distance.
+            diffs_dict: a dictionary with the differences for each relevant distance
         """
 
         if dict_thematic is None:
@@ -608,6 +606,7 @@ class Aligner:
                 )
             for zs in zero_streaks:
                 dict_predictions[theme_id][zs[0]] = dict_series[theme_id][zs[0]]
+                dict_predictions[theme_id][zs[0]]['prediction_score'] = zs[3]
 
         # Check if the predicted reldists are unique (and remove duplicated predictions
         dict_predictions_unique = defaultdict(dict)
