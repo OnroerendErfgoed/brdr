@@ -19,7 +19,7 @@ from shapely import to_geojson
 from shapely.geometry.base import BaseGeometry
 
 from brdr import __version__
-from brdr.constants import DEFAULT_CRS
+from brdr.constants import DEFAULT_CRS, PREDICTION_SCORE, PREDICTION_COUNT
 from brdr.constants import (
     LAST_VERSION_DATE,
     VERSION_DATE,
@@ -604,9 +604,11 @@ class Aligner:
                 self.logger.feedback_debug(
                     "No zero-streaks found for: " + str(theme_id)
                 )
+            prediction_count = len(zero_streaks)#TODO;  this has to be calculated on the unique predictions
             for zs in zero_streaks:
                 dict_predictions[theme_id][zs[0]] = dict_series[theme_id][zs[0]]
-                dict_predictions[theme_id][zs[0]]['prediction_score'] = zs[3]
+                dict_predictions[theme_id][zs[0]][PREDICTION_SCORE] = zs[3]
+                dict_predictions[theme_id][zs[0]][PREDICTION_COUNT] = prediction_count
 
         # Check if the predicted reldists are unique (and remove duplicated predictions
         dict_predictions_unique = defaultdict(dict)
@@ -636,7 +638,7 @@ class Aligner:
             diffs_dict,
         )
 
-    def evaluate(self, ids_to_evaluate=None, base_formula_field=FORMULA_FIELD_NAME):
+    def evaluate(self, ids_to_evaluate=None, base_formula_field=FORMULA_FIELD_NAME,all_predictions=False):
         """
 
         Compares and evaluate input-geometries (with formula). Attributes are added to evaluate and decide if new
@@ -652,7 +654,6 @@ class Aligner:
                 dict_affected[id_theme] = geom
             else:
                 dict_unaffected[id_theme] = geom
-        self.dict_thematic = dict_affected
         # AFFECTED
         dict_series, dict_affected_predictions, diffs = self.predictor(
             dict_thematic=dict_affected, relevant_distances=self.relevant_distances
@@ -664,6 +665,7 @@ class Aligner:
             dict_predictions_evaluated[theme_id] = {}
             prop_dictionary[theme_id] = {}
             if theme_id not in dict_affected_predictions.keys():
+                # No predictions available
                 dist = self.relevant_distances[0]
                 prop_dictionary[theme_id][dist] = {}
                 props = self._evaluate(
@@ -671,22 +673,51 @@ class Aligner:
                     geom_predicted=dict_affected[theme_id],
                     base_formula_field=base_formula_field,
                 )
-                props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION_5
+                props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
+                props[PREDICTION_SCORE] = -1
                 dict_predictions_evaluated[theme_id][dist] = dict_series[theme_id][dist]
                 prop_dictionary[theme_id][dist] = props
                 continue
+
+            #When there are predictions available
             dict_predictions_results = dict_affected_predictions[theme_id]
+            best_dist = None
             for dist in sorted(dict_predictions_results.keys()):
+                prediction_high_score = -1
+                best_dist = None
+                best_prediction = None
                 prop_dictionary[theme_id][dist] = {}
                 props = self._evaluate(
                     id_theme=theme_id,
                     geom_predicted=dict_predictions_results[dist]["result"],
                     base_formula_field=base_formula_field,
                 )
-                dict_predictions_evaluated[theme_id][dist] = dict_affected_predictions[
+                prediction_score = dict_affected_predictions[
+                    theme_id
+                ][dist][PREDICTION_SCORE]
+                prediction_count = dict_affected_predictions[
+                    theme_id
+                ][dist][PREDICTION_COUNT]
+                props[PREDICTION_SCORE] = prediction_score
+                prediction = dict_affected_predictions[
                     theme_id
                 ][dist]
-                prop_dictionary[theme_id][dist] = props
+                props[PREDICTION_COUNT] = prediction_count
+                if props[EVALUATION_FIELD_NAME]==Evaluation.TO_CHECK_NO_PREDICTION and props[PREDICTION_COUNT]==1:
+                    props[EVALUATION_FIELD_NAME] = Evaluation.PREDICTION_UNIQUE
+                elif props[EVALUATION_FIELD_NAME]==Evaluation.TO_CHECK_NO_PREDICTION and props[PREDICTION_COUNT]>1:
+                    props[EVALUATION_FIELD_NAME] =Evaluation.TO_CHECK_PREDICTION_MULTI
+                if prediction_score > prediction_high_score:
+                    prediction_high_score = prediction_score
+                    best_prediction = prediction
+                    best_prediction_props = props
+                    best_dist = dist
+                if all_predictions:
+                    dict_predictions_evaluated[theme_id][dist] = prediction
+                    prop_dictionary[theme_id][dist] = props
+            if best_dist is not None:
+                dict_predictions_evaluated[theme_id][best_dist] = best_prediction
+                prop_dictionary[theme_id][best_dist] = best_prediction_props
         # UNAFFECTED
         relevant_distance = 0.0
         # dict_unaffected_series = self.process(dict_thematic=dict_unaffected,relevant_distances=[relevant_distance])
@@ -699,7 +730,8 @@ class Aligner:
                 geom_predicted=geom,
                 base_formula_field=base_formula_field,
             )
-            props[EVALUATION_FIELD_NAME] = Evaluation.NO_CHANGE_6
+            props[EVALUATION_FIELD_NAME] = Evaluation.NO_CHANGE
+            props[PREDICTION_SCORE] = -1
             dict_predictions_evaluated[theme_id][relevant_distance] = {"result": geom}
             prop_dictionary[theme_id][relevant_distance] = props
         self.dict_evaluated_predictions = dict_predictions_evaluated
@@ -1397,7 +1429,7 @@ class Aligner:
         threshold_od_percentage = 1
         properties = {
             FORMULA_FIELD_NAME: "",
-            EVALUATION_FIELD_NAME: Evaluation.TO_CHECK_PREDICTION_4,
+            EVALUATION_FIELD_NAME: Evaluation.TO_CHECK_PREDICTION_MULTI,
             FULL_BASE_FIELD_NAME: None,
             FULL_ACTUAL_FIELD_NAME: None,
             OD_ALIKE_FIELD_NAME: None,
@@ -1417,7 +1449,7 @@ class Aligner:
             )
 
         if base_formula is None or actual_formula is None:
-            properties[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION_5
+            properties[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
             return properties
         properties[FULL_BASE_FIELD_NAME] = base_formula["full"]
         properties[FULL_ACTUAL_FIELD_NAME] = actual_formula["full"]
