@@ -604,11 +604,9 @@ class Aligner:
                 self.logger.feedback_debug(
                     "No zero-streaks found for: " + str(theme_id)
                 )
-            prediction_count = len(zero_streaks)#TODO;  this has to be calculated on the unique predictions
             for zs in zero_streaks:
                 dict_predictions[theme_id][zs[0]] = dict_series[theme_id][zs[0]]
                 dict_predictions[theme_id][zs[0]][PREDICTION_SCORE] = zs[3]
-                dict_predictions[theme_id][zs[0]][PREDICTION_COUNT] = prediction_count
 
         # Check if the predicted reldists are unique (and remove duplicated predictions
         dict_predictions_unique = defaultdict(dict)
@@ -629,6 +627,8 @@ class Aligner:
                     self.logger.feedback_info(
                         f"Duplicate prediction found for key {theme_id} at distance {rel_dist}: Prediction excluded"
                     )
+            for dist in dict_predictions_unique[theme_id].keys():
+                dict_predictions_unique[theme_id][dist][PREDICTION_COUNT] = len(predicted_geoms_for_theme_id)
 
         self.dict_predictions = dict_predictions_unique
 
@@ -1535,7 +1535,7 @@ class Aligner:
         # elif base_formula["full"] == actual_formula["full"] and od_alike:#TODO evaluate when not-full-parcels?
         #    properties[EVALUATION_FIELD_NAME] = Evaluation.EQUALITY_NON_FULL
         else:
-            properties[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_PREDICTION_4
+            properties[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_PREDICTION_MULTI
         return properties
 
     @staticmethod
