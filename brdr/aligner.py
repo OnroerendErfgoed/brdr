@@ -1269,7 +1269,7 @@ class Aligner:
         if not (geom_thematic is None or geom_thematic.is_empty):
             # Correction for circles
             # calculate ratio to see if it is a circle, and keep the original geometry
-            #  if a circle: (Polsby-popper score)
+            #  if a circle: (Polspy-popper score)
             if (
                 4 * pi * (geom_thematic.area / (geom_thematic.length**2))
                 > self.threshold_circle_ratio
