@@ -4,7 +4,7 @@ from shapely import from_wkt
 from shapely.geometry import Point
 from shapely.geometry import Polygon
 
-from brdr.geometry_utils import _grid_bounds
+from brdr.geometry_utils import _grid_bounds, get_shape_index, geom_from_wkt
 from brdr.geometry_utils import buffer_neg
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import buffer_pos
@@ -14,6 +14,21 @@ from brdr.geometry_utils import safe_intersection
 from brdr.geometry_utils import safe_symmetric_difference
 from brdr.geometry_utils import safe_union
 
+
+class TestShapeIndex(unittest.TestCase):
+    def test_shape_index_circle(self):
+        point = Point(0, 0)
+        result = buffer_pos(point, 1.0)
+        assert get_shape_index(result.area,result.length) > 0.99
+
+    def test_shape_index_0(self):
+        assert get_shape_index(0,0) == -1
+
+    def test_shape_index(self):
+        polygon =geom_from_wkt("POLYGON ((0 0, 0 9, 5 10, 10 0, 0 0))")
+        shape_index  = get_shape_index(polygon.area, polygon.length)
+        assert  shape_index > 0
+        assert shape_index < 1
 
 class TestBuffering(unittest.TestCase):
     def test_buffer_neg_pos_point(self):
@@ -3966,3 +3981,5 @@ class TestGridBounds(unittest.TestCase):
         polygon = Polygon([(0, 0), (0, 5), (5, 5), (5, 0), (0, 0)])
         result = _grid_bounds(polygon, 1.0)
         self.assertEqual(len(result), 25)
+
+

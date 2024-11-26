@@ -4,7 +4,6 @@ from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import wait
 from datetime import datetime
-from math import pi
 from typing import Iterable
 
 import numpy as np
@@ -39,7 +38,7 @@ from brdr.enums import (
     AlignerResultType,
     AlignerInputType,
 )
-from brdr.geometry_utils import buffer_neg, safe_unary_union
+from brdr.geometry_utils import buffer_neg, safe_unary_union, get_shape_index
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import buffer_pos
 from brdr.geometry_utils import fill_and_remove_gaps
@@ -117,7 +116,7 @@ class Aligner:
             threshold_exclusion_percentage (int, optional): Percentage for excluding candidate reference-polygons when overlap(%) is smaller than the threshold(Default=0)
             threshold_exclusion_area (int, optional):Area in m² for excluding candidate reference-polygons when overlap(m²) is smaller than the threshold (Default=0)
             buffer_multiplication_factor (float, optional): Multiplication factor, used to buffer the thematic objects searching for reference borders (buffer= buffer_multiplication_factor*relevant_distance)(Default=1.01)
-            threshold_circle_ratio (float, optional): Threshold-value to exclude circles getting processed (perfect circle = 1) based on POLSPY-POPPER algorithm(Default=0.98)
+            threshold_circle_ratio (float, optional): Threshold-value to exclude circles getting processed (perfect circle = 1) based on POLSBY-POPPER algorithm(Default=0.98)
             correction_distance (float, optional): Distance used in a pos_neg_buffer to remove slivers (technical correction) (Default= 0.01 = 1cm )
             mitre_limit (int, optional):buffer-parameter - The mitre ratio is the ratio of the distance from the corner to the end of the mitred offset corner.
                 When two line segments meet at a sharp angle, a miter join will extend far beyond the original geometry. (and in the extreme case will be infinitely far.) To prevent unreasonable geometry, the mitre limit allows controlling the maximum length of the join corner.
@@ -144,7 +143,7 @@ class Aligner:
         # OD-area to take into account
         self.buffer_multiplication_factor = buffer_multiplication_factor
         # Threshold-value to exclude circles getting processed (perfect circle = 1) based on
-        # POLSPY-POPPER algorithm
+        # POLSBY-POPPER algorithm
         self.threshold_circle_ratio = threshold_circle_ratio
         # Distance used in a pos_neg_buffer to remove slivers (technical correction)
         self.correction_distance = correction_distance
@@ -1240,7 +1239,7 @@ class Aligner:
         *slivers
         *Inner holes (donuts) /multipolygons
         *validity
-        *Circles (Polspy-popper)
+        *Circles (Polsby-Popper)
         *Null/Empty-values
 
         Args:
@@ -1269,9 +1268,8 @@ class Aligner:
         if not (geom_thematic is None or geom_thematic.is_empty):
             # Correction for circles
             # calculate ratio to see if it is a circle, and keep the original geometry
-            #  if a circle: (Polspy-popper score)
-            if (
-                4 * pi * (geom_thematic.area / (geom_thematic.length**2))
+            #  if a circle: (Polsby-Popper score)
+            if (get_shape_index(geom_thematic.area,geom_thematic.length)
                 > self.threshold_circle_ratio
             ):
                 remark = "Circle detected: -->resulting geometry = original geometry"

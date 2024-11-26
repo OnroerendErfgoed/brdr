@@ -1,6 +1,6 @@
 import logging
 import os.path
-from math import pi
+
 import numpy as np
 import requests
 from geojson import Feature, FeatureCollection, dump
@@ -20,7 +20,7 @@ from brdr.constants import (
     AREA_ATTRIBUTE,
 )
 from brdr.enums import DiffMetric
-from brdr.geometry_utils import get_partitions, get_bbox
+from brdr.geometry_utils import get_partitions, get_bbox, get_shape_index
 from brdr.typings import ProcessResult
 
 
@@ -95,7 +95,7 @@ def _feature_from_geom(
         perimeter = geom.length
         properties[AREA_ATTRIBUTE] = area
         properties[PERIMETER_ATTRIBUTE] = perimeter
-        properties[SHAPE_INDEX_ATTRIBUTE] = 4 * pi * (area / (perimeter**2)) if perimeter != 0 and area!=0 else -1
+        properties[SHAPE_INDEX_ATTRIBUTE] = get_shape_index(area,perimeter)
     return Feature(geometry=geom, properties=properties)
 
 

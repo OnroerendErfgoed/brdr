@@ -1,4 +1,5 @@
 import logging
+from math import pi
 
 import numpy as np
 from shapely import GEOSException, equals
@@ -473,6 +474,12 @@ def get_partitions(geom, delta):
     partitions = _grid_bounds(geom, delta)
     filtered_grid = list(filter(prepared_geom.intersects, partitions))
     return filtered_grid
+
+def get_shape_index(area,perimeter):
+    if area>0 and perimeter>0:
+        return 4 * pi * (area / (perimeter**2))
+    else:
+        return -1
 
 
 def fill_and_remove_gaps(input_geometry, buffer_value):
