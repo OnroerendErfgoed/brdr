@@ -11,29 +11,20 @@ class OpenbaarDomeinStrategy(IntEnum):
     *   -1 (EXCLUDE): Completely exclude everything that is not on the reference layer
     *   0 (AS_IS): All parts that are not covered by the reference layer are added to
         the resulting geometry AS IS
-    *   1 (SNAP_SINGLE_SIDE): Everything that falls within the relevant distance over
+    *   1 (SNAP_INNER_SIDE): Everything that falls within the relevant distance over
         the plot boundary is snapped to the plot. The outer boundary is not used.
-    *   2 (SNAP_ALL_SIDE): Everything that falls within the relevant distance over the
+    *   2 (SNAP_OUTER_SIDE): Everything that falls within the relevant distance over the
         plot boundary is snapped to the plot. The outer boundary is used.
-    *   3 (SNAP_FULL_AREA_SINGLE_SIDE): integrates entire Openbaar Domein within
-        buffered original geometry
-    *   4 (SNAP_FULL_AREA_ALL_SIDE): integrates all OD within inside-buffered
-        original geometry. The first part is a copy of SNAP_ALL_SIDE
-    *   5 (SNAP_SINGLE_SIDE_VARIANT_1): implementation variant 1 of strategy
-        SNAP_SINGLE_SIDE
-    *   6 (SNAP_SINGLE_SIDE_VARIANT_2): implementation variant 2 of strategy
-        SNAP_SINGLE_SIDE
+    *   3 (SNAP_ALL_SIDE): Everything that falls within the relevant distance over the
+        plot boundary is snapped to the plot. The inner and outer boundary is used where possible.
 
     """
 
     EXCLUDE = -1
     AS_IS = 0
-    SNAP_SINGLE_SIDE = 1
-    SNAP_ALL_SIDE = 2
-    SNAP_FULL_AREA_SINGLE_SIDE = 3
-    SNAP_FULL_AREA_ALL_SIDE = 4
-    SNAP_SINGLE_SIDE_VARIANT_1 = 5
-    SNAP_SINGLE_SIDE_VARIANT_2 = 6
+    SNAP_INNER_SIDE = 1
+    SNAP_OUTER_SIDE = 2
+    SNAP_ALL_SIDE = 3
 
 
 class AlignerResultType(str, Enum):
@@ -108,8 +99,7 @@ class Evaluation(str, Enum):
     EQUALITY_EQUAL_FORMULA_FULL_1 = "equality_equal_formula_full_1"
     EQUALITY_EQUAL_FORMULA_2 = "equality_equal_formula_2"
     EQUALITY_FULL_3 = "equality_full_3"
-    PREDICTION_UNIQUE ="prediction_unique"
+    PREDICTION_UNIQUE = "prediction_unique"
     TO_CHECK_PREDICTION_MULTI = "to_check_prediction_multi"
     TO_CHECK_NO_PREDICTION = "to_check_no_prediction"
     NO_CHANGE = "no_change"
-

@@ -19,7 +19,7 @@ aligner.load_reference_data(loader)
 relevant_distance = 1
 process_result = aligner.process(
     relevant_distance=relevant_distance,
-    od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
+    od_strategy=OpenbaarDomeinStrategy.SNAP_INNER_SIDE,
     threshold_overlap_percentage=50,
 )
 # PRINT RESULTS IN WKT

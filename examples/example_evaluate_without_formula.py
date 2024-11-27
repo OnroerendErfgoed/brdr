@@ -1,15 +1,10 @@
-import json
-from datetime import date
-
 import numpy as np
 
 from brdr.aligner import Aligner
 from brdr.constants import EVALUATION_FIELD_NAME
 from brdr.enums import GRBType, AlignerResultType
 from brdr.grb import GRBActualLoader
-from brdr.grb import GRBFiscalParcelLoader
-from brdr.grb import get_affected_by_grb_change
-from brdr.loader import DictLoader, GeoJsonFileLoader
+from brdr.loader import GeoJsonFileLoader
 
 # Press the green button in the gutter to run the script.
 if __name__ == "__main__":
@@ -19,7 +14,7 @@ if __name__ == "__main__":
 
     # Start an aligner to align thematic objects on the actual parcels
     actual_aligner = Aligner(relevant_distances=np.arange(0, 310, 10, dtype=int) / 100)
-    loader = GeoJsonFileLoader("themelayer.geojson", "theme_identifier")
+    loader = GeoJsonFileLoader("input/themelayer.geojson", "theme_identifier")
     actual_aligner.load_thematic_data(loader
     )
     # Load reference data; the actual parcels

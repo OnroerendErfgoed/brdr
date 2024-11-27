@@ -95,7 +95,7 @@ def _feature_from_geom(
         perimeter = geom.length
         properties[AREA_ATTRIBUTE] = area
         properties[PERIMETER_ATTRIBUTE] = perimeter
-        properties[SHAPE_INDEX_ATTRIBUTE] = get_shape_index(area,perimeter)
+        properties[SHAPE_INDEX_ATTRIBUTE] = get_shape_index(area, perimeter)
     return Feature(geometry=geom, properties=properties)
 
 

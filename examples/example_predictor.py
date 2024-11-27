@@ -29,7 +29,7 @@ if __name__ == "__main__":
     # predict which relevant distances are interesting to propose as resulting geometry
     dict_series, dict_predictions, diffs = aligner.predictor(
         relevant_distances=series,
-        od_strategy=OpenbaarDomeinStrategy.SNAP_FULL_AREA_ALL_SIDE,
+        od_strategy=OpenbaarDomeinStrategy.SNAP_ALL_SIDE,
         threshold_overlap_percentage=50,
     )
 
