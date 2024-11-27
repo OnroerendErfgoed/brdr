@@ -2,6 +2,8 @@ import statistics
 from datetime import datetime
 
 from brdr.aligner import Aligner
+from brdr.enums import OpenbaarDomeinStrategy, GRBType
+from brdr.grb import GRBActualLoader
 from brdr.loader import GeoJsonFileLoader
 
 
@@ -11,8 +13,10 @@ def main():
     :return:
     """
     # Initiate brdr
-    aligner = Aligner(relevant_distance=2, max_workers=None)
+    aligner = Aligner(max_workers=None)
     iterations = 10
+    od_strategy = OpenbaarDomeinStrategy.SNAP_OUTER_SIDE
+    relevant_distance=0.5
     aligner.multi_as_single_modus = True
     # Load local thematic data and reference data
     # loader = GeoJsonFileLoader(
@@ -22,17 +26,20 @@ def main():
         "../tests/testdata/themelayer_not_referenced.geojson", "theme_identifier"
     )
     aligner.load_thematic_data(loader)
-    loader = GeoJsonFileLoader("../tests/testdata/reference_leuven.geojson", "capakey")
+    #loader = GeoJsonFileLoader("../tests/testdata/reference_leuven.geojson", "capakey")
+    #aligner.load_reference_data(loader)
+    loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
     aligner.load_reference_data(loader)
 
+    aligner.process(relevant_distance=relevant_distance, od_strategy=od_strategy)
     times = []
     total_starttime = datetime.now()
     for iter in range(1, iterations + 1):
         starttime = datetime.now()
 
         # Example how to use the Aligner
-        aligner.predictor()
-        fcs = aligner.get_results_as_geojson(formula=True)
+        aligner.process(relevant_distance=relevant_distance, od_strategy=od_strategy)
+        #fcs = aligner.get_results_as_geojson(formula=True)
         endtime = datetime.now()
         seconds = (endtime - starttime).total_seconds()
         times.append(seconds)

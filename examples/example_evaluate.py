@@ -19,7 +19,7 @@ if __name__ == "__main__":
     # initiate a base Aligner, to align thematic objects on an older version of the parcels (year 2022)
     base_aligner = Aligner()
     # Load thematic data
-    loader = GeoJsonFileLoader("themelayer.geojson", "theme_identifier")
+    loader = GeoJsonFileLoader("input/themelayer.geojson", "theme_identifier")
     base_aligner.load_thematic_data(loader)
     base_year = "2022"
     name_formula = "base_formula"

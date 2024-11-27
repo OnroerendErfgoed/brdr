@@ -78,7 +78,7 @@ class Aligner:
             round(k, 1) for k in np.arange(0, 210, 10, dtype=int) / 100
         ],
         threshold_overlap_percentage=50,
-        od_strategy=OpenbaarDomeinStrategy.SNAP_FULL_AREA_ALL_SIDE,
+        od_strategy=OpenbaarDomeinStrategy.SNAP_ALL_SIDE,
         crs=DEFAULT_CRS,
         multi_as_single_modus=True,
         threshold_exclusion_area=0,
@@ -240,7 +240,7 @@ class Aligner:
         self,
         input_geometry: BaseGeometry,
         relevant_distance: float = 1,
-        od_strategy=OpenbaarDomeinStrategy.SNAP_FULL_AREA_ALL_SIDE,
+        od_strategy=OpenbaarDomeinStrategy.SNAP_ALL_SIDE,
         threshold_overlap_percentage=50,
     ) -> ProcessResult:
         """
@@ -364,7 +364,7 @@ class Aligner:
         dict_thematic=None,
         relevant_distances: Iterable[float] = None,
         relevant_distance=1,
-        od_strategy=OpenbaarDomeinStrategy.SNAP_FULL_AREA_ALL_SIDE,
+        od_strategy=OpenbaarDomeinStrategy.SNAP_ALL_SIDE,
         threshold_overlap_percentage=50,
     ) -> dict[any, dict[float, ProcessResult]]:
         """
@@ -501,7 +501,7 @@ class Aligner:
         relevant_distances=[
             round(k, 1) for k in np.arange(0, 310, 10, dtype=int) / 100
         ],
-        od_strategy=OpenbaarDomeinStrategy.SNAP_FULL_AREA_ALL_SIDE,
+        od_strategy=OpenbaarDomeinStrategy.SNAP_ALL_SIDE,
         threshold_overlap_percentage=50,
     ):
         """
@@ -556,7 +556,7 @@ class Aligner:
               be analyzed. Defaults to np.arange(0.1, 5.05, 0.1).
             od_strategy (OpenbaarDomeinStrategy, optional): A strategy for handling
               open data in the processing (implementation specific). Defaults to
-             OpenbaarDomeinStrategy.SNAP_FULL_AREA_ALL_SIDE.
+             OpenbaarDomeinStrategy.SNAP_ALL_SIDE.
             threshold_overlap_percentage (int, optional): A percentage threshold for
               considering full overlap in the processing (implementation specific).
              Defaults to 50.
@@ -627,7 +627,9 @@ class Aligner:
                         f"Duplicate prediction found for key {theme_id} at distance {rel_dist}: Prediction excluded"
                     )
             for dist in dict_predictions_unique[theme_id].keys():
-                dict_predictions_unique[theme_id][dist][PREDICTION_COUNT] = len(predicted_geoms_for_theme_id)
+                dict_predictions_unique[theme_id][dist][PREDICTION_COUNT] = len(
+                    predicted_geoms_for_theme_id
+                )
 
         self.dict_predictions = dict_predictions_unique
 
@@ -637,7 +639,12 @@ class Aligner:
             diffs_dict,
         )
 
-    def evaluate(self, ids_to_evaluate=None, base_formula_field=FORMULA_FIELD_NAME,all_predictions=False):
+    def evaluate(
+        self,
+        ids_to_evaluate=None,
+        base_formula_field=FORMULA_FIELD_NAME,
+        all_predictions=False,
+    ):
         """
 
         Compares and evaluate input-geometries (with formula). Attributes are added to evaluate and decide if new
@@ -678,7 +685,7 @@ class Aligner:
                 prop_dictionary[theme_id][dist] = props
                 continue
 
-            #When there are predictions available
+            # When there are predictions available
             dict_predictions_results = dict_affected_predictions[theme_id]
             best_dist = None
             for dist in sorted(dict_predictions_results.keys()):
@@ -691,21 +698,25 @@ class Aligner:
                     geom_predicted=dict_predictions_results[dist]["result"],
                     base_formula_field=base_formula_field,
                 )
-                prediction_score = dict_affected_predictions[
-                    theme_id
-                ][dist][PREDICTION_SCORE]
-                prediction_count = dict_affected_predictions[
-                    theme_id
-                ][dist][PREDICTION_COUNT]
+                prediction_score = dict_affected_predictions[theme_id][dist][
+                    PREDICTION_SCORE
+                ]
+                prediction_count = dict_affected_predictions[theme_id][dist][
+                    PREDICTION_COUNT
+                ]
                 props[PREDICTION_SCORE] = prediction_score
-                prediction = dict_affected_predictions[
-                    theme_id
-                ][dist]
+                prediction = dict_affected_predictions[theme_id][dist]
                 props[PREDICTION_COUNT] = prediction_count
-                if props[EVALUATION_FIELD_NAME]==Evaluation.TO_CHECK_NO_PREDICTION and props[PREDICTION_COUNT]==1:
+                if (
+                    props[EVALUATION_FIELD_NAME] == Evaluation.TO_CHECK_NO_PREDICTION
+                    and props[PREDICTION_COUNT] == 1
+                ):
                     props[EVALUATION_FIELD_NAME] = Evaluation.PREDICTION_UNIQUE
-                elif props[EVALUATION_FIELD_NAME]==Evaluation.TO_CHECK_NO_PREDICTION and props[PREDICTION_COUNT]>1:
-                    props[EVALUATION_FIELD_NAME] =Evaluation.TO_CHECK_PREDICTION_MULTI
+                elif (
+                    props[EVALUATION_FIELD_NAME] == Evaluation.TO_CHECK_NO_PREDICTION
+                    and props[PREDICTION_COUNT] > 1
+                ):
+                    props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_PREDICTION_MULTI
                 if prediction_score > prediction_high_score:
                     prediction_high_score = prediction_score
                     best_prediction = prediction
@@ -1039,103 +1050,109 @@ class Aligner:
             self.logger.feedback_debug("OD-strategy AS IS")
             # all OD-parts wil be added AS IS
             geom_thematic_od = safe_difference(geometry, self._get_reference_union())
-        elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE:
-            # Everything that falls within the relevant distance over the
-            #  plot boundary is snapped to the plot.
-            #  Only the inner-reference-boundaries are used.
-            #  The outer-reference-boundaries are not used.
-            self.logger.feedback_debug("OD-strategy SNAP_SINGLE_SIDE")
-            # geom of OD
-            geom_od = safe_difference(geometry, self._get_reference_union())
-            # only the relevant parts of OD
-            geom_od_neg_pos = buffer_neg_pos(
-                geom_od,
-                buffer_distance,
-                mitre_limit=self.mitre_limit,
-            )
-            # geom_thematic_od = safe_intersection(geom_od_neg_pos,geom_od)# resulting
-            # thematic OD
-            geom_od_neg_pos_buffered = buffer_pos(
-                geom_od_neg_pos,
-                buffer_distance,
-                mitre_limit=self.mitre_limit,
-            )  # include parts
-            geom_thematic_od = safe_intersection(
-                geom_od_neg_pos_buffered, geom_od
-            )  # resulting thematic OD
-        elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_ALL_SIDE:
-            # Everything that falls within the relevant distance over
-            # the plot boundary is snapped to the plot.
-            #  Inner-reference-boundaries and outer-reference-boundaries are used.
-            self.logger.feedback_debug("OD-strategy SNAP BOTH SIDED")
-            (
-                geom_thematic_od,
-                relevant_difference_array,
-                relevant_intersection_array,
-            ) = self._od_snap_all_side(
-                geometry, input_geometry_inner, relevant_distance
-            )
-        elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_FULL_AREA_SINGLE_SIDE:
+        # elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_INNER_SIDE:
+        #     # Everything that falls within the relevant distance over the
+        #     #  plot boundary is snapped to the plot.
+        #     #  Only the inner-reference-boundaries are used.
+        #     #  The outer-reference-boundaries are not used.
+        #     self.logger.feedback_debug("OD-strategy SNAP_SINGLE_SIDE")
+        #     # geom of OD
+        #     geom_od = safe_difference(geometry, self._get_reference_union())
+        #     # only the relevant parts of OD
+        #     geom_od_neg_pos = buffer_neg_pos(
+        #         geom_od,
+        #         buffer_distance,
+        #         mitre_limit=self.mitre_limit,
+        #     )
+        #     # geom_thematic_od = safe_intersection(geom_od_neg_pos,geom_od)# resulting
+        #     # thematic OD
+        #     geom_od_neg_pos_buffered = buffer_pos(
+        #         geom_od_neg_pos,
+        #         buffer_distance,
+        #         mitre_limit=self.mitre_limit,
+        #     )  # include parts
+        #     geom_thematic_od = safe_intersection(
+        #         geom_od_neg_pos_buffered, geom_od
+        #     )  # resulting thematic OD
+        #     #TODO this strategy does not write the relative intersections & differences from the OD?
+        elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_INNER_SIDE:
             # Strategy useful for bigger areas.
             # integrates the entire inner area of the input geometry,
             # so Openbaar Domein of the inner area is included in the result
             # Combines SNAP_SINGLE_SIDE with the inner area
             self.logger.feedback_debug(
-                "OD-strategy Full-area-variant of OD-SNAP_SINGLE_SIDE"
+                "OD-strategy Full-area-variant of OD-SNAP_INNER_SIDE"
             )
             geom_thematic_od = self._od_full_area(geometry, relevant_distance)
-        elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_FULL_AREA_ALL_SIDE:
-            # Strategy useful for bigger areas.
-            # integrates the entire inner area of the input geometry,
-            # so Openbaar Domein of the inner area is included in the result
-            # Combines SNAP_ALL_SIDE with the inner area
-            self.logger.feedback_debug(
-                "OD-strategy Full-area-variant of OD-SNAP_ALL_SIDE"
+        elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_OUTER_SIDE:
+            # Everything that falls within the relevant distance over
+            # the plot boundary is snapped to the plot.
+            #  Outer-reference-boundaries are used.
+            self.logger.feedback_debug("OD-strategy SNAP OUTER SIDE")
+            (
+                geom_thematic_od,
+                relevant_difference_array,
+                relevant_intersection_array,
+            ) = self._od_snap_all_side(
+                geometry, input_geometry_inner, relevant_distance, outer=True
             )
+
+            # This part calculates the full area
+            geom_theme_od_min_clipped_plus_buffered_clipped = self._od_full_area(
+                geometry, relevant_distance
+            )
+            # UNION of both elements
+            geom_thematic_od = safe_union(
+                geom_theme_od_min_clipped_plus_buffered_clipped, geom_thematic_od
+            )
+
+        elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_ALL_SIDE:
+            #  Inner & Outer-reference-boundaries are used.
+            # integrates the entire inner area of the input geometry,
+            self.logger.feedback_debug("OD-strategy OD-SNAP_ALL_SIDE")
             # first part is a copy of OD_ALL_SIDE
             (
                 geom_thematic_od,
                 relevant_difference_array,
                 relevant_intersection_array,
             ) = self._od_snap_all_side(
-                geometry, input_geometry_inner, relevant_distance
+                geometry, input_geometry_inner, relevant_distance, outer=False
             )
-            # This part is a copy of SNAP_FULL_AREA_SINGLE_SIDE
+            # This part calculates the full area
             geom_theme_od_min_clipped_plus_buffered_clipped = self._od_full_area(
                 geometry, relevant_distance
             )
-            # UNION the calculation of  OD-SNAP_ALL_SIDE with FULL AREA of
-            # OD-SNAP_FULL_AREA_SINGLE_SIDE
+            # UNION of both elements
             geom_thematic_od = safe_union(
                 geom_theme_od_min_clipped_plus_buffered_clipped, geom_thematic_od
             )
 
-        elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE_VARIANT_1:
-            # OD-strategy SNAP_SINGLE_SIDE - variant 1:
-            # Everything that falls within the relevant distance over the
-            #  plot boundary is snapped to the plot.
-            #  Only the inner-reference-boundaries are used.
-            #  The outer-reference-boundaries are not used.
-            self.logger.feedback_debug("OD-strategy SNAP_SINGLE_SIDE - variant 1")
-            # geom of OD
-            geom_od = safe_difference(geometry, self._get_reference_union())
-            # only the relevant parts of OD
-            geom_od_neg_pos = buffer_neg_pos(
-                geom_od,
-                buffer_distance,
-                mitre_limit=self.mitre_limit,
-            )
-            # resulting thematic OD
-            geom_thematic_od = safe_intersection(geom_od_neg_pos, geom_od)
-        elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE_VARIANT_2:
-            # OD-strategy SNAP_SINGLE_SIDE - variant 2:
-            # Everything that falls within the relevant distance over the
-            #  plot boundary is snapped to the plot.
-            #  Only the inner-reference-boundaries are used.
-            #  The outer-reference-boundaries are not used.
-            self.logger.feedback_debug("OD-strategy SNAP_SINGLE_SIDE - variant 2")
-            geom_thematic_od = Polygon()
-            pass
+        # elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE_VARIANT_1:
+        #     # OD-strategy SNAP_SINGLE_SIDE - variant 1:
+        #     # Everything that falls within the relevant distance over the
+        #     #  plot boundary is snapped to the plot.
+        #     #  Only the inner-reference-boundaries are used.
+        #     #  The outer-reference-boundaries are not used.
+        #     self.logger.feedback_debug("OD-strategy SNAP_SINGLE_SIDE - variant 1")
+        #     # geom of OD
+        #     geom_od = safe_difference(geometry, self._get_reference_union())
+        #     # only the relevant parts of OD
+        #     geom_od_neg_pos = buffer_neg_pos(
+        #         geom_od,
+        #         buffer_distance,
+        #         mitre_limit=self.mitre_limit,
+        #     )
+        #     # resulting thematic OD
+        #     geom_thematic_od = safe_intersection(geom_od_neg_pos, geom_od)
+        # elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE_VARIANT_2:
+        #     # OD-strategy SNAP_SINGLE_SIDE - variant 2:
+        #     # Everything that falls within the relevant distance over the
+        #     #  plot boundary is snapped to the plot.
+        #     #  Only the inner-reference-boundaries are used.
+        #     #  The outer-reference-boundaries are not used.
+        #     self.logger.feedback_debug("OD-strategy SNAP_SINGLE_SIDE - variant 2")
+        #     geom_thematic_od = Polygon()
+        #     pass
 
         # ADD THEMATIC_OD
         preresult = self._add_multi_polygons_from_geom_to_array(geom_thematic_od, [])
@@ -1176,7 +1193,9 @@ class Aligner:
         geom_thematic_od = geom_theme_od_min_clipped_plus_buffered_clipped
         return geom_thematic_od
 
-    def _od_snap_all_side(self, geometry, input_geometry_inner, relevant_distance):
+    def _od_snap_all_side(
+        self, geometry, input_geometry_inner, relevant_distance, outer=False
+    ):
         buffer_distance = relevant_distance / 2
         relevant_difference_array = []
         relevant_intersection_array = []
@@ -1190,14 +1209,24 @@ class Aligner:
         clip_ref_thematic_buffered = safe_intersection(
             self._get_reference_union(), geom_thematic_buffered
         )
+
         geom_reference = safe_difference(
             geom_thematic_buffered, clip_ref_thematic_buffered
         )  # Both OD-parts are SNAPPED added
+        if outer:  # when outer is True, the outer boundary is used, inner is not used
+            geom_1 = safe_difference(geometry, geom_reference)
+            geom_2 = buffer_neg_pos(geom_1, buffer_distance)
+            geom_3 = safe_intersection(geom_2, geometry)
+            geom_reference = safe_unary_union([geom_3, geom_reference])
+
         geom_thematic = geometry
         if geom_reference.is_empty or geom_reference is None:
             geom_thematic_od = geom_reference
         else:
             geom_intersection = safe_intersection(geom_reference, geom_thematic)
+            # geom_intersection = safe_unary_union([geom_intersection])
+
+            # calculate the geometry for the 'virtual' OD parcel
             (
                 geom_thematic_od,
                 geom_relevant_intersection,
@@ -1213,12 +1242,14 @@ class Aligner:
                 self.threshold_exclusion_area,
                 self.mitre_limit,
             )
+
             relevant_intersection_array = self._add_multi_polygons_from_geom_to_array(
                 geom_relevant_intersection, []
             )
             relevant_difference_array = self._add_multi_polygons_from_geom_to_array(
                 geom_relevant_diff, []
             )
+            # geom_thematic_od = safe_unary_union(geom_thematic_od_array)
         return geom_thematic_od, relevant_difference_array, relevant_intersection_array
 
     def _get_reference_union(self):
@@ -1269,7 +1300,8 @@ class Aligner:
             # Correction for circles
             # calculate ratio to see if it is a circle, and keep the original geometry
             #  if a circle: (Polsby-Popper score)
-            if (get_shape_index(geom_thematic.area,geom_thematic.length)
+            if (
+                get_shape_index(geom_thematic.area, geom_thematic.length)
                 > self.threshold_circle_ratio
             ):
                 remark = "Circle detected: -->resulting geometry = original geometry"
@@ -1629,7 +1661,9 @@ def _calculate_geom_by_intersection_and_reference(
         buffer_distance,
         mitre_limit=mitre_limit,
     )
-    geom_intersection_inner = safe_intersection(geom_intersection, input_geometry_inner)
+    geom_intersection_inner = safe_intersection(
+        geom_intersection, input_geometry_inner
+    )  # this part is the intersection-part that always has to be kept, because it is inside the inner_geometry
 
     geom_relevant_difference = buffer_neg(
         geom_difference,
