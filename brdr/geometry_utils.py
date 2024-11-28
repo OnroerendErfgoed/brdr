@@ -437,6 +437,8 @@ def geom_to_wkt(shapely_geometry):
 
 
 def create_donut(geometry, distance):
+    if distance ==0:
+        return geometry
     inner_geometry = buffer_neg(geometry, distance)
     return safe_difference(geometry, inner_geometry)
 

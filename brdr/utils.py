@@ -429,7 +429,7 @@ def get_collection_by_partition(
     dict: A collection of geographic data, potentially partitioned by the input geometry.
     """
     collection = {}
-    if geometry is None:
+    if geometry is None or geometry.is_empty:
         collection = get_collection(
             _add_bbox_to_url(url=url, crs=crs, bbox=None), limit
         )

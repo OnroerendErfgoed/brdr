@@ -110,13 +110,10 @@ def get_affected_by_grb_change(
 
     affected = []
     unaffected = []
-    if border_distance > 0:
-        for key in dict_thematic.keys():
-            dict_thematic[key] = create_donut(dict_thematic[key], border_distance)
     if one_by_one:
         for key in dict_thematic:
             geom = dict_thematic[key]
-            if is_grb_changed(geom, grb_type, date_start, date_end):
+            if is_grb_changed(geom, grb_type, date_start, date_end, border_distance=border_distance):
                 affected.append(key)
             else:
                 unaffected.append(key)
@@ -136,11 +133,21 @@ def get_affected_by_grb_change(
         dict_changed_grb, dict_changed_grb_properties = geojson_to_dicts(
             coll_changed_grb, name_reference_id
         )
+        if border_distance>0:
+            geom_to_check = create_donut(geometry_thematic_union,border_distance)
+            grb_intersections = features_by_geometric_operation(
+                list(dict_changed_grb.values()),
+                list(dict_changed_grb.keys()),
+                [geom_to_check],
+                predicate="intersects",
+            )
+            dict_changed_grb = {key: dict_changed_grb[key] for key in grb_intersections}
+
 
         if len(dict_changed_grb) == 0:
-            logging.info("No detected changes")
+            logging.info(f"No detected changes for thematic geometry in timespan (border distance: {str(border_distance)})")
             return affected, list(dict_thematic.keys())  # empty affected dict
-        logging.info("Changed parcels in timespan: " + str(len(dict_changed_grb)))
+        logging.info(f"Changed parcels in timespan with border_distance {str(border_distance)}: {str(len(dict_changed_grb))}")
         thematic_intersections = features_by_geometric_operation(
             list(dict_thematic.values()),
             list(dict_thematic.keys()),
