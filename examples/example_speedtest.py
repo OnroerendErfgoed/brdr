@@ -15,7 +15,7 @@ def main():
     # Initiate brdr
     aligner = Aligner(max_workers=None)
     iterations = 10
-    od_strategy = OpenbaarDomeinStrategy.SNAP_OUTER_SIDE
+    od_strategy = OpenbaarDomeinStrategy.SNAP_ALL_SIDE
     relevant_distance=0.5
     aligner.multi_as_single_modus = True
     # Load local thematic data and reference data

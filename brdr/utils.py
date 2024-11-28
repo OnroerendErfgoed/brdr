@@ -152,7 +152,9 @@ def multipolygons_to_singles(dict_geoms):
     resulting_dict_geoms = {}
     dict_multi_as_single = {}
     for key, geom in dict_geoms.items():
-        if str(geom.geom_type) == "Polygon":
+        if geom is None or geom.is_empty:
+            continue
+        elif str(geom.geom_type) == "Polygon":
             resulting_dict_geoms[key] = geom
         elif str(geom.geom_type) == "MultiPolygon":
             polygons = list(geom.geoms)
