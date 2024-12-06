@@ -644,12 +644,17 @@ class Aligner:
         ids_to_evaluate=None,
         base_formula_field=FORMULA_FIELD_NAME,
         all_predictions=False,
+            relevant_distances=[
+                round(k, 1) for k in np.arange(0, 310, 10, dtype=int) / 100
+            ],
     ):
         """
 
         Compares and evaluate input-geometries (with formula). Attributes are added to evaluate and decide if new
         proposals can be used
         affected: list with all IDs to evaluate. all other IDs will be unchanged. If None (default), all self.dict_thematic will be evaluated.
+        base_formula_field: name of the field where the base_formula is found in the data
+        all_predictions: boolean that indicates if all predictions should be returned, or only the one with the best score (default False)
         """
         if ids_to_evaluate is None:
             ids_to_evaluate = list(self.dict_thematic.keys())
@@ -662,7 +667,7 @@ class Aligner:
                 dict_unaffected[id_theme] = geom
         # AFFECTED
         dict_series, dict_affected_predictions, diffs = self.predictor(
-            dict_thematic=dict_affected, relevant_distances=self.relevant_distances
+            dict_thematic=dict_affected, relevant_distances=relevant_distances
         )
         dict_predictions_evaluated = {}
         prop_dictionary = {}
