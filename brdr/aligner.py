@@ -647,6 +647,7 @@ class Aligner:
             relevant_distances=[
                 round(k, 1) for k in np.arange(0, 310, 10, dtype=int) / 100
             ],
+            prefer_full = False
     ):
         """
 
@@ -655,6 +656,8 @@ class Aligner:
         affected: list with all IDs to evaluate. all other IDs will be unchanged. If None (default), all self.dict_thematic will be evaluated.
         base_formula_field: name of the field where the base_formula is found in the data
         all_predictions: boolean that indicates if all predictions should be returned, or only the one with the best score (default False)
+        relevant_distances:
+        prefer_full: if True, predictions with full reference polygons are prefered
         """
         if ids_to_evaluate is None:
             ids_to_evaluate = list(self.dict_thematic.keys())
@@ -703,14 +706,11 @@ class Aligner:
                     geom_predicted=dict_predictions_results[dist]["result"],
                     base_formula_field=base_formula_field,
                 )
-                prediction_score = dict_affected_predictions[theme_id][dist][
-                    PREDICTION_SCORE
-                ]
+
                 prediction_count = dict_affected_predictions[theme_id][dist][
                     PREDICTION_COUNT
                 ]
-                props[PREDICTION_SCORE] = prediction_score
-                prediction = dict_affected_predictions[theme_id][dist]
+
                 props[PREDICTION_COUNT] = prediction_count
                 if (
                     props[EVALUATION_FIELD_NAME] == Evaluation.TO_CHECK_NO_PREDICTION
@@ -722,6 +722,19 @@ class Aligner:
                     and props[PREDICTION_COUNT] > 1
                 ):
                     props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_PREDICTION_MULTI
+                if prefer_full:# when full_results have to be prefered, the results are checked and the PREDICTION_SCORE is augmented
+                    formula = json.loads(props[FORMULA_FIELD_NAME])
+                    if formula['full']:
+                        dict_affected_predictions[theme_id][dist][
+                            PREDICTION_SCORE] = dict_affected_predictions[theme_id][dist][
+                    PREDICTION_SCORE] + 100
+                        props[PREDICTION_COUNT] = -1
+                        props[EVALUATION_FIELD_NAME] = Evaluation.PREDICTION_FULL
+                prediction = dict_affected_predictions[theme_id][dist]
+                prediction_score = dict_affected_predictions[theme_id][dist][
+                    PREDICTION_SCORE
+                ]
+                props[PREDICTION_SCORE] = prediction_score
                 if prediction_score > prediction_high_score:
                     prediction_high_score = prediction_score
                     best_prediction = prediction
