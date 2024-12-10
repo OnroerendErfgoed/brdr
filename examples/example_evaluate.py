@@ -29,7 +29,7 @@ if __name__ == "__main__":
     )
     relevant_distance = 2
     # Align the thematic object on the parcelborders of 2022, to simulate a base-situation
-    base_process_result = base_aligner.process(relevant_distance=2)
+    base_process_result = base_aligner.process(relevant_distance=relevant_distance)
 
     # Collect the base-situation (base-geometries and the brdr_formula from that moment
     thematic_dict_formula = {}
@@ -53,7 +53,7 @@ if __name__ == "__main__":
         date_start=date(2022, 1, 1),
         date_end=date.today(),
         one_by_one=False,
-        border_distance=0
+        border_distance=relevant_distance
     )
     if len(affected) == 0:
         print("No affected dicts")

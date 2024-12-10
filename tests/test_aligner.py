@@ -412,6 +412,7 @@ class TestAligner(unittest.TestCase):
             date_start=date(2022, 1, 1),
             date_end=date.today(),
             one_by_one=False,
+            border_distance=relevant_distance
         )
         if len(affected) == 0:
             print("No affected dicts")

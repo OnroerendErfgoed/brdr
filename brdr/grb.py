@@ -123,7 +123,7 @@ def get_affected_by_grb_change(
         if geometry_thematic_union is None:
             geometry_thematic_union = safe_unary_union(list(dict_thematic.values()))
         coll_changed_grb, name_reference_id = get_collection_grb_actual(
-            geometry_thematic_union,
+            buffer_pos(geometry_thematic_union,GRB_MAX_REFERENCE_BUFFER),
             grb_type=grb_type,
             partition=1000,
             date_start=date_start,
@@ -133,15 +133,15 @@ def get_affected_by_grb_change(
         dict_changed_grb, dict_changed_grb_properties = geojson_to_dicts(
             coll_changed_grb, name_reference_id
         )
-        if border_distance>0:
-            geom_to_check = create_donut(geometry_thematic_union,border_distance)
-            grb_intersections = features_by_geometric_operation(
-                list(dict_changed_grb.values()),
-                list(dict_changed_grb.keys()),
-                [geom_to_check],
-                predicate="intersects",
-            )
-            dict_changed_grb = {key: dict_changed_grb[key] for key in grb_intersections}
+        #if border_distance>0:
+        geom_to_check = buffer_pos(create_donut(geometry_thematic_union,border_distance),GRB_MAX_REFERENCE_BUFFER)
+        grb_intersections = features_by_geometric_operation(
+            list(dict_changed_grb.values()),
+            list(dict_changed_grb.keys()),
+            [geom_to_check],
+            predicate="intersects",
+        )
+        dict_changed_grb = {key: dict_changed_grb[key] for key in grb_intersections}
 
 
         if len(dict_changed_grb) == 0:
@@ -417,6 +417,7 @@ def update_to_actual_grb(
             date_end=datetime_end,
             one_by_one=False,
             geometry_thematic_union=base_aligner_result.get_thematic_union(),
+            border_distance=max_distance_for_actualisation,
             crs=base_aligner_result.CRS,
         )
         logger.feedback_info(

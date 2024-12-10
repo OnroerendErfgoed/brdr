@@ -653,10 +653,10 @@ class Aligner:
 
         Compares and evaluate input-geometries (with formula). Attributes are added to evaluate and decide if new
         proposals can be used
-        affected: list with all IDs to evaluate. all other IDs will be unchanged. If None (default), all self.dict_thematic will be evaluated.
+        ids_to_evaluate: list with all IDs to evaluate. all other IDs will be unchanged. If None (default), all self.dict_thematic will be evaluated.
         base_formula_field: name of the field where the base_formula is found in the data
         all_predictions: boolean that indicates if all predictions should be returned, or only the one with the best score (default False)
-        relevant_distances:
+        relevant_distances: relevant distances to evaluate
         prefer_full: if True, predictions with full reference polygons are prefered
         """
         if ids_to_evaluate is None:
@@ -1477,7 +1477,7 @@ class Aligner:
         threshold_od_percentage = 1
         properties = {
             FORMULA_FIELD_NAME: "",
-            EVALUATION_FIELD_NAME: Evaluation.TO_CHECK_PREDICTION_MULTI,
+            EVALUATION_FIELD_NAME: Evaluation.TO_CHECK_NO_PREDICTION,
             FULL_BASE_FIELD_NAME: None,
             FULL_ACTUAL_FIELD_NAME: None,
             OD_ALIKE_FIELD_NAME: None,
@@ -1570,20 +1570,24 @@ class Aligner:
             and od_alike
             and base_formula["full"]
             and actual_formula["full"]
-        ):
+        ): #formula is the same, and both geometries are 'full'
             properties[EVALUATION_FIELD_NAME] = Evaluation.EQUALITY_EQUAL_FORMULA_FULL_1
         elif (
             equal_reference_features
             and od_alike
             and base_formula["full"] == actual_formula["full"]
-        ):
+        ): #formula is the same,  both geometries are not 'full'
             properties[EVALUATION_FIELD_NAME] = Evaluation.EQUALITY_EQUAL_FORMULA_2
-        elif base_formula["full"] and actual_formula["full"] and od_alike:
+        elif base_formula["full"] and actual_formula["full"] and od_alike: # formula not the same but geometries are full
             properties[EVALUATION_FIELD_NAME] = Evaluation.EQUALITY_FULL_3
-        # elif base_formula["full"] == actual_formula["full"] and od_alike:#TODO evaluate when not-full-parcels?
+        # elif base_formula["full"] == actual_formula["full"] and od_alike:
         #    properties[EVALUATION_FIELD_NAME] = Evaluation.EQUALITY_NON_FULL
+        #TODO evaluate when not-full-parcels: compare all parcels?
+        #elif geom_predicted.area >10000: #evaluate only the outer ring
+            #pass
+            #evaluate only the outer ring? # TODO issue 102
         else:
-            properties[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_PREDICTION_MULTI
+            properties[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
         return properties
 
     @staticmethod
@@ -1809,66 +1813,66 @@ def _equal_geom_in_array(geom, geom_array, correction_distance, mitre_limit):
     return False
 
 
-def _check_equality(
-    base_formula, actual_formula, threshold_area=5, threshold_percentage=1
-):
-    """
-    function that checks if 2 formulas are equal (True,False) and adds an Evaluation
-    """
-    if base_formula is None or actual_formula is None:
-        return False, Evaluation.TO_CHECK_NO_PREDICTION_5
-    od_alike = False
-    if base_formula["reference_od"] is None and actual_formula["reference_od"] is None:
-        od_alike = True
-    elif base_formula["reference_od"] is None or actual_formula["reference_od"] is None:
-        od_alike = False
-    elif (
-        abs(
-            base_formula["reference_od"]["area"]
-            - actual_formula["reference_od"]["area"]
-        )
-        * 100
-        / base_formula["reference_od"]["area"]
-    ) < threshold_percentage:
-        od_alike = True
-
-    if (
-        base_formula["reference_features"].keys()
-        == actual_formula["reference_features"].keys()
-        and od_alike
-    ):
-        if base_formula["full"] and actual_formula["full"]:
-            return True, Evaluation.EQUALITY_EQUAL_FORMULA_FULL_1
-
-        equal_reference_features = True
-        for key in base_formula["reference_features"].keys():
-            if (
-                (
-                    base_formula["reference_features"][key]["full"]
-                    == actual_formula["reference_features"][key]["full"]
-                )
-                or (
-                    abs(
-                        base_formula["reference_features"][key]["area"]
-                        - actual_formula["reference_features"][key]["area"]
-                    )
-                    > threshold_area
-                )
-                or (
-                    (
-                        abs(
-                            base_formula["reference_features"][key]["area"]
-                            - actual_formula["reference_features"][key]["area"]
-                        )
-                        * 100
-                        / base_formula["reference_features"][key]["area"]
-                    )
-                    > threshold_percentage
-                )
-            ):
-                equal_reference_features = False
-        if equal_reference_features:
-            return True, Evaluation.EQUALITY_EQUAL_FORMULA_2
-    if base_formula["full"] and actual_formula["full"] and od_alike:
-        return True, Evaluation.EQUALITY_FULL_3
-    return False, Evaluation.TO_CHECK_NO_PREDICTION_5
+# def _check_equality(
+#     base_formula, actual_formula, threshold_area=5, threshold_percentage=1
+# ):
+#     """
+#     function that checks if 2 formulas are equal (True,False) and adds an Evaluation
+#     """
+#     if base_formula is None or actual_formula is None:
+#         return False, Evaluation.TO_CHECK_NO_PREDICTION_5
+#     od_alike = False
+#     if base_formula["reference_od"] is None and actual_formula["reference_od"] is None:
+#         od_alike = True
+#     elif base_formula["reference_od"] is None or actual_formula["reference_od"] is None:
+#         od_alike = False
+#     elif (
+#         abs(
+#             base_formula["reference_od"]["area"]
+#             - actual_formula["reference_od"]["area"]
+#         )
+#         * 100
+#         / base_formula["reference_od"]["area"]
+#     ) < threshold_percentage:
+#         od_alike = True
+#
+#     if (
+#         base_formula["reference_features"].keys()
+#         == actual_formula["reference_features"].keys()
+#         and od_alike
+#     ):
+#         if base_formula["full"] and actual_formula["full"]:
+#             return True, Evaluation.EQUALITY_EQUAL_FORMULA_FULL_1
+#
+#         equal_reference_features = True
+#         for key in base_formula["reference_features"].keys():
+#             if (
+#                 (
+#                     base_formula["reference_features"][key]["full"]
+#                     == actual_formula["reference_features"][key]["full"]
+#                 )
+#                 or (
+#                     abs(
+#                         base_formula["reference_features"][key]["area"]
+#                         - actual_formula["reference_features"][key]["area"]
+#                     )
+#                     > threshold_area
+#                 )
+#                 or (
+#                     (
+#                         abs(
+#                             base_formula["reference_features"][key]["area"]
+#                             - actual_formula["reference_features"][key]["area"]
+#                         )
+#                         * 100
+#                         / base_formula["reference_features"][key]["area"]
+#                     )
+#                     > threshold_percentage
+#                 )
+#             ):
+#                 equal_reference_features = False
+#         if equal_reference_features:
+#             return True, Evaluation.EQUALITY_EQUAL_FORMULA_2
+#     if base_formula["full"] and actual_formula["full"] and od_alike:
+#         return True, Evaluation.EQUALITY_FULL_3
+#     return False, Evaluation.TO_CHECK_NO_PREDICTION_5
