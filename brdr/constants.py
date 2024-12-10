@@ -1,6 +1,9 @@
 # Download-settings: when extracting features by URL
 # Limit used when extracting features by URL, using the feature API (f.e. from GRB)
 DOWNLOAD_LIMIT = 10000
+
+#value that is used to calculate the boundary of a thematic geometry wherefor the calculation has to be done. (inner part is added)
+MAX_OUTER_BUFFER = 25
 # default CRS:
 DEFAULT_CRS = "EPSG:31370"  # BelgianLambert72
 

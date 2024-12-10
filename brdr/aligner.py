@@ -18,7 +18,7 @@ from shapely import to_geojson
 from shapely.geometry.base import BaseGeometry
 
 from brdr import __version__
-from brdr.constants import DEFAULT_CRS, PREDICTION_SCORE, PREDICTION_COUNT
+from brdr.constants import DEFAULT_CRS, PREDICTION_SCORE, PREDICTION_COUNT, MAX_OUTER_BUFFER
 from brdr.constants import (
     LAST_VERSION_DATE,
     VERSION_DATE,
@@ -282,6 +282,7 @@ class Aligner:
         buffer_distance = relevant_distance / 2
         # combine all parts of the input geometry to one polygon
         input_geometry = safe_unary_union(get_parts(input_geometry))
+
         input_geometry_inner = buffer_neg(
             input_geometry, relevant_distance
         )  # inner part of the input that must be always available
@@ -289,6 +290,14 @@ class Aligner:
             input_geometry_inner = safe_intersection(
                 input_geometry_inner, self._get_reference_union()
             )
+
+        input_geometry_double_inner = buffer_neg(
+            input_geometry, 2*relevant_distance + MAX_OUTER_BUFFER
+        )  # inner part of the input that must be always available
+
+        #do the calculation only for the outer border of the geometry. The inner part is added afterwards
+        input_geometry_outer = safe_difference(input_geometry, input_geometry_double_inner)
+        input_geometry = input_geometry_outer
 
         # array with all relevant parts of a thematic geometry; initial empty Polygon
         (
