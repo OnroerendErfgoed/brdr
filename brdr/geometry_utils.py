@@ -3,6 +3,7 @@ from math import pi
 
 import numpy as np
 from shapely import GEOSException, equals
+from shapely import MultiPoint, MultiLineString
 from shapely import Polygon
 from shapely import STRtree
 from shapely import buffer
@@ -26,7 +27,7 @@ from shapely.geometry.base import BaseGeometry
 from shapely.geometry.linestring import LineString
 from shapely.geometry.multipolygon import MultiPolygon
 from shapely.geometry.point import Point
-from shapely.ops import nearest_points, polygonize
+from shapely.ops import nearest_points
 from shapely.prepared import prep
 
 
@@ -441,31 +442,48 @@ def geom_to_wkt(shapely_geometry):
     """
     return to_wkt(shapely_geometry)
 
-def snap_polygon_to_polygon(geometry,reference,max_segment_length=1,tolerance=1):
+def snap_polygon_to_polygon(geometry,reference,prefer_vertices=True,max_segment_length=1,tolerance=1):
     #reference_segmentized = segmentize(reference.boundary, max_segment_length=max_segment_length)
-    if geometry is None or geometry.is_empty:
+    if geometry is None or geometry.is_empty or reference is None or reference.is_empty:
         return geometry
     if max_segment_length >0:
         geometry = segmentize(geometry, max_segment_length=max_segment_length)
     geometry = polygon_to_multipolygon(geometry)
+    reference_coords = list(get_coords_from_geometry (reference))
+    if len(reference_coords) == 0:
+        prefer_vertices = False
     polygons =[]
     for geom in geometry.geoms:
         coordinates = []
         for x, y in geom.exterior.coords:  # for each vertex in the first line#TODO what about interior rings?
             point = Point(x, y)
-            p1, p2 = nearest_points(point, reference)  # find the nearest point on the second line
-            if p1.distance(p2) <= tolerance:
-                # it's within the snapping tolerance, use the snapped vertex
+            if prefer_vertices:
+                p1_vertices, p2_vertices = nearest_points(point, MultiPoint(reference_coords))
+            p1, p2 = nearest_points(point, reference)
+            # lines = shortest_line(point, reference.geoms)
+            # shortest_length = tolerance
+            # shortline =None
+            # for l in lines:
+            #     if l.length <= shortest_length:
+            #         shortline = l
+            #         shortest_length=shortline.length
+            #
+            #  # find the nearest point on the second line
+            #
+            # if shortline is not None:
+            #     # it's within the snapping tolerance, use the snapped vertex
+            #     pt = get_point(shortline, 1)
+            #     coordinates.append(pt.coords[0])
+            if prefer_vertices and p1.distance(p2_vertices) <= tolerance:
+                coordinates.append(p2_vertices.coords[0])
+            elif p1.distance(p2) <= tolerance:
                 coordinates.append(p2.coords[0])
             else:
                 # it's too far, use the original vertex
                 coordinates.append(point.coords[0])
         # convert coordinates back to a LineString and return
-        linestring = LineString(coordinates)
-        if not linestring is None and not linestring.is_empty:
-            polygonized = polygonize ([linestring])
-            for p in polygonized:
-                polygons.append(make_valid(remove_repeated_points(p)))
+        polygon = Polygon(coordinates)
+        polygons.append(make_valid(remove_repeated_points(polygon)))
     return  safe_unary_union(polygons)
 
 
@@ -590,3 +608,26 @@ def polygon_to_multipolygon(geometry):
         return MultiPolygon([geometry])
     else:
         raise Exception("No valid input")
+
+def get_coords_from_geometry(geometry):
+    coords = set()
+    if geometry is None or geometry.is_empty:
+        return coords
+    if isinstance(geometry, Point):
+        coords.update(geometry.coords[:-1])
+    if isinstance(geometry, MultiPoint):
+        for pt in geometry.geoms:
+            coords.update(get_coords_from_geometry(pt))
+    if isinstance(geometry, LineString):
+        coords.update(geometry.coords[:-1])
+    if isinstance(geometry, MultiLineString):
+        for line in geometry.geoms:
+            coords.update(get_coords_from_geometry(line))
+    if isinstance(geometry, Polygon):
+        coords.update(geometry.exterior.coords[:-1])
+        for linearring in geometry.interiors:
+            coords.update(linearring.coords[:-1])
+    elif isinstance(geometry, MultiPolygon):
+        for polygon in geometry.geoms:
+            coords.update(get_coords_from_geometry(polygon))
+    return coords
