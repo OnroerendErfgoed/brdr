@@ -16,11 +16,17 @@ from shapely import intersection
 from shapely import is_empty
 from shapely import make_valid
 from shapely import polygons
+from shapely import remove_repeated_points
+from shapely import segmentize
 from shapely import symmetric_difference
 from shapely import to_wkt
 from shapely import unary_union
 from shapely import union
 from shapely.geometry.base import BaseGeometry
+from shapely.geometry.linestring import LineString
+from shapely.geometry.multipolygon import MultiPolygon
+from shapely.geometry.point import Point
+from shapely.ops import nearest_points, polygonize
 from shapely.prepared import prep
 
 
@@ -435,6 +441,33 @@ def geom_to_wkt(shapely_geometry):
     """
     return to_wkt(shapely_geometry)
 
+def snap_polygon_to_polygon(geometry,reference,max_segment_length=1,tolerance=1):
+    #reference_segmentized = segmentize(reference.boundary, max_segment_length=max_segment_length)
+    if geometry is None or geometry.is_empty:
+        return geometry
+    if max_segment_length >0:
+        geometry = segmentize(geometry, max_segment_length=max_segment_length)
+    geometry = polygon_to_multipolygon(geometry)
+    polygons =[]
+    for geom in geometry.geoms:
+        coordinates = []
+        for x, y in geom.exterior.coords:  # for each vertex in the first line#TODO what about interior rings?
+            point = Point(x, y)
+            p1, p2 = nearest_points(point, reference)  # find the nearest point on the second line
+            if p1.distance(p2) <= tolerance:
+                # it's within the snapping tolerance, use the snapped vertex
+                coordinates.append(p2.coords[0])
+            else:
+                # it's too far, use the original vertex
+                coordinates.append(point.coords[0])
+        # convert coordinates back to a LineString and return
+        linestring = LineString(coordinates)
+        if not linestring is None and not linestring.is_empty:
+            polygonized = polygonize ([linestring])
+            for p in polygonized:
+                polygons.append(make_valid(remove_repeated_points(p)))
+    return  safe_unary_union(polygons)
+
 
 def create_donut(geometry, distance):
     if distance ==0:
@@ -545,3 +578,15 @@ def geojson_polygon_to_multipolygon(geojson):
                 "coordinates": [f["geometry"]["coordinates"]],
             }
     return geojson
+
+def polygon_to_multipolygon(geometry):
+    """
+     Turns polygon features into a multipolygon-feature
+    """
+
+    if geometry is None or geometry.is_empty or geometry.geom_type == "MultiPolygon":
+        return geometry
+    elif geometry.geom_type == "Polygon":
+        return MultiPolygon([geometry])
+    else:
+        raise Exception("No valid input")

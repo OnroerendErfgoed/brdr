@@ -13,9 +13,7 @@ class OpenbaarDomeinStrategy(IntEnum):
         the resulting geometry AS IS
     *   1 (SNAP_INNER_SIDE): Everything that falls within the relevant distance over
         the plot boundary is snapped to the plot. The outer boundary is not used.
-    *   2 (SNAP_OUTER_SIDE): Everything that falls within the relevant distance over the
-        plot boundary is snapped to the plot. The outer boundary is used.
-    *   3 (SNAP_ALL_SIDE): Everything that falls within the relevant distance over the
+    *   2 (SNAP_ALL_SIDE): Everything that falls within the relevant distance over the
         plot boundary is snapped to the plot. The inner and outer boundary is used where possible.
 
     """
@@ -23,8 +21,8 @@ class OpenbaarDomeinStrategy(IntEnum):
     EXCLUDE = -1
     AS_IS = 0
     SNAP_INNER_SIDE = 1
-    SNAP_OUTER_SIDE = 2
-    SNAP_ALL_SIDE = 3
+    SNAP_ALL_SIDE = 2
+    SNAP_SNAP = 3
 
 
 class AlignerResultType(str, Enum):

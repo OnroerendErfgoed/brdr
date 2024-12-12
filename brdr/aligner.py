@@ -38,7 +38,7 @@ from brdr.enums import (
     AlignerResultType,
     AlignerInputType,
 )
-from brdr.geometry_utils import buffer_neg, safe_unary_union, get_shape_index
+from brdr.geometry_utils import buffer_neg, safe_unary_union, get_shape_index, snap_polygon_to_polygon
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import buffer_pos
 from brdr.geometry_utils import fill_and_remove_gaps
@@ -1110,27 +1110,27 @@ class Aligner:
                 "OD-strategy Full-area-variant of OD-SNAP_INNER_SIDE"
             )
             geom_thematic_od = self._od_full_area(input_geometry, relevant_distance)
-        elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_OUTER_SIDE:
-            # Everything that falls within the relevant distance over
-            # the plot boundary is snapped to the plot.
-            #  Outer-reference-boundaries are used.
-            self.logger.feedback_debug("OD-strategy SNAP OUTER SIDE")
-            (
-                geom_thematic_od,
-                relevant_difference_array,
-                relevant_intersection_array,
-            ) = self._od_snap_all_side(
-                input_geometry, input_geometry_inner, relevant_distance, outer=True
-            )
-
-            # This part calculates the full area
-            geom_theme_od_min_clipped_plus_buffered_clipped = self._od_full_area(
-                input_geometry, relevant_distance
-            )
-            # UNION of both elements
-            geom_thematic_od = safe_union(
-                geom_theme_od_min_clipped_plus_buffered_clipped, geom_thematic_od
-            )
+        # elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_OUTER_SIDE:
+        #     # Everything that falls within the relevant distance over
+        #     # the plot boundary is snapped to the plot.
+        #     #  Outer-reference-boundaries are used.
+        #     self.logger.feedback_debug("OD-strategy SNAP OUTER SIDE")
+        #     (
+        #         geom_thematic_od,
+        #         relevant_difference_array,
+        #         relevant_intersection_array,
+        #     ) = self._od_snap_all_side(
+        #         input_geometry, input_geometry_inner, relevant_distance, outer=True
+        #     )
+        #
+        #     # This part calculates the full area
+        #     geom_theme_od_min_clipped_plus_buffered_clipped = self._od_full_area(
+        #         input_geometry, relevant_distance
+        #     )
+        #     # UNION of both elements
+        #     geom_thematic_od = safe_union(
+        #         geom_theme_od_min_clipped_plus_buffered_clipped, geom_thematic_od
+        #     )
 
         elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_ALL_SIDE:
             #  Inner & Outer-reference-boundaries are used.
@@ -1152,6 +1152,21 @@ class Aligner:
             geom_thematic_od = safe_union(
                 geom_theme_od_min_clipped_plus_buffered_clipped, geom_thematic_od
             )
+        elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_SNAP:
+            self.logger.feedback_debug("OD-strategy SNAP_SNAP")
+            # all OD-parts wil be added AS IS
+            geom_thematic_od = safe_difference(input_geometry, self._get_reference_union())
+            if geom_thematic_od is None or geom_thematic_od.is_empty:
+                pass
+            reference = safe_intersection(self._get_reference_union(),make_valid(
+            buffer_pos(
+                geom_thematic_od,
+                self.buffer_multiplication_factor * relevant_distance,
+                mitre_limit=self.mitre_limit,
+            )
+        ))
+            geom_thematic_od = snap_polygon_to_polygon(geom_thematic_od,reference,max_segment_length=1,tolerance= relevant_distance)
+
 
         # elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE_VARIANT_1:
         #     # OD-strategy SNAP_SINGLE_SIDE - variant 1:
@@ -1707,7 +1722,8 @@ def _calculate_geom_by_intersection_and_reference(
         geom_x = safe_intersection(
             geom_intersection, buffer_pos(geom_intersection_inner, 1 * buffer_distance)
         )
-        geom_x = snap(geom_x, geom_reference, 1 * buffer_distance)
+        #geom_x = snap(geom_x, geom_reference, 1 * buffer_distance)
+        geom_x = snap_polygon_to_polygon(geom_x, geom_reference,max_segment_length=1, tolerance= buffer_distance)
         geom = safe_intersection(geom_intersection, geom_x)
     elif (
         not geom_relevant_intersection.is_empty
