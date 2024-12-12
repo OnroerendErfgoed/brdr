@@ -1722,8 +1722,8 @@ def _calculate_geom_by_intersection_and_reference(
         geom_x = safe_intersection(
             geom_intersection, buffer_pos(geom_intersection_inner, 1 * buffer_distance)
         )
-        #geom_x = snap(geom_x, geom_reference, 1 * buffer_distance)
-        geom_x = snap_polygon_to_polygon(geom_x, geom_reference,max_segment_length=1, tolerance= buffer_distance)
+        geom_x = snap(geom_x, geom_reference, 1 * buffer_distance)#this could be better as this snaps to existing vertices
+        #geom_x = snap_polygon_to_polygon(geom_x, geom_reference,max_segment_length=1, tolerance= buffer_distance)
         geom = safe_intersection(geom_intersection, geom_x)
     elif (
         not geom_relevant_intersection.is_empty
