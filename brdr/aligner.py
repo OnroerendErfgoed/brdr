@@ -17,7 +17,7 @@ from shapely import to_geojson
 from shapely.geometry.base import BaseGeometry
 
 from brdr import __version__
-from brdr.constants import DEFAULT_CRS, PREDICTION_SCORE, PREDICTION_COUNT, MAX_OUTER_BUFFER
+from brdr.constants import DEFAULT_CRS, PREDICTION_SCORE, PREDICTION_COUNT, MAX_OUTER_BUFFER, MAX_SEGMENT_SNAPPING_SIZE
 from brdr.constants import (
     LAST_VERSION_DATE,
     VERSION_DATE,
@@ -35,7 +35,7 @@ from brdr.enums import (
     OpenbaarDomeinStrategy,
     Evaluation,
     AlignerResultType,
-    AlignerInputType,
+    AlignerInputType, SnapStrategy,
 )
 from brdr.geometry_utils import buffer_neg, safe_unary_union, get_shape_index, snap_polygon_to_polygon
 from brdr.geometry_utils import buffer_neg_pos
@@ -297,6 +297,7 @@ class Aligner:
 
         #do the calculation only for the outer border of the geometry. The inner part is added afterwards
         input_geometry_outer = safe_difference(input_geometry, input_geometry_double_inner)
+        #TODO maybe we could only do the calculation for the reference that are not fully covered
 
 
         # array with all relevant parts of a thematic geometry; initial empty Polygon
@@ -307,10 +308,27 @@ class Aligner:
         ) = self._calculate_intersection_between_geometry_and_od(
             input_geometry_outer, input_geometry_inner, relevant_distance
         )
+        # #todo get a list of fully covered reference items
+        # ref_fullies = self.reference_items.take(
+        #     self.reference_tree.query(input_geometry_outer, predicate='covered_by')
+        # ).tolist()
+        #
+        # for key_ref in ref_fullies:
+        #     geom_reference = self.dict_reference[key_ref]
+        #     preresult = self._add_multi_polygons_from_geom_to_array(geom_reference, preresult)
+        #     relevant_intersection_array = self._add_multi_polygons_from_geom_to_array(
+        #         buffer_neg(geom_reference,relevant_distance/2), relevant_intersection_array
+        #     )
+        #     relevant_diff_array = self._add_multi_polygons_from_geom_to_array(
+        #         Polygon(), relevant_diff_array
+        #     )
+
         # get a list of all ref_ids that are intersecting the thematic geometry
         ref_intersections = self.reference_items.take(
             self.reference_tree.query(input_geometry_outer)
         ).tolist()
+        # ref_intersections_no_fullies= list(set(ref_intersections) - set(ref_fullies))
+        # for key_ref in ref_intersections_no_fullies:
         for key_ref in ref_intersections:
             geom_reference = self.dict_reference[key_ref]
             geom_intersection = safe_intersection(input_geometry_outer, geom_reference)
@@ -1164,7 +1182,7 @@ class Aligner:
                 mitre_limit=self.mitre_limit,
             )
         ))
-            geom_thematic_od = snap_polygon_to_polygon(geom_thematic_od,reference,max_segment_length=1,tolerance= relevant_distance)
+            geom_thematic_od = snap_polygon_to_polygon(geom_thematic_od,reference,max_segment_length=MAX_SEGMENT_SNAPPING_SIZE,tolerance= relevant_distance)
 
 
         # elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE_VARIANT_1:
@@ -1758,11 +1776,22 @@ def _calculate_geom_by_intersection_and_reference(
         )
         geom_y = safe_unary_union(
             [geom_y, geom_intersection_inner]
-        )  # add inner part that has to be present
+        )  # add inner part that has to be present #TODO, geom_intersection_inner is always empty at this point?
         geom = safe_intersection(
             geom_x,
             geom_y,
         )
+        #TEST: should this code below result in nicer results?
+
+        #first we take the part that we would remove.
+        # We do a neg_pos buffer on it  and combine it with the zone that absolutely should be excluded
+        #we take as result the reference minus the removed part
+        removed_geom=safe_difference(geom_reference,geom)
+        removed_geom=safe_union(buffer_pos(geom_relevant_difference,buffer_distance), buffer_neg_pos(removed_geom,buffer_distance))
+        geom = safe_difference(geom_reference,removed_geom)
+        #todo this is only a test as this is not keeping the interior rings
+        geom = snap_polygon_to_polygon(geom,geom_reference,snap_strategy=SnapStrategy.ONLY_VERTICES,tolerance=2*buffer_distance)
+        #END TEST
         # when calculating for OD, we create a 'virtual parcel'. When calculating this
         # virtual parcel, it is buffered to take outer boundaries into account.
         # This results in a side effect that there are extra non-logical parts included
@@ -1777,8 +1806,8 @@ def _calculate_geom_by_intersection_and_reference(
     else:
         if is_openbaar_domein:
             geom = geom_relevant_intersection  # (=empty geometry)
-        # geom = snap_geom_to_reference (geom_intersection, geom_reference,
-        # relevant_distance)
+            #TODO: test if the snapped geom from below is better?
+            #geom = snap_polygon_to_polygon (geom_intersection, geom_reference, snap_strategy=SnapStrategy.PREFER_VERTICES, tolerance=2*buffer_distance)
         elif threshold_overlap_percentage < 0:
             # if we take a value of -1, the original border will be used
             geom = geom_intersection

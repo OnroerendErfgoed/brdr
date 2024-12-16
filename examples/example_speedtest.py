@@ -14,7 +14,7 @@ def main():
     :return:
     """
     # Initiate brdr
-    aligner = Aligner(max_workers=None)
+    aligner = Aligner(max_workers=5)
     iterations = 10
     od_strategy = OpenbaarDomeinStrategy.SNAP_ALL_SIDE
     relevant_distance=5

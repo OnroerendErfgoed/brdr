@@ -17,7 +17,6 @@ from shapely import intersection
 from shapely import is_empty
 from shapely import make_valid
 from shapely import polygons
-from shapely import remove_repeated_points
 from shapely import segmentize
 from shapely import symmetric_difference
 from shapely import to_wkt
@@ -29,6 +28,9 @@ from shapely.geometry.multipolygon import MultiPolygon
 from shapely.geometry.point import Point
 from shapely.ops import nearest_points
 from shapely.prepared import prep
+
+from brdr.constants import MAX_SEGMENT_SNAPPING_SIZE
+from brdr.enums import SnapStrategy
 
 
 def buffer_neg_pos(geometry, buffer_value, mitre_limit=5):
@@ -442,8 +444,7 @@ def geom_to_wkt(shapely_geometry):
     """
     return to_wkt(shapely_geometry)
 
-def snap_polygon_to_polygon(geometry,reference,prefer_vertices=True,max_segment_length=1,tolerance=1):
-    #reference_segmentized = segmentize(reference.boundary, max_segment_length=max_segment_length)
+def snap_polygon_to_polygon(geometry,reference,snap_strategy=SnapStrategy.PREFER_VERTICES,max_segment_length=MAX_SEGMENT_SNAPPING_SIZE,tolerance=1):
     if geometry is None or geometry.is_empty or reference is None or reference.is_empty:
         return geometry
     if max_segment_length >0:
@@ -451,41 +452,37 @@ def snap_polygon_to_polygon(geometry,reference,prefer_vertices=True,max_segment_
     geometry = polygon_to_multipolygon(geometry)
     reference_coords = list(get_coords_from_geometry (reference))
     if len(reference_coords) == 0:
-        prefer_vertices = False
+        snap_strategy = SnapStrategy.NO_PREFERENCE
     polygons =[]
     for geom in geometry.geoms:
         coordinates = []
         for x, y in geom.exterior.coords:  # for each vertex in the first line#TODO what about interior rings?
             point = Point(x, y)
-            if prefer_vertices:
+            if snap_strategy==SnapStrategy.NO_PREFERENCE:
+                p1, p2 = nearest_points(point, reference)
+                if point.distance(p2) <= tolerance:
+                    coordinates.append(p2.coords[0])
+                else:
+                    coordinates.append(point.coords[0])
+            if snap_strategy == SnapStrategy.ONLY_VERTICES:
                 p1_vertices, p2_vertices = nearest_points(point, MultiPoint(reference_coords))
-            p1, p2 = nearest_points(point, reference)
-            # lines = shortest_line(point, reference.geoms)
-            # shortest_length = tolerance
-            # shortline =None
-            # for l in lines:
-            #     if l.length <= shortest_length:
-            #         shortline = l
-            #         shortest_length=shortline.length
-            #
-            #  # find the nearest point on the second line
-            #
-            # if shortline is not None:
-            #     # it's within the snapping tolerance, use the snapped vertex
-            #     pt = get_point(shortline, 1)
-            #     coordinates.append(pt.coords[0])
-            if prefer_vertices and p1.distance(p2_vertices) <= tolerance:
-                coordinates.append(p2_vertices.coords[0])
-            elif p1.distance(p2) <= tolerance:
-                coordinates.append(p2.coords[0])
-            else:
-                # it's too far, use the original vertex
-                coordinates.append(point.coords[0])
-        # convert coordinates back to a LineString and return
+                if point.distance(p2_vertices) <= tolerance:
+                    coordinates.append(p2_vertices.coords[0])
+                else:
+                    coordinates.append(point.coords[0])
+            if snap_strategy == SnapStrategy.PREFER_VERTICES:
+                p1_vertices, p2_vertices = nearest_points(point, MultiPoint(reference_coords))
+                p1, p2 = nearest_points(point, reference)
+                if point.distance(p2_vertices) <= tolerance:
+                    coordinates.append(p2_vertices.coords[0])
+                elif p1.distance(p2) <= tolerance:
+                    coordinates.append(p2.coords[0])
+                else:
+                    coordinates.append(point.coords[0])
+        # convert coordinates back to a polygon
         polygon = Polygon(coordinates)
-        polygons.append(make_valid(remove_repeated_points(polygon)))
+        polygons.append(make_valid((polygon)))
     return  safe_unary_union(polygons)
-
 
 def create_donut(geometry, distance):
     if distance ==0:
@@ -497,12 +494,12 @@ def create_donut(geometry, distance):
 def features_by_geometric_operation(
     list_input_geometries, list_input_ids, list_geometries, predicate="intersects"
 ):
-    thematic_tree = STRtree(list_input_geometries)
-    thematic_items = np.array(list_input_ids)
-    arr_indices = thematic_tree.query(list_geometries, predicate=predicate)
-    thematic_intersections = list(set(thematic_items.take(arr_indices[1])))
-    # thematic_intersections = [str(element) for element in thematic_intersections]
-    return thematic_intersections
+    tree = STRtree(list_input_geometries)
+    id_items = np.array(list_input_ids)
+    arr_indices = tree.query(list_geometries, predicate=predicate)
+    resulting_id_items = list(set(id_items.take(arr_indices[1])))
+    # resulting_id_items = [str(element) for element in resulting_id_items]
+    return resulting_id_items
 
 
 def get_partitions(geom, delta):
@@ -602,12 +599,29 @@ def polygon_to_multipolygon(geometry):
      Turns polygon features into a multipolygon-feature
     """
 
-    if geometry is None or geometry.is_empty or geometry.geom_type == "MultiPolygon":
+    if geometry is None:
+        return MultiPolygon()
+    elif geometry.geom_type == "MultiPolygon":
         return geometry
     elif geometry.geom_type == "Polygon":
         return MultiPolygon([geometry])
+    elif geometry.geom_type == "GeometryCollection":
+        for g in geometry.geoms:
+            array=[]
+            # Ensure each sub-geometry is valid.
+            g = make_valid(g)
+            if str(g.geom_type) in ["Polygon", "MultiPolygon"]:
+                # Append valid polygons and multipolygons to the array.
+                array.append(g)
+            geom = safe_unary_union(array)
+            if geom.geom_type == "Polygon":
+                return MultiPolygon([geom])
+            elif geom.geom_type == "MultiPolygon":
+                return geom
+            else:
+                return MultiPolygon()
     else:
-        raise Exception("No valid input")
+        return MultiPolygon()
 
 def get_coords_from_geometry(geometry):
     coords = set()
