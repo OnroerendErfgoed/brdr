@@ -3,6 +3,7 @@ from abc import ABC
 from datetime import datetime
 
 import requests as requests
+from shapely import force_2d
 from shapely import make_valid
 from shapely.geometry.base import BaseGeometry
 
@@ -20,7 +21,7 @@ class Loader(ABC):
         self.versiondate_info: dict[any, str] = None
 
     def load_data(self):
-        self.data_dict = {x: make_valid(self.data_dict[x]) for x in self.data_dict}
+        self.data_dict = {x: force_2d(make_valid(self.data_dict[x])) for x in self.data_dict}
         if self.versiondate_info is not None:
             for key in self.data_dict_properties.keys():
                 try:

@@ -103,3 +103,17 @@ class Evaluation(str, Enum):
     TO_CHECK_PREDICTION_MULTI = "to_check_prediction_multi"
     TO_CHECK_NO_PREDICTION = "to_check_no_prediction"
     NO_CHANGE = "no_change"
+
+
+class SnapStrategy(str, Enum):
+    """
+    Enum for snapping strategy when snapping a polygon to a reference:
+
+    ONLY_VERTICES = "only_vertices"
+    PREFER_VERTICES = "prefer_vertices"
+    NO_PREFERENCE = "no_preference"
+    """
+
+    ONLY_VERTICES = "only_vertices"
+    PREFER_VERTICES = "prefer_vertices"
+    NO_PREFERENCE = "no_preference"

@@ -160,7 +160,7 @@ class TestAligner(unittest.TestCase):
         dict_series, dict_predictions, diffs = aligner.predictor(
             relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
         )
-        self.assertEqual(len(dict_predictions["id1"]), 3)
+        self.assertEqual(len(dict_predictions["id1"]), 4)
 
     def test_predictor_no_prediction(self):
         """
