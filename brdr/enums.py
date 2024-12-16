@@ -104,6 +104,7 @@ class Evaluation(str, Enum):
     TO_CHECK_NO_PREDICTION = "to_check_no_prediction"
     NO_CHANGE = "no_change"
 
+
 class SnapStrategy(str, Enum):
     """
     Enum for snapping strategy when snapping a polygon to a reference:

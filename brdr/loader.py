@@ -3,9 +3,9 @@ from abc import ABC
 from datetime import datetime
 
 import requests as requests
+from shapely import force_2d
 from shapely import make_valid
 from shapely.geometry.base import BaseGeometry
-from shapely import force_2d
 
 from brdr.constants import DATE_FORMAT
 from brdr.constants import VERSION_DATE

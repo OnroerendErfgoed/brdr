@@ -444,35 +444,54 @@ def geom_to_wkt(shapely_geometry):
     """
     return to_wkt(shapely_geometry)
 
-def snap_polygon_to_polygon(geometry,reference,snap_strategy=SnapStrategy.PREFER_VERTICES,max_segment_length=MAX_SEGMENT_SNAPPING_SIZE,tolerance=1):
+
+def snap_polygon_to_polygon(
+    geometry,
+    reference,
+    snap_strategy=SnapStrategy.PREFER_VERTICES,
+    max_segment_length=MAX_SEGMENT_SNAPPING_SIZE,
+    tolerance=1,
+        correction_distance = 0.01
+):
     if geometry is None or geometry.is_empty or reference is None or reference.is_empty:
         return geometry
-    if max_segment_length >0:
+    if max_segment_length > 0:
         geometry = segmentize(geometry, max_segment_length=max_segment_length)
     geometry = polygon_to_multipolygon(geometry)
-    reference_coords = list(get_coords_from_geometry (reference))
+    reference_coords = list(get_coords_from_geometry(reference))
     if len(reference_coords) == 0:
         snap_strategy = SnapStrategy.NO_PREFERENCE
-    polygons =[]
+
+
+    polygons = []
     for geom in geometry.geoms:
         coordinates = []
-        for x, y in geom.exterior.coords:  # for each vertex in the first line#TODO what about interior rings?
+        for (
+            x,
+            y,
+        ) in (
+            geom.exterior.coords
+        ):  # for each vertex in the first line#TODO what about interior rings?
             point = Point(x, y)
-            if snap_strategy==SnapStrategy.NO_PREFERENCE:
-                p1, p2 = nearest_points(point, reference)
+            p1, p2 = nearest_points(point, reference)
+            if len(reference_coords) != 0:
+                p1_vertices, p2_vertices = nearest_points(
+                    point, MultiPoint(reference_coords)
+                )
+            if point.distance(p2) <= correction_distance:
+                coordinates.append(p2.coords[0])
+                continue
+            if snap_strategy == SnapStrategy.NO_PREFERENCE:
                 if point.distance(p2) <= tolerance:
                     coordinates.append(p2.coords[0])
                 else:
                     coordinates.append(point.coords[0])
-            if snap_strategy == SnapStrategy.ONLY_VERTICES:
-                p1_vertices, p2_vertices = nearest_points(point, MultiPoint(reference_coords))
+            elif snap_strategy == SnapStrategy.ONLY_VERTICES:
                 if point.distance(p2_vertices) <= tolerance:
                     coordinates.append(p2_vertices.coords[0])
                 else:
                     coordinates.append(point.coords[0])
-            if snap_strategy == SnapStrategy.PREFER_VERTICES:
-                p1_vertices, p2_vertices = nearest_points(point, MultiPoint(reference_coords))
-                p1, p2 = nearest_points(point, reference)
+            elif snap_strategy == SnapStrategy.PREFER_VERTICES:
                 if point.distance(p2_vertices) <= tolerance:
                     coordinates.append(p2_vertices.coords[0])
                 elif p1.distance(p2) <= tolerance:
@@ -482,10 +501,11 @@ def snap_polygon_to_polygon(geometry,reference,snap_strategy=SnapStrategy.PREFER
         # convert coordinates back to a polygon
         polygon = Polygon(coordinates)
         polygons.append(make_valid((polygon)))
-    return  safe_unary_union(polygons)
+    return safe_unary_union(polygons)
+
 
 def create_donut(geometry, distance):
-    if distance ==0:
+    if distance == 0:
         return geometry
     inner_geometry = buffer_neg(geometry, distance)
     return safe_difference(geometry, inner_geometry)
@@ -525,8 +545,9 @@ def get_partitions(geom, delta):
     filtered_grid = list(filter(prepared_geom.intersects, partitions))
     return filtered_grid
 
-def get_shape_index(area,perimeter):
-    if area>0 and perimeter>0:
+
+def get_shape_index(area, perimeter):
+    if area > 0 and perimeter > 0:
         return 4 * pi * (area / (perimeter**2))
     else:
         return -1
@@ -594,9 +615,10 @@ def geojson_polygon_to_multipolygon(geojson):
             }
     return geojson
 
+
 def polygon_to_multipolygon(geometry):
     """
-     Turns polygon features into a multipolygon-feature
+    Turns polygon features into a multipolygon-feature
     """
 
     if geometry is None:
@@ -607,7 +629,7 @@ def polygon_to_multipolygon(geometry):
         return MultiPolygon([geometry])
     elif geometry.geom_type == "GeometryCollection":
         for g in geometry.geoms:
-            array=[]
+            array = []
             # Ensure each sub-geometry is valid.
             g = make_valid(g)
             if str(g.geom_type) in ["Polygon", "MultiPolygon"]:
@@ -622,6 +644,7 @@ def polygon_to_multipolygon(geometry):
                 return MultiPolygon()
     else:
         return MultiPolygon()
+
 
 def get_coords_from_geometry(geometry):
     coords = set()

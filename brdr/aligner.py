@@ -17,7 +17,13 @@ from shapely import to_geojson
 from shapely.geometry.base import BaseGeometry
 
 from brdr import __version__
-from brdr.constants import DEFAULT_CRS, PREDICTION_SCORE, PREDICTION_COUNT, MAX_OUTER_BUFFER, MAX_SEGMENT_SNAPPING_SIZE
+from brdr.constants import (
+    DEFAULT_CRS,
+    PREDICTION_SCORE,
+    PREDICTION_COUNT,
+    MAX_OUTER_BUFFER,
+    MAX_SEGMENT_SNAPPING_SIZE,
+)
 from brdr.constants import (
     LAST_VERSION_DATE,
     VERSION_DATE,
@@ -35,9 +41,15 @@ from brdr.enums import (
     OpenbaarDomeinStrategy,
     Evaluation,
     AlignerResultType,
-    AlignerInputType, SnapStrategy,
+    AlignerInputType,
+    SnapStrategy,
 )
-from brdr.geometry_utils import buffer_neg, safe_unary_union, get_shape_index, snap_polygon_to_polygon
+from brdr.geometry_utils import (
+    buffer_neg,
+    safe_unary_union,
+    get_shape_index,
+    snap_polygon_to_polygon,
+)
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import buffer_pos
 from brdr.geometry_utils import fill_and_remove_gaps
@@ -290,15 +302,15 @@ class Aligner:
             input_geometry, relevant_distance
         )  # inner part of the input that must be always available
 
-
         input_geometry_double_inner = buffer_neg(
-            input_geometry, 2*relevant_distance + MAX_OUTER_BUFFER
+            input_geometry, 2 * relevant_distance + MAX_OUTER_BUFFER
         )  # inner part of the input that must be always available
 
-        #do the calculation only for the outer border of the geometry. The inner part is added afterwards
-        input_geometry_outer = safe_difference(input_geometry, input_geometry_double_inner)
-        #TODO maybe we could only do the calculation for the reference that are not fully covered
-
+        # do the calculation only for the outer border of the geometry. The inner part is added afterwards
+        input_geometry_outer = safe_difference(
+            input_geometry, input_geometry_double_inner
+        )
+        # TODO maybe we could only do the calculation for the reference that are not fully covered
 
         # array with all relevant parts of a thematic geometry; initial empty Polygon
         (
@@ -668,10 +680,10 @@ class Aligner:
         ids_to_evaluate=None,
         base_formula_field=FORMULA_FIELD_NAME,
         all_predictions=False,
-            relevant_distances=[
-                round(k, 1) for k in np.arange(0, 310, 10, dtype=int) / 100
-            ],
-            prefer_full = False
+        relevant_distances=[
+            round(k, 1) for k in np.arange(0, 310, 10, dtype=int) / 100
+        ],
+        prefer_full=False,
     ):
         """
 
@@ -746,12 +758,15 @@ class Aligner:
                     and props[PREDICTION_COUNT] > 1
                 ):
                     props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_PREDICTION_MULTI
-                if prefer_full:# when full_results have to be prefered, the results are checked and the PREDICTION_SCORE is augmented
+                if (
+                    prefer_full
+                ):  # when full_results have to be prefered, the results are checked and the PREDICTION_SCORE is augmented
                     formula = json.loads(props[FORMULA_FIELD_NAME])
-                    if formula['full']:
-                        dict_affected_predictions[theme_id][dist][
-                            PREDICTION_SCORE] = dict_affected_predictions[theme_id][dist][
-                    PREDICTION_SCORE] + 100
+                    if formula["full"]:
+                        dict_affected_predictions[theme_id][dist][PREDICTION_SCORE] = (
+                            dict_affected_predictions[theme_id][dist][PREDICTION_SCORE]
+                            + 100
+                        )
                         props[PREDICTION_COUNT] = -1
                         props[EVALUATION_FIELD_NAME] = Evaluation.PREDICTION_FULL
                 prediction = dict_affected_predictions[theme_id][dist]
@@ -1074,7 +1089,7 @@ class Aligner:
         :return:
         """
         # Calculate the intersection between thematic and Openbaar Domein
-        #buffer_distance = relevant_distance / 2
+        # buffer_distance = relevant_distance / 2
         relevant_intersection_array = []
         relevant_difference_array = []
         geom_thematic_od = Polygon()
@@ -1086,13 +1101,15 @@ class Aligner:
             # Remove from the thematic layer all parts that are not on the reference
             # layer
             # !!this strategy adapts the input-geometry!!
-            #input_geometry = safe_intersection(input_geometry, self._get_reference_union())
+            # input_geometry = safe_intersection(input_geometry, self._get_reference_union())
         elif self.od_strategy == OpenbaarDomeinStrategy.AS_IS:
             # All parts that are not covered by the reference layer are added to the
             #         resulting geometry AS IS
             self.logger.feedback_debug("OD-strategy AS IS")
             # all OD-parts wil be added AS IS
-            geom_thematic_od = safe_difference(input_geometry, self._get_reference_union())
+            geom_thematic_od = safe_difference(
+                input_geometry, self._get_reference_union()
+            )
         # elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_INNER_SIDE:
         #     # Everything that falls within the relevant distance over the
         #     #  plot boundary is snapped to the plot.
@@ -1172,45 +1189,28 @@ class Aligner:
         elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_SNAP:
             self.logger.feedback_debug("OD-strategy SNAP_SNAP")
             # all OD-parts wil be added AS IS
-            geom_thematic_od = safe_difference(input_geometry, self._get_reference_union())
+            geom_thematic_od = safe_difference(
+                input_geometry, self._get_reference_union()
+            )
             if geom_thematic_od is None or geom_thematic_od.is_empty:
                 pass
-            reference = safe_intersection(self._get_reference_union(),make_valid(
-            buffer_pos(
-                geom_thematic_od,
-                self.buffer_multiplication_factor * relevant_distance,
-                mitre_limit=self.mitre_limit,
+            reference = safe_intersection(
+                self._get_reference_union(),
+                make_valid(
+                    buffer_pos(
+                        geom_thematic_od,
+                        self.buffer_multiplication_factor * relevant_distance,
+                        mitre_limit=self.mitre_limit,
+                    )
+                ),
             )
-        ))
-            geom_thematic_od = snap_polygon_to_polygon(geom_thematic_od,reference,max_segment_length=MAX_SEGMENT_SNAPPING_SIZE,tolerance= relevant_distance)
-
-
-        # elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE_VARIANT_1:
-        #     # OD-strategy SNAP_SINGLE_SIDE - variant 1:
-        #     # Everything that falls within the relevant distance over the
-        #     #  plot boundary is snapped to the plot.
-        #     #  Only the inner-reference-boundaries are used.
-        #     #  The outer-reference-boundaries are not used.
-        #     self.logger.feedback_debug("OD-strategy SNAP_SINGLE_SIDE - variant 1")
-        #     # geom of OD
-        #     geom_od = safe_difference(geometry, self._get_reference_union())
-        #     # only the relevant parts of OD
-        #     geom_od_neg_pos = buffer_neg_pos(
-        #         geom_od,
-        #         buffer_distance,
-        #         mitre_limit=self.mitre_limit,
-        #     )
-        #     # resulting thematic OD
-        #     geom_thematic_od = safe_intersection(geom_od_neg_pos, geom_od)
-        # elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE_VARIANT_2:
-        #     # OD-strategy SNAP_SINGLE_SIDE - variant 2:
-        #     # Everything that falls within the relevant distance over the
-        #     #  plot boundary is snapped to the plot.
-        #     #  Only the inner-reference-boundaries are used.
-        #     #  The outer-reference-boundaries are not used.
-        #     self.logger.feedback_debug("OD-strategy SNAP_SINGLE_SIDE - variant 2")
-        #     geom_thematic_od = Polygon()
-        #     pass
+            geom_thematic_od = snap_polygon_to_polygon(
+                geom_thematic_od,
+                reference,
+                max_segment_length=MAX_SEGMENT_SNAPPING_SIZE,
+                snap_strategy=SnapStrategy.PREFER_VERTICES,
+                tolerance=relevant_distance,
+            )
 
         # ADD THEMATIC_OD
         preresult = self._add_multi_polygons_from_geom_to_array(geom_thematic_od, [])
@@ -1609,22 +1609,24 @@ class Aligner:
             and od_alike
             and base_formula["full"]
             and actual_formula["full"]
-        ): #formula is the same, and both geometries are 'full'
+        ):  # formula is the same, and both geometries are 'full'
             properties[EVALUATION_FIELD_NAME] = Evaluation.EQUALITY_EQUAL_FORMULA_FULL_1
         elif (
             equal_reference_features
             and od_alike
             and base_formula["full"] == actual_formula["full"]
-        ): #formula is the same,  both geometries are not 'full'
+        ):  # formula is the same,  both geometries are not 'full'
             properties[EVALUATION_FIELD_NAME] = Evaluation.EQUALITY_EQUAL_FORMULA_2
-        elif base_formula["full"] and actual_formula["full"] and od_alike: # formula not the same but geometries are full
+        elif (
+            base_formula["full"] and actual_formula["full"] and od_alike
+        ):  # formula not the same but geometries are full
             properties[EVALUATION_FIELD_NAME] = Evaluation.EQUALITY_FULL_3
         # elif base_formula["full"] == actual_formula["full"] and od_alike:
         #    properties[EVALUATION_FIELD_NAME] = Evaluation.EQUALITY_NON_FULL
-        #TODO evaluate when not-full-parcels: compare all parcels?
-        #elif geom_predicted.area >10000: #evaluate only the outer ring
-            #pass
-            #evaluate only the outer ring? # TODO issue 102
+        # TODO evaluate when not-full-parcels: compare all parcels?
+        # elif geom_predicted.area >10000: #evaluate only the outer ring
+        # pass
+        # evaluate only the outer ring? # TODO issue 102
         else:
             properties[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
         return properties
@@ -1739,10 +1741,10 @@ def _calculate_geom_by_intersection_and_reference(
         geom_x = safe_intersection(
             geom_intersection, buffer_pos(geom_intersection_inner, 1 * buffer_distance)
         )
-        #geom_x = snap(geom_x, geom_reference, 1 * buffer_distance)#this could be better as this snaps to existing vertices
-        geom_x = snap_polygon_to_polygon(geom_x, geom_reference,max_segment_length=1, tolerance= buffer_distance)
+        geom_x = snap_polygon_to_polygon(
+            geom_x, geom_reference, max_segment_length=MAX_SEGMENT_SNAPPING_SIZE,snap_strategy=SnapStrategy.PREFER_VERTICES, tolerance=2*buffer_distance
+        )
         geom = safe_intersection(geom_intersection, geom_x)
-        #geom = snap_polygon_to_polygon(geom_intersection,geom_reference,max_segment_length=1, tolerance= 2*buffer_distance)
     elif (
         not geom_relevant_intersection.is_empty
         and not geom_relevant_difference.is_empty
@@ -1776,22 +1778,28 @@ def _calculate_geom_by_intersection_and_reference(
         )
         geom_y = safe_unary_union(
             [geom_y, geom_intersection_inner]
-        )  # add inner part that has to be present #TODO, geom_intersection_inner is always empty at this point?
+        ) #geom_intersection_inner can be empty or non- empty at this point!
+        # add inner part that has to be present
         geom = safe_intersection(
             geom_x,
             geom_y,
         )
-        #TEST: should this code below result in nicer results?
-
-        #first we take the part that we would remove.
+        # first we take the part that we would remove.
         # We do a neg_pos buffer on it  and combine it with the zone that absolutely should be excluded
-        #we take as result the reference minus the removed part
-        removed_geom=safe_difference(geom_reference,geom)
-        removed_geom=safe_union(buffer_pos(geom_relevant_difference,buffer_distance), buffer_neg_pos(removed_geom,buffer_distance))
-        geom = safe_difference(geom_reference,removed_geom)
-        #todo this is only a test as this is not keeping the interior rings
-        geom = snap_polygon_to_polygon(geom,geom_reference,snap_strategy=SnapStrategy.ONLY_VERTICES,tolerance=2*buffer_distance)
-        #END TEST
+        # we take as result the reference minus the removed part
+        removed_geom = safe_difference(geom_reference, geom)
+        removed_geom = safe_union(
+            buffer_pos(geom_relevant_difference, buffer_distance),
+            buffer_neg_pos(removed_geom, buffer_distance),
+        )
+        geom = safe_difference(geom_reference, removed_geom)
+        geom = snap_polygon_to_polygon(
+            geom,
+            geom_reference,
+            snap_strategy=SnapStrategy.PREFER_VERTICES,
+            tolerance=2 * buffer_distance,
+        )
+
         # when calculating for OD, we create a 'virtual parcel'. When calculating this
         # virtual parcel, it is buffered to take outer boundaries into account.
         # This results in a side effect that there are extra non-logical parts included
@@ -1806,8 +1814,8 @@ def _calculate_geom_by_intersection_and_reference(
     else:
         if is_openbaar_domein:
             geom = geom_relevant_intersection  # (=empty geometry)
-            #TODO: test if the snapped geom from below is better?
-            #geom = snap_polygon_to_polygon (geom_intersection, geom_reference, snap_strategy=SnapStrategy.PREFER_VERTICES, tolerance=2*buffer_distance)
+            # TODO: test if the snapped geom from below is better?
+            # geom = snap_polygon_to_polygon (geom_intersection, geom_reference, snap_strategy=SnapStrategy.PREFER_VERTICES, tolerance=2*buffer_distance)
         elif threshold_overlap_percentage < 0:
             # if we take a value of -1, the original border will be used
             geom = geom_intersection

@@ -55,7 +55,7 @@ if __name__ == "__main__":
     relevant_distances = [0.5, 1, 3, 6]
     dict_results = aligner.process(
         relevant_distances=relevant_distances,
-        od_strategy=OpenbaarDomeinStrategy.SNAP_OUTER_SIDE,
+        od_strategy=OpenbaarDomeinStrategy.SNAP_ALL_SIDE,
         threshold_overlap_percentage=50,
     )
     # SHOW results: map and plotted changes
