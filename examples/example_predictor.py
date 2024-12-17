@@ -14,7 +14,7 @@ if __name__ == "__main__":
     relevant distances of 'no-change')
     """
     # Initiate an Aligner
-    aligner = Aligner()
+    aligner = Aligner(max_workers=-1)
     # Load thematic data & reference data
     loader = GeoJsonFileLoader(
         "../tests/testdata/test_wanted_changes.geojson", "theme_id"
@@ -29,7 +29,7 @@ if __name__ == "__main__":
     # predict which relevant distances are interesting to propose as resulting geometry
     dict_series, dict_predictions, diffs = aligner.predictor(
         relevant_distances=series,
-        od_strategy=OpenbaarDomeinStrategy.SNAP_FULL_AREA_ALL_SIDE,
+        od_strategy=OpenbaarDomeinStrategy.SNAP_ALL_SIDE,
         threshold_overlap_percentage=50,
     )
 

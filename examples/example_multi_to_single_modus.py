@@ -15,7 +15,7 @@ if __name__ == "__main__":
     # Example (ErfgoedObject): https://inventaris.onroerenderfgoed.be/erfgoedobjecten/305858
     loader = OnroerendErfgoedLoader([305858], oetype=OEType.EO)
     relevant_distance = 5  # rd is taken very high to show the difference
-    od_strategy = OpenbaarDomeinStrategy.SNAP_FULL_AREA_ALL_SIDE
+    od_strategy = OpenbaarDomeinStrategy.SNAP_ALL_SIDE
     threshold_circle_ratio = 0.75  # default it is 0.98, but because it are not fully circles in this example we put this on 0.75
 
     # EXAMPLE of "multi_as_single_modus"=FALSE

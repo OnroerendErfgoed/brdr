@@ -77,6 +77,25 @@
     - Bugfix when using 0m as relevant distance for GRB-actualisation [#121]
     - Bugfix so GRB-actualisation also works with local layers [#120]
 
+# 0.6.0
+
+- Refactoring:
+    - Recalculation of the shape_index parameter [#137]
+    - Cleaned up several OD-strategies that are not used[#136]
+    - Performance gain for the algorithm by only calculating the 'outer boundary' [#142]
+
+- Functionalities:
+    - Predictor: Added sorting of predictions based on 'stability length', so the most logical predictions can be
+      proposed [#133]
+    - Evaluate: aligned features based on 'prediction_score' [#135][#58]
+    - Evaluate: Added possibility to prefer 'full results' when evaluating alignments [#144]
+    - Added new OD-strategies based on new snapping-function: SNAP_PREFER_VERTICES,
+      SNAP_NO_PREFERENCE,SNAP_ONLY_VERTICES [#147]
+
+- Bugfixing:
+    - Bugfix for empty geometry[#140]
+    - Bugfix for OD-snapping strategies [#146]
+
 
 
 

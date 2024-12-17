@@ -20,7 +20,7 @@ from brdr.constants import (
     AREA_ATTRIBUTE,
 )
 from brdr.enums import DiffMetric
-from brdr.geometry_utils import get_partitions, get_bbox
+from brdr.geometry_utils import get_partitions, get_bbox, get_shape_index
 from brdr.typings import ProcessResult
 
 
@@ -95,7 +95,7 @@ def _feature_from_geom(
         perimeter = geom.length
         properties[AREA_ATTRIBUTE] = area
         properties[PERIMETER_ATTRIBUTE] = perimeter
-        properties[SHAPE_INDEX_ATTRIBUTE] = perimeter / area if area != 0 else -1
+        properties[SHAPE_INDEX_ATTRIBUTE] = get_shape_index(area, perimeter)
     return Feature(geometry=geom, properties=properties)
 
 
@@ -152,7 +152,9 @@ def multipolygons_to_singles(dict_geoms):
     resulting_dict_geoms = {}
     dict_multi_as_single = {}
     for key, geom in dict_geoms.items():
-        if str(geom.geom_type) == "Polygon":
+        if geom is None or geom.is_empty:
+            continue
+        elif str(geom.geom_type) == "Polygon":
             resulting_dict_geoms[key] = geom
         elif str(geom.geom_type) == "MultiPolygon":
             polygons = list(geom.geoms)
@@ -429,7 +431,7 @@ def get_collection_by_partition(
     dict: A collection of geographic data, potentially partitioned by the input geometry.
     """
     collection = {}
-    if geometry is None:
+    if geometry is None or geometry.is_empty:
         collection = get_collection(
             _add_bbox_to_url(url=url, crs=crs, bbox=None), limit
         )

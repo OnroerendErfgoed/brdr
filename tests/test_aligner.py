@@ -11,7 +11,7 @@ from shapely.geometry import shape
 
 from brdr.aligner import Aligner
 from brdr.constants import FORMULA_FIELD_NAME, AREA_ATTRIBUTE
-from brdr.enums import GRBType, AlignerResultType
+from brdr.enums import GRBType, AlignerResultType, Evaluation
 from brdr.enums import OpenbaarDomeinStrategy
 from brdr.geometry_utils import _grid_bounds, safe_equals
 from brdr.geometry_utils import buffer_neg_pos
@@ -412,6 +412,7 @@ class TestAligner(unittest.TestCase):
             date_start=date(2022, 1, 1),
             date_end=date.today(),
             one_by_one=False,
+            border_distance=relevant_distance,
         )
         if len(affected) == 0:
             print("No affected dicts")
@@ -442,6 +443,71 @@ class TestAligner(unittest.TestCase):
         )
         print(fc["result"])
         fcs = actual_aligner.get_results_as_geojson(formula=True)
+
+    def test_evaluate_full_parcel_false(self):
+        thematic_dict = {
+            "theme_id_1": from_wkt(
+                "Polygon ((174015.08694170592934825 179025.39916784031083807, 174040.71934808720834553 179031.93985084796440788, 174037.1838437587430235 178986.50862022733781487, 174030.64316075111855753 178982.97311589887249283, 174016.85469387014745735 179002.24161448894301429, 174021.62762471355381422 179005.77711881740833633, 174018.62244603436556645 179008.60552228015149012, 174015.08694170592934825 179025.39916784031083807))"
+            )
+        }
+        aligner = Aligner()
+        aligner.load_thematic_data(DictLoader(thematic_dict))
+        aligner.load_reference_data(
+            GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
+        )
+
+        dict_evaluated, prop_dictionary = aligner.evaluate(
+            relevant_distances=np.arange(0, 410, 10, dtype=int) / 100, prefer_full=False
+        )
+        assert len(dict_evaluated["theme_id_1"]) == 1
+        assert (
+            prop_dictionary["theme_id_1"][3.5]["brdr_evaluation"]
+            == Evaluation.TO_CHECK_PREDICTION_MULTI
+        )
+
+    def test_evaluate_full_parcel_true(self):
+        thematic_dict = {
+            "theme_id_1": from_wkt(
+                "Polygon ((174015.08694170592934825 179025.39916784031083807, 174040.71934808720834553 179031.93985084796440788, 174037.1838437587430235 178986.50862022733781487, 174030.64316075111855753 178982.97311589887249283, 174016.85469387014745735 179002.24161448894301429, 174021.62762471355381422 179005.77711881740833633, 174018.62244603436556645 179008.60552228015149012, 174015.08694170592934825 179025.39916784031083807))"
+            )
+        }
+        aligner = Aligner()
+        aligner.load_thematic_data(DictLoader(thematic_dict))
+        aligner.load_reference_data(
+            GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
+        )
+
+        dict_evaluated, prop_dictionary = aligner.evaluate(
+            relevant_distances=np.arange(0, 410, 10, dtype=int) / 100, prefer_full=True
+        )
+        assert len(dict_evaluated["theme_id_1"]) == 1
+        assert (
+            prop_dictionary["theme_id_1"][3.5]["brdr_evaluation"]
+            == Evaluation.PREDICTION_FULL
+        )
+
+    def test_evaluate_all_predictions(self):
+        thematic_dict = {
+            "theme_id_1": from_wkt(
+                "Polygon ((174015.08694170592934825 179025.39916784031083807, 174040.71934808720834553 179031.93985084796440788, 174037.1838437587430235 178986.50862022733781487, 174030.64316075111855753 178982.97311589887249283, 174016.85469387014745735 179002.24161448894301429, 174021.62762471355381422 179005.77711881740833633, 174018.62244603436556645 179008.60552228015149012, 174015.08694170592934825 179025.39916784031083807))"
+            )
+        }
+        aligner = Aligner()
+        aligner.load_thematic_data(DictLoader(thematic_dict))
+        aligner.load_reference_data(
+            GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
+        )
+
+        dict_evaluated, prop_dictionary = aligner.evaluate(
+            relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
+            prefer_full=True,
+            all_predictions=True,
+        )
+        assert len(dict_evaluated["theme_id_1"]) == 2
+        assert (
+            prop_dictionary["theme_id_1"][3.5]["brdr_evaluation"]
+            == Evaluation.PREDICTION_FULL
+        )
 
     def test_remark_for_poly_multipoly(self):
         shape = from_wkt(

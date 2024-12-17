@@ -110,13 +110,12 @@ def get_affected_by_grb_change(
 
     affected = []
     unaffected = []
-    if border_distance > 0:
-        for key in dict_thematic.keys():
-            dict_thematic[key] = create_donut(dict_thematic[key], border_distance)
     if one_by_one:
         for key in dict_thematic:
             geom = dict_thematic[key]
-            if is_grb_changed(geom, grb_type, date_start, date_end):
+            if is_grb_changed(
+                geom, grb_type, date_start, date_end, border_distance=border_distance
+            ):
                 affected.append(key)
             else:
                 unaffected.append(key)
@@ -126,7 +125,7 @@ def get_affected_by_grb_change(
         if geometry_thematic_union is None:
             geometry_thematic_union = safe_unary_union(list(dict_thematic.values()))
         coll_changed_grb, name_reference_id = get_collection_grb_actual(
-            geometry_thematic_union,
+            buffer_pos(geometry_thematic_union, GRB_MAX_REFERENCE_BUFFER),
             grb_type=grb_type,
             partition=1000,
             date_start=date_start,
@@ -136,11 +135,27 @@ def get_affected_by_grb_change(
         dict_changed_grb, dict_changed_grb_properties = geojson_to_dicts(
             coll_changed_grb, name_reference_id
         )
+        # if border_distance>0:
+        geom_to_check = buffer_pos(
+            create_donut(geometry_thematic_union, border_distance),
+            GRB_MAX_REFERENCE_BUFFER,
+        )
+        grb_intersections = features_by_geometric_operation(
+            list(dict_changed_grb.values()),
+            list(dict_changed_grb.keys()),
+            [geom_to_check],
+            predicate="intersects",
+        )
+        dict_changed_grb = {key: dict_changed_grb[key] for key in grb_intersections}
 
         if len(dict_changed_grb) == 0:
-            logging.info("No detected changes")
+            logging.info(
+                f"No detected changes for thematic geometry in timespan (border distance: {str(border_distance)})"
+            )
             return affected, list(dict_thematic.keys())  # empty affected dict
-        logging.info("Changed parcels in timespan: " + str(len(dict_changed_grb)))
+        logging.info(
+            f"Changed parcels in timespan with border_distance {str(border_distance)}: {str(len(dict_changed_grb))}"
+        )
         thematic_intersections = features_by_geometric_operation(
             list(dict_thematic.values()),
             list(dict_thematic.keys()),
@@ -410,6 +425,7 @@ def update_to_actual_grb(
             date_end=datetime_end,
             one_by_one=False,
             geometry_thematic_union=base_aligner_result.get_thematic_union(),
+            border_distance=max_distance_for_actualisation,
             crs=base_aligner_result.CRS,
         )
         logger.feedback_info(

@@ -1,6 +1,11 @@
 # Download-settings: when extracting features by URL
 # Limit used when extracting features by URL, using the feature API (f.e. from GRB)
 DOWNLOAD_LIMIT = 10000
+
+# value that is used to calculate the boundary of a thematic geometry wherefor the calculation has to be done. (inner part is added)
+MAX_OUTER_BUFFER = 50
+
+MAX_SEGMENT_SNAPPING_SIZE = 2  # when real snapping of vertices is used, the input geometry will be split up by default in parts of max X meter
 # default CRS:
 DEFAULT_CRS = "EPSG:31370"  # BelgianLambert72
 
@@ -13,6 +18,8 @@ BASE_FORMULA_FIELD_NAME = (
 )  # for use in grb_actualisation
 FORMULA_FIELD_NAME = PREFIX_FIELDNAME + "formula"
 EVALUATION_FIELD_NAME = PREFIX_FIELDNAME + "evaluation"
+PREDICTION_SCORE = PREFIX_FIELDNAME + "prediction_score"
+PREDICTION_COUNT = PREFIX_FIELDNAME + "prediction_count"
 DIFF_PERCENTAGE_FIELD_NAME = PREFIX_FIELDNAME + "diff_percentage"
 DIFF_AREA_FIELD_NAME = PREFIX_FIELDNAME + "diff_area"
 FULL_BASE_FIELD_NAME = PREFIX_FIELDNAME + "full_base"

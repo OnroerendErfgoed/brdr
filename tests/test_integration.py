@@ -40,7 +40,7 @@ class TestExamples(unittest.TestCase):
             ],
         }
         referentielaag_type = GRBType.ADP
-        openbaardomein_strategy = OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE
+        openbaardomein_strategy = OpenbaarDomeinStrategy.SNAP_INNER_SIDE
 
         aligner = Aligner(area_limit=100000)
 
