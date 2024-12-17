@@ -94,6 +94,7 @@ class Aligner:
         multi_as_single_modus=True,
         threshold_exclusion_area=0,
         threshold_exclusion_percentage=0,
+        threshold_inclusion_percentage=100,
         buffer_multiplication_factor=1.01,
         threshold_circle_ratio=0.98,
         correction_distance=0.01,
@@ -148,6 +149,7 @@ class Aligner:
         # Percentage for excluding candidate reference-polygons when overlap(%) is smaller than the
         # threshold
         self.threshold_exclusion_percentage = threshold_exclusion_percentage
+        self.threshold_inclusion_percentage = threshold_inclusion_percentage
         self.area_limit = area_limit
         self.max_workers = max_workers
         # Multiplication-factor used in OD-strategy 2 (SNAP-BOTH SIDED) when calculating
@@ -360,6 +362,7 @@ class Aligner:
                 self.threshold_overlap_percentage,
                 self.threshold_exclusion_percentage,
                 self.threshold_exclusion_area,
+                self.threshold_inclusion_percentage,
                 self.mitre_limit,
             )
             self.logger.feedback_debug("intersection calculated")
@@ -1110,31 +1113,7 @@ class Aligner:
             geom_thematic_od = safe_difference(
                 input_geometry, self._get_reference_union()
             )
-        # elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_INNER_SIDE:
-        #     # Everything that falls within the relevant distance over the
-        #     #  plot boundary is snapped to the plot.
-        #     #  Only the inner-reference-boundaries are used.
-        #     #  The outer-reference-boundaries are not used.
-        #     self.logger.feedback_debug("OD-strategy SNAP_SINGLE_SIDE")
-        #     # geom of OD
-        #     geom_od = safe_difference(geometry, self._get_reference_union())
-        #     # only the relevant parts of OD
-        #     geom_od_neg_pos = buffer_neg_pos(
-        #         geom_od,
-        #         buffer_distance,
-        #         mitre_limit=self.mitre_limit,
-        #     )
-        #     # geom_thematic_od = safe_intersection(geom_od_neg_pos,geom_od)# resulting
-        #     # thematic OD
-        #     geom_od_neg_pos_buffered = buffer_pos(
-        #         geom_od_neg_pos,
-        #         buffer_distance,
-        #         mitre_limit=self.mitre_limit,
-        #     )  # include parts
-        #     geom_thematic_od = safe_intersection(
-        #         geom_od_neg_pos_buffered, geom_od
-        #     )  # resulting thematic OD
-        #     #TODO this strategy does not write the relative intersections & differences from the OD?
+
         elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_INNER_SIDE:
             # Strategy useful for bigger areas.
             # integrates the entire inner area of the input geometry,
@@ -1144,27 +1123,6 @@ class Aligner:
                 "OD-strategy Full-area-variant of OD-SNAP_INNER_SIDE"
             )
             geom_thematic_od = self._od_full_area(input_geometry, relevant_distance)
-        # elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_OUTER_SIDE:
-        #     # Everything that falls within the relevant distance over
-        #     # the plot boundary is snapped to the plot.
-        #     #  Outer-reference-boundaries are used.
-        #     self.logger.feedback_debug("OD-strategy SNAP OUTER SIDE")
-        #     (
-        #         geom_thematic_od,
-        #         relevant_difference_array,
-        #         relevant_intersection_array,
-        #     ) = self._od_snap_all_side(
-        #         input_geometry, input_geometry_inner, relevant_distance, outer=True
-        #     )
-        #
-        #     # This part calculates the full area
-        #     geom_theme_od_min_clipped_plus_buffered_clipped = self._od_full_area(
-        #         input_geometry, relevant_distance
-        #     )
-        #     # UNION of both elements
-        #     geom_thematic_od = safe_union(
-        #         geom_theme_od_min_clipped_plus_buffered_clipped, geom_thematic_od
-        #     )
 
         elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_ALL_SIDE:
             #  Inner & Outer-reference-boundaries are used.
@@ -1186,31 +1144,17 @@ class Aligner:
             geom_thematic_od = safe_union(
                 geom_theme_od_min_clipped_plus_buffered_clipped, geom_thematic_od
             )
-        elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_SNAP:
-            self.logger.feedback_debug("OD-strategy SNAP_SNAP")
-            # all OD-parts wil be added AS IS
-            geom_thematic_od = safe_difference(
-                input_geometry, self._get_reference_union()
-            )
-            if geom_thematic_od is None or geom_thematic_od.is_empty:
-                pass
-            reference = safe_intersection(
-                self._get_reference_union(),
-                make_valid(
-                    buffer_pos(
-                        geom_thematic_od,
-                        self.buffer_multiplication_factor * relevant_distance,
-                        mitre_limit=self.mitre_limit,
-                    )
-                ),
-            )
-            geom_thematic_od = snap_polygon_to_polygon(
-                geom_thematic_od,
-                reference,
-                max_segment_length=MAX_SEGMENT_SNAPPING_SIZE,
-                snap_strategy=SnapStrategy.PREFER_VERTICES,
-                tolerance=relevant_distance,
-            )
+        elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_PREFER_VERTICES:
+            self.logger.feedback_debug("OD-strategy SNAP_PREFER_VERTICES")
+            geom_thematic_od = self._od_snap(geometry=input_geometry,relevant_distance=relevant_distance,snap_strategy=SnapStrategy.PREFER_VERTICES)
+
+        elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_NO_PREFERENCE:
+            self.logger.feedback_debug("OD-strategy SNAP_NO_PREFERENCE")
+            geom_thematic_od = self._od_snap(geometry=input_geometry,relevant_distance=relevant_distance,snap_strategy=SnapStrategy.NO_PREFERENCE)
+
+        elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_ONLY_VERTICES:
+            self.logger.feedback_debug("OD-strategy SNAP_NO_PREFERENCE")
+            geom_thematic_od = self._od_snap(geometry=input_geometry,relevant_distance=relevant_distance,snap_strategy=SnapStrategy.ONLY_VERTICES)
 
         # ADD THEMATIC_OD
         preresult = self._add_multi_polygons_from_geom_to_array(geom_thematic_od, [])
@@ -1219,6 +1163,32 @@ class Aligner:
             relevant_intersection_array,
             relevant_difference_array,
         )
+
+    def _od_snap(self,geometry,relevant_distance,snap_strategy):
+        # all OD-parts wil be added AS IS
+        geom_thematic_od = safe_difference(
+            geometry, self._get_reference_union()
+        )
+        if geom_thematic_od is None or geom_thematic_od.is_empty:
+            return geom_thematic_od
+        reference = safe_intersection(
+            self._get_reference_union(),
+            make_valid(
+                buffer_pos(
+                    geom_thematic_od,
+                    self.buffer_multiplication_factor * relevant_distance,
+                    mitre_limit=self.mitre_limit,
+                )
+            ),
+        )
+        geom_thematic_od = snap_polygon_to_polygon(
+            geom_thematic_od,
+            reference,
+            max_segment_length=MAX_SEGMENT_SNAPPING_SIZE,
+            snap_strategy=snap_strategy,
+            tolerance=relevant_distance,
+        )
+        return geom_thematic_od
 
     def _od_full_area(self, geometry, relevant_distance):
         buffer_distance = relevant_distance / 2
@@ -1297,6 +1267,7 @@ class Aligner:
                 self.threshold_overlap_percentage,
                 self.threshold_exclusion_percentage,
                 self.threshold_exclusion_area,
+                self.threshold_inclusion_percentage,
                 self.mitre_limit,
             )
 
@@ -1669,6 +1640,7 @@ def _calculate_geom_by_intersection_and_reference(
     threshold_overlap_percentage,
     threshold_exclusion_percentage,
     threshold_exclusion_area,
+    threshold_inclusion_percentage,
     mitre_limit,
 ):
     """
@@ -1705,18 +1677,22 @@ def _calculate_geom_by_intersection_and_reference(
             geometry.
         -   If only relevant difference is non-empty, the result is None.
     """
-
+    od_overlap = 111  # define a specific value for defining overlap of OD
     if geom_reference.area == 0:
-        overlap = 100
+        overlap = od_overlap #openbaar domein
 
     else:
-        overlap = geom_intersection.area * 100 / geom_reference.area
+        overlap = (geom_intersection.area * 100 / geom_reference.area)
 
     if (
         overlap < threshold_exclusion_percentage
         or geom_intersection.area < threshold_exclusion_area
     ):
         return Polygon(), Polygon(), Polygon()
+
+
+    if overlap>=threshold_inclusion_percentage and not overlap == od_overlap:
+        return geom_reference,geom_reference,Polygon()
 
     geom_difference = safe_difference(geom_reference, geom_intersection)
     geom_relevant_intersection = buffer_neg(
@@ -1741,10 +1717,16 @@ def _calculate_geom_by_intersection_and_reference(
         geom_x = safe_intersection(
             geom_intersection, buffer_pos(geom_intersection_inner, 1 * buffer_distance)
         )
-        geom_x = snap_polygon_to_polygon(
-            geom_x, geom_reference, max_segment_length=MAX_SEGMENT_SNAPPING_SIZE,snap_strategy=SnapStrategy.PREFER_VERTICES, tolerance=2*buffer_distance
-        )
-        geom = safe_intersection(geom_intersection, geom_x)
+        # print ("geom_x")
+        # print(geom_x.wkt)
+        # geom_x = snap_polygon_to_polygon(
+        #     geom_x, geom_reference, max_segment_length=MAX_SEGMENT_SNAPPING_SIZE,snap_strategy=SnapStrategy.PREFER_VERTICES, tolerance=2*buffer_distance
+        # )
+        # print ("geom_x_snapped")
+        # print(geom_x.wkt)
+        #geom_x = safe_intersection(geom_intersection, geom_x)
+
+        geom=geom_x
     elif (
         not geom_relevant_intersection.is_empty
         and not geom_relevant_difference.is_empty
@@ -1787,18 +1769,18 @@ def _calculate_geom_by_intersection_and_reference(
         # first we take the part that we would remove.
         # We do a neg_pos buffer on it  and combine it with the zone that absolutely should be excluded
         # we take as result the reference minus the removed part
-        removed_geom = safe_difference(geom_reference, geom)
-        removed_geom = safe_union(
-            buffer_pos(geom_relevant_difference, buffer_distance),
-            buffer_neg_pos(removed_geom, buffer_distance),
-        )
-        geom = safe_difference(geom_reference, removed_geom)
-        geom = snap_polygon_to_polygon(
-            geom,
-            geom_reference,
-            snap_strategy=SnapStrategy.PREFER_VERTICES,
-            tolerance=2 * buffer_distance,
-        )
+        # removed_geom = safe_difference(geom_reference, geom)
+        # removed_geom = safe_union(
+        #     buffer_pos(geom_relevant_difference, buffer_distance),
+        #     buffer_neg_pos(removed_geom, buffer_distance),
+        # )
+        # geom = safe_difference(geom_reference, removed_geom)
+        # geom = snap_polygon_to_polygon(
+        #     geom,
+        #     geom_reference,
+        #     snap_strategy=SnapStrategy.PREFER_VERTICES,
+        #     tolerance=2 * buffer_distance,
+        # )
 
         # when calculating for OD, we create a 'virtual parcel'. When calculating this
         # virtual parcel, it is buffered to take outer boundaries into account.
@@ -1814,7 +1796,7 @@ def _calculate_geom_by_intersection_and_reference(
     else:
         if is_openbaar_domein:
             geom = geom_relevant_intersection  # (=empty geometry)
-            # TODO: test if the snapped geom from below is better?
+            # TEST if the snapped geom from below is better?
             # geom = snap_polygon_to_polygon (geom_intersection, geom_reference, snap_strategy=SnapStrategy.PREFER_VERTICES, tolerance=2*buffer_distance)
         elif threshold_overlap_percentage < 0:
             # if we take a value of -1, the original border will be used
