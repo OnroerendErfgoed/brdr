@@ -1715,13 +1715,13 @@ def _calculate_geom_by_intersection_and_reference(
         and not geom_relevant_difference.is_empty
     ):
         geom_x = safe_intersection(
-            geom_intersection, buffer_pos(geom_intersection_inner, 1 * buffer_distance)
+            geom_intersection, buffer_pos(geom_intersection_inner, 2 * buffer_distance)
         )
         # print ("geom_x")
         # print(geom_x.wkt)
-        # geom_x = snap_polygon_to_polygon(
-        #     geom_x, geom_reference, max_segment_length=MAX_SEGMENT_SNAPPING_SIZE,snap_strategy=SnapStrategy.PREFER_VERTICES, tolerance=2*buffer_distance
-        # )
+        geom_x = snap_polygon_to_polygon(
+        geom_x, geom_reference, max_segment_length=MAX_SEGMENT_SNAPPING_SIZE,snap_strategy=SnapStrategy.PREFER_VERTICES, tolerance=2*buffer_distance
+        )
         # print ("geom_x_snapped")
         # print(geom_x.wkt)
         #geom_x = safe_intersection(geom_intersection, geom_x)
