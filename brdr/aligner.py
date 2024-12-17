@@ -1146,15 +1146,27 @@ class Aligner:
             )
         elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_PREFER_VERTICES:
             self.logger.feedback_debug("OD-strategy SNAP_PREFER_VERTICES")
-            geom_thematic_od = self._od_snap(geometry=input_geometry,relevant_distance=relevant_distance,snap_strategy=SnapStrategy.PREFER_VERTICES)
+            geom_thematic_od = self._od_snap(
+                geometry=input_geometry,
+                relevant_distance=relevant_distance,
+                snap_strategy=SnapStrategy.PREFER_VERTICES,
+            )
 
         elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_NO_PREFERENCE:
             self.logger.feedback_debug("OD-strategy SNAP_NO_PREFERENCE")
-            geom_thematic_od = self._od_snap(geometry=input_geometry,relevant_distance=relevant_distance,snap_strategy=SnapStrategy.NO_PREFERENCE)
+            geom_thematic_od = self._od_snap(
+                geometry=input_geometry,
+                relevant_distance=relevant_distance,
+                snap_strategy=SnapStrategy.NO_PREFERENCE,
+            )
 
         elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_ONLY_VERTICES:
             self.logger.feedback_debug("OD-strategy SNAP_NO_PREFERENCE")
-            geom_thematic_od = self._od_snap(geometry=input_geometry,relevant_distance=relevant_distance,snap_strategy=SnapStrategy.ONLY_VERTICES)
+            geom_thematic_od = self._od_snap(
+                geometry=input_geometry,
+                relevant_distance=relevant_distance,
+                snap_strategy=SnapStrategy.ONLY_VERTICES,
+            )
 
         # ADD THEMATIC_OD
         preresult = self._add_multi_polygons_from_geom_to_array(geom_thematic_od, [])
@@ -1164,11 +1176,9 @@ class Aligner:
             relevant_difference_array,
         )
 
-    def _od_snap(self,geometry,relevant_distance,snap_strategy):
+    def _od_snap(self, geometry, relevant_distance, snap_strategy):
         # all OD-parts wil be added AS IS
-        geom_thematic_od = safe_difference(
-            geometry, self._get_reference_union()
-        )
+        geom_thematic_od = safe_difference(geometry, self._get_reference_union())
         if geom_thematic_od is None or geom_thematic_od.is_empty:
             return geom_thematic_od
         reference = safe_intersection(
@@ -1679,10 +1689,10 @@ def _calculate_geom_by_intersection_and_reference(
     """
     od_overlap = 111  # define a specific value for defining overlap of OD
     if geom_reference.area == 0:
-        overlap = od_overlap #openbaar domein
+        overlap = od_overlap  # openbaar domein
 
     else:
-        overlap = (geom_intersection.area * 100 / geom_reference.area)
+        overlap = geom_intersection.area * 100 / geom_reference.area
 
     if (
         overlap < threshold_exclusion_percentage
@@ -1690,9 +1700,8 @@ def _calculate_geom_by_intersection_and_reference(
     ):
         return Polygon(), Polygon(), Polygon()
 
-
-    if overlap>=threshold_inclusion_percentage and not overlap == od_overlap:
-        return geom_reference,geom_reference,Polygon()
+    if overlap >= threshold_inclusion_percentage and not overlap == od_overlap:
+        return geom_reference, geom_reference, Polygon()
 
     geom_difference = safe_difference(geom_reference, geom_intersection)
     geom_relevant_intersection = buffer_neg(
@@ -1720,13 +1729,17 @@ def _calculate_geom_by_intersection_and_reference(
         # print ("geom_x")
         # print(geom_x.wkt)
         geom_x = snap_polygon_to_polygon(
-        geom_x, geom_reference, max_segment_length=MAX_SEGMENT_SNAPPING_SIZE,snap_strategy=SnapStrategy.PREFER_VERTICES, tolerance=2*buffer_distance
+            geom_x,
+            geom_reference,
+            max_segment_length=MAX_SEGMENT_SNAPPING_SIZE,
+            snap_strategy=SnapStrategy.PREFER_VERTICES,
+            tolerance=2 * buffer_distance,
         )
         # print ("geom_x_snapped")
         # print(geom_x.wkt)
-        #geom_x = safe_intersection(geom_intersection, geom_x)
+        # geom_x = safe_intersection(geom_intersection, geom_x)
 
-        geom=geom_x
+        geom = geom_x
     elif (
         not geom_relevant_intersection.is_empty
         and not geom_relevant_difference.is_empty
@@ -1760,7 +1773,7 @@ def _calculate_geom_by_intersection_and_reference(
         )
         geom_y = safe_unary_union(
             [geom_y, geom_intersection_inner]
-        ) #geom_intersection_inner can be empty or non- empty at this point!
+        )  # geom_intersection_inner can be empty or non- empty at this point!
         # add inner part that has to be present
         geom = safe_intersection(
             geom_x,
