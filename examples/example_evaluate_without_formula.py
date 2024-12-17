@@ -15,15 +15,14 @@ if __name__ == "__main__":
     # Start an aligner to align thematic objects on the actual parcels
     actual_aligner = Aligner(relevant_distances=np.arange(0, 310, 10, dtype=int) / 100)
     loader = GeoJsonFileLoader("input/themelayer.geojson", "theme_identifier")
-    actual_aligner.load_thematic_data(loader
-    )
+    actual_aligner.load_thematic_data(loader)
     # Load reference data; the actual parcels
     actual_aligner.load_reference_data(
         GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=actual_aligner)
     )
     # Use the EVALUATE-function
     dict_evaluated, prop_dictionary = actual_aligner.evaluate(
-        ids_to_evaluate=None, base_formula_field=None,prefer_full=True
+        ids_to_evaluate=None, base_formula_field=None, prefer_full=True
     )
 
     # SHOW the EVALUATED results
