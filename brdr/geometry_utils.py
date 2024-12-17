@@ -451,7 +451,7 @@ def snap_polygon_to_polygon(
     snap_strategy=SnapStrategy.PREFER_VERTICES,
     max_segment_length=MAX_SEGMENT_SNAPPING_SIZE,
     tolerance=1,
-        correction_distance = 0.01
+    correction_distance=0.01,
 ):
     if geometry is None or geometry.is_empty or reference is None or reference.is_empty:
         return geometry
@@ -461,7 +461,6 @@ def snap_polygon_to_polygon(
     reference_coords = list(get_coords_from_geometry(reference))
     if len(reference_coords) == 0:
         snap_strategy = SnapStrategy.NO_PREFERENCE
-
 
     polygons = []
     for geom in geometry.geoms:
