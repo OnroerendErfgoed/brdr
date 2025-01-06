@@ -24,6 +24,7 @@ class OpenbaarDomeinStrategy(IntEnum):
     """
 
     EXCLUDE = -1
+    EXCLUDE_SLOW = -2
     AS_IS = 0
     SNAP_INNER_SIDE = 1
     SNAP_ALL_SIDE = 2

@@ -295,7 +295,7 @@ class Aligner:
         buffer_distance = relevant_distance / 2
         # combine all parts of the input geometry to one polygon
         input_geometry = safe_unary_union(get_parts(input_geometry))
-        if self.od_strategy == OpenbaarDomeinStrategy.EXCLUDE:
+        if self.od_strategy == OpenbaarDomeinStrategy.EXCLUDE_SLOW:
             input_geometry = safe_intersection(
                 input_geometry, self._get_reference_union()
             )
@@ -1097,9 +1097,9 @@ class Aligner:
         relevant_difference_array = []
         geom_thematic_od = Polygon()
 
-        if self.od_strategy == OpenbaarDomeinStrategy.EXCLUDE:
+        if self.od_strategy == OpenbaarDomeinStrategy.EXCLUDE_SLOW:
             # Completely exclude everything that is not on the reference layer
-            self.logger.feedback_debug("OD-strategy EXCLUDE")
+            self.logger.feedback_debug("OD-strategy EXCLUDE_SLOW")
             pass
             # Remove from the thematic layer all parts that are not on the reference
             # layer
@@ -1114,7 +1114,7 @@ class Aligner:
                 input_geometry, self._get_reference_union()
             )
 
-        elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_INNER_SIDE:
+        elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_INNER_SIDE or self.od_strategy == OpenbaarDomeinStrategy.EXCLUDE:
             # Strategy useful for bigger areas.
             # integrates the entire inner area of the input geometry,
             # so Openbaar Domein of the inner area is included in the result
@@ -1326,13 +1326,24 @@ class Aligner:
                 geometry
             *   remark (str): Remark when processing the geometry
         """
+
+
         # Process array
         remark = ""
         buffer_distance = relevant_distance / 2
         result = []
         geom_thematic = make_valid(geom_thematic)
+        geom_thematic_for_add_delete = geom_thematic
         preresult.append(input_geometry_inner)
         geom_preresult = safe_unary_union(preresult)
+
+        if self.od_strategy==OpenbaarDomeinStrategy.EXCLUDE:
+            geom_thematic_for_add_delete = safe_intersection(
+                geom_thematic_for_add_delete, self._get_reference_union()
+            )
+            geom_preresult = safe_intersection(
+                geom_preresult, self._get_reference_union()
+            )
 
         if not (geom_thematic is None or geom_thematic.is_empty):
             # Correction for circles
@@ -1368,8 +1379,8 @@ class Aligner:
         )
         # geom_symdiff = self._safe_symmetric_difference(geom_thematic,
         # geom_thematic_dissolved)
-        geom_diff_add = safe_difference(geom_thematic, geom_thematic_dissolved)
-        geom_diff_delete = safe_difference(geom_thematic_dissolved, geom_thematic)
+        geom_diff_add = safe_difference(geom_thematic_for_add_delete, geom_thematic_dissolved)
+        geom_diff_delete = safe_difference(geom_thematic_dissolved, geom_thematic_for_add_delete)
         geom_diff_removed = safe_difference(
             geom_thematic_dissolved,
             safe_intersection(

@@ -595,6 +595,30 @@ def get_bbox(geometry):
     return str(geometry.bounds).strip("()")
 
 
+# def align_polygons(poly1, poly2):
+#     """
+#         # Voorbeeldgebruik
+#         poly1 = Polygon([(0, 0), (2, 0), (1, 2)])
+#         poly2 = Polygon([(1, 1), (3, 1), (2, 3)])
+#
+#         aligned_poly2 = align_polygons(poly1, poly2)
+#     :param poly1:
+#     :param poly2:
+#     :return:
+#     """
+#     # Bereken de centroiden van beide polygonen
+#     centroid1 = poly1.centroid
+#     centroid2 = poly2.centroid
+#
+#     # Bereken de verschuiving die nodig is om de centroiden uit te lijnen
+#     shift_x = centroid1.x - centroid2.x
+#     shift_y = centroid1.y - centroid2.y
+#
+#     # Verplaats polygoon 2 zodat de centroiden uitgelijnd zijn
+#     aligned_poly2 = translate(poly2, xoff=shift_x, yoff=shift_y)
+#
+#     return aligned_poly2
+
 def geojson_polygon_to_multipolygon(geojson):
     """
     #TODO: add an example/test so it is clear this function is used (inside brdrQ)
