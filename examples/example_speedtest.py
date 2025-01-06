@@ -16,7 +16,7 @@ def main():
     # Initiate brdr
     aligner = Aligner(max_workers=None)
     iterations = 10
-    od_strategy = OpenbaarDomeinStrategy.EXCLUDE
+    od_strategy = OpenbaarDomeinStrategy.SNAP_PREFER_VERTICES
     relevant_distance = 5
     grb_loader = True
     aligner.multi_as_single_modus = True

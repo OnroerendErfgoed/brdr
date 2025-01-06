@@ -48,7 +48,7 @@ from brdr.geometry_utils import (
     buffer_neg,
     safe_unary_union,
     get_shape_index,
-    snap_polygon_to_polygon,
+    snap_polygon_to_polygon, polygon_to_multipolygon,
 )
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import buffer_pos
@@ -1181,24 +1181,28 @@ class Aligner:
         geom_thematic_od = safe_difference(geometry, self._get_reference_union())
         if geom_thematic_od is None or geom_thematic_od.is_empty:
             return geom_thematic_od
-        reference = safe_intersection(
-            self._get_reference_union(),
-            make_valid(
-                buffer_pos(
-                    geom_thematic_od,
-                    self.buffer_multiplication_factor * relevant_distance,
-                    mitre_limit=self.mitre_limit,
-                )
-            ),
-        )
-        geom_thematic_od = snap_polygon_to_polygon(
-            geom_thematic_od,
-            reference,
-            max_segment_length=MAX_SEGMENT_SNAPPING_SIZE,
-            snap_strategy=snap_strategy,
-            tolerance=relevant_distance,
-        )
-        return geom_thematic_od
+        geom_thematic_od = polygon_to_multipolygon(geom_thematic_od)
+        out = []
+        for p in geom_thematic_od.geoms:
+            reference = safe_intersection(
+                self._get_reference_union(),
+                make_valid(
+                    buffer_pos(
+                        p,
+                        self.buffer_multiplication_factor * relevant_distance,
+                        mitre_limit=self.mitre_limit,
+                    )
+                ),
+            )
+            p_snapped = snap_polygon_to_polygon(
+                p,
+                reference,
+                max_segment_length=MAX_SEGMENT_SNAPPING_SIZE,
+                snap_strategy=snap_strategy,
+                tolerance=relevant_distance,
+            )
+            out.append(p_snapped)
+        return safe_unary_union(out)
 
     def _od_full_area(self, geometry, relevant_distance):
         buffer_distance = relevant_distance / 2
