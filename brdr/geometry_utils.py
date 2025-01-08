@@ -26,7 +26,8 @@ from shapely.geometry.base import BaseGeometry
 from shapely.geometry.linestring import LineString
 from shapely.geometry.multipolygon import MultiPolygon
 from shapely.geometry.point import Point
-from shapely.ops import nearest_points
+from shapely.lib import line_merge
+from shapely.ops import nearest_points, substring
 from shapely.prepared import prep
 
 from brdr.constants import MAX_SEGMENT_SNAPPING_SIZE
@@ -459,49 +460,166 @@ def snap_polygon_to_polygon(
         geometry = segmentize(geometry, max_segment_length=max_segment_length)
     geometry = polygon_to_multipolygon(geometry)
     reference_coords = list(get_coords_from_geometry(reference))
+
+    #ref = safe_intersection(buffer_pos(geometry, tolerance), reference)
+    reference = polygon_to_multipolygon(reference)
+    ref_lines = [g.exterior for g in reference.geoms]
+    #reference_line = ref.geoms[0].exterior  # TODO
     if len(reference_coords) == 0:
         snap_strategy = SnapStrategy.NO_PREFERENCE
 
     polygons = []
     for geom in geometry.geoms:
+        coords = list(geom.exterior.coords)
         coordinates = []
-        for (
-            x,
-            y,
-        ) in (
-            geom.exterior.coords
-        ):  # for each vertex in the first line#TODO what about interior rings?
-            point = Point(x, y)
-            p1, p2 = nearest_points(point, reference)
-            if len(reference_coords) != 0:
-                p1_vertices, p2_vertices = nearest_points(
-                    point, MultiPoint(reference_coords)
-                )
-            if point.distance(p2) <= correction_distance:
-                coordinates.append(p2.coords[0])
+        for idx,coord in enumerate(coords):  # for each vertex in the first line#TODO what about interior rings?
+            if idx ==0:
                 continue
-            if snap_strategy == SnapStrategy.NO_PREFERENCE:
-                if point.distance(p2) <= tolerance:
-                    coordinates.append(p2.coords[0])
-                else:
-                    coordinates.append(point.coords[0])
-            elif snap_strategy == SnapStrategy.ONLY_VERTICES:
-                if point.distance(p2_vertices) <= tolerance:
-                    coordinates.append(p2_vertices.coords[0])
-                else:
-                    coordinates.append(point.coords[0])
-            elif snap_strategy == SnapStrategy.PREFER_VERTICES:
-                if point.distance(p2_vertices) <= tolerance:
-                    coordinates.append(p2_vertices.coords[0])
-                elif p1.distance(p2) <= tolerance:
-                    coordinates.append(p2.coords[0])
-                else:
-                    coordinates.append(point.coords[0])
+            p_start = Point(coords [idx-1])
+            p_end = Point(coords [idx])
+            if not reference.is_empty:
+                p_start_1, p_start_2 = nearest_points(p_start, reference)
+                p_end_1, p_end_2 = nearest_points(p_end, reference)
+            else:
+                p_start_1, p_start_2 = None, None
+                p_end_1, p_end_2 = None, None
+
+            if len(reference_coords) != 0:
+                p_start_1_vertices, p_start_2_vertices = nearest_points(p_start, MultiPoint(reference_coords))
+                p_end_1_vertices, p_end_2_vertices = nearest_points(p_end, MultiPoint(reference_coords))
+            else:
+                p_start_1_vertices, p_start_2_vertices = None, None
+                p_end_1_vertices, p_end_2_vertices = None, None
+
+
+            p_start_snapped,bool_start_snapped = _snapped_point_by_snapstrategy(p_start, p_start_2, p_start_2_vertices,snap_strategy, tolerance)
+            p_end_snapped,bool_start_snapped = _snapped_point_by_snapstrategy(p_end, p_end_2, p_end_2_vertices,snap_strategy, tolerance)
+            coordinates.append(p_start_snapped.coords[0])
+
+            reference_line,distance = closest_line(ref_lines,p_end)
+            if distance ==-1 or distance>tolerance:
+                coordinates.append(p_end_snapped.coords[0])
+                continue
+            start_fraction = reference_line.project(p_start_snapped, normalized=True)
+            end_fraction = reference_line.project(p_end_snapped, normalized=True)
+
+            distance_start_end = p_start.distance(p_end)
+            line_substring =_get_line_substring(reference_line,start_fraction,end_fraction,distance_start_end)
+            print (str(idx))
+            print (line_substring.wkt)
+            for p in line_substring.coords:
+                point = Point(p)
+                if (point.distance(p_start) + point.distance(p_end))/2 <= tolerance:
+                    coordinates.append(p)
+            coordinates.append(p_end_snapped.coords[0])
+
         # convert coordinates back to a polygon
         polygon = Polygon(coordinates)
-        polygons.append(make_valid((polygon)))
-    return safe_unary_union(polygons)
+        polygons.append((polygon))
+    result = safe_unary_union(polygons)
+    result = buffer_neg_pos(result,correction_distance)
+    return result
 
+def _get_line_substring(reference_line,start_fraction,end_fraction,distance_start_end):
+    line_substring = substring(reference_line, start_dist=start_fraction, end_dist=end_fraction,
+                               normalized=True)
+    if line_substring.length>1.5*distance_start_end:
+
+        if start_fraction<end_fraction:
+            subline_a = substring(reference_line, start_dist=start_fraction, end_dist=0,
+                               normalized=True)
+            subline_b = substring(reference_line, start_dist=100, end_dist=end_fraction,
+                               normalized=True)
+        else:
+            subline_a = substring(reference_line, start_dist=start_fraction, end_dist=100,
+                               normalized=True)
+            subline_b = substring(reference_line, start_dist=0, end_dist=end_fraction,
+                               normalized=True)
+
+        sublines =[s for s in [subline_a,subline_b] if s.geom_type=='LineString']
+        line_substring_2 = line_merge(MultiLineString(sublines))
+        if line_substring_2.length<line_substring.length:
+            line_substring=line_substring_2
+    return line_substring
+
+def _snapped_point_by_snapstrategy(p, p_nearest, p_nearest_vertices, snap_strategy,
+                                   tolerance):
+    p_snapped = p
+    snapped = False
+    if p_nearest is None:
+        return p_snapped,snapped
+    if snap_strategy == SnapStrategy.NO_PREFERENCE:
+        if p.distance(p_nearest) <= tolerance:
+            p_snapped = p_nearest
+            snapped=True
+        else:
+            p_snapped = p
+    elif snap_strategy == SnapStrategy.ONLY_VERTICES:
+        if p_nearest_vertices is not None and p.distance(p_nearest_vertices) <= tolerance:
+            p_snapped = p_nearest_vertices
+            snapped=True
+        else:
+            p_snapped = p
+    elif snap_strategy == SnapStrategy.PREFER_VERTICES:
+        if p_nearest_vertices is not None and p.distance(p_nearest_vertices) <= tolerance:
+            p_snapped = p_nearest_vertices
+            snapped=True
+        elif p.distance(p_nearest) <= tolerance:
+            p_snapped = p_nearest
+            snapped=True
+        else:
+            p_snapped = p
+    return p_snapped, snapped
+
+
+# def trace_polygon_to_polygon(
+#     geometry,
+#     reference,
+#     snap_strategy=SnapStrategy.PREFER_VERTICES,
+#     max_segment_length=MAX_SEGMENT_SNAPPING_SIZE,
+#     tolerance=1,
+#     correction_distance=0.01,
+# ):
+#     if geometry is None or geometry.is_empty or reference is None or reference.is_empty:
+#         return geometry
+#     if max_segment_length > 0:
+#         geometry = segmentize(geometry, max_segment_length=max_segment_length)
+#     geometry = polygon_to_multipolygon(geometry)
+#     reference = polygon_to_multipolygon(reference)
+#     reference_line = reference.geoms[0].exterior#TODO
+#
+#     polygons = []
+#     for geom in geometry.geoms:
+#         coords =list(geom.exterior.coords)
+#         coordinates = []
+#         for idx,(
+#             x,
+#             y,
+#         ) in enumerate(
+#             coords
+#         ):
+#             if idx ==0:
+#                 continue
+#             p_start = coords [idx-1]
+#             p_end = coords [idx]
+#             start_fraction = reference_line.project(Point(p_start),normalized=True)
+#             end_fraction = reference_line.project(Point(p_end), normalized=True)
+#             line_substring = substring(reference_line, start_dist=start_fraction, end_dist=end_fraction, normalized=True)
+#             for p in line_substring.coords:
+#                 coordinates.append(p)
+#         # convert coordinates back to a polygon
+#         polygon = Polygon(coordinates)
+#         polygons.append(make_valid((polygon)))
+#     return safe_unary_union(polygons)
+
+def closest_line(lines, point):
+    # get distances
+    distance_list = [line.distance(point) for line in lines]
+    if len(distance_list)==0:
+        return [],-1
+    shortest_distance = min(distance_list) # find the line closest to the point
+    return(lines[distance_list.index(shortest_distance)], # return the closest line
+           shortest_distance) # return the distance to that line
 
 def create_donut(geometry, distance):
     if distance == 0:
@@ -585,7 +703,7 @@ def fill_and_remove_gaps(input_geometry, buffer_value):
 
 
 def safe_unary_union(geometries):
-    return make_valid(unary_union(geometries))
+    return make_valid(buffer(unary_union(geometries),0))
 
 
 def get_bbox(geometry):

@@ -22,7 +22,7 @@ from brdr.constants import (
     PREDICTION_SCORE,
     PREDICTION_COUNT,
     MAX_OUTER_BUFFER,
-    MAX_SEGMENT_SNAPPING_SIZE,
+    MAX_SEGMENT_SNAPPING_SIZE, PARTIAL_SNAPPING_STRATEGY,
 )
 from brdr.constants import (
     LAST_VERSION_DATE,
@@ -1161,12 +1161,19 @@ class Aligner:
             )
 
         elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_ONLY_VERTICES:
-            self.logger.feedback_debug("OD-strategy SNAP_NO_PREFERENCE")
+            self.logger.feedback_debug("OD-strategy SNAP_ONLY_VERTICES")
             geom_thematic_od = self._od_snap(
                 geometry=input_geometry,
                 relevant_distance=relevant_distance,
                 snap_strategy=SnapStrategy.ONLY_VERTICES,
             )
+        # elif self.od_strategy == OpenbaarDomeinStrategy.TRACE:
+        #     self.logger.feedback_debug("OD-strategy TRACE")
+        #     geom_thematic_od = self._od_trace(
+        #         geometry=input_geometry,
+        #         relevant_distance=relevant_distance,
+        #         snap_strategy=SnapStrategy.ONLY_VERTICES,
+        #     )
 
         # ADD THEMATIC_OD
         preresult = self._add_multi_polygons_from_geom_to_array(geom_thematic_od, [])
@@ -1203,6 +1210,34 @@ class Aligner:
             )
             out.append(p_snapped)
         return safe_unary_union(out)
+
+    # def _od_trace(self, geometry, relevant_distance, snap_strategy):
+    #     # all OD-parts wil be added AS IS
+    #     geom_thematic_od = safe_difference(geometry, self._get_reference_union())
+    #     if geom_thematic_od is None or geom_thematic_od.is_empty:
+    #         return geom_thematic_od
+    #     geom_thematic_od = polygon_to_multipolygon(geom_thematic_od)
+    #     out = []
+    #     for p in geom_thematic_od.geoms:
+    #         reference = safe_intersection(
+    #             self._get_reference_union(),
+    #             make_valid(
+    #                 buffer_pos(
+    #                     p,
+    #                     self.buffer_multiplication_factor * relevant_distance,
+    #                     mitre_limit=self.mitre_limit,
+    #                 )
+    #             ),
+    #         )
+    #         p_snapped = trace_polygon_to_polygon(
+    #             p,
+    #             reference,
+    #             max_segment_length=MAX_SEGMENT_SNAPPING_SIZE,
+    #             snap_strategy=snap_strategy,
+    #             tolerance=relevant_distance,
+    #         )
+    #         out.append(p_snapped)
+    #     return safe_unary_union(out)
 
     def _od_full_area(self, geometry, relevant_distance):
         buffer_distance = relevant_distance / 2
@@ -1741,19 +1776,13 @@ def _calculate_geom_by_intersection_and_reference(
         geom_x = safe_intersection(
             geom_intersection, buffer_pos(geom_intersection_inner, 2 * buffer_distance)
         )
-        # print ("geom_x")
-        # print(geom_x.wkt)
         geom_x = snap_polygon_to_polygon(
             geom_x,
             geom_reference,
-            max_segment_length=MAX_SEGMENT_SNAPPING_SIZE,
-            snap_strategy=SnapStrategy.PREFER_VERTICES,
+            max_segment_length=-1,
+            snap_strategy=PARTIAL_SNAPPING_STRATEGY,
             tolerance=2 * buffer_distance,
         )
-        # print ("geom_x_snapped")
-        # print(geom_x.wkt)
-        # geom_x = safe_intersection(geom_intersection, geom_x)
-
         geom = geom_x
     elif (
         not geom_relevant_intersection.is_empty

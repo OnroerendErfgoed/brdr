@@ -1,11 +1,14 @@
 # Download-settings: when extracting features by URL
 # Limit used when extracting features by URL, using the feature API (f.e. from GRB)
+from brdr.enums import SnapStrategy
+
 DOWNLOAD_LIMIT = 10000
 
 # value that is used to calculate the boundary of a thematic geometry wherefor the calculation has to be done. (inner part is added)
 MAX_OUTER_BUFFER = 50
 
 MAX_SEGMENT_SNAPPING_SIZE = 2  # when real snapping of vertices is used, the input geometry will be split up by default in parts of max X meter
+PARTIAL_SNAPPING_STRATEGY =  SnapStrategy.PREFER_VERTICES # when snapping of partial geometries (geom_x) is executed, This strategy will be applied
 # default CRS:
 DEFAULT_CRS = "EPSG:31370"  # BelgianLambert72
 
