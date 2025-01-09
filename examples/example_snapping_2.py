@@ -1,82 +1,44 @@
-from shapely import segmentize
-from shapely.geometry import MultiPoint,Polygon, Point, LineString
-from shapely.ops import nearest_points
-from brdr.geometry_utils import get_coords_from_geometry
-from shapely import segmentize
-from shapely.geometry import MultiPoint, Polygon, Point, LineString
-from shapely.ops import nearest_points
+import numpy as np
 
+from brdr.aligner import Aligner
+from brdr.enums import GRBType, AlignerResultType, OpenbaarDomeinStrategy
+from brdr.geometry_utils import geom_from_wkt
+from brdr.grb import GRBActualLoader
+from brdr.loader import DictLoader
+from examples import show_map, plot_series, print_brdr_formula
 
-def trace_polygon(reference_poly, input_poly, tolerance):
-    reference_poly_segmentized = segmentize(reference_poly, max_segment_length=1)
-    # Ensure the vertices of the input polygon are on the boundary of the reference polygon
-    reference_coords = MultiPoint(list(reference_poly_segmentized.exterior.coords))
-    snapped_coords = []
-    for coord in input_poly.exterior.coords:
-        point = Point(coord)
-        nearest_point = nearest_points(point, reference_coords)[1]
-        if point.distance(nearest_point) <= tolerance:
-            snapped_coords.append((nearest_point.x, nearest_point.y))
-        else:
-            snapped_coords.append((point.x, point.y))
+# Press the green button in the gutter to run the script.
+if __name__ == "__main__":
+    """
+    EXAMPLE to use the predictor-function to automatically predict which resulting
+    geometries are interesting to look at (based on detection of breakpoints and
+    relevant distances of 'no-change')
+    """
+    # Initiate an Aligner
+    aligner = Aligner(max_workers=-1)
 
-    # Find the indices of the snapped points in the reference polygon boundary
-    boundary_coords = list(reference_poly_segmentized.boundary.coords)
-    snapped_indices = []
-    for coord in snapped_coords:
-        if (coord[0], coord[1]) in boundary_coords:
-            snapped_indices.append(boundary_coords.index((coord[0], coord[1])))
-        else:
-            snapped_indices.append(None)
+    parcel_wkt = "MultiPolygon (((176601.17833364009857178 174696.6223953552544117, 176589.48553363233804703 174687.07282735034823418, 176583.66473362594842911 174694.12889135628938675, 176590.62780563533306122 174699.80780335888266563, 176590.89020563662052155 174700.02181936055421829, 176595.40860563516616821 174703.70693936198949814, 176613.93948564678430557 174718.82041137292981148, 176638.31906966865062714 174738.70393138751387596, 176644.25897367298603058 174731.80658737942576408, 176601.17833364009857178 174696.6223953552544117)))"
+    parcel_geom = geom_from_wkt(parcel_wkt)
+    # Load thematic data & reference data
+    #550/650
+    wkt = "Polygon ((176502.06903269811300561 174525.21342084850766696, 176598.26893461190047674 174575.05957464542007074, 176586.83924329539877363 174386.15217649791156873, 176567.47226634246180765 174389.32709075248567387, 176431.90342767190304585 174383.29475366877159104, 176421.42621063179103658 174522.03850659393356182, 176502.06903269811300561 174525.21342084850766696))"
+    #101
+    #wkt = "Polygon ((171681.61391718150116503 174093.33527241024421528, 171699.81010965688619763 174061.65692696082987823, 171718.85482924254029058 174031.39279336185427383, 171679.72830138093559071 174030.5442662516143173, 171669.92309921802370809 174047.60908924668910913, 171681.61391718150116503 174093.33527241024421528))"
 
-    # Create a new list of coordinates that includes the full parts of the reference polygon between the snapped vertices
-    traced_coords = []
-    for i in range(len(snapped_indices) - 1):
-        start_index = snapped_indices[i]
-        end_index = snapped_indices[i + 1]
-        if start_index is not None and end_index is not None:
-            if start_index < end_index:
-                traced_coords.extend(boundary_coords[start_index: end_index + 1])
-            else:
-                traced_coords.extend(
-                    boundary_coords[start_index:] + boundary_coords[: end_index + 1]
-                )
-        else:
-            traced_coords.append(snapped_coords[i])
-            traced_coords.append(snapped_coords[i + 1])
+    #550
+    wkt = "Polygon ((176606.77175185008672997 174725.19333245884627104, 176601.53314333004527725 174635.97824190513347276, 176598.99321192633942701 174587.24330809732782654, 176497.71344720522756688 174535.17471432220190763, 176437.07258494273992255 174661.53630165450158529, 176500.25337860887520947 174688.84056424390291795, 176545.97214387485291809 174721.85967249152599834, 176556.13186948947259225 174726.3045524479530286, 176562.79918942411313765 174731.3844152552774176, 176585.34108063162420876 174756.46623786646523513, 176606.93049756277468987 174774.24575769211514853, 176609.47042896642233245 174770.75335201207781211, 176606.77175185008672997 174725.19333245884627104))"
+    loader = DictLoader({"1": geom_from_wkt(wkt)}
+    )
+    aligner.load_thematic_data(loader)
+    # Load reference data
+    loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
+    aligner.load_reference_data(loader)
+    aligner.partial_snapping=False
 
-    # Create a new polygon from the traced coordinates
-    traced_polygon = Polygon(traced_coords)
-
-    return traced_polygon
-
-
-def plot_polygons(reference_poly, input_poly, traced_poly):
-    import matplotlib.pyplot as plt
-
-    fig, ax = plt.subplots()
-
-    # Plot reference polygon
-    x1, y1 = reference_poly.exterior.xy
-    ax.plot(x1, y1, 'b-', label='Reference Polygon')
-
-    # Plot input polygon
-    x2, y2 = input_poly.exterior.xy
-    ax.plot(x2, y2, 'r--', label='Input Polygon')
-
-    # Plot traced polygon
-    x3, y3 = traced_poly.exterior.xy
-    ax.plot(x3, y3, 'g--', label='Traced Polygon')
-
-    ax.legend()
-    plt.show()
-
-
-# Example usage
-reference_poly = Polygon([(0, 0), (4, 0), (4, 4), (0, 4), (0, 0)])
-input_poly = Polygon([(1, 0.5), (3, 0.5), (3, 2), (1, 2), (1, 0.5)])
-tolerance = 1
-
-traced_poly = trace_polygon(reference_poly, input_poly, tolerance)
-
-plot_polygons(reference_poly, input_poly, traced_poly)
+    dict_results = aligner.process(
+        relevant_distances=[10],
+        od_strategy=OpenbaarDomeinStrategy.SNAP_ALL_SIDE,
+        threshold_overlap_percentage=50,
+    )
+    show_map(dict_results, aligner.dict_thematic, aligner.dict_reference)
+    print_brdr_formula(dict_results, aligner)

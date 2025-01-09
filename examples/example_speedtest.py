@@ -17,7 +17,7 @@ def main():
     aligner = Aligner(max_workers=None)
     iterations = 10
     od_strategy = OpenbaarDomeinStrategy.SNAP_PREFER_VERTICES
-    relevant_distance = 5
+    relevant_distance = 3
     grb_loader = True
     aligner.multi_as_single_modus = True
     # Load local thematic data and reference data

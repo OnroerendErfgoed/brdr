@@ -8,7 +8,8 @@ DOWNLOAD_LIMIT = 10000
 MAX_OUTER_BUFFER = 50
 
 MAX_SEGMENT_SNAPPING_SIZE = 2  # when real snapping of vertices is used, the input geometry will be split up by default in parts of max X meter
-PARTIAL_SNAPPING_STRATEGY =  SnapStrategy.PREFER_VERTICES # when snapping of partial geometries (geom_x) is executed, This strategy will be applied
+PARTIAL_SNAPPING = False
+PARTIAL_SNAPPING_STRATEGY =  SnapStrategy.NO_PREFERENCE # when snapping of partial geometries (geom_x) is executed, This strategy will be applied
 # default CRS:
 DEFAULT_CRS = "EPSG:31370"  # BelgianLambert72
 

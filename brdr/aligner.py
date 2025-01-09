@@ -22,7 +22,7 @@ from brdr.constants import (
     PREDICTION_SCORE,
     PREDICTION_COUNT,
     MAX_OUTER_BUFFER,
-    MAX_SEGMENT_SNAPPING_SIZE, PARTIAL_SNAPPING_STRATEGY,
+    MAX_SEGMENT_SNAPPING_SIZE, PARTIAL_SNAPPING_STRATEGY, PARTIAL_SNAPPING,
 )
 from brdr.constants import (
     LAST_VERSION_DATE,
@@ -48,8 +48,7 @@ from brdr.geometry_utils import (
     buffer_neg,
     safe_unary_union,
     get_shape_index,
-    snap_polygon_to_polygon, polygon_to_multipolygon,
-)
+    snap_polygon_to_polygon, polygon_to_multipolygon, geom_from_wkt, )
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import buffer_pos
 from brdr.geometry_utils import fill_and_remove_gaps
@@ -1768,6 +1767,7 @@ def _calculate_geom_by_intersection_and_reference(
         buffer_distance,
         mitre_limit=mitre_limit,
     )
+
     if (
         not geom_intersection_inner.is_empty
         and geom_relevant_intersection.is_empty
@@ -1776,21 +1776,25 @@ def _calculate_geom_by_intersection_and_reference(
         geom_x = safe_intersection(
             geom_intersection, buffer_pos(geom_intersection_inner, 2 * buffer_distance)
         )
+
         geom_x = snap_polygon_to_polygon(
             geom_x,
             geom_reference,
-            max_segment_length=-1,
+            max_segment_length=MAX_SEGMENT_SNAPPING_SIZE,
             snap_strategy=PARTIAL_SNAPPING_STRATEGY,
             tolerance=2 * buffer_distance,
         )
+
         geom = geom_x
-    elif (
-        not geom_relevant_intersection.is_empty
-        and not geom_relevant_difference.is_empty
-    ):
+    elif  (not geom_relevant_intersection.is_empty and not geom_relevant_difference.is_empty):
         # relevant intersection and relevant difference
 
-        # calculate part where difference is removed
+
+        # geom_x = safe_intersection(buffer_pos(geom_intersection,buffer_distance),
+        # safe_difference(geom_reference,buffer_neg_pos(geom_difference,buffer_distance)))
+        #this gives a little smaller result, so not as good as the one below
+
+
         geom_x = safe_intersection(
             geom_reference,
             safe_difference(
@@ -1805,39 +1809,23 @@ def _calculate_geom_by_intersection_and_reference(
                 ),
             ),
         )
-        # calculate part that is relevant
-        geom_y = buffer_pos(
-            buffer_neg_pos(
+
+
+        geom_intersection_buffered = buffer_pos(geom_intersection,2*buffer_distance)
+        geom_difference_2 = safe_difference(geom_reference,geom_intersection_buffered)
+        geom_difference_2_buffered = buffer_pos(geom_difference_2, 2*buffer_distance)
+
+        geom_x = safe_difference(geom_x, geom_difference_2_buffered)
+
+        if PARTIAL_SNAPPING:
+            geom_x = snap_polygon_to_polygon(
                 geom_x,
-                buffer_distance,
-                mitre_limit=mitre_limit,
-            ),
-            buffer_distance,
-            mitre_limit=mitre_limit,
-        )
-        geom_y = safe_unary_union(
-            [geom_y, geom_intersection_inner]
-        )  # geom_intersection_inner can be empty or non- empty at this point!
-        # add inner part that has to be present
-        geom = safe_intersection(
-            geom_x,
-            geom_y,
-        )
-        # first we take the part that we would remove.
-        # We do a neg_pos buffer on it  and combine it with the zone that absolutely should be excluded
-        # we take as result the reference minus the removed part
-        # removed_geom = safe_difference(geom_reference, geom)
-        # removed_geom = safe_union(
-        #     buffer_pos(geom_relevant_difference, buffer_distance),
-        #     buffer_neg_pos(removed_geom, buffer_distance),
-        # )
-        # geom = safe_difference(geom_reference, removed_geom)
-        # geom = snap_polygon_to_polygon(
-        #     geom,
-        #     geom_reference,
-        #     snap_strategy=SnapStrategy.PREFER_VERTICES,
-        #     tolerance=2 * buffer_distance,
-        # )
+                geom_reference,
+                max_segment_length=MAX_SEGMENT_SNAPPING_SIZE,
+                snap_strategy=PARTIAL_SNAPPING_STRATEGY,
+                tolerance=2 * buffer_distance,
+            )
+        geom = safe_unary_union([geom_x, geom_relevant_intersection,geom_intersection_inner])
 
         # when calculating for OD, we create a 'virtual parcel'. When calculating this
         # virtual parcel, it is buffered to take outer boundaries into account.
@@ -1855,6 +1843,11 @@ def _calculate_geom_by_intersection_and_reference(
             geom = geom_relevant_intersection  # (=empty geometry)
             # TEST if the snapped geom from below is better?
             # geom = snap_polygon_to_polygon (geom_intersection, geom_reference, snap_strategy=SnapStrategy.PREFER_VERTICES, tolerance=2*buffer_distance)
+        elif not geom_intersection_inner.is_empty:
+            geom_intersection_buffered = buffer_pos(geom_intersection, 2*buffer_distance)
+            geom_difference_2 = safe_difference(geom_reference, geom_intersection_buffered)
+            geom_difference_2_buffered = buffer_pos(geom_difference_2, 2*buffer_distance)
+            geom = safe_difference(geom_reference, geom_difference_2_buffered)
         elif threshold_overlap_percentage < 0:
             # if we take a value of -1, the original border will be used
             geom = geom_intersection

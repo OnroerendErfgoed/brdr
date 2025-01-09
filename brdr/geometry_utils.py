@@ -29,8 +29,6 @@ from shapely.geometry.point import Point
 from shapely.lib import line_merge
 from shapely.ops import nearest_points, substring
 from shapely.prepared import prep
-
-from brdr.constants import MAX_SEGMENT_SNAPPING_SIZE
 from brdr.enums import SnapStrategy
 
 
@@ -285,6 +283,15 @@ def safe_intersection(geom_a: BaseGeometry, geom_b: BaseGeometry) -> BaseGeometr
     return geom
 
 
+def safe_unary_union(geometries):
+    try:
+        union = make_valid(buffer(unary_union(geometries),0))
+    except:
+        geometries = [make_valid(g) for g in geometries]
+        union = make_valid(buffer(unary_union(geometries), 0))
+
+    return union
+
 def safe_difference(geom_a, geom_b):
     """
     Calculates the difference between two geometries with error handling.
@@ -450,7 +457,7 @@ def snap_polygon_to_polygon(
     geometry,
     reference,
     snap_strategy=SnapStrategy.PREFER_VERTICES,
-    max_segment_length=MAX_SEGMENT_SNAPPING_SIZE,
+    max_segment_length=-1,
     tolerance=1,
     correction_distance=0.01,
 ):
@@ -500,13 +507,11 @@ def snap_polygon_to_polygon(
             if distance ==-1 or distance>tolerance:
                 coordinates.append(p_end_snapped.coords[0])
                 continue
-            start_fraction = reference_line.project(p_start_snapped, normalized=True)
-            end_fraction = reference_line.project(p_end_snapped, normalized=True)
+
 
             distance_start_end = p_start.distance(p_end)
-            line_substring =_get_line_substring(reference_line,start_fraction,end_fraction,distance_start_end)
-            print (str(idx))
-            print (line_substring.wkt)
+            line_substring =_get_line_substring(reference_line,p_start_snapped,p_end_snapped,distance_start_end)
+
             for p in line_substring.coords:
                 point = Point(p)
                 if (point.distance(p_start) + point.distance(p_end))/2 <= tolerance:
@@ -514,13 +519,15 @@ def snap_polygon_to_polygon(
             coordinates.append(p_end_snapped.coords[0])
 
         # convert coordinates back to a polygon
-        polygon = Polygon(coordinates)
+        polygon = make_valid(Polygon(coordinates))
         polygons.append((polygon))
     result = safe_unary_union(polygons)
     result = buffer_neg_pos(result,correction_distance)
     return result
 
-def _get_line_substring(reference_line,start_fraction,end_fraction,distance_start_end):
+def _get_line_substring(reference_line,p_start_snapped,p_end_snapped,distance_start_end):
+    start_fraction = reference_line.project(p_start_snapped, normalized=True)
+    end_fraction = reference_line.project(p_end_snapped, normalized=True)
     line_substring = substring(reference_line, start_dist=start_fraction, end_dist=end_fraction,
                                normalized=True)
     if line_substring.length>1.5*distance_start_end:
@@ -540,6 +547,8 @@ def _get_line_substring(reference_line,start_fraction,end_fraction,distance_star
         line_substring_2 = line_merge(MultiLineString(sublines))
         if line_substring_2.length<line_substring.length:
             line_substring=line_substring_2
+        if line_substring.length > 3 * distance_start_end:
+            line_substring= LineString([p_start_snapped,p_end_snapped])
     return line_substring
 
 def _snapped_point_by_snapstrategy(p, p_nearest, p_nearest_vertices, snap_strategy,
@@ -570,47 +579,6 @@ def _snapped_point_by_snapstrategy(p, p_nearest, p_nearest_vertices, snap_strate
         else:
             p_snapped = p
     return p_snapped, snapped
-
-
-# def trace_polygon_to_polygon(
-#     geometry,
-#     reference,
-#     snap_strategy=SnapStrategy.PREFER_VERTICES,
-#     max_segment_length=MAX_SEGMENT_SNAPPING_SIZE,
-#     tolerance=1,
-#     correction_distance=0.01,
-# ):
-#     if geometry is None or geometry.is_empty or reference is None or reference.is_empty:
-#         return geometry
-#     if max_segment_length > 0:
-#         geometry = segmentize(geometry, max_segment_length=max_segment_length)
-#     geometry = polygon_to_multipolygon(geometry)
-#     reference = polygon_to_multipolygon(reference)
-#     reference_line = reference.geoms[0].exterior#TODO
-#
-#     polygons = []
-#     for geom in geometry.geoms:
-#         coords =list(geom.exterior.coords)
-#         coordinates = []
-#         for idx,(
-#             x,
-#             y,
-#         ) in enumerate(
-#             coords
-#         ):
-#             if idx ==0:
-#                 continue
-#             p_start = coords [idx-1]
-#             p_end = coords [idx]
-#             start_fraction = reference_line.project(Point(p_start),normalized=True)
-#             end_fraction = reference_line.project(Point(p_end), normalized=True)
-#             line_substring = substring(reference_line, start_dist=start_fraction, end_dist=end_fraction, normalized=True)
-#             for p in line_substring.coords:
-#                 coordinates.append(p)
-#         # convert coordinates back to a polygon
-#         polygon = Polygon(coordinates)
-#         polygons.append(make_valid((polygon)))
-#     return safe_unary_union(polygons)
 
 def closest_line(lines, point):
     # get distances
@@ -702,8 +670,7 @@ def fill_and_remove_gaps(input_geometry, buffer_value):
     return cleaned_geometry
 
 
-def safe_unary_union(geometries):
-    return make_valid(buffer(unary_union(geometries),0))
+
 
 
 def get_bbox(geometry):
