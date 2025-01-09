@@ -31,6 +31,7 @@ class OpenbaarDomeinStrategy(IntEnum):
     SNAP_PREFER_VERTICES = 3
     SNAP_NO_PREFERENCE = 4
     SNAP_ONLY_VERTICES = 5
+    # TRACE = 6
 
 
 class AlignerResultType(str, Enum):
