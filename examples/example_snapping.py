@@ -1,13 +1,9 @@
-import numpy as np
-
-import brdr
 from brdr.aligner import Aligner
 from brdr.enums import GRBType, OpenbaarDomeinStrategy
 from brdr.geometry_utils import geom_from_wkt
 from brdr.grb import GRBActualLoader
 from brdr.loader import DictLoader
 from examples import show_map, print_brdr_formula
-from brdr.constants import PARTIAL_SNAPPING
 
 # Press the green button in the gutter to run the script.
 if __name__ == "__main__":

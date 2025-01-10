@@ -1,6 +1,5 @@
 import matplotlib.pyplot as plt
 
-from brdr.constants import MAX_SEGMENT_SNAPPING_SIZE
 from brdr.enums import SnapStrategy
 from brdr.geometry_utils import snap_polygon_to_polygon, geom_from_wkt, polygon_to_multipolygon
 

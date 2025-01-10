@@ -1,11 +1,9 @@
-import numpy as np
-
 from brdr.aligner import Aligner
-from brdr.enums import GRBType, AlignerResultType, OpenbaarDomeinStrategy
+from brdr.enums import GRBType, OpenbaarDomeinStrategy
 from brdr.geometry_utils import geom_from_wkt
 from brdr.grb import GRBActualLoader
 from brdr.loader import DictLoader
-from examples import show_map, plot_series, print_brdr_formula
+from examples import show_map, print_brdr_formula
 
 # Press the green button in the gutter to run the script.
 if __name__ == "__main__":

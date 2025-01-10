@@ -1,9 +1,10 @@
 from matplotlib import pyplot as plt
-from shapely.geometry import Polygon, LineString, Point
+from shapely.geometry import Polygon
 from shapely.geometry.multipoint import MultiPoint
 from shapely.ops import nearest_points
 
 from brdr.geometry_utils import get_coords_from_geometry, geom_from_wkt
+
 
 def plot_polygons(poly_reference, poly_input, edge_matched_poly):
     fig, ax = plt.subplots()

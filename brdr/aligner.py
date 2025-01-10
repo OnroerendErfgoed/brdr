@@ -22,7 +22,7 @@ from brdr.constants import (
     PREDICTION_SCORE,
     PREDICTION_COUNT,
     MAX_OUTER_BUFFER,
-    MAX_SEGMENT_SNAPPING_SIZE, PARTIAL_SNAPPING_STRATEGY, PARTIAL_SNAPPING,
+    SNAPPING_MAX_SEGMENT_LENGTH, PARTIAL_SNAPPING_STRATEGY, PARTIAL_SNAPPING,
 )
 from brdr.constants import (
     LAST_VERSION_DATE,
@@ -48,7 +48,7 @@ from brdr.geometry_utils import (
     buffer_neg,
     safe_unary_union,
     get_shape_index,
-    snap_polygon_to_polygon, polygon_to_multipolygon, geom_from_wkt, )
+    snap_polygon_to_polygon, polygon_to_multipolygon, geometric_equality, )
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import buffer_pos
 from brdr.geometry_utils import fill_and_remove_gaps
@@ -91,6 +91,9 @@ class Aligner:
         od_strategy=OpenbaarDomeinStrategy.SNAP_ALL_SIDE,
         crs=DEFAULT_CRS,
         multi_as_single_modus=True,
+        partial_snapping=PARTIAL_SNAPPING,
+        partial_snapping_strategy = PARTIAL_SNAPPING_STRATEGY,
+        snapping_max_segment_length=SNAPPING_MAX_SEGMENT_LENGTH,
         threshold_exclusion_area=0,
         threshold_exclusion_percentage=0,
         threshold_inclusion_percentage=100,
@@ -216,6 +219,9 @@ class Aligner:
         # this parameter is used to treat multipolygon as single polygons. So polygons
         # with ID splitter are separately evaluated and merged on result.
         self.multi_as_single_modus = multi_as_single_modus
+        self.partial_snapping = partial_snapping
+        self.partial_snapping_strategy = partial_snapping_strategy
+        self.snapping_max_segment_length = snapping_max_segment_length
         self.logger.feedback_info("Aligner initialized")
 
     ##########LOADERS##########################
@@ -363,6 +369,7 @@ class Aligner:
                 self.threshold_exclusion_area,
                 self.threshold_inclusion_percentage,
                 self.mitre_limit,
+                self.partial_snapping
             )
             self.logger.feedback_debug("intersection calculated")
             preresult = self._add_multi_polygons_from_geom_to_array(geom, preresult)
@@ -1203,7 +1210,7 @@ class Aligner:
             p_snapped = snap_polygon_to_polygon(
                 p,
                 reference,
-                max_segment_length=MAX_SEGMENT_SNAPPING_SIZE,
+                max_segment_length=SNAPPING_MAX_SEGMENT_LENGTH,
                 snap_strategy=snap_strategy,
                 tolerance=relevant_distance,
             )
@@ -1317,6 +1324,7 @@ class Aligner:
                 self.threshold_exclusion_area,
                 self.threshold_inclusion_percentage,
                 self.mitre_limit,
+                self.partial_snapping
             )
 
             relevant_intersection_array = self._add_multi_polygons_from_geom_to_array(
@@ -1701,6 +1709,7 @@ def _calculate_geom_by_intersection_and_reference(
     threshold_exclusion_area,
     threshold_inclusion_percentage,
     mitre_limit,
+    partial_snapping
 ):
     """
     Calculates the geometry based on intersection and reference geometries.
@@ -1780,7 +1789,7 @@ def _calculate_geom_by_intersection_and_reference(
         geom_x = snap_polygon_to_polygon(
             geom_x,
             geom_reference,
-            max_segment_length=MAX_SEGMENT_SNAPPING_SIZE,
+            max_segment_length=SNAPPING_MAX_SEGMENT_LENGTH,
             snap_strategy=PARTIAL_SNAPPING_STRATEGY,
             tolerance=2 * buffer_distance,
         )
@@ -1817,11 +1826,11 @@ def _calculate_geom_by_intersection_and_reference(
 
         geom_x = safe_difference(geom_x, geom_difference_2_buffered)
 
-        if PARTIAL_SNAPPING:
+        if partial_snapping:
             geom_x = snap_polygon_to_polygon(
                 geom_x,
                 geom_reference,
-                max_segment_length=MAX_SEGMENT_SNAPPING_SIZE,
+                max_segment_length=SNAPPING_MAX_SEGMENT_LENGTH,
                 snap_strategy=PARTIAL_SNAPPING_STRATEGY,
                 tolerance=2 * buffer_distance,
             )
@@ -1895,12 +1904,7 @@ def _equal_geom_in_array(geom, geom_array, correction_distance, mitre_limit):
     Returns True if one of the elements is equal, otherwise False
     """
     for g in geom_array:
-        # if safe_equals(geom,g):
-        if buffer_neg(
-            safe_symmetric_difference(geom, g),
-            correction_distance,
-            mitre_limit=mitre_limit,
-        ).is_empty:
+        if geometric_equality(geom,g,correction_distance,mitre_limit):
             return True
     return False
 

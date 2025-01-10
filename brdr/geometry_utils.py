@@ -29,6 +29,7 @@ from shapely.geometry.point import Point
 from shapely.lib import line_merge
 from shapely.ops import nearest_points, substring
 from shapely.prepared import prep
+
 from brdr.enums import SnapStrategy
 
 
@@ -524,6 +525,13 @@ def snap_polygon_to_polygon(
     result = safe_unary_union(polygons)
     result = buffer_neg_pos(result,correction_distance)
     return result
+
+def geometric_equality(geom_a,geom_b,correction_distance,mitre_limit):
+    return buffer_neg(
+        safe_symmetric_difference(geom_a, geom_b),
+        correction_distance,
+        mitre_limit=mitre_limit,
+    ).is_empty
 
 def _get_line_substring(reference_line,p_start_snapped,p_end_snapped,distance_start_end):
     start_fraction = reference_line.project(p_start_snapped, normalized=True)
