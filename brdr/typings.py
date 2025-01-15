@@ -29,7 +29,7 @@ class FeatureCollection(TypedDict, total=False):
     features: List[Feature]
     __extra_items__: Dict[str, str]
 
-
+#TODO, where to add PREDICTION_SCORE?
 class ProcessResult(TypedDict, total=False):
     result: BaseGeometry
     result_diff: BaseGeometry

@@ -263,7 +263,7 @@ class TestAligner(unittest.TestCase):
                 od_strategy=od_strategy,
                 threshold_overlap_percentage=50,
             )
-            self.assertEqual(len(process_result["theme_id_1"][relevant_distance]), 7)
+            self.assertEqual(len(process_result["theme_id_1"][relevant_distance]), 8)
 
     def test_process_interior_ring(self):
         thematic_dict = {

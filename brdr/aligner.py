@@ -59,7 +59,7 @@ from brdr.geometry_utils import safe_union
 from brdr.loader import Loader
 from brdr.logger import Logger
 from brdr.typings import ProcessResult
-from brdr.utils import diffs_from_dict_series, multipolygons_to_singles
+from brdr.utils import diffs_from_dict_processresults, multipolygons_to_singles
 from brdr.utils import geojson_from_dict
 from brdr.utils import get_breakpoints_zerostreak
 from brdr.utils import get_series_geojson_dict
@@ -522,6 +522,7 @@ class Aligner:
             elif original_geometry.geom_type == "MultiPolygon":
                 original_geometry_length = len(original_geometry.geoms)
             for relevant_distance, process_result in dict_dist_results.items():
+                process_result[PREDICTION_SCORE] = -1
                 resulting_geom = process_result["result"]
                 resulting_geometry_length = -1
                 if resulting_geom.geom_type == "Polygon":
@@ -624,13 +625,13 @@ class Aligner:
         if dict_thematic is None:
             dict_thematic = self.dict_thematic
         dict_predictions = defaultdict(dict)
-        dict_series = self.process(
+        dict_processresults = self.process(
             relevant_distances=relevant_distances,
             od_strategy=od_strategy,
             threshold_overlap_percentage=threshold_overlap_percentage,
         )
 
-        diffs_dict = diffs_from_dict_series(dict_series, dict_thematic)
+        diffs_dict = diffs_from_dict_processresults(dict_processresults, dict_thematic)
 
         for theme_id, diffs in diffs_dict.items():
             if len(diffs) != len(relevant_distances):
@@ -649,7 +650,7 @@ class Aligner:
                     "No zero-streaks found for: " + str(theme_id)
                 )
             for zs in zero_streaks:
-                dict_predictions[theme_id][zs[0]] = dict_series[theme_id][zs[0]]
+                dict_predictions[theme_id][zs[0]] = dict_processresults[theme_id][zs[0]]
                 dict_predictions[theme_id][zs[0]][PREDICTION_SCORE] = zs[3]
 
         # Check if the predicted reldists are unique (and remove duplicated predictions
@@ -679,7 +680,7 @@ class Aligner:
         self.dict_predictions = dict_predictions_unique
 
         return (
-            dict_series,
+            dict_processresults,
             self.dict_predictions,
             diffs_dict,
         )
@@ -968,7 +969,7 @@ class Aligner:
             for relevant_distance, process_results in results_dict.items():
                 if relevant_distance not in prop_dictionary[theme_id]:
                     prop_dictionary[theme_id][relevant_distance] = {}
-                if attributes:
+                if attributes and theme_id in self.dict_thematic_properties.keys():
                     for attr, value in self.dict_thematic_properties[theme_id].items():
                         prop_dictionary[theme_id][relevant_distance][attr] = value
                 if (

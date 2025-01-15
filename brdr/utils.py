@@ -293,8 +293,8 @@ def _numerical_derivative(x, y):
     return derivative
 
 
-def diffs_from_dict_series(
-    dict_series: dict[any, dict[float, ProcessResult]],
+def diffs_from_dict_processresults(
+    dict_processresults: dict[any, dict[float, ProcessResult]],
     dict_thematic: dict[any, BaseGeometry],
     diff_metric: DiffMetric = DiffMetric.CHANGES_AREA,
 ):
@@ -311,7 +311,7 @@ def diffs_from_dict_series(
     """
     diffs = {}
     # all the relevant distances used to calculate the series
-    for thematic_id, results_dict in dict_series.items():
+    for thematic_id, results_dict in dict_processresults.items():
         diffs[thematic_id] = {}
 
         for rel_dist in results_dict:
