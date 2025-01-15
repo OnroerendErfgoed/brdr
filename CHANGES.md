@@ -96,6 +96,13 @@
     - Bugfix for empty geometry[#140]
     - Bugfix for OD-snapping strategies [#146]
 
+# 0.7.0
+
+- Use tracing (=following lines) when snapping to reference borders [#154]
+- adding 'partial_snapping' as parameter, to execute post-snapping on geometries that are partially covered [#157] 
+- Improvement of the od_strategies (SNAP_PREFER_VERTICES, SNAP_NO_PREFERENCE, SNAP_ONLY_VERTICES): performance gain [#153] 
+- Improvement of the od_strategy 'EXCLUDE':performance gain [#150] 
+
 
 
 
