@@ -24,12 +24,14 @@ class OpenbaarDomeinStrategy(IntEnum):
     """
 
     EXCLUDE = -1
+    EXCLUDE_SLOW = -2
     AS_IS = 0
     SNAP_INNER_SIDE = 1
     SNAP_ALL_SIDE = 2
     SNAP_PREFER_VERTICES = 3
     SNAP_NO_PREFERENCE = 4
     SNAP_ONLY_VERTICES = 5
+    # TRACE = 6
 
 
 class AlignerResultType(str, Enum):

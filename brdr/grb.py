@@ -302,6 +302,7 @@ def get_collection_grb_parcels_by_date(
         year=str(date.year),
         geometry=geometry,
         partition=partition,
+        limit=limit,
         crs=crs,
     )
     # Filter on specific date: delete all features > specific_date
@@ -329,6 +330,7 @@ def get_collection_grb_parcels_by_date(
         year=str(date.year - 1),
         geometry=geometry,
         partition=partition,
+        limit=limit,
         crs=crs,
     )
     kept_features = []
