@@ -451,7 +451,7 @@ def update_to_actual_grb(
         GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=actual_aligner)
     )
     rd_step = 10
-    actual_aligner.relevant_distances = [
+    relevant_distances = [
         round(k, 1)
         for k in np.arange(
             0, max_distance_for_actualisation * 100 + rd_step, rd_step, dtype=int
@@ -460,7 +460,7 @@ def update_to_actual_grb(
     ]
     # EXECUTE evaluation
     actual_aligner.evaluate(
-        ids_to_evaluate=affected, base_formula_field=BASE_FORMULA_FIELD_NAME
+        ids_to_evaluate=affected, base_formula_field=BASE_FORMULA_FIELD_NAME,relevant_distances=relevant_distances
     )
 
     return actual_aligner.get_results_as_geojson(
