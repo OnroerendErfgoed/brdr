@@ -199,7 +199,7 @@ def polygonize_reference_data(dict_ref):
     return dict_ref
 
 
-def get_breakpoints_zerostreak(x, y,extra_score=10):
+def get_breakpoints_zerostreak(x, y,extra_score=100):
     """
     Determine the extremes and zero_streaks of a graph based on the derivative.
 
@@ -235,9 +235,11 @@ def get_breakpoints_zerostreak(x, y,extra_score=10):
             end_streak = x[i - 1]
             if derivative[i] == 0:
                 end_streak = x[i]
-            center_streak = start_streak + (end_streak - start_streak) / 2
+            score_streak = round((end_streak - start_streak),0)
+            center_streak = start_streak + (score_streak) / 2
+
             zero_streaks.append(
-                (start_streak, end_streak, center_streak, streak, last_extreme)
+                (start_streak, end_streak, center_streak, score_streak*100, last_extreme)
             )
             streak = 0
             start_streak = None

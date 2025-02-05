@@ -25,7 +25,7 @@ from brdr.constants import GRB_KNW_ID
 from brdr.constants import GRB_MAX_REFERENCE_BUFFER
 from brdr.constants import GRB_PARCEL_ID
 from brdr.constants import GRB_VERSION_DATE
-from brdr.enums import GRBType, AlignerResultType
+from brdr.enums import GRBType, AlignerResultType, Full
 from brdr.geometry_utils import buffer_pos, safe_intersection, safe_unary_union
 from brdr.geometry_utils import create_donut
 from brdr.geometry_utils import features_by_geometric_operation
@@ -365,8 +365,8 @@ def update_to_actual_grb(
     base_formula_field=FORMULA_FIELD_NAME,
     grb_type=GRBType.ADP,
     max_distance_for_actualisation=2,
-    all_predictions=False,
-    prefer_full=False,
+    max_predictions=-1,
+    full_strategy=Full.NO_FULL,
     feedback=None,
     attributes=True,
 ):
@@ -471,9 +471,9 @@ def update_to_actual_grb(
     actual_aligner.evaluate(
         ids_to_evaluate=affected,
         base_formula_field=BASE_FORMULA_FIELD_NAME,
-        all_predictions=all_predictions,
+        max_predictions=max_predictions,
         relevant_distances=relevant_distances,
-        prefer_full=prefer_full,
+        full_strategy=full_strategy,
     )
 
     return actual_aligner.get_results_as_geojson(

@@ -90,4 +90,6 @@ if __name__ == "__main__":
             feature["properties"][actual_aligner.name_thematic_id]
             + ": "
             + feature["properties"][EVALUATION_FIELD_NAME]
+            + " - distance "
+            +  str(feature["properties"]["brdr_relevant_distance"])
         )

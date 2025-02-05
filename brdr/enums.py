@@ -97,9 +97,12 @@ class Evaluation(str, Enum):
     EQUALITY_EQUAL_FORMULA_FULL_1 = "equality_equal_formula_full_1"
     EQUALITY_EQUAL_FORMULA_2 = "equality_equal_formula_2"
     EQUALITY_FULL_3 = "equality_full_3"
-    PREDICTION_UNIQUE ="prediction_unique"
-    PREDICTION_FULL = "prediction_full"
+    PREDICTION_UNIQUE = "prediction_unique"
+    PREDICTION_UNIQUE_FULL = "prediction_unique_full"
+    TO_CHECK_PREDICTION_FULL = "to_check_prediction_full"
     TO_CHECK_PREDICTION_MULTI = "to_check_prediction_multi"
+    TO_CHECK_PREDICTION_MULTI_FULL = "to_check_prediction_multi_full"
+    TO_CHECK_ORIGINAL ="to_check_original"
     TO_CHECK_NO_PREDICTION = "to_check_no_prediction"
     NO_CHANGE = "no_change"
     """
@@ -108,11 +111,27 @@ class Evaluation(str, Enum):
     EQUALITY_EQUAL_FORMULA_2 = "equality_equal_formula_2"
     EQUALITY_FULL_3 = "equality_full_3"
     PREDICTION_UNIQUE = "prediction_unique"
-    PREDICTION_FULL = "prediction_full"
+    PREDICTION_UNIQUE_FULL = "prediction_unique_full"
+    TO_CHECK_PREDICTION_FULL = "to_check_prediction_full"
     TO_CHECK_PREDICTION_MULTI = "to_check_prediction_multi"
+    TO_CHECK_PREDICTION_MULTI_FULL = "to_check_prediction_multi_full"
+    TO_CHECK_ORIGINAL ="to_check_original"
     TO_CHECK_NO_PREDICTION = "to_check_no_prediction"
     NO_CHANGE = "no_change"
 
+
+class Full(str, Enum):
+    """
+    Enum for full strategy when evaluating predictions:
+
+    ONLY_FULL = "only_full"
+    PREFER_FULL = "prefer_full"
+    NO_FULL = "no_full"
+    """
+
+    ONLY_FULL = "only_full"
+    PREFER_FULL = "prefer_full"
+    NO_FULL = "no_full"
 
 class SnapStrategy(str, Enum):
     """

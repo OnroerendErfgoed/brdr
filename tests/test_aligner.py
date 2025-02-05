@@ -11,7 +11,7 @@ from shapely.geometry import shape
 
 from brdr.aligner import Aligner
 from brdr.constants import FORMULA_FIELD_NAME, AREA_ATTRIBUTE
-from brdr.enums import GRBType, AlignerResultType, Evaluation
+from brdr.enums import GRBType, AlignerResultType, Evaluation, Full
 from brdr.enums import OpenbaarDomeinStrategy
 from brdr.geometry_utils import _grid_bounds, safe_equals
 from brdr.geometry_utils import buffer_neg_pos
@@ -457,12 +457,12 @@ class TestAligner(unittest.TestCase):
         )
 
         dict_evaluated, prop_dictionary = aligner.evaluate(
-            relevant_distances=np.arange(0, 410, 10, dtype=int) / 100, prefer_full=False
+            relevant_distances=np.arange(0, 410, 10, dtype=int) / 100, full_strategy=Full.NO_FULL,
         )
-        assert len(dict_evaluated["theme_id_1"]) == 1
+        assert len(dict_evaluated["theme_id_1"]) == 3
         assert (
             prop_dictionary["theme_id_1"][3.5]["brdr_evaluation"]
-            == Evaluation.TO_CHECK_PREDICTION_MULTI
+            == Evaluation.TO_CHECK_PREDICTION_MULTI_FULL
         )
 
     def test_evaluate_full_parcel_true(self):
@@ -478,12 +478,12 @@ class TestAligner(unittest.TestCase):
         )
 
         dict_evaluated, prop_dictionary = aligner.evaluate(
-            relevant_distances=np.arange(0, 410, 10, dtype=int) / 100, prefer_full=True
+            relevant_distances=np.arange(0, 410, 10, dtype=int) / 100, full_strategy=Full.PREFER_FULL,
         )
-        assert len(dict_evaluated["theme_id_1"]) == 1
+        assert len(dict_evaluated["theme_id_1"]) == 3
         assert (
             prop_dictionary["theme_id_1"][3.5]["brdr_evaluation"]
-            == Evaluation.PREDICTION_FULL
+            == Evaluation.TO_CHECK_PREDICTION_FULL
         )
 
     def test_evaluate_all_predictions(self):
@@ -500,13 +500,36 @@ class TestAligner(unittest.TestCase):
 
         dict_evaluated, prop_dictionary = aligner.evaluate(
             relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
-            prefer_full=True,
-            all_predictions=True,
+            full_strategy=Full.PREFER_FULL,
+            max_predictions=-1,
         )
         assert len(dict_evaluated["theme_id_1"]) == 3
         assert (
             prop_dictionary["theme_id_1"][3.5]["brdr_evaluation"]
-            == Evaluation.PREDICTION_FULL
+            == Evaluation.TO_CHECK_PREDICTION_FULL
+        )
+
+    def test_evaluate_limited_predictions(self):
+        thematic_dict = {
+            "theme_id_1": from_wkt(
+                "Polygon ((174015.08694170592934825 179025.39916784031083807, 174040.71934808720834553 179031.93985084796440788, 174037.1838437587430235 178986.50862022733781487, 174030.64316075111855753 178982.97311589887249283, 174016.85469387014745735 179002.24161448894301429, 174021.62762471355381422 179005.77711881740833633, 174018.62244603436556645 179008.60552228015149012, 174015.08694170592934825 179025.39916784031083807))"
+            )
+        }
+        aligner = Aligner()
+        aligner.load_thematic_data(DictLoader(thematic_dict))
+        aligner.load_reference_data(
+            GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
+        )
+
+        dict_evaluated, prop_dictionary = aligner.evaluate(
+            relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
+            full_strategy=Full.NO_FULL,
+            max_predictions=3,
+        )
+        assert len(dict_evaluated["theme_id_1"]) == 3
+        assert (
+            prop_dictionary["theme_id_1"][3.5]["brdr_evaluation"]
+            == Evaluation.TO_CHECK_PREDICTION_MULTI_FULL
         )
 
     def test_remark_for_poly_multipoly(self):
