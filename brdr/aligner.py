@@ -784,6 +784,7 @@ class Aligner:
                         )
                         props[PREDICTION_COUNT] = -1
                         props[EVALUATION_FIELD_NAME] = Evaluation.PREDICTION_FULL
+
                 prediction = dict_affected_predictions[theme_id][dist]
                 prediction_score = dict_affected_predictions[theme_id][dist][
                     PREDICTION_SCORE
@@ -802,8 +803,6 @@ class Aligner:
                 prop_dictionary[theme_id][best_dist] = best_prediction_props
         # UNAFFECTED
         relevant_distance = 0.0
-        # dict_unaffected_series = self.process(dict_thematic=dict_unaffected,relevant_distances=[relevant_distance])
-        # for theme_id, dict_unaffected_results in dict_unaffected_series.items():
         for theme_id, geom in dict_unaffected.items():
             dict_predictions_evaluated[theme_id] = {}
             prop_dictionary[theme_id] = {relevant_distance: {}}
