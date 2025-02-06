@@ -733,7 +733,7 @@ class Aligner:
             prop_dictionary[theme_id] = {}
             if theme_id not in dict_affected_predictions.keys():
                 # No predictions available
-                dist = self.relevant_distances[0]
+                dist = relevant_distances[0]
                 prop_dictionary[theme_id][dist] = {}
                 props = self._evaluate(
                     id_theme=theme_id,
@@ -766,8 +766,12 @@ class Aligner:
                 prediction_count = dict_affected_predictions[theme_id][dist][
                     PREDICTION_COUNT
                 ]
-
                 props[PREDICTION_COUNT] = prediction_count
+                full = props[FULL_ACTUAL_FIELD_NAME]
+                # formula = json.loads(props[FORMULA_FIELD_NAME])
+                # full = formula["full"]
+                if full_strategy == Full.ONLY_FULL and not full:
+                    continue
                 if (
                     props[EVALUATION_FIELD_NAME] == Evaluation.TO_CHECK_NO_PREDICTION
                     and props[PREDICTION_COUNT] == 1
@@ -784,10 +788,6 @@ class Aligner:
                     dict_predictions_evaluated[theme_id][dist] = dict_affected_predictions[theme_id][dist]
                     prop_dictionary[theme_id][dist] = props
                     equality_found =True
-                    continue
-                formula = json.loads(props[FORMULA_FIELD_NAME])
-                full = formula["full"]
-                if full_strategy == Full.ONLY_FULL and not full:
                     continue
                 if full:
                     if full_strategy!=Full.NO_FULL:
@@ -810,7 +810,7 @@ class Aligner:
 
             #if there is only one prediction left,  evaluation is set to PREDICTION_UNIQUE_FULL
             if len_best_ix==1:
-                if  "brdr_full_actual" in prediction_properties[0] and  prediction_properties[0]["brdr_full_actual"]:
+                if  FULL_ACTUAL_FIELD_NAME in prediction_properties[0] and  prediction_properties[0][FULL_ACTUAL_FIELD_NAME]:
                     prediction_properties[0][EVALUATION_FIELD_NAME] = Evaluation.PREDICTION_UNIQUE_FULL
                 else:
                     prediction_properties[0][EVALUATION_FIELD_NAME] = Evaluation.PREDICTION_UNIQUE
@@ -1607,6 +1607,11 @@ class Aligner:
             DIFF_AREA_FIELD_NAME: None,
         }
         actual_formula = self.get_brdr_formula(geom_predicted)
+        if actual_formula is None:
+            properties[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
+            properties[FULL_ACTUAL_FIELD_NAME] = False
+            return properties
+        properties[FULL_ACTUAL_FIELD_NAME] = actual_formula["full"]
         properties[FORMULA_FIELD_NAME] = json.dumps(actual_formula)
         base_formula = None
         if (
@@ -1617,11 +1622,10 @@ class Aligner:
                 self.dict_thematic_properties[id_theme][base_formula_field]
             )
 
-        if base_formula is None or actual_formula is None:
+        if base_formula is None:
             properties[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
             return properties
         properties[FULL_BASE_FIELD_NAME] = base_formula["full"]
-        properties[FULL_ACTUAL_FIELD_NAME] = actual_formula["full"]
         od_alike = False
         if (
             base_formula["reference_od"] is None
