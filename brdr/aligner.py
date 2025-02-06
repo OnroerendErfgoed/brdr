@@ -766,7 +766,11 @@ class Aligner:
                 prediction_count = dict_affected_predictions[theme_id][dist][
                     PREDICTION_COUNT
                 ]
+                prediction_score = dict_affected_predictions[theme_id][dist][
+                    PREDICTION_SCORE
+                ]
                 props[PREDICTION_COUNT] = prediction_count
+                props[PREDICTION_SCORE] = prediction_score
                 full = props[FULL_ACTUAL_FIELD_NAME]
                 # formula = json.loads(props[FORMULA_FIELD_NAME])
                 # full = formula["full"]
@@ -792,14 +796,15 @@ class Aligner:
                 if full:
                     if full_strategy!=Full.NO_FULL:
                         props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_PREDICTION_FULL
-                        dict_affected_predictions[theme_id][dist][PREDICTION_SCORE] = (
-                                dict_affected_predictions[theme_id][dist][PREDICTION_SCORE]
-                                + 1000
-                        )
+                        # dict_affected_predictions[theme_id][dist][PREDICTION_SCORE] = (
+                        #         dict_affected_predictions[theme_id][dist][PREDICTION_SCORE]
+                        #         + 1000
+                        # )
+                        props[PREDICTION_SCORE] = prediction_score +1000
                         props[PREDICTION_COUNT] = -1
                     else:
                         props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_PREDICTION_MULTI_FULL
-                scores.append(dict_affected_predictions[theme_id][dist][PREDICTION_SCORE])
+                scores.append(props[PREDICTION_SCORE])
                 distances.append(dist)
                 predictions.append(dict_affected_predictions[theme_id][dist])
                 prediction_properties.append(props)

@@ -235,7 +235,7 @@ def get_breakpoints_zerostreak(x, y,extra_score=100):
             end_streak = x[i - 1]
             if derivative[i] == 0:
                 end_streak = x[i]
-            score_streak = round((end_streak - start_streak),0)
+            score_streak = round((end_streak - start_streak),2)
             center_streak = start_streak + (score_streak) / 2
 
             zero_streaks.append(
