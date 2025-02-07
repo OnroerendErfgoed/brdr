@@ -24,7 +24,7 @@ from brdr.constants import (
     MAX_OUTER_BUFFER,
     SNAPPING_MAX_SEGMENT_LENGTH,
     PARTIAL_SNAPPING_STRATEGY,
-    PARTIAL_SNAPPING,
+    PARTIAL_SNAPPING, RELEVANT_DISTANCE_DECIMALS,
 )
 from brdr.constants import (
     LAST_VERSION_DATE,
@@ -91,7 +91,7 @@ class Aligner:
         feedback=None,
         relevant_distance=1,
         relevant_distances=[
-            round(k, 1) for k in np.arange(0, 210, 10, dtype=int) / 100
+            round(k, RELEVANT_DISTANCE_DECIMALS) for k in np.arange(0, 210, 10, dtype=int) / 100
         ],
         threshold_overlap_percentage=50,
         od_strategy=OpenbaarDomeinStrategy.SNAP_ALL_SIDE,
@@ -551,7 +551,7 @@ class Aligner:
         self,
         dict_thematic=None,
         relevant_distances=[
-            round(k, 1) for k in np.arange(0, 310, 10, dtype=int) / 100
+            round(k, RELEVANT_DISTANCE_DECIMALS) for k in np.arange(0, 310, 10, dtype=int) / 100
         ],
         od_strategy=OpenbaarDomeinStrategy.SNAP_ALL_SIDE,
         threshold_overlap_percentage=50,
@@ -631,6 +631,10 @@ class Aligner:
         if dict_thematic is None:
             dict_thematic = self.dict_thematic
         dict_predictions = defaultdict(dict)
+        relevant_distances = list(relevant_distances)
+        relevant_distances.append(round(0,RELEVANT_DISTANCE_DECIMALS))
+        relevant_distances=list(set(relevant_distances))
+        relevant_distances=sorted(relevant_distances)
         dict_processresults = self.process(
             relevant_distances=relevant_distances,
             od_strategy=od_strategy,
@@ -696,7 +700,7 @@ class Aligner:
         ids_to_evaluate=None,
         base_formula_field=FORMULA_FIELD_NAME,
         relevant_distances=[
-            round(k, 1) for k in np.arange(0, 310, 10, dtype=int) / 100
+            round(k, RELEVANT_DISTANCE_DECIMALS) for k in np.arange(0, 310, 10, dtype=int) / 100
         ],
         full_strategy=Full.NO_FULL,
             max_predictions=-1,
@@ -829,7 +833,7 @@ class Aligner:
 
             # if there are multiple predictions, but we want only one and we ask for the original
             if len_best_ix > 1 and max_predictions == 1 and not multi_to_best_prediction:
-                relevant_distance = 0.0
+                relevant_distance = round(0,RELEVANT_DISTANCE_DECIMALS)
                 props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_ORIGINAL
                 props[PREDICTION_SCORE] = -1
                 dict_predictions_evaluated[theme_id][relevant_distance] = {
@@ -848,7 +852,7 @@ class Aligner:
                 prop_dictionary[theme_id][distance] = props
 
         # UNAFFECTED
-        relevant_distance = 0.0
+        relevant_distance = round(0,RELEVANT_DISTANCE_DECIMALS)
         for theme_id, geom in dict_unaffected.items():
             dict_predictions_evaluated[theme_id] = {}
             prop_dictionary[theme_id] = {relevant_distance: {}}

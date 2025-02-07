@@ -250,7 +250,30 @@ class TestEvaluate(unittest.TestCase):
         )
         assert len(dict_evaluated["theme_id_1"]) == 1
         assert (
-            prop_dictionary["theme_id_1"][0.0]["brdr_evaluation"]
+            prop_dictionary["theme_id_1"][0]["brdr_evaluation"]
             == Evaluation.TO_CHECK_ORIGINAL
         )
 
+    def test_evaluate_relevant_distances_without_0(self):
+        thematic_dict = {
+            "theme_id_1": from_wkt(
+                "Polygon ((174015.08694170592934825 179025.39916784031083807, 174040.71934808720834553 179031.93985084796440788, 174037.1838437587430235 178986.50862022733781487, 174030.64316075111855753 178982.97311589887249283, 174016.85469387014745735 179002.24161448894301429, 174021.62762471355381422 179005.77711881740833633, 174018.62244603436556645 179008.60552228015149012, 174015.08694170592934825 179025.39916784031083807))"
+            )
+        }
+        aligner = Aligner()
+        aligner.load_thematic_data(DictLoader(thematic_dict))
+        aligner.load_reference_data(
+            GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
+        )
+
+        dict_evaluated, prop_dictionary = aligner.evaluate(
+            relevant_distances=np.arange(10, 410, 10, dtype=int) / 100,
+            full_strategy=Full.NO_FULL,
+            max_predictions=1,
+            multi_to_best_prediction=False
+        )
+        assert len(dict_evaluated["theme_id_1"]) == 1
+        assert (
+            prop_dictionary["theme_id_1"][0]["brdr_evaluation"]
+            == Evaluation.TO_CHECK_ORIGINAL
+        )

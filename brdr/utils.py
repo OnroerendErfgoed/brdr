@@ -4,6 +4,7 @@ import os.path
 import numpy as np
 import requests
 from geojson import Feature, FeatureCollection, dump
+from matplotlib import pyplot as plt
 from shapely import GeometryCollection, make_valid, node, polygonize, unary_union
 from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry

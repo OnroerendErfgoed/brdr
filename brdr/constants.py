@@ -18,6 +18,8 @@ DEFAULT_CRS = "EPSG:31370"  # BelgianLambert72
 # MULTI_SINGLE_ID_SEPARATOR #separator to split multipolygon_ids to single polygons
 MULTI_SINGLE_ID_SEPARATOR = "*$*"
 
+RELEVANT_DISTANCE_DECIMALS = 2
+
 PREFIX_FIELDNAME = "brdr_"
 BASE_FORMULA_FIELD_NAME = (
     PREFIX_FIELDNAME + "base_formula"
