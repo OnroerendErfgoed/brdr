@@ -368,7 +368,6 @@ class TestAligner(unittest.TestCase):
         assert result["theme_id_1"][relevant_distance].get("result_diff_min").is_empty
         assert result["theme_id_1"][relevant_distance].get("result_diff_plus").is_empty
 
-
     def test_remark_for_poly_multipoly(self):
         # TODO correct test
         shape = from_wkt(
