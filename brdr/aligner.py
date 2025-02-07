@@ -44,7 +44,8 @@ from brdr.enums import (
     Evaluation,
     AlignerResultType,
     AlignerInputType,
-    SnapStrategy, Full,
+    SnapStrategy,
+    Full,
 )
 from brdr.geometry_utils import (
     buffer_neg,
@@ -697,20 +698,19 @@ class Aligner:
         relevant_distances=[
             round(k, 1) for k in np.arange(0, 310, 10, dtype=int) / 100
         ],
-        max_predictions=-1,
         full_strategy=Full.NO_FULL,
-        multi_to_best=True
+            max_predictions=-1,
+        multi_to_best_prediction=True,
     ):
         """
-
         Compares and evaluate input-geometries (with formula). Attributes are added to evaluate and decide if new
         proposals can be used
         ids_to_evaluate: list with all IDs to evaluate. all other IDs will be unchanged. If None (default), all self.dict_thematic will be evaluated.
         base_formula_field: name of the field where the base_formula is found in the data
-        max_predictions: boolean that indicates if all predictions should be returned, or only the one with the best score (default False)
+        max_predictions: integer that indicates how many predictions are maximally returned. (-1 indicates all predictions are returned)
         relevant_distances: relevant distances to evaluate
-        full_strategy: enum, decided with predictions are kept or prefered based on full-ness
-        multi_to_best (default True): If True, the prediction with highest score will be taken, otherwise, the original geometry is returned
+        full_strategy: enum, decided which predictions are kept or prefered based on full-ness of the prediction
+        multi_to_best (default True): Only usable in combination with max_predictions=1. If True (and max_predictions=1), the prediction with highest score will be taken.If False, the original geometry is returned.
         """
         if ids_to_evaluate is None:
             ids_to_evaluate = list(self.dict_thematic.keys())
@@ -752,7 +752,7 @@ class Aligner:
             distances = []
             predictions = []
             prediction_properties = []
-            equality_found=False
+            equality_found = False
 
             for dist in sorted(dict_predictions_results.keys()):
                 if equality_found:
@@ -786,52 +786,60 @@ class Aligner:
                     and props[PREDICTION_COUNT] > 1
                 ):
                     props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_PREDICTION_MULTI
-                elif (
-                    props[EVALUATION_FIELD_NAME] != Evaluation.TO_CHECK_NO_PREDICTION
-                ):
-                    dict_predictions_evaluated[theme_id][dist] = dict_affected_predictions[theme_id][dist]
+                elif props[EVALUATION_FIELD_NAME] != Evaluation.TO_CHECK_NO_PREDICTION:
+                    dict_predictions_evaluated[theme_id][dist] = (
+                        dict_affected_predictions[theme_id][dist]
+                    )
                     prop_dictionary[theme_id][dist] = props
-                    equality_found =True
+                    equality_found = True
                     continue
                 if full:
-                    if full_strategy!=Full.NO_FULL:
-                        props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_PREDICTION_FULL
-                        # dict_affected_predictions[theme_id][dist][PREDICTION_SCORE] = (
-                        #         dict_affected_predictions[theme_id][dist][PREDICTION_SCORE]
-                        #         + 1000
-                        # )
-                        props[PREDICTION_SCORE] = prediction_score +1000
+                    if full_strategy != Full.NO_FULL:
+                        props[EVALUATION_FIELD_NAME] = (
+                            Evaluation.TO_CHECK_PREDICTION_FULL
+                        )
+                        props[PREDICTION_SCORE] = prediction_score + 1000
                         props[PREDICTION_COUNT] = -1
                     else:
-                        props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_PREDICTION_MULTI_FULL
+                        props[EVALUATION_FIELD_NAME] = (
+                            Evaluation.TO_CHECK_PREDICTION_MULTI_FULL
+                        )
                 scores.append(props[PREDICTION_SCORE])
                 distances.append(dist)
                 predictions.append(dict_affected_predictions[theme_id][dist])
                 prediction_properties.append(props)
 
-            #get max amount of best-scoring predictions
-            best_ix=sorted(range(len(scores)), reverse=True, key=lambda i: scores[i])
+            # get max amount of best-scoring predictions
+            best_ix = sorted(range(len(scores)), reverse=True, key=lambda i: scores[i])
             len_best_ix = len(best_ix)
 
-            #if there is only one prediction left,  evaluation is set to PREDICTION_UNIQUE_FULL
-            if len_best_ix==1:
-                if  FULL_ACTUAL_FIELD_NAME in prediction_properties[0] and  prediction_properties[0][FULL_ACTUAL_FIELD_NAME]:
-                    prediction_properties[0][EVALUATION_FIELD_NAME] = Evaluation.PREDICTION_UNIQUE_FULL
+            # if there is only one prediction left,  evaluation is set to PREDICTION_UNIQUE_FULL
+            if len_best_ix == 1:
+                if (
+                    FULL_ACTUAL_FIELD_NAME in prediction_properties[0]
+                    and prediction_properties[0][FULL_ACTUAL_FIELD_NAME]
+                ):
+                    prediction_properties[0][
+                        EVALUATION_FIELD_NAME
+                    ] = Evaluation.PREDICTION_UNIQUE_FULL
                 else:
-                    prediction_properties[0][EVALUATION_FIELD_NAME] = Evaluation.PREDICTION_UNIQUE
-
+                    prediction_properties[0][
+                        EVALUATION_FIELD_NAME
+                    ] = Evaluation.PREDICTION_UNIQUE
 
             # if there are multiple predictions, but we want only one and we ask for the original
-            if len_best_ix>1 and max_predictions==1 and not multi_to_best:
+            if len_best_ix > 1 and max_predictions == 1 and not multi_to_best_prediction:
                 relevant_distance = 0.0
                 props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_ORIGINAL
                 props[PREDICTION_SCORE] = -1
-                dict_predictions_evaluated[theme_id][relevant_distance] = {"result": dict_affected[theme_id]}
+                dict_predictions_evaluated[theme_id][relevant_distance] = {
+                    "result": dict_affected[theme_id]
+                }
                 prop_dictionary[theme_id][relevant_distance] = props
                 continue
 
-            if max_predictions>0 and len_best_ix>max_predictions:
-                best_ix =best_ix[: max_predictions]
+            if max_predictions > 0 and len_best_ix > max_predictions:
+                best_ix = best_ix[:max_predictions]
             for ix in best_ix:
                 distance = distances[ix]
                 prediction = predictions[ix]

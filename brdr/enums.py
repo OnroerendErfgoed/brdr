@@ -115,7 +115,7 @@ class Evaluation(str, Enum):
     TO_CHECK_PREDICTION_FULL = "to_check_prediction_full"
     TO_CHECK_PREDICTION_MULTI = "to_check_prediction_multi"
     TO_CHECK_PREDICTION_MULTI_FULL = "to_check_prediction_multi_full"
-    TO_CHECK_ORIGINAL ="to_check_original"
+    TO_CHECK_ORIGINAL = "to_check_original"
     TO_CHECK_NO_PREDICTION = "to_check_no_prediction"
     NO_CHANGE = "no_change"
 
@@ -132,6 +132,7 @@ class Full(str, Enum):
     ONLY_FULL = "only_full"
     PREFER_FULL = "prefer_full"
     NO_FULL = "no_full"
+
 
 class SnapStrategy(str, Enum):
     """

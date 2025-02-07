@@ -199,7 +199,7 @@ def polygonize_reference_data(dict_ref):
     return dict_ref
 
 
-def get_breakpoints_zerostreak(x, y,extra_score=100):
+def get_breakpoints_zerostreak(x, y, extra_score=100):
     """
     Determine the extremes and zero_streaks of a graph based on the derivative.
 
@@ -235,11 +235,17 @@ def get_breakpoints_zerostreak(x, y,extra_score=100):
             end_streak = x[i - 1]
             if derivative[i] == 0:
                 end_streak = x[i]
-            score_streak = round((end_streak - start_streak),2)
+            score_streak = round((end_streak - start_streak), 2)
             center_streak = start_streak + (score_streak) / 2
 
             zero_streaks.append(
-                (start_streak, end_streak, center_streak, score_streak*100, last_extreme)
+                (
+                    start_streak,
+                    end_streak,
+                    center_streak,
+                    score_streak * 100,
+                    last_extreme,
+                )
             )
             streak = 0
             start_streak = None
@@ -266,10 +272,10 @@ def get_breakpoints_zerostreak(x, y,extra_score=100):
     #         f"breakpoints: relevant_distance:"
     #         f"{extremum[0]:.2f}, extreme:{extremum[1]:.2f} ({extremum[2]})"
     #     )
-    #adding some extra prediction_score to the last streak when this is ended by the max dist
-    if len(zero_streaks)>0 and zero_streaks[-1][1]==x[-1]:
+    # adding some extra prediction_score to the last streak when this is ended by the max dist
+    if len(zero_streaks) > 0 and zero_streaks[-1][1] == x[-1]:
         list_last_tuple = list(zero_streaks[-1])
-        list_last_tuple[3]= list_last_tuple[3]+extra_score
+        list_last_tuple[3] = list_last_tuple[3] + extra_score
         zero_streaks[-1] = tuple(list_last_tuple)
     # for st in zero_streaks:
     #     logging.debug(
