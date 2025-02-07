@@ -2,7 +2,7 @@ import numpy as np
 
 from brdr.aligner import Aligner
 from brdr.constants import EVALUATION_FIELD_NAME
-from brdr.enums import GRBType, AlignerResultType
+from brdr.enums import GRBType, AlignerResultType, Full
 from brdr.grb import GRBActualLoader
 from brdr.loader import GeoJsonFileLoader
 
@@ -22,7 +22,7 @@ if __name__ == "__main__":
     )
     # Use the EVALUATE-function
     dict_evaluated, prop_dictionary = actual_aligner.evaluate(
-        ids_to_evaluate=None, base_formula_field=None, prefer_full=True
+        ids_to_evaluate=None, base_formula_field=None,full_strategy=Full.PREFER_FULL,
     )
 
     # SHOW the EVALUATED results

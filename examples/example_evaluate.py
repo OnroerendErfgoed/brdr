@@ -4,7 +4,7 @@ from datetime import date
 import numpy as np
 
 from brdr.aligner import Aligner
-from brdr.constants import EVALUATION_FIELD_NAME
+from brdr.constants import EVALUATION_FIELD_NAME, PREDICTION_SCORE, RELEVANT_DISTANCE_FIELD_NAME
 from brdr.enums import GRBType, AlignerResultType
 from brdr.grb import GRBActualLoader
 from brdr.grb import GRBFiscalParcelLoader
@@ -90,4 +90,8 @@ if __name__ == "__main__":
             feature["properties"][actual_aligner.name_thematic_id]
             + ": "
             + feature["properties"][EVALUATION_FIELD_NAME]
+            + " - score "
+            + str(feature["properties"][PREDICTION_SCORE])
+            + " - distance "
+            +  str(feature["properties"][RELEVANT_DISTANCE_FIELD_NAME])
         )
