@@ -397,16 +397,18 @@ def update_to_actual_grb(
         try:
             if not base_formula_field is None:
                 base_formula_string = feature["properties"][base_formula_field]
-                dict_thematic_props[id_theme][BASE_FORMULA_FIELD_NAME] = base_formula_string
+                dict_thematic_props[id_theme][
+                    BASE_FORMULA_FIELD_NAME
+                ] = base_formula_string
                 base_formula = json.loads(base_formula_string)
 
                 logger.feedback_debug("formula: " + str(base_formula))
                 try:
                     logger.feedback_debug(str(dict_thematic_props[id_theme]))
                     if (
-                            LAST_VERSION_DATE in base_formula
-                            and base_formula[LAST_VERSION_DATE] is not None
-                            and base_formula[LAST_VERSION_DATE] != ""
+                        LAST_VERSION_DATE in base_formula
+                        and base_formula[LAST_VERSION_DATE] is not None
+                        and base_formula[LAST_VERSION_DATE] != ""
                     ):
                         str_lvd = base_formula[LAST_VERSION_DATE]
                         lvd = datetime.strptime(str_lvd, DATE_FORMAT).date()
@@ -415,10 +417,14 @@ def update_to_actual_grb(
                 except Exception:
                     logger.feedback_info(f"Problem with {LAST_VERSION_DATE}")
             else:
-                logger.feedback_info(f"No brdr_formula (- json-attribute-field) loaded for id {str(id_theme)}")
+                logger.feedback_info(
+                    f"No brdr_formula (- json-attribute-field) loaded for id {str(id_theme)}"
+                )
                 last_version_date = None
         except:
-            logger.feedback_info(f"No brdr_formula (- json-attribute-field) loaded for id {str(id_theme)}")
+            logger.feedback_info(
+                f"No brdr_formula (- json-attribute-field) loaded for id {str(id_theme)}"
+            )
             last_version_date = None
 
     # als lastversiondate nog altijd 'now' is dan is er eigenlijk geen versiedate aanwezig in de data, en dan zetten we alle features op affected

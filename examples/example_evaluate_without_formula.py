@@ -22,7 +22,9 @@ if __name__ == "__main__":
     )
     # Use the EVALUATE-function
     dict_evaluated, prop_dictionary = actual_aligner.evaluate(
-        ids_to_evaluate=None, base_formula_field=None,full_strategy=Full.PREFER_FULL,
+        ids_to_evaluate=None,
+        base_formula_field=None,
+        full_strategy=Full.PREFER_FULL,
     )
 
     # SHOW the EVALUATED results

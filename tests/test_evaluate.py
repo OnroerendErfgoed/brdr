@@ -24,8 +24,6 @@ class TestEvaluate(unittest.TestCase):
         self.sample_aligner = Aligner()
         self.sample_geom = Polygon([(0, 0), (0, 10), (10, 10), (10, 0)])
 
-
-
     def test_evaluate(self):
         thematic_dict = {
             "theme_id_1": from_wkt(
@@ -110,7 +108,8 @@ class TestEvaluate(unittest.TestCase):
         )
 
         dict_evaluated, prop_dictionary = aligner.evaluate(
-            relevant_distances=np.arange(0, 410, 10, dtype=int) / 100, full_strategy=Full.NO_FULL,
+            relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
+            full_strategy=Full.NO_FULL,
         )
         assert len(dict_evaluated["theme_id_1"]) == 3
         assert (
@@ -131,7 +130,8 @@ class TestEvaluate(unittest.TestCase):
         )
 
         dict_evaluated, prop_dictionary = aligner.evaluate(
-            relevant_distances=np.arange(0, 410, 10, dtype=int) / 100, full_strategy=Full.PREFER_FULL,
+            relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
+            full_strategy=Full.PREFER_FULL,
         )
         assert len(dict_evaluated["theme_id_1"]) == 3
         assert (
@@ -152,7 +152,8 @@ class TestEvaluate(unittest.TestCase):
         )
 
         dict_evaluated, prop_dictionary = aligner.evaluate(
-            relevant_distances=np.arange(0, 410, 10, dtype=int) / 100, full_strategy=Full.ONLY_FULL,
+            relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
+            full_strategy=Full.ONLY_FULL,
         )
         assert len(dict_evaluated["theme_id_1"]) == 1
         assert (
@@ -222,7 +223,7 @@ class TestEvaluate(unittest.TestCase):
             relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
             full_strategy=Full.NO_FULL,
             max_predictions=1,
-            multi_to_best_prediction=True
+            multi_to_best_prediction=True,
         )
         assert len(dict_evaluated["theme_id_1"]) == 1
         assert (
@@ -246,7 +247,7 @@ class TestEvaluate(unittest.TestCase):
             relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
             full_strategy=Full.NO_FULL,
             max_predictions=1,
-            multi_to_best_prediction=False
+            multi_to_best_prediction=False,
         )
         assert len(dict_evaluated["theme_id_1"]) == 1
         assert (
@@ -270,7 +271,7 @@ class TestEvaluate(unittest.TestCase):
             relevant_distances=np.arange(10, 410, 10, dtype=int) / 100,
             full_strategy=Full.NO_FULL,
             max_predictions=1,
-            multi_to_best_prediction=False
+            multi_to_best_prediction=False,
         )
         assert len(dict_evaluated["theme_id_1"]) == 1
         assert (

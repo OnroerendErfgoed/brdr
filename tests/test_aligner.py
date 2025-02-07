@@ -1,5 +1,4 @@
 import os
-import os
 import unittest
 
 import numpy as np
