@@ -25,7 +25,7 @@ from brdr.constants import GRB_KNW_ID
 from brdr.constants import GRB_MAX_REFERENCE_BUFFER
 from brdr.constants import GRB_PARCEL_ID
 from brdr.constants import GRB_VERSION_DATE
-from brdr.enums import GRBType, AlignerResultType
+from brdr.enums import GRBType, AlignerResultType, Full
 from brdr.geometry_utils import buffer_pos, safe_intersection, safe_unary_union
 from brdr.geometry_utils import create_donut
 from brdr.geometry_utils import features_by_geometric_operation
@@ -363,7 +363,10 @@ def update_to_actual_grb(
     featurecollection,
     id_theme_fieldname,
     base_formula_field=FORMULA_FIELD_NAME,
+    grb_type=GRBType.ADP,
     max_distance_for_actualisation=2,
+    max_predictions=-1,
+    full_strategy=Full.NO_FULL,
     feedback=None,
     attributes=True,
 ):
@@ -392,27 +395,39 @@ def update_to_actual_grb(
         dict_thematic[id_theme] = geom
         dict_thematic_props[id_theme] = feature["properties"]
         try:
-            base_formula_string = feature["properties"][base_formula_field]
-            dict_thematic_props[id_theme][BASE_FORMULA_FIELD_NAME] = base_formula_string
-            base_formula = json.loads(base_formula_string)
+            if not base_formula_field is None:
+                base_formula_string = feature["properties"][base_formula_field]
+                dict_thematic_props[id_theme][
+                    BASE_FORMULA_FIELD_NAME
+                ] = base_formula_string
+                base_formula = json.loads(base_formula_string)
 
-            logger.feedback_debug("formula: " + str(base_formula))
-        except Exception:
-            raise Exception("Formula -attribute-field (json) cannot be loaded")
-        try:
-            logger.feedback_debug(str(dict_thematic_props[id_theme]))
-            if (
-                LAST_VERSION_DATE in base_formula
-                and base_formula[LAST_VERSION_DATE] is not None
-                and base_formula[LAST_VERSION_DATE] != ""
-            ):
-                str_lvd = base_formula[LAST_VERSION_DATE]
-                lvd = datetime.strptime(str_lvd, DATE_FORMAT).date()
-                if last_version_date is None or lvd < last_version_date:
-                    last_version_date = lvd
+                logger.feedback_debug("formula: " + str(base_formula))
+                try:
+                    logger.feedback_debug(str(dict_thematic_props[id_theme]))
+                    if (
+                        LAST_VERSION_DATE in base_formula
+                        and base_formula[LAST_VERSION_DATE] is not None
+                        and base_formula[LAST_VERSION_DATE] != ""
+                    ):
+                        str_lvd = base_formula[LAST_VERSION_DATE]
+                        lvd = datetime.strptime(str_lvd, DATE_FORMAT).date()
+                        if last_version_date is None or lvd < last_version_date:
+                            last_version_date = lvd
+                except Exception:
+                    logger.feedback_info(f"Problem with {LAST_VERSION_DATE}")
+            else:
+                logger.feedback_info(
+                    f"No brdr_formula (- json-attribute-field) loaded for id {str(id_theme)}"
+                )
+                last_version_date = None
         except:
-            raise Exception(f"Problem with {LAST_VERSION_DATE}")
-    # als lastversiondate nog altijd 'now' is dan is r eigenlijk geen versiedate aanwezig in de data, en dan zetten we alle features op affected
+            logger.feedback_info(
+                f"No brdr_formula (- json-attribute-field) loaded for id {str(id_theme)}"
+            )
+            last_version_date = None
+
+    # als lastversiondate nog altijd 'now' is dan is er eigenlijk geen versiedate aanwezig in de data, en dan zetten we alle features op affected
     if last_version_date is not None:
         datetime_start = last_version_date
         datetime_end = datetime.now().date()
@@ -422,7 +437,7 @@ def update_to_actual_grb(
 
         affected, unaffected = get_affected_by_grb_change(
             dict_thematic=base_aligner_result.dict_thematic,
-            grb_type=GRBType.ADP,
+            grb_type=grb_type,
             date_start=datetime_start,
             date_end=datetime_end,
             one_by_one=False,
@@ -448,10 +463,10 @@ def update_to_actual_grb(
         DictLoader(data_dict=dict_thematic, data_dict_properties=dict_thematic_props)
     )
     actual_aligner.load_reference_data(
-        GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=actual_aligner)
+        GRBActualLoader(grb_type=grb_type, partition=1000, aligner=actual_aligner)
     )
     rd_step = 10
-    actual_aligner.relevant_distances = [
+    relevant_distances = [
         round(k, 1)
         for k in np.arange(
             0, max_distance_for_actualisation * 100 + rd_step, rd_step, dtype=int
@@ -460,7 +475,11 @@ def update_to_actual_grb(
     ]
     # EXECUTE evaluation
     actual_aligner.evaluate(
-        ids_to_evaluate=affected, base_formula_field=BASE_FORMULA_FIELD_NAME
+        ids_to_evaluate=affected,
+        base_formula_field=BASE_FORMULA_FIELD_NAME,
+        max_predictions=max_predictions,
+        relevant_distances=relevant_distances,
+        full_strategy=full_strategy,
     )
 
     return actual_aligner.get_results_as_geojson(

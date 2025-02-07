@@ -75,7 +75,45 @@ if __name__ == "__main__":
         featurecollection_base_result,
         base_aligner.name_thematic_id,
         base_formula_field=FORMULA_FIELD_NAME,
+        max_distance_for_actualisation=3,
+    )
+    if len(featurecollection) == 0:
+        print("empty featurecolection, no updates")
+    else:
+        # Print results
+        for feature in featurecollection["result"]["features"]:
+            print(
+                feature["properties"][name_thematic_id]
+                + ": "
+                + feature["properties"][EVALUATION_FIELD_NAME]
+            )
+        geojson = featurecollection["result"]
+        print(geojson)
+
+    featurecollection = update_to_actual_grb(
+        featurecollection_base_result,
+        base_aligner.name_thematic_id,
+        base_formula_field=FORMULA_FIELD_NAME,
         max_distance_for_actualisation=0,
+    )
+    if len(featurecollection) == 0:
+        print("empty featurecolection, no updates")
+    else:
+        # Print results
+        for feature in featurecollection["result"]["features"]:
+            print(
+                feature["properties"][name_thematic_id]
+                + ": "
+                + feature["properties"][EVALUATION_FIELD_NAME]
+            )
+        geojson = featurecollection["result"]
+        print(geojson)
+
+    featurecollection = update_to_actual_grb(
+        featurecollection_base_result,
+        base_aligner.name_thematic_id,
+        base_formula_field=None,
+        max_distance_for_actualisation=3,
     )
     if len(featurecollection) == 0:
         print("empty featurecolection, no updates")
