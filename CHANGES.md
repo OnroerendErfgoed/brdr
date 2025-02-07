@@ -99,10 +99,21 @@
 # 0.7.0
 
 - Use tracing (=following lines) when snapping to reference borders [#154]
-- adding 'partial_snapping' as parameter, to execute post-snapping on geometries that are partially covered [#157] 
-- Improvement of the od_strategies (SNAP_PREFER_VERTICES, SNAP_NO_PREFERENCE, SNAP_ONLY_VERTICES): performance gain [#153] 
-- Improvement of the od_strategy 'EXCLUDE':performance gain [#150] 
+- adding 'partial_snapping' as parameter, to execute post-snapping on geometries that are partially covered [#157]
+- Improvement of the od_strategies (SNAP_PREFER_VERTICES, SNAP_NO_PREFERENCE, SNAP_ONLY_VERTICES): performance
+  gain [#153]
+- Improvement of the od_strategy 'EXCLUDE':performance gain [#150]
 
+# 0.8.0
 
+! Not Backwards compatable !
 
+- Always '0'(zero) added to the relevant distances when calculating predictions, so a (cleaned-up) original geometry is
+  avalailable in the processresults[#167]
+- evaluate()-function: improved and adapted parameters[#164]
+- prediction_score: adapted that is an absolute value, expressing the stability-length (in cm)[#162]
+- augmented prediction_score when this is stable at max_relevant_distance [#163]
+- update_to_actual_grb: added logic that extra parameters (grb_type, max_predictions and full_strategy) can be
+  defined[#161]
+- Bugfix for updating to actual GRB (max_relevant_distance was always set to the default) [#160]
 
