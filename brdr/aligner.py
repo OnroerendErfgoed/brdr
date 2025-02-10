@@ -93,7 +93,7 @@ class Aligner:
         relevant_distance=1,
         relevant_distances=[
             round(k, RELEVANT_DISTANCE_DECIMALS)
-            for k in np.arange(0, 210, 10, dtype=int) / 100
+            for k in np.arange(0, 310, 10, dtype=int) / 100
         ],
         threshold_overlap_percentage=50,
         od_strategy=OpenbaarDomeinStrategy.SNAP_ALL_SIDE,
@@ -634,6 +634,10 @@ class Aligner:
         if dict_thematic is None:
             dict_thematic = self.dict_thematic
         dict_predictions = defaultdict(dict)
+        if od_strategy is None:
+            od_strategy=OpenbaarDomeinStrategy.SNAP_ALL_SIDE
+        if threshold_overlap_percentage is None:
+            threshold_overlap_percentage=50
         relevant_distances = list(relevant_distances)
         relevant_distances.append(round(0, RELEVANT_DISTANCE_DECIMALS))
         relevant_distances = list(set(relevant_distances))
@@ -731,7 +735,10 @@ class Aligner:
                 dict_unaffected[id_theme] = geom
         # AFFECTED
         dict_series, dict_affected_predictions, diffs = self.predictor(
-            dict_thematic=dict_affected, relevant_distances=relevant_distances
+            dict_thematic=dict_affected,
+            relevant_distances=relevant_distances,
+            od_strategy=self.od_strategy,
+            threshold_overlap_percentage=self.threshold_overlap_percentage
         )
         dict_predictions_evaluated = {}
         prop_dictionary = {}

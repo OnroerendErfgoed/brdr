@@ -4,12 +4,12 @@ import numpy as np
 from pyramid.config import Configurator
 from pyramid.response import Response
 from pyramid.view import view_config
-from shapely.geometry.geo import shape
 
 from brdr.aligner import Aligner
-from brdr.enums import GRBType, AlignerResultType
+from brdr.enums import GRBType, AlignerResultType, OpenbaarDomeinStrategy
 from brdr.grb import GRBActualLoader
 from brdr.loader import DictLoader
+from brdr.utils import geojson_geometry_to_shapely
 
 #from shapely.geometry.geo import shape, mapping
 
@@ -24,36 +24,59 @@ def home(request):
 
 @view_config(route_name='actualiser', renderer='json', request_method='POST')
 def actualiser(request):
-    try:
-        #get geometry and parameters from request body
-        data = request.json_body
-        geometry = data['geometry']
-        if 'params' in data:
-            params = data['params']
-        else:
-            params = None
+    """
 
-        relevant_distances = params["relevant_distances"] if (params is not None and 'relevant_distances' in params) else [
+    :param request:
+    :return:
+    """
+    try:
+        data = request.json_body
+        #DEFAULT
+        relevant_distances = [
             round(k, 2)
             for k in np.arange(0, 310, 10, dtype=int) / 100
         ]
+        crs="EPSG:31370"
+        threshold_overlap_percentage=50
+        od_strategy=OpenbaarDomeinStrategy.SNAP_ALL_SIDE
+        area_limit=100000
+        grb_type = GRBType.ADP
+
+        #get geometry
+        geojson_geometry = data['geometry']
+
+        #get parameters
+        if 'params' in data:
+            params = data['params']
+            if 'crs' in params:
+                crs = params['crs']
+            if 'relevant_distances' in params:
+                relevant_distances = params['relevant_distances']
+            if 'od_strategy' in params:
+                od_strategy =  params['od_strategy']
+            if 'grb_type' in params:
+                grb_type =  GRBType[params['grb_type']]
+
+        #validate geometry & parameters
+        #TODO
 
         #start a new aligner
-        aligner = Aligner()
+        aligner = Aligner(crs=crs,
+                          threshold_overlap_percentage=threshold_overlap_percentage,
+                          od_strategy=od_strategy,
+                          area_limit=area_limit
+                          )
         #load geometry into thematic dictionary
-        shapely_geom = shape(geometry)
-        id = 1
-        thematic_dict = {id: shapely_geom}
-        loader = DictLoader(
-            data_dict=thematic_dict
-        )
-        aligner.load_thematic_data(loader)
+        aligner.load_thematic_data(DictLoader(
+            data_dict={'id_1': geojson_geometry_to_shapely(geojson_geometry)}
+        ))
         #load reference data
         aligner.load_reference_data(
-            GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
+            GRBActualLoader(grb_type=grb_type, partition=1000, aligner=aligner)
         )
 
-        dict_evaluated, prop_dictionary = aligner.evaluate(relevant_distances=relevant_distances)
+        #EXECUTE EVALUATION
+        aligner.evaluate(relevant_distances=relevant_distances)
         fc = aligner.get_results_as_geojson(
             resulttype=AlignerResultType.EVALUATED_PREDICTIONS,
             formula=True,

@@ -402,6 +402,14 @@ def get_collection(ref_url, limit):
             break
     return collection
 
+def geojson_geometry_to_shapely(geojson_geometry):
+    """
+    Converts a geojson geometry into a shapely geometry
+    :param geojson_geometry:  geojson geometry
+    :return: shapely geometry
+    """
+    return shape(geojson_geometry)
+
 
 def geojson_to_dicts(collection, id_property):
     """
@@ -421,7 +429,7 @@ def geojson_to_dicts(collection, id_property):
     if collection is None or "features" not in collection:
         return data_dict, data_dict_properties
     for f in collection["features"]:
-        key = str(f["properties"][id_property])
+        key = f["properties"][id_property] #TODO to check if this has to be converted to string?
         geom = shape(f["geometry"])
         data_dict[key] = make_valid(geom)
         data_dict_properties[key] = f["properties"]
