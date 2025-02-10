@@ -46,7 +46,7 @@ dev = [
     "black==24.10.0",
     "flake8==7.1.1",
     "geopandas==1.0.1",
-    "hatchling==1.26.1",
+    "hatchling==1.27.0",
     "matplotlib==3.8.4",
     "mypy==1.13.0",
     "pip-tools==7.4.1",
