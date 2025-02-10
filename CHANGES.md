@@ -117,3 +117,7 @@
   defined[#161]
 - Bugfix for updating to actual GRB (max_relevant_distance was always set to the default) [#160]
 
+# 0.8.1
+
+- upgrade hatchling
+- added parameter to update_to_actual_grb()
