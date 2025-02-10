@@ -481,7 +481,7 @@ def update_to_actual_grb(
         max_predictions=max_predictions,
         relevant_distances=relevant_distances,
         full_strategy=full_strategy,
-        multi_to_best_prediction=multi_to_best_prediction
+        multi_to_best_prediction=multi_to_best_prediction,
     )
 
     return actual_aligner.get_results_as_geojson(
