@@ -1,3 +1,3 @@
 #!/bin/sh
 
-docker run --rm -p 8000:8000 --name grb_webservice grb_webservice
+docker run --rm -p 7999:7999 --name grb_webservice grb_webservice

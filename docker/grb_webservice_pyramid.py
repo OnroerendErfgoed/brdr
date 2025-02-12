@@ -1,29 +1,35 @@
-import threading
-from typing import Union
+from wsgiref.simple_server import make_server
 
 import numpy as np
-import uvicorn
-from fastapi import FastAPI,Request,HTTPException
+from pyramid.config import Configurator
+from pyramid.response import Response
+from pyramid.view import view_config
+
 from brdr.aligner import Aligner
 from brdr.enums import GRBType, AlignerResultType, OpenbaarDomeinStrategy
 from brdr.grb import GRBActualLoader
 from brdr.loader import DictLoader
 from brdr.utils import geojson_geometry_to_shapely
 
-
-port = 7999
+host = "0.0.0.0"
 host = "localhost"
+port = 8765
 
-app = FastAPI()
+@view_config(
+    route_name="home"
+)
+def home(request):
+    return Response("Welcome to GRB actualiser webservice!.You can actualise on '/actualiser'")
 
-@app.post("/actualiser")
-async def actualiser(request: Request):
+@view_config(route_name='actualiser', renderer='json', request_method='POST')
+def actualiser(request):
     """
+
     :param request:
     :return:
     """
     try:
-        data = await request.json()
+        data = request.json_body
         #DEFAULT
         relevant_distances = [
             round(k, 2)
@@ -78,25 +84,18 @@ async def actualiser(request: Request):
         #return the featureclasses with the evaluated predictions
         return fc
     except Exception as e:
-        raise HTTPException(status_code=400, detail="Missing required fields")
+        return Response(str(e), status=400)
 
-@app.get("/")
-def home():
-    return "Welcome to GRB actualiser webservice!.You can actualise on '/actualiser'"
-
-# @app.get("/items/{item_id}")
-# def read_item(item_id: int, q: Union[str, None] = None):
-#     return {"item_id": item_id, "q": q}
-
-
-def start_server():
-    uvicorn.run(app, host=host, port=port)
-    print ("Webservice started at " + "http://" + host+":"+ str(port))
+def start_service():
+    with Configurator() as config:
+        config.add_route("home", "/")
+        config.add_route("actualiser", "/actualiser")
+        config.scan()
+        app = config.make_wsgi_app()
+    server = make_server(host, port, app)
+    print("webservice active on http://localhost:" + str(port))
+    server.serve_forever()
 
 if __name__ == "__main__":
-    start_server()
-
-
-
-
+    start_service()
 
