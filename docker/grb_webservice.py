@@ -1,10 +1,6 @@
-import threading
-from typing import Union
-
 import numpy as np
 import uvicorn
-from fastapi import FastAPI,Request,HTTPException
-from shapely.geometry.geo import shape
+from fastapi import FastAPI, HTTPException
 from brdr.aligner import Aligner
 from brdr.enums import GRBType, AlignerResultType, OpenbaarDomeinStrategy
 from brdr.grb import GRBActualLoader
@@ -17,14 +13,104 @@ host = "0.0.0.0"
 
 app = FastAPI()
 
+from pydantic import BaseModel, Field, model_validator, ValidationError
+from typing import List, Dict, Any
+from shapely.geometry import shape
+
+class GeoJSONPolygon(BaseModel):
+    type: str = Field(..., example="Polygon")
+    coordinates: List[List[List[float]]] = Field(
+        ...,
+        example=[
+            [
+                [173933.56907947885, 179488.30342623874],
+                [173936.35215775482, 179488.67450334204],
+                [173934.272076098, 179506.26064825893],
+                [173933.01475345079, 179506.0509856817],
+                [173931.93712825546, 179505.87128823],
+                [173930.62761179, 179520.14188669],
+                [173930.46313179, 179521.93427069],
+                [173930.39100379, 179522.72044669],
+                [173938.4672918, 179523.72991869],
+                [173945.75362781016, 179524.6406386901],
+                [173945.87503581008, 179523.31763069],
+                [173946.02997980008, 179521.62924669],
+                [173947.10466781, 179509.9178866799],
+                [173947.56194781009, 179504.93478267992],
+                [173951.4300438099, 179462.78214265],
+                [173944.1195798101, 179462.13452665],
+                [173936.12290780008, 179461.42611064983],
+                [173935.80130780008, 179464.81087865008],
+                [173933.56907947885, 179488.30342623874]
+            ]
+        ]
+    )
+
+class Params(BaseModel):
+    crs: str = Field(..., example="EPSG:31370")
+    grb_type: str = Field(..., example="ADP")
+
+class RequestBody(BaseModel):
+    geometry: GeoJSONPolygon
+    params: Params
+
+    @model_validator(mode='before')
+    def check_polygon_area(cls, values: Dict[str, Any]):
+        geometry = values.get('geometry')
+        polygon = shape(geometry)
+        area = polygon.area
+        if area >= 100000:
+            raise ValidationError(f"Polygon area is too large: {area} m²")
+        return values
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [
+                        [
+                            [173933.56907947885, 179488.30342623874],
+                            [173936.35215775482, 179488.67450334204],
+                            [173934.272076098, 179506.26064825893],
+                            [173933.01475345079, 179506.0509856817],
+                            [173931.93712825546, 179505.87128823],
+                            [173930.62761179, 179520.14188669],
+                            [173930.46313179, 179521.93427069],
+                            [173930.39100379, 179522.72044669],
+                            [173938.4672918, 179523.72991869],
+                            [173945.75362781016, 179524.6406386901],
+                            [173945.87503581008, 179523.31763069],
+                            [173946.02997980008, 179521.62924669],
+                            [173947.10466781, 179509.9178866799],
+                            [173947.56194781009, 179504.93478267992],
+                            [173951.4300438099, 179462.78214265],
+                            [173944.1195798101, 179462.13452665],
+                            [173936.12290780008, 179461.42611064983],
+                            [173935.80130780008, 179464.81087865008],
+                            [173933.56907947885, 179488.30342623874]
+                        ]
+                    ]
+                },
+                "params": {
+                    "crs": "EPSG:31370",
+                    "grb_type": "ADP"
+                }
+            }
+        }
+
 @app.post("/actualiser")
-async def actualiser(request: Request):
+def actualiser(request_body: RequestBody):
     """
-    :param request:
-    :return:
+    Create an item with all the information:
+
+    - **name**: each item must have a name
+    - **description**: a long description
+    - **price**: required
+    - **tax**: optional
     """
     try:
-        data = await request.json()
+
         #DEFAULT
         relevant_distances = [
             round(k, 2)
@@ -35,24 +121,8 @@ async def actualiser(request: Request):
         od_strategy=OpenbaarDomeinStrategy.SNAP_ALL_SIDE
         area_limit=100000
         grb_type = GRBType.ADP
-
         #get geometry
-        geojson_geometry = data['geometry']
-
-        #get parameters
-        if 'params' in data:
-            params = data['params']
-            if 'crs' in params:
-                crs = params['crs']
-            if 'relevant_distances' in params:
-                relevant_distances = params['relevant_distances']
-            if 'od_strategy' in params:
-                od_strategy =  params['od_strategy']
-            if 'grb_type' in params:
-                grb_type =  GRBType[params['grb_type']]
-
-        #validate geometry & parameters
-        #TODO
+        geojson_geometry = request_body.geometry.model_dump()
 
         #start a new aligner
         aligner = Aligner(crs=crs,
