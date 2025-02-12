@@ -4,15 +4,16 @@ from typing import Union
 import numpy as np
 import uvicorn
 from fastapi import FastAPI,Request,HTTPException
+from shapely.geometry.geo import shape
 from brdr.aligner import Aligner
 from brdr.enums import GRBType, AlignerResultType, OpenbaarDomeinStrategy
 from brdr.grb import GRBActualLoader
 from brdr.loader import DictLoader
-from brdr.utils import geojson_geometry_to_shapely
+#from brdr.utils import geojson_geometry_to_shapely
 
 
 port = 7999
-host = "localhost"
+host = "0.0.0.0"
 
 app = FastAPI()
 
@@ -61,7 +62,8 @@ async def actualiser(request: Request):
                           )
         #load geometry into thematic dictionary
         aligner.load_thematic_data(DictLoader(
-            data_dict={'id_1': geojson_geometry_to_shapely(geojson_geometry)}
+            #data_dict={'id_1': geojson_geometry_to_shapely(geojson_geometry)}
+        data_dict = {'id_1': shape(geojson_geometry)}
         ))
         #load reference data
         aligner.load_reference_data(
