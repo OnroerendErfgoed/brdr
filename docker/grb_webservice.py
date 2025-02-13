@@ -1,103 +1,271 @@
+from typing import List, Optional, Dict, Any
+
 import numpy as np
 import uvicorn
 from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel, model_validator
+from shapely.geometry import shape
+
 from brdr.aligner import Aligner
 from brdr.enums import GRBType, AlignerResultType, OpenbaarDomeinStrategy
 from brdr.grb import GRBActualLoader
 from brdr.loader import DictLoader
-#from brdr.utils import geojson_geometry_to_shapely
-
 
 port = 7999
 host = "0.0.0.0"
 
 app = FastAPI()
 
-from pydantic import BaseModel, Field, model_validator, ValidationError
-from typing import List, Dict, Any
-from shapely.geometry import shape
 
-class GeoJSONPolygon(BaseModel):
-    type: str = Field(..., example="Polygon")
-    coordinates: List[List[List[float]]] = Field(
-        ...,
-        example=[
-            [
-                [173933.56907947885, 179488.30342623874],
-                [173936.35215775482, 179488.67450334204],
-                [173934.272076098, 179506.26064825893],
-                [173933.01475345079, 179506.0509856817],
-                [173931.93712825546, 179505.87128823],
-                [173930.62761179, 179520.14188669],
-                [173930.46313179, 179521.93427069],
-                [173930.39100379, 179522.72044669],
-                [173938.4672918, 179523.72991869],
-                [173945.75362781016, 179524.6406386901],
-                [173945.87503581008, 179523.31763069],
-                [173946.02997980008, 179521.62924669],
-                [173947.10466781, 179509.9178866799],
-                [173947.56194781009, 179504.93478267992],
-                [173951.4300438099, 179462.78214265],
-                [173944.1195798101, 179462.13452665],
-                [173936.12290780008, 179461.42611064983],
-                [173935.80130780008, 179464.81087865008],
-                [173933.56907947885, 179488.30342623874]
+
+
+
+class ReferenceSource(BaseModel):
+    source: str
+    version_date: str
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "source": "Adpf",
+                    "version_date": "2022-01-01"
+                }
             ]
-        ]
-    )
+        }
+    }
 
-class Params(BaseModel):
-    crs: str = Field(..., example="EPSG:31370")
-    grb_type: str = Field(..., example="ADP")
+class ReferenceFeature(BaseModel):
+    full: bool
+    area: float
+    percentage: Optional[float]
+    version_date: str
 
-class RequestBody(BaseModel):
-    geometry: GeoJSONPolygon
-    params: Params
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "full": True,
+                    "area": 1344.81,
+                    "percentage": 100,
+                    "version_date": "2019-07-25"
+                }
+            ]
+        }
+    }
 
-    @model_validator(mode='before')
-    def check_polygon_area(cls, values: Dict[str, Any]):
-        geometry = values.get('geometry')
-        polygon = shape(geometry)
-        area = polygon.area
-        if area >= 100000:
-            raise ValidationError(f"Polygon area is too large: {area} m²")
-        return values
+class Metadata(BaseModel):
+    alignment_date: str
+    brdr_version: str
+    reference_source: ReferenceSource
+    full: bool
+    area: float
+    reference_features: Optional[Dict[Any, ReferenceFeature]]
+    #reference_features: Optional[Dict[str, ReferenceFeature]]
+    reference_od: Optional[Dict[Any, float]]
+    last_version_date: Optional[str]
 
-    class Config:
-        schema_extra = {
-            "example": {
-                "geometry": {
-                    "type": "Polygon",
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "alignment_date": "2025-02-13",
+                    "brdr_version": "0.8.1",
+                    "reference_source": {
+                        "source": "Adpf",
+                        "version_date": "2022-01-01"
+                    },
+                    "full": True,
+                    "area": 1344.81,
+                    "reference_features": {
+                        "24126B0031/00N005": {
+                            "full": True,
+                            "area": 1344.81,
+                            "percentage": 100,
+                            "version_date": "2019-07-25"
+                        }
+                    },
+                    "reference_od": None,
+                    "last_version_date": "2019-07-25"
+                }
+            ]
+        }
+    }
+
+class Properties(BaseModel):
+    id: Any
+    metadata: Optional[Metadata] = None
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "id": "300",
+                    "metadata": {
+                        "alignment_date": "2025-02-13",
+                        "brdr_version": "0.8.1",
+                        "reference_source": {
+                            "source": "Adpf",
+                            "version_date": "2022-01-01"
+                        },
+                        "full": True,
+                        "area": 1344.81,
+                        "reference_features": {
+                            "24126B0031/00N005": {
+                                "full": True,
+                                "area": 1344.81,
+                                "percentage": 100,
+                                "version_date": "2019-07-25"
+                            }
+                        },
+                        "reference_od": None,
+                        "last_version_date": "2019-07-25"
+                    }
+                }
+            ]
+        }
+    }
+
+class Geometry(BaseModel):
+    type: str
+    coordinates: List[Any]
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "type": "MultiPolygon",
                     "coordinates": [
                         [
-                            [173933.56907947885, 179488.30342623874],
-                            [173936.35215775482, 179488.67450334204],
-                            [173934.272076098, 179506.26064825893],
-                            [173933.01475345079, 179506.0509856817],
-                            [173931.93712825546, 179505.87128823],
-                            [173930.62761179, 179520.14188669],
-                            [173930.46313179, 179521.93427069],
-                            [173930.39100379, 179522.72044669],
-                            [173938.4672918, 179523.72991869],
-                            [173945.75362781016, 179524.6406386901],
-                            [173945.87503581008, 179523.31763069],
-                            [173946.02997980008, 179521.62924669],
-                            [173947.10466781, 179509.9178866799],
-                            [173947.56194781009, 179504.93478267992],
-                            [173951.4300438099, 179462.78214265],
-                            [173944.1195798101, 179462.13452665],
-                            [173936.12290780008, 179461.42611064983],
-                            [173935.80130780008, 179464.81087865008],
-                            [173933.56907947885, 179488.30342623874]
+                            [
+                                [174111.5042, 179153.9243],
+                                [174110.0614, 179154.1094],
+                                [174068.867, 179159.3947],
+                                [174068.8661, 179159.4262],
+                                [174068.8626, 179159.5573],
+                                [174073.7483, 179188.9357],
+                                [174120.4387, 179180.3235],
+                                [174116.1333, 179157.2025],
+                                [174111.549, 179153.956],
+                                [174111.5042, 179153.9243]
+                            ]
                         ]
                     ]
-                },
-                "params": {
-                    "crs": "EPSG:31370",
-                    "grb_type": "ADP"
                 }
-            }
+            ]
         }
+    }
+
+class Feature(BaseModel):
+    type: str
+    properties: Properties
+    geometry: Geometry
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "type": "Feature",
+                    "properties": {
+                        "id": "300",
+                        "metadata": {
+                            "alignment_date": "2025-02-13",
+                            "brdr_version": "0.8.1",
+                            "reference_source": {
+                                "source": "Adpf",
+                                "version_date": "2022-01-01"
+                            },
+                            "full": True,
+                            "area": 1344.81,
+                            "reference_features": {
+                                "24126B0031/00N005": {
+                                    "full": True,
+                                    "area": 1344.81,
+                                    "percentage": 100,
+                                    "version_date": "2019-07-25"
+                                }
+                            },
+                            "reference_od": None,
+                            "last_version_date": "2019-07-25"
+                        }
+                    },
+                    "geometry": {
+                        "type": "MultiPolygon",
+                        "coordinates": [
+                            [
+                                [
+                                    [174111.5042, 179153.9243],
+                                    [174110.0614, 179154.1094],
+                                    [174068.867, 179159.3947],
+                                    [174068.8661, 179159.4262],
+                                    [174068.8626, 179159.5573],
+                                    [174073.7483, 179188.9357],
+                                    [174120.4387, 179180.3235],
+                                    [174116.1333, 179157.2025],
+                                    [174111.549, 179153.956],
+                                    [174111.5042, 179153.9243]
+                                ]
+                            ]
+                        ]
+                    }
+                }
+            ]
+        }
+    }
+
+class Params(BaseModel):
+    crs: Optional[str] = None
+    grb_type: Optional[GRBType] = None
+    prediction_strategy: Optional[str] = None
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "crs": "EPSG:31370",
+                    "grb_type": "ADP",
+                    "prediction_strategy": "ADP"
+                }
+            ]
+        }
+    }
+
+class RequestBody(BaseModel):
+    features: List[Feature]
+    params: Optional[Params] = None
+
+    @model_validator(mode='before')
+    def check_unique_ids(cls, values):
+        features = values.get('features', [])
+        ids = [feature['properties']['id'] for feature in features]
+        if len(ids) != len(set(ids)):
+            raise ValueError('All feature IDs must be unique')
+        return values
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "features": [
+                        {
+                            "type": "Feature",
+                            "properties": {
+                                "id": "3"
+                            },
+                            "geometry":
+                                {"coordinates": [
+                                    [[174179.0363610595, 179442.4164414695], [174201.26076084137, 179435.4316301095],
+                                     [174179.98883533585, 179373.5208021457], [174158.08192697944, 179379.87063065483],
+                                     [174179.0363610595, 179442.4164414695]]], "type": "Polygon"}
+                        }
+                    ],
+                    "params": {}
+                }
+
+            ]
+        }
+    }
+
 
 @app.post("/actualiser")
 def actualiser(request_body: RequestBody):
@@ -122,7 +290,10 @@ def actualiser(request_body: RequestBody):
         area_limit=100000
         grb_type = GRBType.ADP
         #get geometry
-        geojson_geometry = request_body.geometry.model_dump()
+        data_dict ={}
+        for f in request_body.features:
+            data_dict[f.properties.id] =shape(f.geometry.model_dump())
+
 
         #start a new aligner
         aligner = Aligner(crs=crs,
@@ -132,8 +303,7 @@ def actualiser(request_body: RequestBody):
                           )
         #load geometry into thematic dictionary
         aligner.load_thematic_data(DictLoader(
-            #data_dict={'id_1': geojson_geometry_to_shapely(geojson_geometry)}
-        data_dict = {'id_1': shape(geojson_geometry)}
+        data_dict = data_dict
         ))
         #load reference data
         aligner.load_reference_data(
@@ -154,12 +324,8 @@ def actualiser(request_body: RequestBody):
 
 @app.get("/")
 def home():
-    return "Welcome to GRB actualiser webservice!.You can actualise on '/actualiser'"
-
-# @app.get("/items/{item_id}")
-# def read_item(item_id: int, q: Union[str, None] = None):
-#     return {"item_id": item_id, "q": q}
-
+    return ("Welcome to GRB-actualiser webservice!.You can actualise on '/actualiser'."
+            "Docs can be found at '/docs'")
 
 def start_server():
     uvicorn.run(app, host=host, port=port)
