@@ -16,12 +16,8 @@ time.sleep(2)
 
 # Make a call to the web service
 url = base_url +'/actualiser'
-with open('body.json', "r") as f:
-    request_body = json.load(f)
-response = requests.post(url, json=request_body)
-print(response.json())
 
-with open('body_without_metadata.json', "r") as f:
+with open('body.json', "r") as f:
     request_body = json.load(f)
 response = requests.post(url, json=request_body)
 print(response.json())
