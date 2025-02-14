@@ -25,7 +25,7 @@ from brdr.constants import (
     SNAPPING_MAX_SEGMENT_LENGTH,
     PARTIAL_SNAPPING_STRATEGY,
     PARTIAL_SNAPPING,
-    RELEVANT_DISTANCE_DECIMALS,
+    RELEVANT_DISTANCE_DECIMALS, ID_THEME_FIELD_NAME, ID_REFERENCE_FIELD_NAME,
 )
 from brdr.constants import (
     LAST_VERSION_DATE,
@@ -181,7 +181,7 @@ class Aligner:
         # PROCESSING DEFAULTS
         # thematic
         # name of the identifier-field of the thematic data (id has to be unique)
-        self.name_thematic_id = "theme_identifier"
+        self.name_thematic_id = ID_THEME_FIELD_NAME
         # dictionary to store all thematic geometries to handle
         self.dict_thematic: dict[any, BaseGeometry] = {}
         # dictionary to store properties of the reference-features (optional)
@@ -195,7 +195,7 @@ class Aligner:
 
         # name of the identifier-field of the reference data (id has to be unique,f.e
         # CAPAKEY for GRB-parcels)
-        self.name_reference_id = "ref_identifier"
+        self.name_reference_id = ID_REFERENCE_FIELD_NAME
         # dictionary to store all reference geometries
         self.dict_reference: dict[any, BaseGeometry] = {}
         # dictionary to store properties of the reference-features (optional)
@@ -335,27 +335,11 @@ class Aligner:
         ) = self._calculate_intersection_between_geometry_and_od(
             input_geometry_outer, input_geometry_inner, relevant_distance
         )
-        # #todo get a list of fully covered reference items
-        # ref_fullies = self.reference_items.take(
-        #     self.reference_tree.query(input_geometry_outer, predicate='covered_by')
-        # ).tolist()
-        #
-        # for key_ref in ref_fullies:
-        #     geom_reference = self.dict_reference[key_ref]
-        #     preresult = self._add_multi_polygons_from_geom_to_array(geom_reference, preresult)
-        #     relevant_intersection_array = self._add_multi_polygons_from_geom_to_array(
-        #         buffer_neg(geom_reference,relevant_distance/2), relevant_intersection_array
-        #     )
-        #     relevant_diff_array = self._add_multi_polygons_from_geom_to_array(
-        #         Polygon(), relevant_diff_array
-        #     )
 
         # get a list of all ref_ids that are intersecting the thematic geometry
         ref_intersections = self.reference_items.take(
             self.reference_tree.query(input_geometry_outer)
         ).tolist()
-        # ref_intersections_no_fullies= list(set(ref_intersections) - set(ref_fullies))
-        # for key_ref in ref_intersections_no_fullies:
         for key_ref in ref_intersections:
             geom_reference = self.dict_reference[key_ref]
             geom_intersection = safe_intersection(input_geometry_outer, geom_reference)
@@ -1153,7 +1137,7 @@ class Aligner:
             "length of reference_dict: " + str(len(self.dict_reference))
         )
         self.reference_tree = STRtree(list(self.dict_reference.values()))
-        self.reference_items = np.array(list(self.dict_reference.keys()))
+        self.reference_items = np.array(list(self.dict_reference.keys()),dtype = object)
         # clear the reference_union, so it will be recalculated on request when needed
         self.reference_union = None
         return

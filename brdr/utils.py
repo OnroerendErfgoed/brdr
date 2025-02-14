@@ -63,7 +63,7 @@ def get_series_geojson_dict(
                 if results_type not in features_list_dict:
                     features_list_dict[results_type] = []
 
-                feature = _feature_from_geom(geom, properties, geom_attributes)
+                feature = _feature_from_geom(geom,theme_id, properties, geom_attributes)
                 features_list_dict[results_type].append(feature)
 
     crs_geojson = {"type": "name", "properties": {"name": crs}}
@@ -75,6 +75,7 @@ def get_series_geojson_dict(
 
 def _feature_from_geom(
     geom: BaseGeometry,
+    feature_id:any,
     properties: dict = None,
     geom_attributes=True,
 ) -> Feature:
@@ -83,6 +84,7 @@ def _feature_from_geom(
 
     Args:
         geom (BaseGeometry): The geometry to convert.
+        feature_id: a (unique) id for the feature
         properties (dict, optional): The properties to include in the feature.
         geom_attributes (bool, optional): Whether to include geometry attributes.
 
@@ -96,7 +98,7 @@ def _feature_from_geom(
         properties[AREA_ATTRIBUTE] = area
         properties[PERIMETER_ATTRIBUTE] = perimeter
         properties[SHAPE_INDEX_ATTRIBUTE] = get_shape_index(area, perimeter)
-    return Feature(geometry=geom, properties=properties)
+    return Feature(geometry=geom,id=feature_id ,properties=properties)
 
 
 def geojson_from_dict(dictionary, crs, id_field, prop_dict=None, geom_attributes=True):
@@ -117,7 +119,7 @@ def geojson_from_dict(dictionary, crs, id_field, prop_dict=None, geom_attributes
     for key, geom in dictionary.items():
         properties = dict(prop_dict or {}).get(key, {})
         properties[id_field] = key
-        features.append(_feature_from_geom(geom, properties, geom_attributes))
+        features.append(_feature_from_geom(geom, key, properties, geom_attributes))
     crs_geojson = {"type": "name", "properties": {"name": crs}}
     geojson = FeatureCollection(features, crs=crs_geojson)
     return geojson
