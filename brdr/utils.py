@@ -139,16 +139,16 @@ def write_geojson(path_to_file, geojson):
         dump(geojson, f, default=str)
 
 
-def multipolygons_to_singles(dict_geoms):
+def multi_to_singles(dict_geoms):
     """
-    Convert a dictionary of Shapely geometries to a dictionary containing only single polygons.
+    Convert a dictionary of Shapely (multi-)geometries to a dictionary containing only single geometries.
 
     Args:
         dict_geoms (dict): Dictionary of geometries.
 
     Returns:
         tuple: A tuple containing:
-            - dict: Dictionary of single polygons.
+            - dict: Dictionary of single geometries.
             - dict: Dictionary mapping new keys to original keys.
     """
     resulting_dict_geoms = {}
@@ -156,15 +156,15 @@ def multipolygons_to_singles(dict_geoms):
     for key, geom in dict_geoms.items():
         if geom is None or geom.is_empty:
             continue
-        elif str(geom.geom_type) == "Polygon":
+        elif str(geom.geom_type) in ["Polygon","LineString","Point"]:
             resulting_dict_geoms[key] = geom
-        elif str(geom.geom_type) == "MultiPolygon":
-            polygons = list(geom.geoms)
-            if len(polygons) == 1:
-                resulting_dict_geoms[key] = polygons[0]
+        elif str(geom.geom_type) in  ["MultiPolygon","MultiLineString","MultiPoint"]:
+            geometries = list(geom.geoms)
+            if len(geometries) == 1:
+                resulting_dict_geoms[key] = geometries[0]
                 continue
             i = 0
-            for p in polygons:
+            for p in geometries:
                 new_key = str(key) + MULTI_SINGLE_ID_SEPARATOR + str(i)
                 dict_multi_as_single[new_key] = key
                 resulting_dict_geoms[new_key] = p

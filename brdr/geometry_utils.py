@@ -286,10 +286,10 @@ def safe_intersection(geom_a: BaseGeometry, geom_b: BaseGeometry) -> BaseGeometr
 
 def safe_unary_union(geometries):
     try:
-        union = make_valid(buffer(unary_union(geometries), 0))
+        union = make_valid(unary_union(geometries))
     except:
         geometries = [make_valid(g) for g in geometries]
-        union = make_valid(buffer(unary_union(geometries), 0))
+        union = make_valid(unary_union(geometries))
 
     return union
 
@@ -454,6 +454,145 @@ def geom_to_wkt(shapely_geometry):
     """
     return to_wkt(shapely_geometry)
 
+def snap_point_to_polygon(
+    geometry,
+    reference,
+    snap_strategy=SnapStrategy.NO_PREFERENCE,
+    max_segment_length=-1,
+    tolerance=1,
+    correction_distance=0.01,
+):
+    if geometry is None or geometry.is_empty or reference is None or reference.is_empty:
+        return geometry
+    if max_segment_length > 0:
+        geometry = segmentize(geometry, max_segment_length=max_segment_length)
+
+    if geometry.geom_type =="Point":
+        geometry = MultiPoint([geometry])
+
+    reference_coords = list(get_coords_from_geometry(reference))
+
+    # ref = safe_intersection(buffer_pos(geometry, tolerance), reference)
+    reference = polygon_to_multipolygon(reference)
+    ref_line = safe_unary_union([g.exterior for g in reference.geoms])
+    ref_lines = [ref_line]
+    if len(reference_coords) == 0:
+        snap_strategy = SnapStrategy.NO_PREFERENCE
+
+    points = []
+    for geom in geometry.geoms:
+        coords = list(geom.coords)
+        coordinates = []
+        for idx, coord in enumerate(
+            coords
+        ):
+            p_end = Point(coords[idx])
+            if not ref_line.is_empty:
+                p_end_1, p_end_2 = nearest_points(p_end, ref_line)
+            else:
+                p_end_1, p_end_2 = None, None
+
+            if len(reference_coords) != 0:
+                p_end_1_vertices, p_end_2_vertices = nearest_points(
+                    p_end, MultiPoint(reference_coords)
+                )
+            else:
+                p_end_1_vertices, p_end_2_vertices = None, None
+
+            p_end_snapped, bool_end_snapped = _snapped_point_by_snapstrategy(
+                p_end, p_end_2, p_end_2_vertices, snap_strategy, tolerance
+            )
+            coordinates.append(p_end_snapped.coords[0])
+
+        # convert coordinates back to a point
+        point = make_valid(Point(coordinates))
+        points.append((point))
+    result = safe_unary_union(points)
+    return result
+
+def snap_line_to_polygon(
+    geometry,
+    reference,
+    snap_strategy=SnapStrategy.NO_PREFERENCE,
+    max_segment_length=-1,
+    tolerance=1,
+    correction_distance=0.01,
+):
+    if geometry is None or geometry.is_empty or reference is None or reference.is_empty:
+        return geometry
+    if max_segment_length > 0:
+        geometry = segmentize(geometry, max_segment_length=max_segment_length)
+
+    if geometry.geom_type =="LineString":
+        geometry = MultiLineString([geometry])
+
+    reference_coords = list(get_coords_from_geometry(reference))
+
+    # ref = safe_intersection(buffer_pos(geometry, tolerance), reference)
+    reference = polygon_to_multipolygon(reference)
+    ref_line = safe_unary_union([g.exterior for g in reference.geoms])
+    ref_lines = [ref_line]
+    if len(reference_coords) == 0:
+        snap_strategy = SnapStrategy.NO_PREFERENCE
+
+    lines = []
+    for geom in geometry.geoms:
+        coords = list(geom.coords)
+        coordinates = []
+        for idx, coord in enumerate(
+            coords
+        ):  # for each vertex in the first line#TODO what about interior rings?
+            if idx == 0:
+                continue
+            p_start = Point(coords[idx - 1])
+            p_end = Point(coords[idx])
+            if not ref_line.is_empty:
+                p_start_1, p_start_2 = nearest_points(p_start, ref_line)
+                p_end_1, p_end_2 = nearest_points(p_end, ref_line)
+            else:
+                p_start_1, p_start_2 = None, None
+                p_end_1, p_end_2 = None, None
+
+            if len(reference_coords) != 0:
+                p_start_1_vertices, p_start_2_vertices = nearest_points(
+                    p_start, MultiPoint(reference_coords)
+                )
+                p_end_1_vertices, p_end_2_vertices = nearest_points(
+                    p_end, MultiPoint(reference_coords)
+                )
+            else:
+                p_start_1_vertices, p_start_2_vertices = None, None
+                p_end_1_vertices, p_end_2_vertices = None, None
+
+            p_start_snapped, bool_start_snapped = _snapped_point_by_snapstrategy(
+                p_start, p_start_2, p_start_2_vertices, snap_strategy, tolerance
+            )
+            p_end_snapped, bool_end_snapped = _snapped_point_by_snapstrategy(
+                p_end, p_end_2, p_end_2_vertices, snap_strategy, tolerance
+            )
+            coordinates.append(p_start_snapped.coords[0])
+
+            reference_line, distance = closest_line(ref_lines, p_end)
+            if distance == -1 or distance > tolerance:
+                coordinates.append(p_end_snapped.coords[0])
+                continue
+
+            distance_start_end = p_start.distance(p_end)
+            line_substring = _get_line_substring(
+                reference_line, p_start_snapped, p_end_snapped, distance_start_end
+            )
+
+            for p in line_substring.coords:
+                point = Point(p)
+                if (point.distance(p_start) + point.distance(p_end)) / 2 <= tolerance:
+                    coordinates.append(p)
+            coordinates.append(p_end_snapped.coords[0])
+
+        # convert coordinates back to a line
+        linestring = make_valid(LineString(coordinates))
+        lines.append((linestring))
+    result = safe_unary_union(lines)
+    return result
 
 def snap_polygon_to_polygon(
     geometry,
@@ -509,7 +648,7 @@ def snap_polygon_to_polygon(
             p_start_snapped, bool_start_snapped = _snapped_point_by_snapstrategy(
                 p_start, p_start_2, p_start_2_vertices, snap_strategy, tolerance
             )
-            p_end_snapped, bool_start_snapped = _snapped_point_by_snapstrategy(
+            p_end_snapped, bool_end_snapped = _snapped_point_by_snapstrategy(
                 p_end, p_end_2, p_end_2_vertices, snap_strategy, tolerance
             )
             coordinates.append(p_start_snapped.coords[0])

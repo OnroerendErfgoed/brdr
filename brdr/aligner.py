@@ -15,6 +15,9 @@ from shapely import make_valid
 from shapely import remove_repeated_points
 from shapely import to_geojson
 from shapely.geometry.base import BaseGeometry
+from shapely.geometry import MultiPolygon
+from shapely.geometry.linestring import LineString
+from shapely.geometry.point import Point
 
 from brdr import __version__
 from brdr.constants import (
@@ -54,7 +57,7 @@ from brdr.geometry_utils import (
     get_shape_index,
     snap_polygon_to_polygon,
     polygon_to_multipolygon,
-    geometric_equality,
+    geometric_equality, snap_line_to_polygon, snap_point_to_polygon,
 )
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import buffer_pos
@@ -66,7 +69,7 @@ from brdr.geometry_utils import safe_union
 from brdr.loader import Loader
 from brdr.logger import Logger
 from brdr.typings import ProcessResult
-from brdr.utils import diffs_from_dict_processresults, multipolygons_to_singles
+from brdr.utils import diffs_from_dict_processresults, multi_to_singles
 from brdr.utils import geojson_from_dict
 from brdr.utils import get_breakpoints_zerostreak
 from brdr.utils import get_series_geojson_dict
@@ -262,6 +265,35 @@ class Aligner:
     ##########PROCESSORS#######################
     ###########################################
 
+    def process_point_or_linestring(self,input_geometry: BaseGeometry)-> ProcessResult:
+        result_dict= {}
+        snapped =[]
+        geom_type= input_geometry.geom_type
+
+        ref_intersections = self.reference_items.take(
+            self.reference_tree.query(input_geometry)
+        ).tolist()
+        for key_ref in ref_intersections:
+            geom_reference = self.dict_reference[key_ref]
+            geom_intersection =safe_intersection(input_geometry,geom_reference)
+            if geom_type=="Point":
+                geom_snapped = snap_point_to_polygon(geom_intersection, geom_reference,
+                                                    snap_strategy=SnapStrategy.PREFER_VERTICES, max_segment_length=2)
+                geom_empty= Point()
+            elif geom_type=="LineString":
+                geom_snapped = snap_line_to_polygon(geom_intersection,geom_reference,snap_strategy=SnapStrategy.PREFER_VERTICES, max_segment_length=2)
+                geom_empty = LineString()
+            snapped.append(geom_snapped)
+        geom = safe_unary_union(snapped)
+        result_dict["result"] = geom
+        result_dict["result_diff"] = safe_symmetric_difference(input_geometry,geom)
+        result_dict["result_diff_plus"] = safe_difference(geom,input_geometry)
+        result_dict["result_diff_min"] = safe_difference(input_geometry,geom)
+        result_dict["result_relevant_intersection"] = geom_empty
+        result_dict["result_relevant_diff"] = geom_empty
+        result_dict["remark"] = "no remark"
+        return result_dict
+
     def process_geometry(
         self,
         input_geometry: BaseGeometry,
@@ -296,8 +328,11 @@ class Aligner:
                 geometry
             *   relevant_intersection (BaseGeometry): The relevant_intersection
             *   relevant_difference (BaseGeometry): The relevant_difference
-            *   remark (str): remarks collected when processing the geoemetry
+            *   remark (str): remarks collected when processing the geometry
         """
+        if input_geometry.geom_type in ("LineString","Point"):
+            return self.process_point_or_linestring(input_geometry)
+
         if self.area_limit and input_geometry.area > self.area_limit:
             message = "The input geometry is too large to process."
             raise ValueError(message)
@@ -445,7 +480,7 @@ class Aligner:
             dict_thematic = self.dict_thematic
         dict_multi_as_single = {}
         if self.multi_as_single_modus:
-            dict_thematic, dict_multi_as_single = multipolygons_to_singles(
+            dict_thematic, dict_multi_as_single = multi_to_singles(
                 dict_thematic
             )
 
