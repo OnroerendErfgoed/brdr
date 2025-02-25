@@ -272,10 +272,9 @@ class Aligner:
         ref_intersections = self.reference_items.take(
             self.reference_tree.query(input_geometry)
         ).tolist()
-        # if od_strategy==OpenbaarDomeinStrategy.SNAP_ALL_SIDE:
-        #     pass
 
-        geom_references =[self.dict_reference[key_ref] for key_ref in ref_intersections]
+
+
         #Openbaar domein
         if od_strategy != OpenbaarDomeinStrategy.EXCLUDE:
             virtual_reference = self._create_virtual_reference(input_geometry, relevant_distance, False)
@@ -288,16 +287,17 @@ class Aligner:
         else:
             geom_empty, geom_od = self._snapped_line_point(input_geometry, virtual_reference,relevant_distance,snap_strategy,max_segment_length)
             snapped.append(geom_od)
-
+        geom_references =[self.dict_reference[key_ref] for key_ref in ref_intersections]
         for geom_reference in geom_references:
             geom_empty, geom_snapped = self._snapped_line_point(input_geometry, geom_reference,relevant_distance,snap_strategy,max_segment_length)
             snapped.append(geom_snapped)
         #union all
         geom = safe_unary_union(snapped)
-        result_dict["result"] = geom
-        result_dict["result_diff"] = safe_symmetric_difference(input_geometry,geom)
-        result_dict["result_diff_plus"] = safe_difference(geom,input_geometry)
-        result_dict["result_diff_min"] = safe_difference(input_geometry,geom)
+        result_dict["result"] = to_multi(geom)
+        result_dict["result_diff_plus"] = to_multi(safe_difference(geom,buffer_pos(input_geometry,self.correction_distance)))
+        result_dict["result_diff_min"] = to_multi(safe_difference(input_geometry,buffer_pos(geom,self.correction_distance)))
+        result_dict["result_diff"] = to_multi(safe_unary_union([result_dict["result_diff_plus"],result_dict["result_diff_min"]]))
+
         result_dict["result_relevant_intersection"] = geom_empty
         result_dict["result_relevant_diff"] = geom_empty
         result_dict["remark"] = "no remark"
@@ -1402,7 +1402,7 @@ class Aligner:
         geom_thematic_buffered = make_valid(
             buffer_pos(
                 geometry,
-                self.buffer_multiplication_factor * relevant_distance,
+                (self.buffer_multiplication_factor * relevant_distance)+self.correction_distance,
                 mitre_limit=self.mitre_limit,
             )
         )

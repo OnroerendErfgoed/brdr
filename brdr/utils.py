@@ -331,11 +331,10 @@ def diffs_from_dict_processresults(
     # all the relevant distances used to calculate the series
     for thematic_id, results_dict in dict_processresults.items():
         diffs[thematic_id] = {}
-
+        if dict_thematic[thematic_id].geom_type in ("LineString", "MultiLineString"):
+            diff_metric = DiffMetric.TOTAL_DISTANCE
         for rel_dist in results_dict:
             result = results_dict.get(rel_dist, {}).get("result")
-            if result.geom_type in ("LineString", "MultiLineString"):
-                diff_metric =  DiffMetric.TOTAL_DISTANCE
             result_diff = results_dict.get(rel_dist, {}).get("result_diff")
 
             diff = 0

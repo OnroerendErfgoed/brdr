@@ -619,7 +619,6 @@ def snap_polygon_to_polygon(
     for g in reference.geoms:
         ref_lines.append(g.exterior)
         ref_lines.extend([interior for interior in g.interiors])
-    #ref_lines = [g.exterior for g in reference.geoms]
     ref_line = safe_unary_union(ref_lines)
     if len(reference_coords) == 0:
         snap_strategy = SnapStrategy.NO_PREFERENCE
