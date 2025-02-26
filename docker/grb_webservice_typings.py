@@ -232,7 +232,7 @@ class ResponseProperties(BaseModel):
     brdr_prediction_count: int
     brdr_prediction_score: float
     # brdr_id: Optional[Any]
-    theme_identifier: Optional[Any]
+    # theme_identifier: Optional[Any]
     brdr_nr_calculations: int
     brdr_relevant_distance: float
     brdr_remark: str
