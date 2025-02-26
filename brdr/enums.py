@@ -24,14 +24,12 @@ class OpenbaarDomeinStrategy(IntEnum):
     """
 
     EXCLUDE = -1
-    EXCLUDE_SLOW = -2
     AS_IS = 0
     SNAP_INNER_SIDE = 1
     SNAP_ALL_SIDE = 2
     SNAP_PREFER_VERTICES = 3
     SNAP_NO_PREFERENCE = 4
     SNAP_ONLY_VERTICES = 5
-    # TRACE = 6
 
 
 class AlignerResultType(str, Enum):
@@ -82,12 +80,18 @@ class DiffMetric(str, Enum):
     * TOTAL_PERCENTAGE: the percentage of the total difference area
     * CHANGES_AREA: the sum of the negative and positive difference areas
     * CHANGES_PERCENTAGE: the percentage of the changed area
+    * TOTAL_LENGTH ="total_length"
+    * CHANGES_LENGTH = "changes_length"
+    * TOTAL_DISTANCE = "total_distance"
     """
 
     TOTAL_AREA = "total_area"
     TOTAL_PERCENTAGE = "total_percentage"
     CHANGES_AREA = "changes_area"
     CHANGES_PERCENTAGE = "changes_percentage"
+    TOTAL_LENGTH ="total_length"
+    CHANGES_LENGTH = "changes_length"
+    TOTAL_DISTANCE = "total_distance"
 
 
 class Evaluation(str, Enum):

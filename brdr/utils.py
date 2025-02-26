@@ -7,6 +7,8 @@ from geojson import Feature, FeatureCollection, dump
 from shapely import GeometryCollection, make_valid, node, polygonize, unary_union
 from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
+from shapely.geometry.point import Point
+from shapely.ops import nearest_points
 
 from brdr.constants import (
     MULTI_SINGLE_ID_SEPARATOR,
@@ -20,7 +22,7 @@ from brdr.constants import (
     AREA_ATTRIBUTE,
 )
 from brdr.enums import DiffMetric
-from brdr.geometry_utils import get_partitions, get_bbox, get_shape_index
+from brdr.geometry_utils import get_partitions, get_bbox, get_shape_index, to_multi
 from brdr.typings import ProcessResult
 
 
@@ -139,16 +141,16 @@ def write_geojson(path_to_file, geojson):
         dump(geojson, f, default=str)
 
 
-def multipolygons_to_singles(dict_geoms):
+def multi_to_singles(dict_geoms):
     """
-    Convert a dictionary of Shapely geometries to a dictionary containing only single polygons.
+    Convert a dictionary of Shapely (multi-)geometries to a dictionary containing only single geometries.
 
     Args:
         dict_geoms (dict): Dictionary of geometries.
 
     Returns:
         tuple: A tuple containing:
-            - dict: Dictionary of single polygons.
+            - dict: Dictionary of single geometries.
             - dict: Dictionary mapping new keys to original keys.
     """
     resulting_dict_geoms = {}
@@ -156,15 +158,15 @@ def multipolygons_to_singles(dict_geoms):
     for key, geom in dict_geoms.items():
         if geom is None or geom.is_empty:
             continue
-        elif str(geom.geom_type) == "Polygon":
+        elif str(geom.geom_type) in ["Polygon","LineString","Point"]:
             resulting_dict_geoms[key] = geom
-        elif str(geom.geom_type) == "MultiPolygon":
-            polygons = list(geom.geoms)
-            if len(polygons) == 1:
-                resulting_dict_geoms[key] = polygons[0]
+        elif str(geom.geom_type) in  ["MultiPolygon","MultiLineString","MultiPoint"]:
+            geometries = list(geom.geoms)
+            if len(geometries) == 1:
+                resulting_dict_geoms[key] = geometries[0]
                 continue
             i = 0
-            for p in polygons:
+            for p in geometries:
                 new_key = str(key) + MULTI_SINGLE_ID_SEPARATOR + str(i)
                 dict_multi_as_single[new_key] = key
                 resulting_dict_geoms[new_key] = p
@@ -329,12 +331,14 @@ def diffs_from_dict_processresults(
     # all the relevant distances used to calculate the series
     for thematic_id, results_dict in dict_processresults.items():
         diffs[thematic_id] = {}
-
+        if dict_thematic[thematic_id].geom_type in ("LineString", "MultiLineString"):
+            diff_metric = DiffMetric.TOTAL_DISTANCE
         for rel_dist in results_dict:
             result = results_dict.get(rel_dist, {}).get("result")
             result_diff = results_dict.get(rel_dist, {}).get("result_diff")
 
             diff = 0
+            original = dict_thematic[thematic_id]
             if (
                 result_diff is None
                 or result_diff.is_empty
@@ -343,9 +347,9 @@ def diffs_from_dict_processresults(
             ):
                 diff = 0
             elif diff_metric == DiffMetric.TOTAL_AREA:
-                diff = result.area - dict_thematic[thematic_id].area
+                diff = result.area - original.area
             elif diff_metric == DiffMetric.TOTAL_PERCENTAGE:
-                diff = result.area - dict_thematic[thematic_id].area
+                diff = result.area - original.area
                 diff = diff * 100 / result.area
             elif diff_metric == DiffMetric.CHANGES_AREA:
                 # equals the symmetrical difference, so equal to
@@ -355,6 +359,22 @@ def diffs_from_dict_processresults(
             elif diff_metric == DiffMetric.CHANGES_PERCENTAGE:
                 diff = result_diff.area
                 diff = diff * 100 / result.area
+            elif diff_metric == DiffMetric.TOTAL_LENGTH:
+                diff = result.length - original.length
+            elif diff_metric == DiffMetric.CHANGES_LENGTH:
+                diff = result_diff.length
+            elif diff_metric == DiffMetric.TOTAL_DISTANCE:
+                diff=0
+                result = to_multi(result)
+                for g in result.geoms:
+                    if g.geom_type == "Polygon":
+                        g = g.exterior
+                    for coord in g.coords:
+                        p = Point(coord)
+                        p1, p2 = nearest_points(
+                            p, original
+                        )
+                        diff= diff + p2.distance(p)
 
             # round, so the detected changes are within 10cm² or 0.1%
             diff = round(diff, 1)
