@@ -12,14 +12,10 @@ class ReferenceSource(BaseModel):
 
     model_config = {
         "json_schema_extra": {
-            "examples": [
-                {
-                    "source": "Adpf",
-                    "version_date": "2022-01-01"
-                }
-            ]
+            "examples": [{"source": "Adpf", "version_date": "2022-01-01"}]
         }
     }
+
 
 class ReferenceFeature(BaseModel):
     full: bool
@@ -34,11 +30,12 @@ class ReferenceFeature(BaseModel):
                     "full": True,
                     "area": 1344.81,
                     "percentage": 100,
-                    "version_date": "2019-07-25"
+                    "version_date": "2019-07-25",
                 }
             ]
         }
     }
+
 
 class Metadata(BaseModel):
     alignment_date: str
@@ -58,7 +55,7 @@ class Metadata(BaseModel):
                     "brdr_version": "0.8.1",
                     "reference_source": {
                         "source": "Adpf",
-                        "version_date": "2022-01-01"
+                        "version_date": "2022-01-01",
                     },
                     "full": True,
                     "area": 1344.81,
@@ -67,18 +64,19 @@ class Metadata(BaseModel):
                             "full": True,
                             "area": 1344.81,
                             "percentage": 100,
-                            "version_date": "2019-07-25"
+                            "version_date": "2019-07-25",
                         }
                     },
                     "reference_od": None,
-                    "last_version_date": "2019-07-25"
+                    "last_version_date": "2019-07-25",
                 }
             ]
         }
     }
 
+
 class RequestProperties(BaseModel):
-    #id: Any
+    # id: Any
     metadata: Optional[Metadata] = None
 
     model_config = {
@@ -91,7 +89,7 @@ class RequestProperties(BaseModel):
                         "brdr_version": "0.8.1",
                         "reference_source": {
                             "source": "Adpf",
-                            "version_date": "2022-01-01"
+                            "version_date": "2022-01-01",
                         },
                         "full": True,
                         "area": 1344.81,
@@ -100,11 +98,11 @@ class RequestProperties(BaseModel):
                                 "full": True,
                                 "area": 1344.81,
                                 "percentage": 100,
-                                "version_date": "2019-07-25"
+                                "version_date": "2019-07-25",
                             }
                         },
                         "reference_od": None,
-                        "last_version_date": "2019-07-25"
+                        "last_version_date": "2019-07-25",
                     }
                 }
             ]
@@ -123,26 +121,28 @@ class RequestParams(BaseModel):
                 {
                     "crs": "EPSG:31370",
                     "grb_type": "adp",
-                    "prediction_strategy": "prefer_full"
+                    "prediction_strategy": "prefer_full",
                 }
             ]
         }
     }
 
+
 class RequestFeatureModel(Feature[Union[Polygon, MultiPolygon], RequestProperties]):
     pass
+
 
 class RequestBody(BaseModel):
     featurecollection: FeatureCollection[RequestFeatureModel]
     params: Optional[RequestParams] = None
 
-    @model_validator(mode='before')
+    @model_validator(mode="before")
     def check_unique_ids(cls, values):
-        features = values.get('features', [])
-        #ids = [feature['properties']['id'] for feature in features]
-        ids = [feature['id'] for feature in features]
+        features = values.get("features", [])
+        # ids = [feature['properties']['id'] for feature in features]
+        ids = [feature["id"] for feature in features]
         if len(ids) != len(set(ids)):
-            raise ValueError('All feature IDs must be unique')
+            raise ValueError("All feature IDs must be unique")
         return values
 
     model_config = {
@@ -161,60 +161,35 @@ class RequestBody(BaseModel):
                                     "coordinates": [
                                         [
                                             [
-                                                [
-                                                    174111.5042,
-                                                    179153.924300000013318
-                                                ],
-                                                [
-                                                    174110.0614,
-                                                    179154.109399999986636
-                                                ],
-                                                [
-                                                    174068.867,
-                                                    179159.3947
-                                                ],
+                                                [174111.5042, 179153.924300000013318],
+                                                [174110.0614, 179154.109399999986636],
+                                                [174068.867, 179159.3947],
                                                 [
                                                     174068.86610000001383,
-                                                    179159.426199999987148
+                                                    179159.426199999987148,
                                                 ],
-                                                [
-                                                    174068.8626,
-                                                    179159.557299999985844
-                                                ],
-                                                [
-                                                    174073.7483,
-                                                    179188.9357
-                                                ],
-                                                [
-                                                    174120.4387,
-                                                    179180.3235
-                                                ],
+                                                [174068.8626, 179159.557299999985844],
+                                                [174073.7483, 179188.9357],
+                                                [174120.4387, 179180.3235],
                                                 [
                                                     174116.133299999986775,
-                                                    179157.20250000001397
+                                                    179157.20250000001397,
                                                 ],
-                                                [
-                                                    174111.549009999987902,
-                                                    179153.956007
-                                                ],
-                                                [
-                                                    174111.5042,
-                                                    179153.924300000013318
-                                                ]
+                                                [174111.549009999987902, 179153.956007],
+                                                [174111.5042, 179153.924300000013318],
                                             ]
                                         ]
-                                    ]
-                                }
+                                    ],
+                                },
                             }
-                        ]
+                        ],
                     },
                     "params": {
                         "crs": "EPSG:31370",
                         "grb_type": "adp",
-                        "prediction_strategy": "prefer_full"
-                    }
+                        "prediction_strategy": "prefer_full",
+                    },
                 }
-
             ]
         }
     }
@@ -239,8 +214,10 @@ class ResponseProperties(BaseModel):
     brdr_perimeter: float
     brdr_shape_index: float
 
+
 class ResponseFeatureModel(Feature[Union[Polygon, MultiPolygon], ResponseProperties]):
     pass
+
 
 class ResponseBody(BaseModel):
     result: FeatureCollection[ResponseFeatureModel]
