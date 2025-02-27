@@ -23,6 +23,7 @@ from shapely import to_wkt
 from shapely import unary_union
 from shapely import union
 from shapely.geometry.base import BaseGeometry
+from shapely.geometry.collection import GeometryCollection
 from shapely.geometry.linestring import LineString
 from shapely.geometry.multipolygon import MultiPolygon
 from shapely.geometry.point import Point
@@ -286,10 +287,10 @@ def safe_intersection(geom_a: BaseGeometry, geom_b: BaseGeometry) -> BaseGeometr
 
 def safe_unary_union(geometries):
     try:
-        union = make_valid(buffer(unary_union(geometries), 0))
+        union = make_valid(unary_union(geometries))
     except:
         geometries = [make_valid(g) for g in geometries]
-        union = make_valid(buffer(unary_union(geometries), 0))
+        union = make_valid(unary_union(geometries))
 
     return union
 
@@ -455,42 +456,101 @@ def geom_to_wkt(shapely_geometry):
     return to_wkt(shapely_geometry)
 
 
-def snap_polygon_to_polygon(
+def snap_point_to_polygon(
     geometry,
     reference,
-    snap_strategy=SnapStrategy.PREFER_VERTICES,
+    snap_strategy=SnapStrategy.NO_PREFERENCE,
     max_segment_length=-1,
     tolerance=1,
-    correction_distance=0.01,
 ):
     if geometry is None or geometry.is_empty or reference is None or reference.is_empty:
         return geometry
     if max_segment_length > 0:
         geometry = segmentize(geometry, max_segment_length=max_segment_length)
-    geometry = polygon_to_multipolygon(geometry)
+
+    if geometry.geom_type == "Point":
+        geometry = MultiPoint([geometry])
+
     reference_coords = list(get_coords_from_geometry(reference))
 
-    # ref = safe_intersection(buffer_pos(geometry, tolerance), reference)
-    reference = polygon_to_multipolygon(reference)
-    ref_lines = [g.exterior for g in reference.geoms]
-    # reference_line = ref.geoms[0].exterior  # TODO
+    reference = to_multi(reference, geomtype="Polygon")
+    ref_lines = []
+    for g in reference.geoms:
+        ref_lines.append(g.exterior)
+        ref_lines.extend([interior for interior in g.interiors])
+    ref_line = safe_unary_union(ref_lines)
+
     if len(reference_coords) == 0:
         snap_strategy = SnapStrategy.NO_PREFERENCE
 
-    polygons = []
+    points = []
     for geom in geometry.geoms:
-        coords = list(geom.exterior.coords)
+        coords = list(geom.coords)
         coordinates = []
-        for idx, coord in enumerate(
-            coords
-        ):  # for each vertex in the first line#TODO what about interior rings?
+        for idx, coord in enumerate(coords):
+            p_end = Point(coords[idx])
+            if not ref_line.is_empty:
+                p_end_1, p_end_2 = nearest_points(p_end, ref_line)
+            else:
+                p_end_1, p_end_2 = None, None
+
+            if len(reference_coords) != 0:
+                p_end_1_vertices, p_end_2_vertices = nearest_points(
+                    p_end, MultiPoint(reference_coords)
+                )
+            else:
+                p_end_1_vertices, p_end_2_vertices = None, None
+
+            p_end_snapped, bool_end_snapped = _snapped_point_by_snapstrategy(
+                p_end, p_end_2, p_end_2_vertices, snap_strategy, tolerance
+            )
+            coordinates.append(p_end_snapped.coords[0])
+
+        # convert coordinates back to a point
+        point = make_valid(Point(coordinates))
+        points.append((point))
+    result = safe_unary_union(points)
+    return result
+
+
+def snap_line_to_polygon(
+    geometry,
+    reference,
+    snap_strategy=SnapStrategy.NO_PREFERENCE,
+    max_segment_length=-1,
+    tolerance=1,
+):
+    if geometry is None or geometry.is_empty or reference is None or reference.is_empty:
+        return geometry
+    if max_segment_length > 0:
+        geometry = segmentize(geometry, max_segment_length=max_segment_length)
+
+    if geometry.geom_type == "LineString":
+        geometry = MultiLineString([geometry])
+
+    reference_coords = list(get_coords_from_geometry(reference))
+
+    reference = to_multi(reference, geomtype="Polygon")
+    ref_lines = []
+    for g in reference.geoms:
+        ref_lines.append(g.exterior)
+        ref_lines.extend([interior for interior in g.interiors])
+    ref_line = safe_unary_union(ref_lines)
+    if len(reference_coords) == 0:
+        snap_strategy = SnapStrategy.NO_PREFERENCE
+
+    lines = []
+    for geom in geometry.geoms:
+        coords = list(geom.coords)
+        coordinates = []
+        for idx, coord in enumerate(coords):
             if idx == 0:
                 continue
             p_start = Point(coords[idx - 1])
             p_end = Point(coords[idx])
-            if not reference.is_empty:
-                p_start_1, p_start_2 = nearest_points(p_start, reference)
-                p_end_1, p_end_2 = nearest_points(p_end, reference)
+            if not ref_line.is_empty:
+                p_start_1, p_start_2 = nearest_points(p_start, ref_line)
+                p_end_1, p_end_2 = nearest_points(p_end, ref_line)
             else:
                 p_start_1, p_start_2 = None, None
                 p_end_1, p_end_2 = None, None
@@ -509,7 +569,97 @@ def snap_polygon_to_polygon(
             p_start_snapped, bool_start_snapped = _snapped_point_by_snapstrategy(
                 p_start, p_start_2, p_start_2_vertices, snap_strategy, tolerance
             )
-            p_end_snapped, bool_start_snapped = _snapped_point_by_snapstrategy(
+            p_end_snapped, bool_end_snapped = _snapped_point_by_snapstrategy(
+                p_end, p_end_2, p_end_2_vertices, snap_strategy, tolerance
+            )
+            coordinates.append(p_start_snapped.coords[0])
+
+            reference_line, distance = closest_line(ref_lines, p_end)
+            if distance == -1 or distance > tolerance:
+                coordinates.append(p_end_snapped.coords[0])
+                continue
+
+            distance_start_end = p_start.distance(p_end)
+            line_substring = _get_line_substring(
+                reference_line, p_start_snapped, p_end_snapped, distance_start_end
+            )
+
+            for p in line_substring.coords:
+                point = Point(p)
+                if (point.distance(p_start) + point.distance(p_end)) / 2 <= tolerance:
+                    coordinates.append(p)
+            coordinates.append(p_end_snapped.coords[0])
+
+        # convert coordinates back to a line
+        linestring = make_valid(LineString(coordinates))
+        lines.append((linestring))
+    result = safe_unary_union(lines)
+    return result
+
+
+def snap_polygon_to_polygon(
+    geometry,
+    reference,
+    snap_strategy=SnapStrategy.PREFER_VERTICES,
+    max_segment_length=-1,
+    tolerance=1,
+    correction_distance=0.01,
+):
+    if (
+        geometry is None
+        or geometry.is_empty
+        or reference is None
+        or reference.is_empty
+        or not reference.geom_type in ("Polygon", "MultiPolygon")
+    ):
+        return geometry
+    if max_segment_length > 0:
+        geometry = segmentize(geometry, max_segment_length=max_segment_length)
+    geometry = to_multi(geometry, geomtype="Polygon")
+    reference_coords = list(get_coords_from_geometry(reference))
+
+    reference = to_multi(reference, geomtype="Polygon")
+    ref_lines = []
+    for g in reference.geoms:
+        ref_lines.append(g.exterior)
+        ref_lines.extend([interior for interior in g.interiors])
+    ref_line = safe_unary_union(ref_lines)
+    if len(reference_coords) == 0:
+        snap_strategy = SnapStrategy.NO_PREFERENCE
+
+    polygons = []
+    for geom in geometry.geoms:
+        coords = list(geom.exterior.coords)
+        coordinates = []
+        for idx, coord in enumerate(
+            coords
+        ):  # for each vertex in the first line#TODO what about interior rings?
+            if idx == 0:
+                continue
+            p_start = Point(coords[idx - 1])
+            p_end = Point(coords[idx])
+            if not ref_line.is_empty:
+                p_start_1, p_start_2 = nearest_points(p_start, ref_line)
+                p_end_1, p_end_2 = nearest_points(p_end, ref_line)
+            else:
+                p_start_1, p_start_2 = None, None
+                p_end_1, p_end_2 = None, None
+
+            if len(reference_coords) != 0:
+                p_start_1_vertices, p_start_2_vertices = nearest_points(
+                    p_start, MultiPoint(reference_coords)
+                )
+                p_end_1_vertices, p_end_2_vertices = nearest_points(
+                    p_end, MultiPoint(reference_coords)
+                )
+            else:
+                p_start_1_vertices, p_start_2_vertices = None, None
+                p_end_1_vertices, p_end_2_vertices = None, None
+
+            p_start_snapped, bool_start_snapped = _snapped_point_by_snapstrategy(
+                p_start, p_start_2, p_start_2_vertices, snap_strategy, tolerance
+            )
+            p_end_snapped, bool_end_snapped = _snapped_point_by_snapstrategy(
                 p_end, p_end_2, p_end_2_vertices, snap_strategy, tolerance
             )
             coordinates.append(p_start_snapped.coords[0])
@@ -720,31 +870,6 @@ def get_bbox(geometry):
     return str(geometry.bounds).strip("()")
 
 
-# def align_polygons(poly1, poly2):
-#     """
-#         # Voorbeeldgebruik
-#         poly1 = Polygon([(0, 0), (2, 0), (1, 2)])
-#         poly2 = Polygon([(1, 1), (3, 1), (2, 3)])
-#
-#         aligned_poly2 = align_polygons(poly1, poly2)
-#     :param poly1:
-#     :param poly2:
-#     :return:
-#     """
-#     # Bereken de centroiden van beide polygonen
-#     centroid1 = poly1.centroid
-#     centroid2 = poly2.centroid
-#
-#     # Bereken de verschuiving die nodig is om de centroiden uit te lijnen
-#     shift_x = centroid1.x - centroid2.x
-#     shift_y = centroid1.y - centroid2.y
-#
-#     # Verplaats polygoon 2 zodat de centroiden uitgelijnd zijn
-#     aligned_poly2 = translate(poly2, xoff=shift_x, yoff=shift_y)
-#
-#     return aligned_poly2
-
-
 def geojson_polygon_to_multipolygon(geojson):
     """
     #TODO: add an example/test so it is clear this function is used (inside brdrQ)
@@ -765,34 +890,111 @@ def geojson_polygon_to_multipolygon(geojson):
     return geojson
 
 
-def polygon_to_multipolygon(geometry):
+def to_multi(geometry, geomtype=None):
     """
-    Turns polygon features into a multipolygon-feature
-    """
+    Converts a Shapely geometry to its corresponding multi-variant.
 
-    if geometry is None:
-        return MultiPolygon()
-    elif geometry.geom_type == "MultiPolygon":
-        return geometry
-    elif geometry.geom_type == "Polygon":
-        return MultiPolygon([geometry])
-    elif geometry.geom_type == "GeometryCollection":
-        for g in geometry.geoms:
-            array = []
-            # Ensure each sub-geometry is valid.
-            g = make_valid(g)
-            if str(g.geom_type) in ["Polygon", "MultiPolygon"]:
-                # Append valid polygons and multipolygons to the array.
-                array.append(g)
-            geom = safe_unary_union(array)
-            if geom.geom_type == "Polygon":
-                return MultiPolygon([geom])
-            elif geom.geom_type == "MultiPolygon":
-                return geom
+    Parameters:
+    geometry (shapely.geometry.base.BaseGeometry): The input geometry to be converted.
+    geomtype (str, optional): The type of geometry to extract and convert.
+                              Possible values are 'Point', 'LineString', 'Polygon', or None.
+                              If None, all geometries are converted to their multi-variant.
+
+    Returns:
+    shapely.geometry.base.BaseGeometry: The converted multi-geometry or an empty multi-geometry of the specified type.
+
+    Raises:
+    TypeError: If an unknown geometry type is provided.
+
+    Examples:
+    >>> from shapely.geometry import Point, LineString, Polygon, GeometryCollection
+    >>> point = Point(1, 1)
+    >>> line = LineString([(0, 0), (1, 1)])
+    >>> polygon = Polygon([(0, 0), (1, 1), (1, 0)])
+    >>> collection = GeometryCollection([point, line, polygon])
+    >>> to_multi(point, 'Point')
+    <shapely.geometry.multipoint.MultiPoint object at 0x...>
+    >>> to_multi(line, 'LineString')
+    <shapely.geometry.multilinestring.MultiLineString object at 0x...>
+    >>> to_multi(polygon, 'Polygon')
+    <shapely.geometry.multipolygon.MultiPolygon object at 0x...>
+    >>> to_multi(collection, 'Point')
+    <shapely.geometry.multipoint.MultiPoint object at 0x...>
+    >>> to_multi(collection)
+    <shapely.geometry.collection.GeometryCollection object at 0x...>
+    """
+    if geomtype == "Point":
+        if isinstance(geometry, Point):
+            return MultiPoint([geometry])
+        elif isinstance(geometry, MultiPoint):
+            return geometry
+        elif isinstance(geometry, GeometryCollection):
+            points = [geom for geom in geometry.geoms if isinstance(geom, Point)]
+            return MultiPoint(points)
+        else:
+            return MultiPoint()
+    elif geomtype == "LineString":
+        if isinstance(geometry, LineString):
+            return MultiLineString([geometry])
+        elif isinstance(geometry, MultiLineString):
+            return geometry
+        elif isinstance(geometry, GeometryCollection):
+            lines = [geom for geom in geometry.geoms if isinstance(geom, LineString)]
+            return MultiLineString(lines)
+        else:
+            return MultiLineString()
+    elif geomtype == "Polygon":
+        if isinstance(geometry, Polygon):
+            return MultiPolygon([geometry])
+        elif isinstance(geometry, MultiPolygon):
+            return geometry
+        elif isinstance(geometry, GeometryCollection):
+            polygons = [geom for geom in geometry.geoms if isinstance(geom, Polygon)]
+            return MultiPolygon(polygons)
+        else:
+            return MultiPolygon()
+    elif geomtype is None:
+        if isinstance(geometry, Point):
+            if not geometry.is_empty:
+                return MultiPoint([geometry])
+            else:
+                return MultiPoint()
+        elif isinstance(geometry, LineString):
+            if not geometry.is_empty:
+                return MultiLineString([geometry])
+            else:
+                return MultiLineString()
+        elif isinstance(geometry, Polygon):
+            if not geometry.is_empty:
+                return MultiPolygon([geometry])
             else:
                 return MultiPolygon()
+        elif (
+            isinstance(geometry, MultiPoint)
+            or isinstance(geometry, MultiLineString)
+            or isinstance(geometry, MultiPolygon)
+        ):
+            return geometry  # Het is al een multi-variant
+        elif isinstance(geometry, GeometryCollection):
+            multi_geoms = []
+            for geom in geometry.geoms:
+                if isinstance(geom, Point):
+                    multi_geoms.append(MultiPoint([geom]))
+                elif isinstance(geom, LineString):
+                    multi_geoms.append(MultiLineString([geom]))
+                elif isinstance(geom, Polygon):
+                    multi_geoms.append(MultiPolygon([geom]))
+                elif (
+                    isinstance(geom, MultiPoint)
+                    or isinstance(geom, MultiLineString)
+                    or isinstance(geom, MultiPolygon)
+                ):
+                    multi_geoms.append(geom)
+            return GeometryCollection(multi_geoms)
+        else:
+            raise TypeError("Onbekend geometrie type: {}".format(type(geometry)))
     else:
-        return MultiPolygon()
+        raise TypeError("Onbekend geometrie type: {}".format(type(geometry)))
 
 
 def get_coords_from_geometry(geometry):

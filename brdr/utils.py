@@ -7,6 +7,8 @@ from geojson import Feature, FeatureCollection, dump
 from shapely import GeometryCollection, make_valid, node, polygonize, unary_union
 from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
+from shapely.geometry.point import Point
+from shapely.ops import nearest_points
 
 from brdr.constants import (
     MULTI_SINGLE_ID_SEPARATOR,
@@ -20,7 +22,7 @@ from brdr.constants import (
     AREA_ATTRIBUTE,
 )
 from brdr.enums import DiffMetric
-from brdr.geometry_utils import get_partitions, get_bbox, get_shape_index
+from brdr.geometry_utils import get_partitions, get_bbox, get_shape_index, to_multi
 from brdr.typings import ProcessResult
 
 
@@ -63,7 +65,9 @@ def get_series_geojson_dict(
                 if results_type not in features_list_dict:
                     features_list_dict[results_type] = []
 
-                feature = _feature_from_geom(geom, properties, geom_attributes)
+                feature = _feature_from_geom(
+                    geom, theme_id, properties, geom_attributes
+                )
                 features_list_dict[results_type].append(feature)
 
     crs_geojson = {"type": "name", "properties": {"name": crs}}
@@ -75,6 +79,7 @@ def get_series_geojson_dict(
 
 def _feature_from_geom(
     geom: BaseGeometry,
+    feature_id: any,
     properties: dict = None,
     geom_attributes=True,
 ) -> Feature:
@@ -83,6 +88,7 @@ def _feature_from_geom(
 
     Args:
         geom (BaseGeometry): The geometry to convert.
+        feature_id: a (unique) id for the feature
         properties (dict, optional): The properties to include in the feature.
         geom_attributes (bool, optional): Whether to include geometry attributes.
 
@@ -96,7 +102,7 @@ def _feature_from_geom(
         properties[AREA_ATTRIBUTE] = area
         properties[PERIMETER_ATTRIBUTE] = perimeter
         properties[SHAPE_INDEX_ATTRIBUTE] = get_shape_index(area, perimeter)
-    return Feature(geometry=geom, properties=properties)
+    return Feature(geometry=geom, id=feature_id, properties=properties)
 
 
 def geojson_from_dict(dictionary, crs, id_field, prop_dict=None, geom_attributes=True):
@@ -117,7 +123,7 @@ def geojson_from_dict(dictionary, crs, id_field, prop_dict=None, geom_attributes
     for key, geom in dictionary.items():
         properties = dict(prop_dict or {}).get(key, {})
         properties[id_field] = key
-        features.append(_feature_from_geom(geom, properties, geom_attributes))
+        features.append(_feature_from_geom(geom, key, properties, geom_attributes))
     crs_geojson = {"type": "name", "properties": {"name": crs}}
     geojson = FeatureCollection(features, crs=crs_geojson)
     return geojson
@@ -137,16 +143,16 @@ def write_geojson(path_to_file, geojson):
         dump(geojson, f, default=str)
 
 
-def multipolygons_to_singles(dict_geoms):
+def multi_to_singles(dict_geoms):
     """
-    Convert a dictionary of Shapely geometries to a dictionary containing only single polygons.
+    Convert a dictionary of Shapely (multi-)geometries to a dictionary containing only single geometries.
 
     Args:
         dict_geoms (dict): Dictionary of geometries.
 
     Returns:
         tuple: A tuple containing:
-            - dict: Dictionary of single polygons.
+            - dict: Dictionary of single geometries.
             - dict: Dictionary mapping new keys to original keys.
     """
     resulting_dict_geoms = {}
@@ -154,15 +160,15 @@ def multipolygons_to_singles(dict_geoms):
     for key, geom in dict_geoms.items():
         if geom is None or geom.is_empty:
             continue
-        elif str(geom.geom_type) == "Polygon":
+        elif str(geom.geom_type) in ["Polygon", "LineString", "Point"]:
             resulting_dict_geoms[key] = geom
-        elif str(geom.geom_type) == "MultiPolygon":
-            polygons = list(geom.geoms)
-            if len(polygons) == 1:
-                resulting_dict_geoms[key] = polygons[0]
+        elif str(geom.geom_type) in ["MultiPolygon", "MultiLineString", "MultiPoint"]:
+            geometries = list(geom.geoms)
+            if len(geometries) == 1:
+                resulting_dict_geoms[key] = geometries[0]
                 continue
             i = 0
-            for p in polygons:
+            for p in geometries:
                 new_key = str(key) + MULTI_SINGLE_ID_SEPARATOR + str(i)
                 dict_multi_as_single[new_key] = key
                 resulting_dict_geoms[new_key] = p
@@ -199,7 +205,7 @@ def polygonize_reference_data(dict_ref):
     return dict_ref
 
 
-def get_breakpoints_zerostreak(x, y, extra_score=100):
+def get_breakpoints_zerostreak(x, y, extra_score=10):
     """
     Determine the extremes and zero_streaks of a graph based on the derivative.
 
@@ -220,6 +226,7 @@ def get_breakpoints_zerostreak(x, y, extra_score=100):
     # plt.show()
     extremes = []
     zero_streaks = []
+    max_zero_streak_score = x[-1] - x[0]
     start_streak = None
     streak = 0
     write_zero_streak = False
@@ -235,15 +242,17 @@ def get_breakpoints_zerostreak(x, y, extra_score=100):
             end_streak = x[i - 1]
             if derivative[i] == 0:
                 end_streak = x[i]
-            score_streak = round((end_streak - start_streak), 2)
-            center_streak = start_streak + (score_streak) / 2
+            score_streak = round(
+                (end_streak - start_streak) * 100 / max_zero_streak_score, 2
+            )
+            center_streak = start_streak + (end_streak - start_streak) / 2
 
             zero_streaks.append(
                 (
                     start_streak,
                     end_streak,
                     center_streak,
-                    score_streak * 100,
+                    score_streak,
                     last_extreme,
                 )
             )
@@ -267,22 +276,15 @@ def get_breakpoints_zerostreak(x, y, extra_score=100):
         ):
             last_extreme = derivative[i]
             extremes.append((x[i], derivative[i], "minimum"))
-    # for extremum in extremes:
-    #     logging.debug(
-    #         f"breakpoints: relevant_distance:"
-    #         f"{extremum[0]:.2f}, extreme:{extremum[1]:.2f} ({extremum[2]})"
-    #     )
+
     # adding some extra prediction_score to the last streak when this is ended by the max dist
     if len(zero_streaks) > 0 and zero_streaks[-1][1] == x[-1]:
         list_last_tuple = list(zero_streaks[-1])
         list_last_tuple[3] = list_last_tuple[3] + extra_score
+        if list_last_tuple[3] > 99:
+            list_last_tuple[3] = 99
         zero_streaks[-1] = tuple(list_last_tuple)
-    # for st in zero_streaks:
-    #     logging.debug(
-    #         f"zero_streaks: [{st[0]:.2f} - {st[1]:.2f}] - center:{st[2]:.2f}"
-    #         f" - counter:{st[3]:.2f} - min/max-extreme:{st[4]:.2f} "
-    #     )
-    # plt.plot(series, afgeleide, label='afgeleide-' + str(key))
+
     return extremes, zero_streaks
 
 
@@ -327,12 +329,14 @@ def diffs_from_dict_processresults(
     # all the relevant distances used to calculate the series
     for thematic_id, results_dict in dict_processresults.items():
         diffs[thematic_id] = {}
-
+        if dict_thematic[thematic_id].geom_type in ("LineString", "MultiLineString"):
+            diff_metric = DiffMetric.TOTAL_DISTANCE
         for rel_dist in results_dict:
             result = results_dict.get(rel_dist, {}).get("result")
             result_diff = results_dict.get(rel_dist, {}).get("result_diff")
 
             diff = 0
+            original = dict_thematic[thematic_id]
             if (
                 result_diff is None
                 or result_diff.is_empty
@@ -341,9 +345,9 @@ def diffs_from_dict_processresults(
             ):
                 diff = 0
             elif diff_metric == DiffMetric.TOTAL_AREA:
-                diff = result.area - dict_thematic[thematic_id].area
+                diff = result.area - original.area
             elif diff_metric == DiffMetric.TOTAL_PERCENTAGE:
-                diff = result.area - dict_thematic[thematic_id].area
+                diff = result.area - original.area
                 diff = diff * 100 / result.area
             elif diff_metric == DiffMetric.CHANGES_AREA:
                 # equals the symmetrical difference, so equal to
@@ -353,6 +357,20 @@ def diffs_from_dict_processresults(
             elif diff_metric == DiffMetric.CHANGES_PERCENTAGE:
                 diff = result_diff.area
                 diff = diff * 100 / result.area
+            elif diff_metric == DiffMetric.TOTAL_LENGTH:
+                diff = result.length - original.length
+            elif diff_metric == DiffMetric.CHANGES_LENGTH:
+                diff = result_diff.length
+            elif diff_metric == DiffMetric.TOTAL_DISTANCE:
+                diff = 0
+                result = to_multi(result)
+                for g in result.geoms:
+                    if g.geom_type == "Polygon":
+                        g = g.exterior
+                    for coord in g.coords:
+                        p = Point(coord)
+                        p1, p2 = nearest_points(p, original)
+                        diff = diff + p2.distance(p)
 
             # round, so the detected changes are within 10cm² or 0.1%
             diff = round(diff, 1)
@@ -403,6 +421,15 @@ def get_collection(ref_url, limit):
     return collection
 
 
+def geojson_geometry_to_shapely(geojson_geometry):
+    """
+    Converts a geojson geometry into a shapely geometry
+    :param geojson_geometry:  geojson geometry
+    :return: shapely geometry
+    """
+    return shape(geojson_geometry)
+
+
 def geojson_to_dicts(collection, id_property):
     """
     Converts a GeoJSON collection into dictionaries of geometries and properties.
@@ -421,7 +448,9 @@ def geojson_to_dicts(collection, id_property):
     if collection is None or "features" not in collection:
         return data_dict, data_dict_properties
     for f in collection["features"]:
-        key = str(f["properties"][id_property])
+        key = f["properties"][
+            id_property
+        ]  # TODO to check if this has to be converted to string?
         geom = shape(f["geometry"])
         data_dict[key] = make_valid(geom)
         data_dict_properties[key] = f["properties"]
@@ -533,3 +562,24 @@ def merge_process_results(
                             [existing, geom]
                         )  # noqa
     return grouped_results
+
+
+def is_brdr_formula(brdr_formula):
+    """
+    returns true if the value has the correct structure of a base_formula, otherwise False
+    :param brdr_formula:
+    :return:
+    """
+    if brdr_formula is None or not isinstance(brdr_formula, dict):
+        return False
+    if brdr_formula.keys() >= {
+        "alignment_date",
+        "brdr_version",
+        "reference_source",
+        "full",
+        "area",
+        "reference_features",
+        "reference_od",
+    }:
+        return True
+    return False

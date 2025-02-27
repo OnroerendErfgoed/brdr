@@ -121,3 +121,11 @@
 
 - upgrade hatchling
 - added parameter to update_to_actual_grb()
+
+# 0.9.0
+
+- Adapted prediction score to a relative value between 0 and 100 (or -1 = no prediction)[#170]
+- bugfix - catch exception when the content of a formula_field cannot be loaded/interpreted[#178]
+- Change the default name 'theme_identifier' to 'brdr_id'[#179]
+- Added a docker-service to repo - experimental [#143]
+- Possibility to align(multi-)linestrings and (multi-)points to referenceborders. experimental[#49]

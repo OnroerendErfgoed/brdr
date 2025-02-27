@@ -10,7 +10,7 @@ if __name__ == "__main__":
     # CREATE AN ALIGNER
     aligner = Aligner(crs="EPSG:31370", multi_as_single_modus=True)
     # ADD A THEMATIC POLYGON TO THEMATIC DICTIONARY and LOAD into Aligner
-    id = 1
+    id = "my_theme_id"
     thematic_dict = {id: geom_from_wkt("POLYGON ((0 0, 0 9, 5 10, 10 0, 0 0))")}
     # Add properties
     thematic_dict_properties = {
@@ -21,7 +21,7 @@ if __name__ == "__main__":
     )
     aligner.load_thematic_data(loader)
     # ADD A REFERENCE POLYGON TO REFERENCE DICTIONARY and LOAD into Aligner
-    reference_dict = {100: geom_from_wkt("POLYGON ((0 1, 0 10,8 10,10 1,0 1))")}
+    reference_dict = {"my_ref_id": geom_from_wkt("POLYGON ((0 1, 0 10,8 10,10 1,0 1))")}
     loader = DictLoader(reference_dict)
     aligner.load_reference_data(loader)
     # EXECUTE THE ALIGNMENT
