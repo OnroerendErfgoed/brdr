@@ -557,3 +557,23 @@ def merge_process_results(
                             [existing, geom]
                         )  # noqa
     return grouped_results
+
+
+def is_brdr_formula(brdr_formula):
+    """
+    returns true if the value has the correct structure of a base_formula, otherwise False
+    :param brdr_formula:
+    :return:
+    """
+    if  brdr_formula is None or not isinstance (brdr_formula,dict):
+        return False
+    if (brdr_formula.keys() >= {"alignment_date"
+                                ,"brdr_version"
+                                , "reference_source"
+                                , "full"
+                                , "area"
+                                , "reference_features"
+                                , "reference_od"
+                                }):
+        return True
+    return False

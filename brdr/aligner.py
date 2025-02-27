@@ -67,7 +67,7 @@ from brdr.geometry_utils import safe_union
 from brdr.loader import Loader
 from brdr.logger import Logger
 from brdr.typings import ProcessResult
-from brdr.utils import diffs_from_dict_processresults, multi_to_singles
+from brdr.utils import diffs_from_dict_processresults, multi_to_singles, is_brdr_formula
 from brdr.utils import geojson_from_dict
 from brdr.utils import get_breakpoints_zerostreak
 from brdr.utils import get_series_geojson_dict
@@ -1667,7 +1667,7 @@ class Aligner:
                 self.dict_thematic_properties[id_theme][base_formula_field]
             )
 
-        if base_formula is None:
+        if not is_brdr_formula(base_formula):
             properties[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
             return properties
         properties[FULL_BASE_FIELD_NAME] = base_formula["full"]

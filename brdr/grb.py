@@ -416,7 +416,7 @@ def update_to_actual_grb(
                         if last_version_date is None or lvd < last_version_date:
                             last_version_date = lvd
                 except Exception:
-                    logger.feedback_info(f"Problem with {LAST_VERSION_DATE}")
+                    logger.feedback_info(f"Problem with {LAST_VERSION_DATE}. No brdr_formula (- json-attribute-field) loaded for id {str(id_theme)}")
             else:
                 logger.feedback_info(
                     f"No brdr_formula (- json-attribute-field) loaded for id {str(id_theme)}"
