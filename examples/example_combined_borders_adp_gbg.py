@@ -26,13 +26,8 @@ if __name__ == "__main__":
     )
     aligner.load_thematic_data(loader)
 
-
-    adp_loader = GRBActualLoader(
-        grb_type=GRBType.ADP, partition=1000, aligner=aligner
-    )
-    gbg_loader = GRBActualLoader(
-        grb_type=GRBType.GBG, partition=1000, aligner=aligner
-    )
+    adp_loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
+    gbg_loader = GRBActualLoader(grb_type=GRBType.GBG, partition=1000, aligner=aligner)
     dict_ref, dict_ref_properties_adp, source_adp = adp_loader.load_data()
     dict_ref2, dict_ref_properties_gbg, source_gbg = gbg_loader.load_data()
     dict_ref.update(dict_ref2)  # combine 2 dictionaries
@@ -80,9 +75,6 @@ if __name__ == "__main__":
     )
     print(fcs["result"])
 
-    input = aligner.get_input_as_geojson(inputtype=AlignerInputType.REFERENCE
-    )
+    input = aligner.get_input_as_geojson(inputtype=AlignerInputType.REFERENCE)
 
-    print (input)
-
-
+    print(input)

@@ -1,7 +1,5 @@
 from shapely import from_wkt
 
-from shapely import from_wkt
-
 from brdr.aligner import Aligner
 from brdr.enums import GRBType
 from brdr.grb import GRBActualLoader
