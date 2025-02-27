@@ -89,7 +89,7 @@ class DiffMetric(str, Enum):
     TOTAL_PERCENTAGE = "total_percentage"
     CHANGES_AREA = "changes_area"
     CHANGES_PERCENTAGE = "changes_percentage"
-    TOTAL_LENGTH ="total_length"
+    TOTAL_LENGTH = "total_length"
     CHANGES_LENGTH = "changes_length"
     TOTAL_DISTANCE = "total_distance"
 

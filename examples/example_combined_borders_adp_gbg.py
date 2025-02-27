@@ -1,8 +1,7 @@
 from brdr.aligner import Aligner
 from brdr.enums import GRBType, AlignerResultType, AlignerInputType
-from brdr.grb import get_collection_grb_actual, GRBActualLoader
+from brdr.grb import GRBActualLoader
 from brdr.loader import GeoJsonFileLoader, DictLoader
-from brdr.utils import polygonize_reference_data, geojson_to_dicts
 from examples import show_map, print_brdr_formula
 
 

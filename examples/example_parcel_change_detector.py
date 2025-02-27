@@ -63,7 +63,7 @@ for key in base_aligner.dict_thematic:
     if base_aligner.dict_thematic[key].area > excluded_area:
         keys_to_exclude.append(key)
         counter_excluded = counter_excluded + 1
-        print("geometrie excluded; bigger than " + str(excluded_area) + ": " + key)
+        print("geometrie excluded; bigger than " + str(excluded_area) + ": " + str(key))
 for x in keys_to_exclude:
     del base_aligner.dict_thematic[x]
 

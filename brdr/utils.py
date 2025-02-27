@@ -65,7 +65,9 @@ def get_series_geojson_dict(
                 if results_type not in features_list_dict:
                     features_list_dict[results_type] = []
 
-                feature = _feature_from_geom(geom,theme_id, properties, geom_attributes)
+                feature = _feature_from_geom(
+                    geom, theme_id, properties, geom_attributes
+                )
                 features_list_dict[results_type].append(feature)
 
     crs_geojson = {"type": "name", "properties": {"name": crs}}
@@ -77,7 +79,7 @@ def get_series_geojson_dict(
 
 def _feature_from_geom(
     geom: BaseGeometry,
-    feature_id:any,
+    feature_id: any,
     properties: dict = None,
     geom_attributes=True,
 ) -> Feature:
@@ -100,7 +102,7 @@ def _feature_from_geom(
         properties[AREA_ATTRIBUTE] = area
         properties[PERIMETER_ATTRIBUTE] = perimeter
         properties[SHAPE_INDEX_ATTRIBUTE] = get_shape_index(area, perimeter)
-    return Feature(geometry=geom,id=feature_id ,properties=properties)
+    return Feature(geometry=geom, id=feature_id, properties=properties)
 
 
 def geojson_from_dict(dictionary, crs, id_field, prop_dict=None, geom_attributes=True):
@@ -158,9 +160,9 @@ def multi_to_singles(dict_geoms):
     for key, geom in dict_geoms.items():
         if geom is None or geom.is_empty:
             continue
-        elif str(geom.geom_type) in ["Polygon","LineString","Point"]:
+        elif str(geom.geom_type) in ["Polygon", "LineString", "Point"]:
             resulting_dict_geoms[key] = geom
-        elif str(geom.geom_type) in  ["MultiPolygon","MultiLineString","MultiPoint"]:
+        elif str(geom.geom_type) in ["MultiPolygon", "MultiLineString", "MultiPoint"]:
             geometries = list(geom.geoms)
             if len(geometries) == 1:
                 resulting_dict_geoms[key] = geometries[0]
@@ -224,7 +226,7 @@ def get_breakpoints_zerostreak(x, y, extra_score=10):
     # plt.show()
     extremes = []
     zero_streaks = []
-    max_zero_streak_score = x[-1]-x[0]
+    max_zero_streak_score = x[-1] - x[0]
     start_streak = None
     streak = 0
     write_zero_streak = False
@@ -240,7 +242,9 @@ def get_breakpoints_zerostreak(x, y, extra_score=10):
             end_streak = x[i - 1]
             if derivative[i] == 0:
                 end_streak = x[i]
-            score_streak = round((end_streak - start_streak)*100/max_zero_streak_score, 2)
+            score_streak = round(
+                (end_streak - start_streak) * 100 / max_zero_streak_score, 2
+            )
             center_streak = start_streak + (end_streak - start_streak) / 2
 
             zero_streaks.append(
@@ -277,7 +281,7 @@ def get_breakpoints_zerostreak(x, y, extra_score=10):
     if len(zero_streaks) > 0 and zero_streaks[-1][1] == x[-1]:
         list_last_tuple = list(zero_streaks[-1])
         list_last_tuple[3] = list_last_tuple[3] + extra_score
-        if list_last_tuple[3]>99:
+        if list_last_tuple[3] > 99:
             list_last_tuple[3] = 99
         zero_streaks[-1] = tuple(list_last_tuple)
 
@@ -358,17 +362,15 @@ def diffs_from_dict_processresults(
             elif diff_metric == DiffMetric.CHANGES_LENGTH:
                 diff = result_diff.length
             elif diff_metric == DiffMetric.TOTAL_DISTANCE:
-                diff=0
+                diff = 0
                 result = to_multi(result)
                 for g in result.geoms:
                     if g.geom_type == "Polygon":
                         g = g.exterior
                     for coord in g.coords:
                         p = Point(coord)
-                        p1, p2 = nearest_points(
-                            p, original
-                        )
-                        diff= diff + p2.distance(p)
+                        p1, p2 = nearest_points(p, original)
+                        diff = diff + p2.distance(p)
 
             # round, so the detected changes are within 10cm² or 0.1%
             diff = round(diff, 1)
@@ -418,6 +420,7 @@ def get_collection(ref_url, limit):
             break
     return collection
 
+
 def geojson_geometry_to_shapely(geojson_geometry):
     """
     Converts a geojson geometry into a shapely geometry
@@ -445,7 +448,9 @@ def geojson_to_dicts(collection, id_property):
     if collection is None or "features" not in collection:
         return data_dict, data_dict_properties
     for f in collection["features"]:
-        key = f["properties"][id_property] #TODO to check if this has to be converted to string?
+        key = f["properties"][
+            id_property
+        ]  # TODO to check if this has to be converted to string?
         geom = shape(f["geometry"])
         data_dict[key] = make_valid(geom)
         data_dict_properties[key] = f["properties"]
@@ -565,15 +570,16 @@ def is_brdr_formula(brdr_formula):
     :param brdr_formula:
     :return:
     """
-    if  brdr_formula is None or not isinstance (brdr_formula,dict):
+    if brdr_formula is None or not isinstance(brdr_formula, dict):
         return False
-    if (brdr_formula.keys() >= {"alignment_date"
-                                ,"brdr_version"
-                                , "reference_source"
-                                , "full"
-                                , "area"
-                                , "reference_features"
-                                , "reference_od"
-                                }):
+    if brdr_formula.keys() >= {
+        "alignment_date",
+        "brdr_version",
+        "reference_source",
+        "full",
+        "area",
+        "reference_features",
+        "reference_od",
+    }:
         return True
     return False

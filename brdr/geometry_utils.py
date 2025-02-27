@@ -455,24 +455,25 @@ def geom_to_wkt(shapely_geometry):
     """
     return to_wkt(shapely_geometry)
 
+
 def snap_point_to_polygon(
     geometry,
     reference,
     snap_strategy=SnapStrategy.NO_PREFERENCE,
     max_segment_length=-1,
-    tolerance=1
+    tolerance=1,
 ):
     if geometry is None or geometry.is_empty or reference is None or reference.is_empty:
         return geometry
     if max_segment_length > 0:
         geometry = segmentize(geometry, max_segment_length=max_segment_length)
 
-    if geometry.geom_type =="Point":
+    if geometry.geom_type == "Point":
         geometry = MultiPoint([geometry])
 
     reference_coords = list(get_coords_from_geometry(reference))
 
-    reference = to_multi(reference,geomtype="Polygon")
+    reference = to_multi(reference, geomtype="Polygon")
     ref_lines = []
     for g in reference.geoms:
         ref_lines.append(g.exterior)
@@ -486,9 +487,7 @@ def snap_point_to_polygon(
     for geom in geometry.geoms:
         coords = list(geom.coords)
         coordinates = []
-        for idx, coord in enumerate(
-            coords
-        ):
+        for idx, coord in enumerate(coords):
             p_end = Point(coords[idx])
             if not ref_line.is_empty:
                 p_end_1, p_end_2 = nearest_points(p_end, ref_line)
@@ -513,24 +512,25 @@ def snap_point_to_polygon(
     result = safe_unary_union(points)
     return result
 
+
 def snap_line_to_polygon(
     geometry,
     reference,
     snap_strategy=SnapStrategy.NO_PREFERENCE,
     max_segment_length=-1,
-    tolerance=1
+    tolerance=1,
 ):
     if geometry is None or geometry.is_empty or reference is None or reference.is_empty:
         return geometry
     if max_segment_length > 0:
         geometry = segmentize(geometry, max_segment_length=max_segment_length)
 
-    if geometry.geom_type =="LineString":
+    if geometry.geom_type == "LineString":
         geometry = MultiLineString([geometry])
 
     reference_coords = list(get_coords_from_geometry(reference))
 
-    reference = to_multi(reference,geomtype="Polygon")
+    reference = to_multi(reference, geomtype="Polygon")
     ref_lines = []
     for g in reference.geoms:
         ref_lines.append(g.exterior)
@@ -543,9 +543,7 @@ def snap_line_to_polygon(
     for geom in geometry.geoms:
         coords = list(geom.coords)
         coordinates = []
-        for idx, coord in enumerate(
-            coords
-        ):
+        for idx, coord in enumerate(coords):
             if idx == 0:
                 continue
             p_start = Point(coords[idx - 1])
@@ -598,6 +596,7 @@ def snap_line_to_polygon(
     result = safe_unary_union(lines)
     return result
 
+
 def snap_polygon_to_polygon(
     geometry,
     reference,
@@ -606,15 +605,20 @@ def snap_polygon_to_polygon(
     tolerance=1,
     correction_distance=0.01,
 ):
-    if geometry is None or geometry.is_empty or reference is None or reference.is_empty or not reference.geom_type in ("Polygon","MultiPolygon"):
+    if (
+        geometry is None
+        or geometry.is_empty
+        or reference is None
+        or reference.is_empty
+        or not reference.geom_type in ("Polygon", "MultiPolygon")
+    ):
         return geometry
     if max_segment_length > 0:
         geometry = segmentize(geometry, max_segment_length=max_segment_length)
-    geometry = to_multi(geometry,geomtype="Polygon")
+    geometry = to_multi(geometry, geomtype="Polygon")
     reference_coords = list(get_coords_from_geometry(reference))
 
-
-    reference = to_multi(reference,geomtype="Polygon")
+    reference = to_multi(reference, geomtype="Polygon")
     ref_lines = []
     for g in reference.geoms:
         ref_lines.append(g.exterior)
@@ -865,6 +869,7 @@ def get_bbox(geometry):
     """
     return str(geometry.bounds).strip("()")
 
+
 def geojson_polygon_to_multipolygon(geojson):
     """
     #TODO: add an example/test so it is clear this function is used (inside brdrQ)
@@ -918,7 +923,7 @@ def to_multi(geometry, geomtype=None):
     >>> to_multi(collection)
     <shapely.geometry.collection.GeometryCollection object at 0x...>
     """
-    if geomtype == 'Point':
+    if geomtype == "Point":
         if isinstance(geometry, Point):
             return MultiPoint([geometry])
         elif isinstance(geometry, MultiPoint):
@@ -928,7 +933,7 @@ def to_multi(geometry, geomtype=None):
             return MultiPoint(points)
         else:
             return MultiPoint()
-    elif geomtype == 'LineString':
+    elif geomtype == "LineString":
         if isinstance(geometry, LineString):
             return MultiLineString([geometry])
         elif isinstance(geometry, MultiLineString):
@@ -938,7 +943,7 @@ def to_multi(geometry, geomtype=None):
             return MultiLineString(lines)
         else:
             return MultiLineString()
-    elif geomtype == 'Polygon':
+    elif geomtype == "Polygon":
         if isinstance(geometry, Polygon):
             return MultiPolygon([geometry])
         elif isinstance(geometry, MultiPolygon):
@@ -950,12 +955,25 @@ def to_multi(geometry, geomtype=None):
             return MultiPolygon()
     elif geomtype is None:
         if isinstance(geometry, Point):
-            return MultiPoint([geometry])
+            if not geometry.is_empty:
+                return MultiPoint([geometry])
+            else:
+                return MultiPoint()
         elif isinstance(geometry, LineString):
-            return MultiLineString([geometry])
+            if not geometry.is_empty:
+                return MultiLineString([geometry])
+            else:
+                return MultiLineString()
         elif isinstance(geometry, Polygon):
-            return MultiPolygon([geometry])
-        elif isinstance(geometry, MultiPoint) or isinstance(geometry, MultiLineString) or isinstance(geometry, MultiPolygon):
+            if not geometry.is_empty:
+                return MultiPolygon([geometry])
+            else:
+                return MultiPolygon()
+        elif (
+            isinstance(geometry, MultiPoint)
+            or isinstance(geometry, MultiLineString)
+            or isinstance(geometry, MultiPolygon)
+        ):
             return geometry  # Het is al een multi-variant
         elif isinstance(geometry, GeometryCollection):
             multi_geoms = []
@@ -966,14 +984,17 @@ def to_multi(geometry, geomtype=None):
                     multi_geoms.append(MultiLineString([geom]))
                 elif isinstance(geom, Polygon):
                     multi_geoms.append(MultiPolygon([geom]))
-                elif isinstance(geom, MultiPoint) or isinstance(geom, MultiLineString) or isinstance(geom, MultiPolygon):
+                elif (
+                    isinstance(geom, MultiPoint)
+                    or isinstance(geom, MultiLineString)
+                    or isinstance(geom, MultiPolygon)
+                ):
                     multi_geoms.append(geom)
             return GeometryCollection(multi_geoms)
         else:
             raise TypeError("Onbekend geometrie type: {}".format(type(geometry)))
     else:
         raise TypeError("Onbekend geometrie type: {}".format(type(geometry)))
-
 
 
 def get_coords_from_geometry(geometry):
