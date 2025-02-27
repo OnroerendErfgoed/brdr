@@ -10,7 +10,7 @@ if __name__ == "__main__":
     thematic_dict = {
         "theme_id_1": from_wkt(
             "MULTIPOINT ((174135.22472090268274769 179531.68224664646550082),(174121.19416637552785687 179537.99109039537142962),(174121.04699272679863498 179548.5385352322482504))"
-                  )
+        )
     }
 
     loader = DictLoader(thematic_dict)
@@ -19,4 +19,4 @@ if __name__ == "__main__":
     aligner.load_reference_data(loader)
 
     dict_processresults = aligner.process(relevant_distance=3)
-    print (dict_processresults["theme_id_1"][3]['result'])
+    print(dict_processresults["theme_id_1"][3]["result"])
