@@ -849,7 +849,10 @@ class Aligner:
                         props[EVALUATION_FIELD_NAME] = (
                             Evaluation.TO_CHECK_PREDICTION_FULL
                         )
-                        props[PREDICTION_SCORE] = prediction_score + 1000
+                        prediction_score = prediction_score + 50
+                        if prediction_score>100:
+                            prediction_score=100
+                        props[PREDICTION_SCORE] = prediction_score
                         props[PREDICTION_COUNT] = -1
                     else:
                         props[EVALUATION_FIELD_NAME] = (

@@ -203,7 +203,7 @@ def polygonize_reference_data(dict_ref):
     return dict_ref
 
 
-def get_breakpoints_zerostreak(x, y, extra_score=100):
+def get_breakpoints_zerostreak(x, y, extra_score=10):
     """
     Determine the extremes and zero_streaks of a graph based on the derivative.
 
@@ -224,6 +224,7 @@ def get_breakpoints_zerostreak(x, y, extra_score=100):
     # plt.show()
     extremes = []
     zero_streaks = []
+    max_zero_streak_score = x[-1]-x[0]
     start_streak = None
     streak = 0
     write_zero_streak = False
@@ -239,15 +240,15 @@ def get_breakpoints_zerostreak(x, y, extra_score=100):
             end_streak = x[i - 1]
             if derivative[i] == 0:
                 end_streak = x[i]
-            score_streak = round((end_streak - start_streak), 2)
-            center_streak = start_streak + (score_streak) / 2
+            score_streak = round((end_streak - start_streak)*100/max_zero_streak_score, 2)
+            center_streak = start_streak + (end_streak - start_streak) / 2
 
             zero_streaks.append(
                 (
                     start_streak,
                     end_streak,
                     center_streak,
-                    score_streak * 100,
+                    score_streak,
                     last_extreme,
                 )
             )
@@ -271,22 +272,15 @@ def get_breakpoints_zerostreak(x, y, extra_score=100):
         ):
             last_extreme = derivative[i]
             extremes.append((x[i], derivative[i], "minimum"))
-    # for extremum in extremes:
-    #     logging.debug(
-    #         f"breakpoints: relevant_distance:"
-    #         f"{extremum[0]:.2f}, extreme:{extremum[1]:.2f} ({extremum[2]})"
-    #     )
+
     # adding some extra prediction_score to the last streak when this is ended by the max dist
     if len(zero_streaks) > 0 and zero_streaks[-1][1] == x[-1]:
         list_last_tuple = list(zero_streaks[-1])
         list_last_tuple[3] = list_last_tuple[3] + extra_score
+        if list_last_tuple[3]>99:
+            list_last_tuple[3] = 99
         zero_streaks[-1] = tuple(list_last_tuple)
-    # for st in zero_streaks:
-    #     logging.debug(
-    #         f"zero_streaks: [{st[0]:.2f} - {st[1]:.2f}] - center:{st[2]:.2f}"
-    #         f" - counter:{st[3]:.2f} - min/max-extreme:{st[4]:.2f} "
-    #     )
-    # plt.plot(series, afgeleide, label='afgeleide-' + str(key))
+
     return extremes, zero_streaks
 
 
