@@ -234,6 +234,18 @@ tests / --cov - report
 term - missing
 ```
 
+### Docker
+As an example-usage, a Dockerfile is added to set up a GRB-specific webservice that 'predicts' one or multiple actual geometries for a input-geometry based on the reference source GRB.
+This webservice is based on 'brdr'
+
+```bat
+docker run --rm -p 7999:7999 --name grb_webservice grb_webservice
+docker build -f Dockerfile . -t grb_webservice
+
+example can be found at: http://localhost:7999/docs#/default/actualiser_actualiser_post
+```
+
+
 ## Motivation & citation
 
 A more in-depth description of the algorithm can be found in the following article (in dutch):
