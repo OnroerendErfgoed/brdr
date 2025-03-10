@@ -16,9 +16,9 @@ from brdr.utils import diffs_from_dict_processresults
 
 class TestExamples(unittest.TestCase):
 
-    def test_webservice_brdr(self):
+    def test_webservice_inventaris_brdr_integration(self):
         """
-        Code used in brdr-webservice
+        Code used in inventaris-webservice for brdr-integration
         """
         contour = {
             "type": "MultiPolygon",
@@ -77,8 +77,6 @@ class TestExamples(unittest.TestCase):
                     to_geojson(dict_results[rel_dist]["result_diff_plus"])
                 ),
             }
+        assert len(serial_dict)==len(series)
+        assert len(dict_diffs)==len(series)
 
-        return {
-            "series": serial_dict,
-            "diffs": dict_diffs,
-        }

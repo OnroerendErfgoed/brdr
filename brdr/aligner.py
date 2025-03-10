@@ -1726,7 +1726,6 @@ class Aligner:
         except:
             base_formula = None
 
-
         if not is_brdr_formula(base_formula):
             properties[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
             return properties
