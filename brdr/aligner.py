@@ -885,8 +885,6 @@ class Aligner:
                 props[PREDICTION_COUNT] = prediction_count
                 props[PREDICTION_SCORE] = prediction_score
                 full = props[FULL_ACTUAL_FIELD_NAME]
-                # formula = json.loads(props[FORMULA_FIELD_NAME])
-                # full = formula["full"]
                 if full_strategy == Full.ONLY_FULL and not full:
                     continue
                 if (
@@ -1720,14 +1718,14 @@ class Aligner:
             return properties
         properties[FULL_ACTUAL_FIELD_NAME] = actual_formula["full"]
         properties[FORMULA_FIELD_NAME] = json.dumps(actual_formula)
-        base_formula = None
-        if (
-            id_theme in self.dict_thematic_properties
-            and base_formula_field in self.dict_thematic_properties[id_theme]
-        ):
+
+        try:
             base_formula = json.loads(
                 self.dict_thematic_properties[id_theme][base_formula_field]
             )
+        except:
+            base_formula = None
+
 
         if not is_brdr_formula(base_formula):
             properties[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
