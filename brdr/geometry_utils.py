@@ -1,6 +1,6 @@
+
 import logging
 from math import pi
-
 import numpy as np
 from shapely import GEOSException, equals
 from shapely import MultiPoint, MultiLineString
@@ -33,6 +33,9 @@ from shapely.prepared import prep
 
 from brdr.enums import SnapStrategy
 
+
+
+log = logging.getLogger(__name__)
 
 def buffer_neg_pos(geometry, buffer_value, mitre_limit=5):
     """
@@ -185,6 +188,7 @@ def safe_union(geom_a: BaseGeometry, geom_b: BaseGeometry) -> BaseGeometry:
         geom = union(geom_a, geom_b)
     except GEOSException:
         try:
+
             logging.warning(
                 "union_error for geoms:" + geom_a.wkt + " and " + geom_b.wkt
             )

@@ -25,6 +25,7 @@ from brdr.enums import DiffMetric
 from brdr.geometry_utils import get_partitions, get_bbox, get_shape_index, to_multi
 from brdr.typings import ProcessResult
 
+log = logging.getLogger(__name__)
 
 def get_series_geojson_dict(
     series_dict: dict[any, dict[float, ProcessResult]],
