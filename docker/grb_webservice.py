@@ -9,7 +9,7 @@ from brdr.grb import GRBActualLoader
 from brdr.loader import DictLoader
 from grb_webservice_typings import ResponseBody, RequestBody
 
-port = 7999
+port = 80
 host = "0.0.0.0"
 
 app = FastAPI()

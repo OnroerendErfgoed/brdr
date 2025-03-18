@@ -548,8 +548,11 @@ def snap_line_to_polygon(
         coords = list(geom.coords)
         coordinates = []
         for idx, coord in enumerate(coords):
+            print("idx: " + str(idx))
             if idx == 0:
                 continue
+            if idx == 25:
+                pass
             p_start = Point(coords[idx - 1])
             p_end = Point(coords[idx])
             if not ref_line.is_empty:
@@ -578,11 +581,12 @@ def snap_line_to_polygon(
             )
             coordinates.append(p_start_snapped.coords[0])
 
-            reference_line, distance = closest_line(ref_lines, p_end)
-            if distance == -1 or distance > tolerance:
+
+            #if distance == -1 or distance > tolerance:
+            if not bool_start_snapped or not bool_end_snapped:
                 coordinates.append(p_end_snapped.coords[0])
                 continue
-
+            reference_line, distance = closest_line(ref_lines, p_end)
             distance_start_end = p_start.distance(p_end)
             line_substring = _get_line_substring(
                 reference_line, p_start_snapped, p_end_snapped, distance_start_end
@@ -668,10 +672,11 @@ def snap_polygon_to_polygon(
             )
             coordinates.append(p_start_snapped.coords[0])
 
-            reference_line, distance = closest_line(ref_lines, p_end)
-            if distance == -1 or distance > tolerance:
+            #if distance == -1 or distance > tolerance:
+            if not bool_start_snapped or not bool_end_snapped:
                 coordinates.append(p_end_snapped.coords[0])
                 continue
+            reference_line, distance = closest_line(ref_lines, p_end)
 
             distance_start_end = p_start.distance(p_end)
             line_substring = _get_line_substring(
@@ -759,6 +764,7 @@ def _snapped_point_by_snapstrategy(
             snapped = True
         else:
             p_snapped = p
+            print (p.wkt)
     elif snap_strategy == SnapStrategy.PREFER_VERTICES:
         if (
             p_nearest_vertices is not None
@@ -1023,3 +1029,20 @@ def get_coords_from_geometry(geometry):
         for polygon in geometry.geoms:
             coords.update(get_coords_from_geometry(polygon))
     return coords
+
+
+def remove_shortest_and_merge(multilinestring):
+    # Check if the merged result is a LineString
+    merged = line_merge(multilinestring)
+    if isinstance(merged, LineString):
+        return merged
+
+    # Find the shortest LineString in the MultiLineString
+    shortest_line = min(multilinestring.geoms, key=lambda line: line.length)
+
+    # Create a new MultiLineString without the shortest LineString
+    remaining_lines = [line for line in multilinestring.geoms if line != shortest_line]
+    new_multilinestring = MultiLineString(remaining_lines)
+
+    # Recursively call the function with the new MultiLineString
+    return remove_shortest_and_merge(new_multilinestring)

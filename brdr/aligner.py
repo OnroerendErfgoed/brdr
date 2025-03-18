@@ -272,7 +272,9 @@ class Aligner:
         self, input_geometry: BaseGeometry, relevant_distance, od_strategy
     ) -> ProcessResult:
         result_dict = {}
+        snap_strategy = SnapStrategy.PREFER_VERTICES
         snap_strategy = SnapStrategy.NO_PREFERENCE
+        #snap_strategy = SnapStrategy.ONLY_VERTICES
         max_segment_length = 2
         snapped = []
 
@@ -355,7 +357,7 @@ class Aligner:
             geom_snapped = snap_line_to_polygon(
                 geom_intersection,
                 geom_reference,
-                snap_strategy=SnapStrategy.PREFER_VERTICES,
+                snap_strategy=snap_strategy,
                 tolerance=relevant_distance,
                 max_segment_length=2,
             )
