@@ -33,7 +33,7 @@ aligner.load_thematic_data(DictLoader(arc_dict))
 aligner.load_reference_data(
     GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
 )
-relevant_distance = 5
+relevant_distance = 0.4
 process_result = aligner.process(
     relevant_distance=relevant_distance,
 )

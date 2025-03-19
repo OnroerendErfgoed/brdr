@@ -273,7 +273,7 @@ class Aligner:
     ) -> ProcessResult:
         result_dict = {}
         snap_strategy = SnapStrategy.PREFER_VERTICES
-        snap_strategy = SnapStrategy.NO_PREFERENCE
+        #snap_strategy = SnapStrategy.NO_PREFERENCE
         #snap_strategy = SnapStrategy.ONLY_VERTICES
         max_segment_length = 2
         snapped = []
