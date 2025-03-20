@@ -458,8 +458,52 @@ def geom_to_wkt(shapely_geometry):
     """
     return to_wkt(shapely_geometry)
 
+def snap_geometry_to_reference(
+    geometry,
+    reference,
+    snap_strategy=SnapStrategy.NO_PREFERENCE,
+    max_segment_length=-1,
+    tolerance=1,
+):
+    if geometry is None or geometry.is_empty or reference is None or reference.is_empty:
+        return geometry
+    if max_segment_length > 0:
+        geometry = segmentize(geometry, max_segment_length=max_segment_length)
+    geometry=to_multi(geometry,geomtype=None)
+    if geometry.geom_type == "MultiPoint":
+        result =_snap_point_to_reference(geometry,
+                                         reference=reference,
+                                         snap_strategy=snap_strategy,
+                                         max_segment_length=max_segment_length,
+                                         tolerance=tolerance)
+    elif geometry.geom_type == "MultiLineString":
+        result = _snap_line_to_reference(geometry,
+                                         reference=reference,
+                                         snap_strategy=snap_strategy,
+                                         max_segment_length=max_segment_length,
+                                         tolerance=tolerance)
+    elif geometry.geom_type == "MultiPolygon":
+        result = _snap_polygon_to_reference(geometry,
+                                         reference=reference,
+                                         snap_strategy=snap_strategy,
+                                         max_segment_length=max_segment_length,
+                                         tolerance=tolerance)
 
-def snap_point_to_polygon(
+    elif geometry.geom_type == "GeometryCollection":
+        results =[]
+        for geom in geometry.geoms:
+            result = snap_geometry_to_reference(geom,
+                                                reference=reference,
+                                                snap_strategy=snap_strategy,
+                                                max_segment_length=max_segment_length,
+                                                tolerance=tolerance)
+            results.append(result)
+        result=safe_unary_union(results)
+    else:
+        raise NotImplementedError(f"snapping for this type of geometry is not implemented: {str(geometry.geom_type)}")
+    return result
+
+def _snap_point_to_reference(
     geometry,
     reference,
     snap_strategy=SnapStrategy.NO_PREFERENCE,
@@ -473,7 +517,6 @@ def snap_point_to_polygon(
 
     if geometry.geom_type == "Point":
         geometry = MultiPoint([geometry])
-
 
     ref_line, ref_lines,ref_coords = _get_ref_objects(reference)
 
@@ -496,7 +539,7 @@ def snap_point_to_polygon(
     result = safe_unary_union(points)
     return result
 
-def snap_line_to_polygon(
+def _snap_line_to_reference(
     geometry,
     reference,
     snap_strategy=SnapStrategy.NO_PREFERENCE,
@@ -527,7 +570,7 @@ def snap_line_to_polygon(
     return result
 
 
-def snap_polygon_to_polygon(
+def _snap_polygon_to_reference(
     geometry,
     reference,
     snap_strategy=SnapStrategy.PREFER_VERTICES,
@@ -540,7 +583,6 @@ def snap_polygon_to_polygon(
         or geometry.is_empty
         or reference is None
         or reference.is_empty
-        or not reference.geom_type in ("Polygon", "MultiPolygon")
     ):
         return geometry
     if max_segment_length > 0:
@@ -559,16 +601,22 @@ def snap_polygon_to_polygon(
         polygons.append((polygon))
     return buffer_neg_pos(safe_unary_union(polygons), correction_distance)
 
-
 def _get_ref_objects(reference):
     ref_coords = list(get_coords_from_geometry(reference))
-    reference = to_multi(reference, geomtype="Polygon")
+    reference = to_multi(reference, geomtype=None)
     ref_lines = []
     for g in reference.geoms:
-        ref_lines.append(g.exterior)
-        ref_lines.extend([interior for interior in g.interiors])
+        if g.geom_type=="Polygon":
+            ref_lines.append(g.exterior)
+            ref_lines.extend([interior for interior in g.interiors])
+        elif g.geom_type=="LineString":
+            ref_lines.append(g)
+        elif g.geom_type=="Point":
+            pass
     ref_line = safe_unary_union(ref_lines)
     return ref_line, ref_lines, ref_coords
+
+
 
 
 def _get_snapped_coordinates(coords, ref_line, ref_lines, ref_coords, snap_strategy, tolerance):
@@ -578,8 +626,6 @@ def _get_snapped_coordinates(coords, ref_line, ref_lines, ref_coords, snap_strat
     ):  # for each vertex in the first line
         if idx == 0:
             continue
-        if idx == 25:
-            pass
         p_start = Point(coords[idx - 1])
         p_end = Point(coords[idx])
 
@@ -588,8 +634,6 @@ def _get_snapped_coordinates(coords, ref_line, ref_lines, ref_coords, snap_strat
 
         coordinates.append(p_start_snapped.coords[0])
 
-        #TODO: vanaf hier; kijk logic na. Issue dat voorvalt is dat niet volledige referentielijn gevolgd wordt
-        #(zie example_topology.py)
         if not bool_start_snapped and not bool_end_snapped:
             coordinates.append(p_end_snapped.coords[0])
             continue
@@ -600,14 +644,14 @@ def _get_snapped_coordinates(coords, ref_line, ref_lines, ref_coords, snap_strat
         elif bool_start_snapped != bool_end_snapped:
             #determine_p_mid
             line = LineString([p_start,p_end])
-            print ("idx:" + str(idx))
-            print (line.wkt)
+            # print ("idx:" + str(idx))
+            # print (line.wkt)
             if ref_vertices_start or ref_vertices_end:
                 ref_buffered = buffer_pos(MultiPoint(ref_coords), tolerance)
             else:
                 ref_buffered = buffer_pos(ref_line,tolerance)
             intersected_line = safe_intersection(line,ref_buffered)
-            if intersected_line.geom_type!='LineString':
+            if intersected_line.is_empty or intersected_line.geom_type!='LineString':
                 coordinates.append(p_end_snapped.coords[0])
                 continue
             intersected_line_boundary_points = intersected_line.boundary.geoms
@@ -703,7 +747,7 @@ def _snapped_point_by_snapstrategy(
     snapped = False
     ref_vertices = False
     if p_nearest is None:
-        return p_snapped, snapped
+        return p_snapped, snapped,ref_vertices
     if snap_strategy == SnapStrategy.NO_PREFERENCE:
         if p.distance(p_nearest) <= tolerance:
             p_snapped = p_nearest
@@ -889,7 +933,7 @@ def to_multi(geometry, geomtype=None):
     >>> to_multi(collection)
     <shapely.geometry.collection.GeometryCollection object at 0x...>
     """
-    if geomtype == "Point":
+    if geomtype in ["Point","MultiPoint"]:
         if isinstance(geometry, Point):
             return MultiPoint([geometry])
         elif isinstance(geometry, MultiPoint):
@@ -899,7 +943,7 @@ def to_multi(geometry, geomtype=None):
             return MultiPoint(points)
         else:
             return MultiPoint()
-    elif geomtype == "LineString":
+    elif geomtype in ["LineString","MultiLineString"]:
         if isinstance(geometry, LineString):
             return MultiLineString([geometry])
         elif isinstance(geometry, MultiLineString):
@@ -909,7 +953,7 @@ def to_multi(geometry, geomtype=None):
             return MultiLineString(lines)
         else:
             return MultiLineString()
-    elif geomtype == "Polygon":
+    elif geomtype in ["Polygon","MultiPolygon"]:
         if isinstance(geometry, Polygon):
             return MultiPolygon([geometry])
         elif isinstance(geometry, MultiPolygon):
@@ -984,6 +1028,9 @@ def get_coords_from_geometry(geometry):
     elif isinstance(geometry, MultiPolygon):
         for polygon in geometry.geoms:
             coords.update(get_coords_from_geometry(polygon))
+    elif isinstance(geometry, GeometryCollection):
+        for geom in geometry.geoms:
+            coords.update(get_coords_from_geometry(geom))
     return coords
 
 
@@ -1007,6 +1054,8 @@ def _get_snapped_point(point, ref_line, reference_coords, snap_strategy, toleran
 
     if not ref_line.is_empty:
         p1, p2 = nearest_points(point, ref_line)
+    elif len(reference_coords) != 0:
+        p1, p2 = nearest_points(point, MultiPoint(reference_coords))
     else:
         p1, p2 = None, None
 
