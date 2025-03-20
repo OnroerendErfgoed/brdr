@@ -56,11 +56,10 @@ from brdr.geometry_utils import (
     buffer_neg,
     safe_unary_union,
     get_shape_index,
-    snap_polygon_to_polygon,
     geometric_equality,
-    snap_line_to_polygon,
-    snap_point_to_polygon,
-    to_multi,
+    _snap_line_to_reference,
+    _snap_point_to_reference,
+    to_multi, snap_geometry_to_reference,
 )
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import buffer_pos
@@ -272,7 +271,9 @@ class Aligner:
         self, input_geometry: BaseGeometry, relevant_distance, od_strategy
     ) -> ProcessResult:
         result_dict = {}
-        snap_strategy = SnapStrategy.NO_PREFERENCE
+        snap_strategy = SnapStrategy.PREFER_VERTICES
+        #snap_strategy = SnapStrategy.NO_PREFERENCE
+        #snap_strategy = SnapStrategy.ONLY_VERTICES
         max_segment_length = 2
         snapped = []
 
@@ -343,7 +344,7 @@ class Aligner:
         geom_type = input_geometry.geom_type
         geom_intersection = safe_intersection(input_geometry, geom_reference)
         if geom_type in ("Point", "MultiPoint"):
-            geom_snapped = snap_point_to_polygon(
+            geom_snapped = _snap_point_to_reference(
                 geom_intersection,
                 geom_reference,
                 snap_strategy=snap_strategy,
@@ -352,10 +353,10 @@ class Aligner:
             )
             geom_empty = Point()
         elif geom_type in ("LineString", "MultiLineString"):
-            geom_snapped = snap_line_to_polygon(
+            geom_snapped = _snap_line_to_reference(
                 geom_intersection,
                 geom_reference,
-                snap_strategy=SnapStrategy.PREFER_VERTICES,
+                snap_strategy=snap_strategy,
                 tolerance=relevant_distance,
                 max_segment_length=2,
             )
@@ -1359,7 +1360,7 @@ class Aligner:
                     )
                 ),
             )
-            p_snapped = snap_polygon_to_polygon(
+            p_snapped = snap_geometry_to_reference(
                 p,
                 reference,
                 max_segment_length=SNAPPING_MAX_SEGMENT_LENGTH,
@@ -1938,7 +1939,7 @@ def _calculate_geom_by_intersection_and_reference(
             geom_intersection, buffer_pos(geom_intersection_inner, 2 * buffer_distance)
         )
 
-        geom_x = snap_polygon_to_polygon(
+        geom_x = snap_geometry_to_reference(
             geom_x,
             geom_reference,
             max_segment_length=SNAPPING_MAX_SEGMENT_LENGTH,
@@ -1979,7 +1980,7 @@ def _calculate_geom_by_intersection_and_reference(
         geom_x = safe_difference(geom_x, geom_difference_2_buffered)
 
         if partial_snapping:
-            geom_x = snap_polygon_to_polygon(
+            geom_x = snap_geometry_to_reference(
                 geom_x,
                 geom_reference,
                 max_segment_length=SNAPPING_MAX_SEGMENT_LENGTH,
