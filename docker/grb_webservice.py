@@ -4,7 +4,7 @@ from fastapi import FastAPI, HTTPException
 from shapely.geometry import shape
 
 from brdr.aligner import Aligner
-from brdr.enums import GRBType, AlignerResultType, OpenbaarDomeinStrategy, Full
+from brdr.enums import GRBType, AlignerResultType, OpenDomainStrategy, FullStrategy
 from brdr.grb import GRBActualLoader
 from brdr.loader import DictLoader
 from grb_webservice_typings import ResponseBody, RequestBody
@@ -30,10 +30,10 @@ def actualiser(request_body: RequestBody):
         ]
         crs = "EPSG:31370"
         threshold_overlap_percentage = 50
-        od_strategy = OpenbaarDomeinStrategy.SNAP_ALL_SIDE
+        od_strategy = OpenDomainStrategy.SNAP_ALL_SIDE
         area_limit = 100000
         grb_type = GRBType.ADP
-        full_strategy = Full.PREFER_FULL
+        full_strategy = FullStrategy.PREFER_FULL
         # get geometry
         data_dict = {}
         for f in request_body.featurecollection.features:

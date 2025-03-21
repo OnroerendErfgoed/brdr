@@ -8,10 +8,10 @@ from shapely.geometry import shape
 from brdr.aligner import Aligner
 from brdr.enums import DiffMetric
 from brdr.enums import GRBType
-from brdr.enums import OpenbaarDomeinStrategy
+from brdr.enums import OpenDomainStrategy
 from brdr.grb import GRBActualLoader
 from brdr.loader import DictLoader
-from brdr.utils import diffs_from_dict_processresults
+from brdr.utils import _diffs_from_dict_processresults
 
 
 class TestExamples(unittest.TestCase):
@@ -40,7 +40,7 @@ class TestExamples(unittest.TestCase):
             ],
         }
         referentielaag_type = GRBType.ADP
-        openbaardomein_strategy = OpenbaarDomeinStrategy.SNAP_INNER_SIDE
+        openbaardomein_strategy = OpenDomainStrategy.SNAP_INNER_SIDE
 
         aligner = Aligner(area_limit=100000)
 
@@ -60,7 +60,7 @@ class TestExamples(unittest.TestCase):
             od_strategy=openbaardomein_strategy,
             threshold_overlap_percentage=50,
         )
-        dict_diffs = diffs_from_dict_processresults(
+        dict_diffs = _diffs_from_dict_processresults(
             dict_series, aligner.dict_thematic, DiffMetric.CHANGES_AREA
         )
 

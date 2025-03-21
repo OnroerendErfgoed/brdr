@@ -310,7 +310,7 @@ def _numerical_derivative(x, y):
     return derivative
 
 
-def diffs_from_dict_processresults(
+def _diffs_from_dict_processresults(
     dict_processresults: dict[any, dict[float, ProcessResult]],
     dict_thematic: dict[any, BaseGeometry],
     diff_metric: DiffMetric = DiffMetric.CHANGES_AREA,

@@ -1,5 +1,5 @@
 from brdr.aligner import Aligner
-from brdr.enums import OpenbaarDomeinStrategy, AlignerResultType, GRBType
+from brdr.enums import OpenDomainStrategy, AlignerResultType, GRBType
 from brdr.geometry_utils import geom_from_wkt
 from brdr.grb import GRBActualLoader
 from brdr.loader import DictLoader
@@ -32,7 +32,7 @@ if __name__ == "__main__":
     relevant_distance = 2.7
     process_result = aligner.process(
         relevant_distance=relevant_distance,
-        od_strategy=OpenbaarDomeinStrategy.EXCLUDE,
+        od_strategy=OpenDomainStrategy.EXCLUDE,
         threshold_overlap_percentage=50,
     )
     # PRINT RESULTS IN WKT

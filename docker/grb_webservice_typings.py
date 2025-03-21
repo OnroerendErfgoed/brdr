@@ -3,7 +3,7 @@ from typing import Optional, Dict, Any, Union
 from geojson_pydantic import Feature, FeatureCollection, MultiPolygon, Polygon
 from pydantic import BaseModel, model_validator
 
-from brdr.enums import GRBType, Full
+from brdr.enums import GRBType, FullStrategy
 
 
 class ReferenceSource(BaseModel):
@@ -113,7 +113,7 @@ class RequestProperties(BaseModel):
 class RequestParams(BaseModel):
     crs: Optional[str] = "EPSG:31370"
     grb_type: Optional[GRBType] = GRBType.ADP
-    prediction_strategy: Optional[Full] = Full.PREFER_FULL
+    prediction_strategy: Optional[FullStrategy] = FullStrategy.PREFER_FULL
 
     model_config = {
         "json_schema_extra": {

@@ -6,7 +6,7 @@ from pyramid.response import Response
 from pyramid.view import view_config
 
 from brdr.aligner import Aligner
-from brdr.enums import GRBType, AlignerResultType, OpenbaarDomeinStrategy
+from brdr.enums import GRBType, AlignerResultType, OpenDomainStrategy
 from brdr.grb import GRBActualLoader
 from brdr.loader import DictLoader
 from brdr.utils import geojson_geometry_to_shapely
@@ -38,7 +38,7 @@ def actualiser(request):
         ]
         crs = "EPSG:31370"
         threshold_overlap_percentage = 50
-        od_strategy = OpenbaarDomeinStrategy.SNAP_ALL_SIDE
+        od_strategy = OpenDomainStrategy.SNAP_ALL_SIDE
         area_limit = 100000
         grb_type = GRBType.ADP
 

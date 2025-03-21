@@ -2,7 +2,7 @@ import statistics
 from datetime import datetime
 
 from brdr.aligner import Aligner
-from brdr.enums import OpenbaarDomeinStrategy, GRBType
+from brdr.enums import OpenDomainStrategy, GRBType
 from brdr.geometry_utils import geom_from_wkt
 from brdr.grb import GRBActualLoader
 from brdr.loader import GeoJsonFileLoader, DictLoader
@@ -16,7 +16,7 @@ def main():
     # Initiate brdr
     aligner = Aligner(max_workers=None)
     iterations = 5
-    od_strategy = OpenbaarDomeinStrategy.SNAP_PREFER_VERTICES
+    od_strategy = OpenDomainStrategy.SNAP_PREFER_VERTICES
     relevant_distance = 3
     grb_loader = True
     aligner.multi_as_single_modus = True

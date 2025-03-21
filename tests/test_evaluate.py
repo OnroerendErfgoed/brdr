@@ -8,7 +8,7 @@ from shapely.geometry import Polygon
 
 from brdr.aligner import Aligner
 from brdr.constants import FORMULA_FIELD_NAME
-from brdr.enums import GRBType, Evaluation, Full
+from brdr.enums import GRBType, Evaluation, FullStrategy
 from brdr.grb import (
     GRBActualLoader,
     GRBFiscalParcelLoader,
@@ -109,7 +109,7 @@ class TestEvaluate(unittest.TestCase):
 
         dict_evaluated, prop_dictionary = aligner.evaluate(
             relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
-            full_strategy=Full.NO_FULL,
+            full_strategy=FullStrategy.NO_FULL,
         )
         assert len(dict_evaluated["theme_id_1"]) == 3
         assert (
@@ -131,7 +131,7 @@ class TestEvaluate(unittest.TestCase):
 
         dict_evaluated, prop_dictionary = aligner.evaluate(
             relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
-            full_strategy=Full.PREFER_FULL,
+            full_strategy=FullStrategy.PREFER_FULL,
         )
         assert len(dict_evaluated["theme_id_1"]) == 3
         assert (
@@ -153,7 +153,7 @@ class TestEvaluate(unittest.TestCase):
 
         dict_evaluated, prop_dictionary = aligner.evaluate(
             relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
-            full_strategy=Full.ONLY_FULL,
+            full_strategy=FullStrategy.ONLY_FULL,
         )
         assert len(dict_evaluated["theme_id_1"]) == 1
         assert (
@@ -175,7 +175,7 @@ class TestEvaluate(unittest.TestCase):
 
         dict_evaluated, prop_dictionary = aligner.evaluate(
             relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
-            full_strategy=Full.PREFER_FULL,
+            full_strategy=FullStrategy.PREFER_FULL,
             max_predictions=-1,
         )
         assert len(dict_evaluated["theme_id_1"]) == 3
@@ -198,7 +198,7 @@ class TestEvaluate(unittest.TestCase):
 
         dict_evaluated, prop_dictionary = aligner.evaluate(
             relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
-            full_strategy=Full.NO_FULL,
+            full_strategy=FullStrategy.NO_FULL,
             max_predictions=2,
         )
         assert len(dict_evaluated["theme_id_1"]) == 2
@@ -221,7 +221,7 @@ class TestEvaluate(unittest.TestCase):
 
         dict_evaluated, prop_dictionary = aligner.evaluate(
             relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
-            full_strategy=Full.NO_FULL,
+            full_strategy=FullStrategy.NO_FULL,
             max_predictions=1,
             multi_to_best_prediction=True,
         )
@@ -245,7 +245,7 @@ class TestEvaluate(unittest.TestCase):
 
         dict_evaluated, prop_dictionary = aligner.evaluate(
             relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
-            full_strategy=Full.NO_FULL,
+            full_strategy=FullStrategy.NO_FULL,
             max_predictions=1,
             multi_to_best_prediction=False,
         )
@@ -269,7 +269,7 @@ class TestEvaluate(unittest.TestCase):
 
         dict_evaluated, prop_dictionary = aligner.evaluate(
             relevant_distances=np.arange(10, 410, 10, dtype=int) / 100,
-            full_strategy=Full.NO_FULL,
+            full_strategy=FullStrategy.NO_FULL,
             max_predictions=1,
             multi_to_best_prediction=False,
         )

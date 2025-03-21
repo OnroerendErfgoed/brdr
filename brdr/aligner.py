@@ -45,12 +45,12 @@ from brdr.constants import (
     EQUAL_REFERENCE_FEATURES_FIELD_NAME,
 )
 from brdr.enums import (
-    OpenbaarDomeinStrategy,
+    OpenDomainStrategy,
     Evaluation,
     AlignerResultType,
     AlignerInputType,
     SnapStrategy,
-    Full,
+    FullStrategy, DiffMetric,
 )
 from brdr.geometry_utils import (
     buffer_neg,
@@ -71,7 +71,7 @@ from brdr.geometry_utils import safe_union
 from brdr.loader import Loader
 from brdr.logger import Logger
 from brdr.typings import ProcessResult
-from brdr.utils import diffs_from_dict_processresults, multi_to_singles, is_brdr_formula
+from brdr.utils import _diffs_from_dict_processresults, multi_to_singles, is_brdr_formula
 from brdr.utils import geojson_from_dict
 from brdr.utils import get_breakpoints_zerostreak
 from brdr.utils import get_series_geojson_dict
@@ -101,7 +101,7 @@ class Aligner:
             for k in np.arange(0, 310, 10, dtype=int) / 100
         ],
         threshold_overlap_percentage=50,
-        od_strategy=OpenbaarDomeinStrategy.SNAP_ALL_SIDE,
+        od_strategy=OpenDomainStrategy.SNAP_ALL_SIDE,
         crs=DEFAULT_CRS,
         multi_as_single_modus=True,
         partial_snapping=PARTIAL_SNAPPING,
@@ -282,14 +282,14 @@ class Aligner:
         ).tolist()
 
         # Openbaar domein
-        if od_strategy != OpenbaarDomeinStrategy.EXCLUDE:
+        if od_strategy != OpenDomainStrategy.EXCLUDE:
             virtual_reference = self._create_virtual_reference(
                 input_geometry, relevant_distance, False
             )
 
-        if od_strategy == OpenbaarDomeinStrategy.EXCLUDE:
+        if od_strategy == OpenDomainStrategy.EXCLUDE:
             pass
-        elif od_strategy == OpenbaarDomeinStrategy.AS_IS:
+        elif od_strategy == OpenDomainStrategy.AS_IS:
             geom_od = safe_intersection(input_geometry, virtual_reference)
             snapped.append(geom_od)
         else:
@@ -367,7 +367,7 @@ class Aligner:
         self,
         input_geometry: BaseGeometry,
         relevant_distance: float = 1,
-        od_strategy=OpenbaarDomeinStrategy.SNAP_ALL_SIDE,
+        od_strategy=OpenDomainStrategy.SNAP_ALL_SIDE,
         threshold_overlap_percentage=50,
     ) -> ProcessResult:
         """
@@ -518,7 +518,7 @@ class Aligner:
         dict_thematic=None,
         relevant_distances: Iterable[float] = None,
         relevant_distance=1,
-        od_strategy=OpenbaarDomeinStrategy.SNAP_ALL_SIDE,
+        od_strategy=OpenDomainStrategy.SNAP_ALL_SIDE,
         threshold_overlap_percentage=50,
     ) -> dict[any, dict[float, ProcessResult]]:
         """
@@ -655,7 +655,7 @@ class Aligner:
             round(k, RELEVANT_DISTANCE_DECIMALS)
             for k in np.arange(0, 310, 10, dtype=int) / 100
         ],
-        od_strategy=OpenbaarDomeinStrategy.SNAP_ALL_SIDE,
+        od_strategy=OpenDomainStrategy.SNAP_ALL_SIDE,
         threshold_overlap_percentage=50,
     ):
         """
@@ -734,7 +734,7 @@ class Aligner:
             dict_thematic = self.dict_thematic
         dict_predictions = defaultdict(dict)
         if od_strategy is None:
-            od_strategy = OpenbaarDomeinStrategy.SNAP_ALL_SIDE
+            od_strategy = OpenDomainStrategy.SNAP_ALL_SIDE
         if threshold_overlap_percentage is None:
             threshold_overlap_percentage = 50
         relevant_distances = list(relevant_distances)
@@ -747,7 +747,7 @@ class Aligner:
             threshold_overlap_percentage=threshold_overlap_percentage,
         )
 
-        diffs_dict = diffs_from_dict_processresults(dict_processresults, dict_thematic)
+        diffs_dict = self.get_diff_metrics(dict_processresults, dict_thematic)
 
         for theme_id, diffs in diffs_dict.items():
             if len(diffs) != len(relevant_distances):
@@ -809,7 +809,7 @@ class Aligner:
             round(k, RELEVANT_DISTANCE_DECIMALS)
             for k in np.arange(0, 310, 10, dtype=int) / 100
         ],
-        full_strategy=Full.NO_FULL,
+        full_strategy=FullStrategy.NO_FULL,
         max_predictions=-1,
         multi_to_best_prediction=True,
     ):
@@ -886,7 +886,7 @@ class Aligner:
                 props[PREDICTION_COUNT] = prediction_count
                 props[PREDICTION_SCORE] = prediction_score
                 full = props[FULL_ACTUAL_FIELD_NAME]
-                if full_strategy == Full.ONLY_FULL and not full:
+                if full_strategy == FullStrategy.ONLY_FULL and not full:
                     continue
                 if (
                     props[EVALUATION_FIELD_NAME] == Evaluation.TO_CHECK_NO_PREDICTION
@@ -906,7 +906,7 @@ class Aligner:
                     equality_found = True
                     continue
                 if full:
-                    if full_strategy != Full.NO_FULL:
+                    if full_strategy != FullStrategy.NO_FULL:
                         props[EVALUATION_FIELD_NAME] = (
                             Evaluation.TO_CHECK_PREDICTION_FULL
                         )
@@ -1101,9 +1101,32 @@ class Aligner:
         self.logger.feedback_debug(str(dict_formula))
         return dict_formula
 
+
+
+    def get_diff_metrics(self,dict_processresults=None,dict_thematic=None, diff_metric=DiffMetric.CHANGES_AREA):
+        """
+        Calculates a dictionary containing difference metrics for thematic elements based on a distance series.
+
+        Parameters:
+        dict_series (dict): A dictionary where keys are thematic IDs and values are dictionaries mapping relative distances to ProcessResult objects.
+        dict_thematic (dict): A dictionary where keys are thematic IDs and values are BaseGeometry objects representing the original geometries.
+        diff_metric (DiffMetric, optional): The metric to use for calculating differences. Default is DiffMetric.CHANGES_AREA.
+
+        Returns:
+        dict: A dictionary where keys are thematic IDs and values are dictionaries mapping relative distances to calculated difference metrics.
+        """
+        if dict_processresults is None:
+            dict_processresults=self.dict_processresults
+        if dict_thematic is None:
+            dict_thematic =self.dict_thematic
+        return _diffs_from_dict_processresults(dict_processresults=dict_processresults,
+                                               dict_thematic=dict_thematic,
+                                               diff_metric=diff_metric
+                                               )
+
+
     ##########EXPORTERS########################
     ###########################################
-
     def get_results_as_geojson(
         self,
         resulttype=AlignerResultType.PROCESSRESULTS,
@@ -1273,7 +1296,7 @@ class Aligner:
         relevant_difference_array = []
         geom_thematic_od = Polygon()
 
-        if self.od_strategy == OpenbaarDomeinStrategy.AS_IS:
+        if self.od_strategy == OpenDomainStrategy.AS_IS:
             # All parts that are not covered by the reference layer are added to the
             #         resulting geometry AS IS
             self.logger.feedback_debug("OD-strategy AS IS")
@@ -1283,15 +1306,15 @@ class Aligner:
             )
 
         elif (
-            self.od_strategy == OpenbaarDomeinStrategy.SNAP_INNER_SIDE
-            or self.od_strategy == OpenbaarDomeinStrategy.EXCLUDE
+                self.od_strategy == OpenDomainStrategy.SNAP_INNER_SIDE
+                or self.od_strategy == OpenDomainStrategy.EXCLUDE
         ):
             # integrates the entire inner area of the input geometry,
             # so Openbaar Domein of the inner area is included in the result
             self.logger.feedback_debug("OD-strategy OD_SNAP_INNER_SIDE or EXCLUDE")
             geom_thematic_od = self._od_full_area(input_geometry, relevant_distance)
 
-        elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_ALL_SIDE:
+        elif self.od_strategy == OpenDomainStrategy.SNAP_ALL_SIDE:
             #  Inner & Outer-reference-boundaries are used.
             # integrates the entire inner area of the input geometry,
             self.logger.feedback_debug("OD-strategy OD-SNAP_ALL_SIDE")
@@ -1310,7 +1333,7 @@ class Aligner:
             geom_thematic_od = safe_union(
                 geom_theme_od_min_clipped_plus_buffered_clipped, geom_thematic_od
             )
-        elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_PREFER_VERTICES:
+        elif self.od_strategy == OpenDomainStrategy.SNAP_PREFER_VERTICES:
             self.logger.feedback_debug("OD-strategy SNAP_PREFER_VERTICES")
             geom_thematic_od = self._od_snap(
                 geometry=input_geometry,
@@ -1318,7 +1341,7 @@ class Aligner:
                 snap_strategy=SnapStrategy.PREFER_VERTICES,
             )
 
-        elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_NO_PREFERENCE:
+        elif self.od_strategy == OpenDomainStrategy.SNAP_NO_PREFERENCE:
             self.logger.feedback_debug("OD-strategy SNAP_NO_PREFERENCE")
             geom_thematic_od = self._od_snap(
                 geometry=input_geometry,
@@ -1326,7 +1349,7 @@ class Aligner:
                 snap_strategy=SnapStrategy.NO_PREFERENCE,
             )
 
-        elif self.od_strategy == OpenbaarDomeinStrategy.SNAP_ONLY_VERTICES:
+        elif self.od_strategy == OpenDomainStrategy.SNAP_ONLY_VERTICES:
             self.logger.feedback_debug("OD-strategy SNAP_ONLY_VERTICES")
             geom_thematic_od = self._od_snap(
                 geometry=input_geometry,
@@ -1529,7 +1552,7 @@ class Aligner:
         preresult.append(input_geometry_inner)
         geom_preresult = safe_unary_union(preresult)
 
-        if self.od_strategy == OpenbaarDomeinStrategy.EXCLUDE:
+        if self.od_strategy == OpenDomainStrategy.EXCLUDE:
             geom_thematic_for_add_delete = safe_intersection(
                 geom_thematic_for_add_delete, self._get_reference_union()
             )

@@ -129,3 +129,11 @@
 - Change the default name 'theme_identifier' to 'brdr_id'[#179]
 - Added a docker-service to repo - experimental [#143]
 - Possibility to align(multi-)linestrings and (multi-)points to referenceborders. experimental[#49]
+
+
+# 0.10.0 (in progress)
+
+! Not Backwards compatable !
+
+- Adapted Enum OpenbaarDomeinStrategy to OpenDomainStrategy
+- 

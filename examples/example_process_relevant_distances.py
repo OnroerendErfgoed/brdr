@@ -1,8 +1,8 @@
 from brdr.aligner import Aligner
-from brdr.enums import OpenbaarDomeinStrategy, GRBType
+from brdr.enums import OpenDomainStrategy, GRBType
 from brdr.grb import GRBActualLoader
 from brdr.loader import GeoJsonLoader
-from brdr.utils import diffs_from_dict_processresults
+from brdr.utils import _diffs_from_dict_processresults
 from examples import plot_series
 from examples import show_map
 
@@ -55,12 +55,12 @@ if __name__ == "__main__":
     relevant_distances = [0.5, 1, 3, 6]
     dict_results = aligner.process(
         relevant_distances=relevant_distances,
-        od_strategy=OpenbaarDomeinStrategy.SNAP_ALL_SIDE,
+        od_strategy=OpenDomainStrategy.SNAP_ALL_SIDE,
         threshold_overlap_percentage=50,
     )
     # SHOW results: map and plotted changes
     show_map(dict_results, aligner.dict_thematic, aligner.dict_reference)
-    resulting_areas = diffs_from_dict_processresults(
+    resulting_areas = _diffs_from_dict_processresults(
         dict_results, aligner.dict_thematic
     )
     plot_series(relevant_distances, resulting_areas)

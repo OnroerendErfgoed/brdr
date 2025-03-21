@@ -1,7 +1,7 @@
 import numpy as np
 
 from brdr.aligner import Aligner
-from brdr.enums import GRBType, AlignerResultType, OpenbaarDomeinStrategy
+from brdr.enums import GRBType, AlignerResultType, OpenDomainStrategy
 from brdr.geometry_utils import geom_from_wkt
 from brdr.grb import GRBActualLoader
 from brdr.loader import GeoJsonFileLoader, DictLoader
@@ -35,7 +35,7 @@ if __name__ == "__main__":
     # predict which relevant distances are interesting to propose as resulting geometry
     dict_series, dict_predictions, diffs = aligner.predictor(
         relevant_distances=series,
-        od_strategy=OpenbaarDomeinStrategy.SNAP_ALL_SIDE,
+        od_strategy=OpenDomainStrategy.SNAP_ALL_SIDE,
         threshold_overlap_percentage=50,
     )
 

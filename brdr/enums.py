@@ -2,7 +2,7 @@ from enum import Enum
 from enum import IntEnum
 
 
-class OpenbaarDomeinStrategy(IntEnum):
+class OpenDomainStrategy(IntEnum):
     """
     Determines how the algorithm deals with parts of the geometry that are not on the
     reference layer. (=public domain in the case of plots as a reference layer).
@@ -124,7 +124,7 @@ class Evaluation(str, Enum):
     NO_CHANGE = "no_change"
 
 
-class Full(str, Enum):
+class FullStrategy(str, Enum):
     """
     Enum for full strategy when evaluating predictions:
 

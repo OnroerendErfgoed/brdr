@@ -10,7 +10,7 @@ from shapely.geometry import shape
 from brdr.aligner import Aligner
 from brdr.constants import AREA_ATTRIBUTE
 from brdr.enums import GRBType, AlignerResultType
-from brdr.enums import OpenbaarDomeinStrategy
+from brdr.enums import OpenDomainStrategy
 from brdr.geometry_utils import _grid_bounds, safe_equals
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.grb import (
@@ -252,7 +252,7 @@ class TestAligner(unittest.TestCase):
         # LOAD REFERENCE DICTIONARY
         self.sample_aligner.load_reference_data(DictLoader(reference_dict))
         relevant_distance = 1
-        for od_strategy in OpenbaarDomeinStrategy:
+        for od_strategy in OpenDomainStrategy:
             process_result = self.sample_aligner.process(
                 relevant_distance=relevant_distance,
                 od_strategy=od_strategy,
