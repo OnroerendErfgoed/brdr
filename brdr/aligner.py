@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
@@ -272,17 +273,15 @@ class Aligner:
     ##########PROCESSORS#######################
     ###########################################
 
-    def process_point_or_linestring(
+    def _process_by_snap(
         self, input_geometry: BaseGeometry, relevant_distance, od_strategy,snap_strategy,snap_max_segment_length
     ) -> ProcessResult:
         result_dict = {}
         snapped = []
-        #TODO maybe we could make a geometrycollection of all these geom_references together?
         ref_intersections = self.reference_items.take(
             self.reference_tree.query(input_geometry)
         ).tolist()
-        ref_intersection_geometries = [self.dict_reference[k] for k in ref_intersections]
-        ref_geometrycollection = GeometryCollection(ref_intersection_geometries)
+        ref_intersections_geoms = [self.dict_reference[key_ref] for key_ref in ref_intersections]
 
         # Open Domain
         if od_strategy != OpenDomainStrategy.EXCLUDE:
@@ -296,26 +295,12 @@ class Aligner:
             geom_od = safe_intersection(input_geometry, virtual_reference)
             snapped.append(geom_od)
         else:
-            geom_empty, geom_od = self._snapped_line_point(
-                input_geometry,
-                virtual_reference,
-                relevant_distance,
-                snap_strategy,
-                snap_max_segment_length,
-            )
-            snapped.append(geom_od)
-        geom_references = [
-            self.dict_reference[key_ref] for key_ref in ref_intersections
-        ]
-        for geom_reference in geom_references:
-            geom_empty, geom_snapped = self._snapped_line_point(
-                input_geometry,
-                geom_reference,
-                relevant_distance,
-                snap_strategy,
-                snap_max_segment_length,
-            )
-            snapped.append(geom_snapped)
+            ref_intersections_geoms.append(virtual_reference)
+
+        ref_geometrycollection = GeometryCollection(ref_intersections_geoms)
+
+        snapped_geom =snap_geometry_to_reference(input_geometry,ref_geometrycollection,snap_strategy,snap_max_segment_length,relevant_distance)
+        snapped.append(snapped_geom)
         # union all
         geom = safe_unary_union(snapped)
         result_dict["result"] = to_multi(geom)
@@ -331,8 +316,8 @@ class Aligner:
             )
         )
 
-        result_dict["result_relevant_intersection"] = geom_empty
-        result_dict["result_relevant_diff"] = geom_empty
+        result_dict["result_relevant_intersection"] = BaseGeometry()
+        result_dict["result_relevant_diff"] = BaseGeometry()
         result_dict["remark"] = "no remark"
         return result_dict
 
@@ -402,33 +387,40 @@ class Aligner:
             *   relevant_difference (BaseGeometry): The relevant_difference
             *   remark (str): remarks collected when processing the geometry
         """
-        #TODO als alle referentie polygonen zijn dan kan algoritme gebruikt worden, maar als er ook referentieelementen zijn van andere types, dan gaan we mogelijks moeten aligneren  met snap_geom_to_reference zodat er naar een geometrycollection kan gerefereerd worden.
-        #ook te bekijken in combinatie met topology?
-        # Processing thematic lines and points
-        if input_geometry.geom_type in (
-            "MultiLineString",
-            "MultiPoint",
-            "LineString",
-            "Point",
-        ):
-            return self.process_point_or_linestring(
+        # Processing based on thematic geom_type and reference_geom_type
+        #TODO check reference geometries
+
+        logging.info(str(input_geometry.geom_type))
+        if input_geometry.geom_type in ("GeometryCollection"):
+            raise ValueError("GeometryCollection as input is not supported")
+        elif input_geometry.geom_type not in ("MultiPolygon", "Polygon"):
+            return self._process_by_snap(
                 input_geometry,
                 relevant_distance=relevant_distance,
                 od_strategy=od_strategy,
                 snap_strategy=self.snap_strategy,
                 snap_max_segment_length=self.snap_max_segment_length
             )
-        elif input_geometry.geom_type in ("MultiPolygon", "Polygon"):
-            return self.process_polygon(
-                input_geometry,
-                relevant_distance=relevant_distance,
-                od_strategy=od_strategy,
-                threshold_overlap_percentage=threshold_overlap_percentage,
-            )
-        else:
-            raise TypeError(f"geom_type {str(input_geometry.geom_type)} not implemented")
+        else: #thematic geometry is a (multi)polygon
+            #check reference geometries in outer ring on
+            all_polygons=True
+            if all_polygons:
+                return self._process_by_brdr(
+                    input_geometry,
+                    relevant_distance=relevant_distance,
+                    od_strategy=od_strategy,
+                    threshold_overlap_percentage=threshold_overlap_percentage,
+                )
+            else:
+                return self._process_by_snap(
+                    input_geometry,
+                    relevant_distance=relevant_distance,
+                    od_strategy=od_strategy,
+                    snap_strategy=self.snap_strategy,
+                    snap_max_segment_length=self.snap_max_segment_length
+                )
 
-    def process_polygon(
+    def _process_by_brdr(
         self,
         input_geometry,
         relevant_distance,
@@ -467,39 +459,57 @@ class Aligner:
         ref_intersections = self.reference_items.take(
             self.reference_tree.query(input_geometry_outer)
         ).tolist()
+        #relevant_intersection_array=[]
+        #relevant_diff_array = []
+        ref_intersections_geoms = []
+        all_polygons=True
         for key_ref in ref_intersections:
-            geom_reference = self.dict_reference[key_ref]
-            geom_intersection = safe_intersection(input_geometry_outer, geom_reference)
-            if geom_intersection.is_empty or geom_intersection is None:
-                continue
-            self.logger.feedback_debug("calculate intersection")
-            (
-                geom,
-                relevant_intersection,
-                relevant_diff,
-            ) = _calculate_geom_by_intersection_and_reference(
-                geom_intersection,
-                geom_reference,
-                input_geometry_inner,
-                False,
-                buffer_distance,
-                self.threshold_overlap_percentage,
-                self.threshold_exclusion_percentage,
-                self.threshold_exclusion_area,
-                self.threshold_inclusion_percentage,
-                self.mitre_limit,
-                self.partial_snapping,
-                self.partial_snap_strategy,
-                self.partial_snap_max_segment_length
-            )
-            self.logger.feedback_debug("intersection calculated")
+            ref_geom = self.dict_reference[key_ref]
+            ref_intersections_geoms.append(ref_geom)
+            if not ref_geom.geom_type in ["Polygon", "MultiPolygon"]:
+                all_polygons = False
+        if all_polygons:
+            for geom_reference in ref_intersections_geoms:
+                #geom_reference = self.dict_reference[key_ref]
+                geom_intersection = safe_intersection(input_geometry_outer, geom_reference)
+                if geom_intersection.is_empty or geom_intersection is None:
+                    continue
+                self.logger.feedback_debug("calculate intersection")
+                (
+                    geom,
+                    relevant_intersection,
+                    relevant_diff,
+                ) = _calculate_geom_by_intersection_and_reference(
+                    geom_intersection,
+                    geom_reference,
+                    input_geometry_inner,
+                    False,
+                    buffer_distance,
+                    self.threshold_overlap_percentage,
+                    self.threshold_exclusion_percentage,
+                    self.threshold_exclusion_area,
+                    self.threshold_inclusion_percentage,
+                    self.mitre_limit,
+                    self.partial_snapping,
+                    self.partial_snap_strategy,
+                    self.partial_snap_max_segment_length
+                )
+                self.logger.feedback_debug("intersection calculated")
+
+                preresult = self._add_multi_polygons_from_geom_to_array(geom, preresult)
+                relevant_intersection_array = self._add_multi_polygons_from_geom_to_array(
+                    relevant_intersection, relevant_intersection_array
+                )
+                relevant_diff_array = self._add_multi_polygons_from_geom_to_array(
+                    relevant_diff, relevant_diff_array
+                )
+        else:
+            reference = GeometryCollection(ref_intersections_geoms)
+            geom = snap_geometry_to_reference(input_geometry_outer,reference,self.snap_strategy,self.snap_max_segment_length, relevant_distance)
             preresult = self._add_multi_polygons_from_geom_to_array(geom, preresult)
-            relevant_intersection_array = self._add_multi_polygons_from_geom_to_array(
-                relevant_intersection, relevant_intersection_array
-            )
-            relevant_diff_array = self._add_multi_polygons_from_geom_to_array(
-                relevant_diff, relevant_diff_array
-            )
+            relevant_intersection_array = []#TODO
+            relevant_diff_array = []#TODO
+
         # UNION INTERMEDIATE LAYERS
         relevant_intersection = safe_unary_union(relevant_intersection_array)
         if relevant_intersection is None or relevant_intersection.is_empty:
@@ -507,6 +517,7 @@ class Aligner:
         relevant_diff = safe_unary_union(relevant_diff_array)
         if relevant_diff is None or relevant_diff.is_empty:
             relevant_diff = Polygon()
+
         # POSTPROCESSING
         result_dict = self._postprocess_preresult(
             preresult, input_geometry, input_geometry_inner, relevant_distance
