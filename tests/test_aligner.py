@@ -157,6 +157,19 @@ class TestAligner(unittest.TestCase):
         )
         self.assertEqual(len(dict_predictions["id1"]), 2)
 
+    def test_line(self):
+        aligner = Aligner(max_workers=-1)
+        wkt = "MULTILINESTRING ((174024.1298775521281641 179420.42107488788315095, 174042.22504128722357564 179413.1830093938333448, 174044.36356063772109337 179418.28255553735652938, 174049.29860529277357273 179418.94056149138486944, 174050.28561422377242707 179422.72409572688047774, 174054.39815143629675731 179421.90158828438143246, 174057.52367971779312938 179420.75007786488276906, 174054.56265292479656637 179408.08346325031016022, 174047.16008594224695116 179398.54237691726302728, 174036.960993655200582 179404.29992901478544809, 174032.84845644267625175 179400.51639477928983979, 174029.88742964965058491 179397.88437096326379105))"
+        thematic_dict = {"theme_id_1": from_wkt(wkt)}
+
+        loader = DictLoader(thematic_dict)
+        aligner.load_thematic_data(loader)
+        loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
+        aligner.load_reference_data(loader)
+        relevant_distance =3
+        dict_processresults = aligner.process(relevant_distance=relevant_distance)
+        self.assertEqual(dict_processresults['theme_id_1'][relevant_distance]['result'].geom_type,"MultiLineString")
+
     def test_predictor_no_prediction(self):
         """
         Test if no prediction is returned when there are no stable geometries (=no zerostreaks) in the range of relevent_distances

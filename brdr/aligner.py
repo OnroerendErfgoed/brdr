@@ -24,12 +24,12 @@ from brdr.constants import (
     PREDICTION_SCORE,
     PREDICTION_COUNT,
     MAX_OUTER_BUFFER,
-    SNAPPING_MAX_SEGMENT_LENGTH,
-    PARTIAL_SNAPPING_STRATEGY,
+    PARTIAL_SNAP_MAX_SEGMENT_LENGTH,
+    PARTIAL_SNAP_STRATEGY,
     PARTIAL_SNAPPING,
     RELEVANT_DISTANCE_DECIMALS,
     ID_THEME_FIELD_NAME,
-    ID_REFERENCE_FIELD_NAME,
+    ID_REFERENCE_FIELD_NAME, SNAP_STRATEGY, SNAP_MAX_SEGMENT_LENGTH,
 )
 from brdr.constants import (
     LAST_VERSION_DATE,
@@ -90,7 +90,6 @@ class Aligner:
     The thematic data can be loaded by using different Loaders: DictLoader, GeojsonLoader,...
     The class can be used to compare and aligne the thematic data with the reference data.
     """
-
     def __init__(
         self,
         *,
@@ -104,9 +103,12 @@ class Aligner:
         od_strategy=OpenDomainStrategy.SNAP_ALL_SIDE,
         crs=DEFAULT_CRS,
         multi_as_single_modus=True,
+        preserve_topology=False,
+        snap_strategy=SNAP_STRATEGY,
+        snap_max_segment_length=SNAP_MAX_SEGMENT_LENGTH,
         partial_snapping=PARTIAL_SNAPPING,
-        partial_snapping_strategy=PARTIAL_SNAPPING_STRATEGY,
-        snapping_max_segment_length=SNAPPING_MAX_SEGMENT_LENGTH,
+        partial_snap_strategy=PARTIAL_SNAP_STRATEGY,
+        partial_snap_max_segment_length=PARTIAL_SNAP_MAX_SEGMENT_LENGTH,
         threshold_exclusion_area=0,
         threshold_exclusion_percentage=0,
         threshold_inclusion_percentage=100,
@@ -128,7 +130,7 @@ class Aligner:
             relevant_distances ([],optional): Relevant distances (in meters) for
                 processing
             od_strategy (int, optional): The strategy to determine how to handle
-                information outside the reference polygons (Openbaar Domein)
+                information outside the reference polygons (Open Domain)
                 (default: SNAP_FULL_AREA_ALL_SIDE)
             threshold_overlap_percentage (int, optional): Threshold (%) to determine
                 from which overlapping-percentage a reference-polygon has to be included
@@ -232,9 +234,12 @@ class Aligner:
         # this parameter is used to treat multipolygon as single polygons. So polygons
         # with ID splitter are separately evaluated and merged on result.
         self.multi_as_single_modus = multi_as_single_modus
+        self.preserve_topology=preserve_topology
+        self.snap_strategy = snap_strategy
+        self.snap_max_segment_length = snap_max_segment_length
         self.partial_snapping = partial_snapping
-        self.partial_snapping_strategy = partial_snapping_strategy
-        self.snapping_max_segment_length = snapping_max_segment_length
+        self.partial_snap_strategy = partial_snap_strategy
+        self.partial_snap_max_segment_length = partial_snap_max_segment_length
         self.logger.feedback_info("Aligner initialized")
 
     ##########LOADERS##########################
@@ -268,20 +273,18 @@ class Aligner:
     ###########################################
 
     def process_point_or_linestring(
-        self, input_geometry: BaseGeometry, relevant_distance, od_strategy
+        self, input_geometry: BaseGeometry, relevant_distance, od_strategy,snap_strategy,snap_max_segment_length
     ) -> ProcessResult:
         result_dict = {}
-        snap_strategy = SnapStrategy.PREFER_VERTICES
-        #snap_strategy = SnapStrategy.NO_PREFERENCE
-        #snap_strategy = SnapStrategy.ONLY_VERTICES
-        max_segment_length = 2
         snapped = []
         #TODO maybe we could make a geometrycollection of all these geom_references together?
         ref_intersections = self.reference_items.take(
             self.reference_tree.query(input_geometry)
         ).tolist()
+        ref_intersection_geometries = [self.dict_reference[k] for k in ref_intersections]
+        ref_geometrycollection = GeometryCollection(ref_intersection_geometries)
 
-        # Openbaar domein
+        # Open Domain
         if od_strategy != OpenDomainStrategy.EXCLUDE:
             virtual_reference = self._create_virtual_reference(
                 input_geometry, relevant_distance, False
@@ -298,7 +301,7 @@ class Aligner:
                 virtual_reference,
                 relevant_distance,
                 snap_strategy,
-                max_segment_length,
+                snap_max_segment_length,
             )
             snapped.append(geom_od)
         geom_references = [
@@ -310,7 +313,7 @@ class Aligner:
                 geom_reference,
                 relevant_distance,
                 snap_strategy,
-                max_segment_length,
+                snap_max_segment_length,
             )
             snapped.append(geom_snapped)
         # union all
@@ -377,7 +380,7 @@ class Aligner:
             input_geometry (BaseGeometry): The input geometric object.
             relevant_distance: The relevant distance (in meters) for processing
             od_strategy (int, optional): The strategy to determine how to handle
-                information outside the reference polygons (Openbaar Domein)
+                information outside the reference polygons (Open Domain)
                 (default: SNAP_FULL_AREA_ALL_SIDE)
             threshold_overlap_percentage (int, optional): Threshold (%) to determine
                 from which overlapping-percentage a reference-polygon has to be included
@@ -412,6 +415,8 @@ class Aligner:
                 input_geometry,
                 relevant_distance=relevant_distance,
                 od_strategy=od_strategy,
+                snap_strategy=self.snap_strategy,
+                snap_max_segment_length=self.snap_max_segment_length
             )
         elif input_geometry.geom_type in ("MultiPolygon", "Polygon"):
             return self.process_polygon(
@@ -421,7 +426,7 @@ class Aligner:
                 threshold_overlap_percentage=threshold_overlap_percentage,
             )
         else:
-            raise TypeError("geom_type not identified")
+            raise TypeError(f"geom_type {str(input_geometry.geom_type)} not implemented")
 
     def process_polygon(
         self,
@@ -484,6 +489,8 @@ class Aligner:
                 self.threshold_inclusion_percentage,
                 self.mitre_limit,
                 self.partial_snapping,
+                self.partial_snap_strategy,
+                self.partial_snap_max_segment_length
             )
             self.logger.feedback_debug("intersection calculated")
             preresult = self._add_multi_polygons_from_geom_to_array(geom, preresult)
@@ -530,7 +537,7 @@ class Aligner:
             relevant_distances (Iterable[float]): A series of relevant distances
                 (in meters) to process
             od_strategy (int, optional): The strategy to determine how to handle
-                information outside the reference polygons (Openbaar Domein)
+                information outside the reference polygons (Open Domain)
                 (default: SNAP_FULL_AREA_ALL_SIDE)
             threshold_overlap_percentage (int, optional): Threshold (%) to determine
                 from which overlapping-percentage a reference-polygon has to be included
@@ -562,6 +569,10 @@ class Aligner:
         if dict_thematic is None:
             dict_thematic = self.dict_thematic
         dict_multi_as_single = {}
+
+        if self.preserve_topology:
+            # TODO implement
+            pass
         if self.multi_as_single_modus:
             dict_thematic, dict_multi_as_single = multi_to_singles(dict_thematic)
 
@@ -621,6 +632,9 @@ class Aligner:
         if self.multi_as_single_modus:
             dict_series = merge_process_results(dict_series, dict_multi_as_single)
 
+        if self.preserve_topology:
+            # TODO implement
+            pass
         # Check if geom changes from polygon to multipolygon or vice versa
         for theme_id, dict_dist_results in dict_series.items():
             original_geometry = self.dict_thematic[theme_id]
@@ -699,7 +713,7 @@ class Aligner:
                 (in meters) to process. : A NumPy array of distances to
               be analyzed.
             od_strategy (int, optional): The strategy to determine how to handle
-                information outside the reference polygons (Openbaar Domein)
+                information outside the reference polygons (Open Domain)
                 (default: SNAP_FULL_AREA_ALL_SIDE)
             threshold_overlap_percentage (int, optional): Threshold (%) to determine
                 from which overlapping-percentage a reference-polygon has to be included
@@ -709,9 +723,9 @@ class Aligner:
 
             relevant_distances (np.ndarray, optional): A NumPy array of distances to
               be analyzed. Defaults to np.arange(0.1, 5.05, 0.1).
-            od_strategy (OpenbaarDomeinStrategy, optional): A strategy for handling
+            od_strategy (OpenDomainStrategy, optional): A strategy for handling
               open data in the processing (implementation specific). Defaults to
-             OpenbaarDomeinStrategy.SNAP_ALL_SIDE.
+             OpenDomainStrategy.SNAP_ALL_SIDE.
             threshold_overlap_percentage (int, optional): A percentage threshold for
               considering full overlap in the processing (implementation specific).
              Defaults to 50.
@@ -1286,12 +1300,12 @@ class Aligner:
         self, input_geometry, input_geometry_inner, relevant_distance
     ):
         """
-        Calculates the intersecting parts between a thematic geometry and the openbaardomein( domain, not coverd by reference-polygons)
+        Calculates the intersecting parts between a thematic geometry and the Open Domain( domain, not coverd by reference-polygons)
         :param input_geometry:
         :param relevant_distance:
         :return:
         """
-        # Calculate the intersection between thematic and Openbaar Domein
+        # Calculate the intersection between thematic and Open Domain
         # buffer_distance = relevant_distance / 2
         relevant_intersection_array = []
         relevant_difference_array = []
@@ -1311,7 +1325,7 @@ class Aligner:
                 or self.od_strategy == OpenDomainStrategy.EXCLUDE
         ):
             # integrates the entire inner area of the input geometry,
-            # so Openbaar Domein of the inner area is included in the result
+            # so Open Domain of the inner area is included in the result
             self.logger.feedback_debug("OD-strategy OD_SNAP_INNER_SIDE or EXCLUDE")
             geom_thematic_od = self._od_full_area(input_geometry, relevant_distance)
 
@@ -1387,7 +1401,7 @@ class Aligner:
             p_snapped = snap_geometry_to_reference(
                 p,
                 reference,
-                max_segment_length=SNAPPING_MAX_SEGMENT_LENGTH,
+                max_segment_length=PARTIAL_SNAP_MAX_SEGMENT_LENGTH,
                 snap_strategy=snap_strategy,
                 tolerance=relevant_distance,
             )
@@ -1466,6 +1480,8 @@ class Aligner:
                 self.threshold_inclusion_percentage,
                 self.mitre_limit,
                 self.partial_snapping,
+                self.partial_snap_strategy,
+                self.partial_snap_max_segment_length
             )
 
             relevant_intersection_array = self._add_multi_polygons_from_geom_to_array(
@@ -1879,7 +1895,7 @@ def _calculate_geom_by_intersection_and_reference(
     geom_intersection: BaseGeometry,
     geom_reference: BaseGeometry,
     input_geometry_inner: BaseGeometry,
-    is_openbaar_domein,
+    is_open_domain,
     buffer_distance,
     threshold_overlap_percentage,
     threshold_exclusion_percentage,
@@ -1887,6 +1903,8 @@ def _calculate_geom_by_intersection_and_reference(
     threshold_inclusion_percentage,
     mitre_limit,
     partial_snapping,
+    partial_snap_strategy,
+    partial_snap_max_segment_length
 ):
     """
     Calculates the geometry based on intersection and reference geometries.
@@ -1894,7 +1912,7 @@ def _calculate_geom_by_intersection_and_reference(
     Args:
         geom_intersection (BaseGeometry): The intersection geometry.
         geom_reference (BaseGeometry): The reference geometry.
-        is_openbaar_domein (bool): A flag indicating whether it's a public domain
+        is_open_domain (bool): A flag indicating whether it's a public domain
             (area not covered with reference polygon).
         threshold_exclusion_percentage (int): The threshold exclusion percentage.
         threshold_exclusion_area (int): The threshold exclusion area.
@@ -1924,7 +1942,7 @@ def _calculate_geom_by_intersection_and_reference(
     """
     od_overlap = 111  # define a specific value for defining overlap of OD
     if geom_reference.area == 0:
-        overlap = od_overlap  # openbaar domein
+        overlap = od_overlap  # Open Domain
 
     else:
         overlap = geom_intersection.area * 100 / geom_reference.area
@@ -1966,8 +1984,8 @@ def _calculate_geom_by_intersection_and_reference(
         geom_x = snap_geometry_to_reference(
             geom_x,
             geom_reference,
-            max_segment_length=SNAPPING_MAX_SEGMENT_LENGTH,
-            snap_strategy=PARTIAL_SNAPPING_STRATEGY,
+            max_segment_length=partial_snap_max_segment_length,
+            snap_strategy=partial_snap_strategy,
             tolerance=2 * buffer_distance,
         )
 
@@ -2007,8 +2025,8 @@ def _calculate_geom_by_intersection_and_reference(
             geom_x = snap_geometry_to_reference(
                 geom_x,
                 geom_reference,
-                max_segment_length=SNAPPING_MAX_SEGMENT_LENGTH,
-                snap_strategy=PARTIAL_SNAPPING_STRATEGY,
+                max_segment_length=partial_snap_max_segment_length,
+                snap_strategy=partial_snap_strategy,
                 tolerance=2 * buffer_distance,
             )
         geom = safe_unary_union(
@@ -2020,14 +2038,14 @@ def _calculate_geom_by_intersection_and_reference(
         # This results in a side effect that there are extra non-logical parts included
         # in the result. The function below tries to exclude these non-logical parts.
         # see eo_id 206363 with relevant distance=0.2m and SNAP_ALL_SIDE
-        if is_openbaar_domein:
+        if is_open_domain:
             geom = _get_relevant_polygons_from_geom(geom, buffer_distance, mitre_limit)
     elif not geom_relevant_intersection.is_empty and geom_relevant_difference.is_empty:
         geom = geom_reference
     elif geom_relevant_intersection.is_empty and not geom_relevant_difference.is_empty:
         geom = geom_relevant_intersection  # (=empty geometry)
     else:
-        if is_openbaar_domein:
+        if is_open_domain:
             geom = geom_relevant_intersection  # (=empty geometry)
             # TEST if the snapped geom from below is better?
             # geom = snap_polygon_to_polygon (geom_intersection, geom_reference, snap_strategy=SnapStrategy.PREFER_VERTICES, tolerance=2*buffer_distance)
