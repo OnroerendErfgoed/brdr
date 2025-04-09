@@ -276,7 +276,7 @@ class Aligner:
         #snap_strategy = SnapStrategy.ONLY_VERTICES
         max_segment_length = 2
         snapped = []
-
+        #TODO maybe we could make a geometrycollection of all these geom_references together?
         ref_intersections = self.reference_items.take(
             self.reference_tree.query(input_geometry)
         ).tolist()
@@ -399,7 +399,8 @@ class Aligner:
             *   relevant_difference (BaseGeometry): The relevant_difference
             *   remark (str): remarks collected when processing the geometry
         """
-
+        #TODO als alle referentie polygonen zijn dan kan algoritme gebruikt worden, maar als er ook referentieelementen zijn van andere types, dan gaan we mogelijks moeten aligneren  met snap_geom_to_reference zodat er naar een geometrycollection kan gerefereerd worden.
+        #ook te bekijken in combinatie met topology?
         # Processing thematic lines and points
         if input_geometry.geom_type in (
             "MultiLineString",

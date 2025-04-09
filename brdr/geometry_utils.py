@@ -498,7 +498,9 @@ def snap_geometry_to_reference(
                                                 max_segment_length=max_segment_length,
                                                 tolerance=tolerance)
             results.append(result)
+        #result = GeometryCollection(results)
         result=safe_unary_union(results)
+
     else:
         raise NotImplementedError(f"snapping for this type of geometry is not implemented: {str(geometry.geom_type)}")
     return result
@@ -603,16 +605,22 @@ def _snap_polygon_to_reference(
 
 def _get_ref_objects(reference):
     ref_coords = list(get_coords_from_geometry(reference))
-    reference = to_multi(reference, geomtype=None)
+    reference_list = []
+    if reference.geom_type=="GeometryCollection":
+        for r in reference.geoms:
+            reference_list.append(to_multi(r,geomtype=None))
+    else:
+        reference_list.append(to_multi(reference, geomtype=None))
     ref_lines = []
-    for g in reference.geoms:
-        if g.geom_type=="Polygon":
-            ref_lines.append(g.exterior)
-            ref_lines.extend([interior for interior in g.interiors])
-        elif g.geom_type=="LineString":
-            ref_lines.append(g)
-        elif g.geom_type=="Point":
-            pass
+    for r in reference_list:
+        for g in r.geoms:
+            if g.geom_type=="Polygon":
+                ref_lines.append(g.exterior)
+                ref_lines.extend([interior for interior in g.interiors])
+            elif g.geom_type=="LineString":
+                ref_lines.append(g)
+            elif g.geom_type=="Point":
+                pass
     ref_line = safe_unary_union(ref_lines)
     return ref_line, ref_lines, ref_coords
 
@@ -1011,20 +1019,20 @@ def get_coords_from_geometry(geometry):
     coords = set()
     if geometry is None or geometry.is_empty:
         return coords
-    if isinstance(geometry, Point):
-        coords.update(geometry.coords[:-1])
-    if isinstance(geometry, MultiPoint):
+    elif isinstance(geometry, Point):
+        coords.update(geometry.coords)
+    elif isinstance(geometry, MultiPoint):
         for pt in geometry.geoms:
             coords.update(get_coords_from_geometry(pt))
-    if isinstance(geometry, LineString):
-        coords.update(geometry.coords[:-1])
-    if isinstance(geometry, MultiLineString):
+    elif isinstance(geometry, LineString):
+        coords.update(geometry.coords)
+    elif isinstance(geometry, MultiLineString):
         for line in geometry.geoms:
             coords.update(get_coords_from_geometry(line))
-    if isinstance(geometry, Polygon):
-        coords.update(geometry.exterior.coords[:-1])
+    elif isinstance(geometry, Polygon):
+        coords.update(geometry.exterior.coords)
         for linearring in geometry.interiors:
-            coords.update(linearring.coords[:-1])
+            coords.update(linearring.coords)
     elif isinstance(geometry, MultiPolygon):
         for polygon in geometry.geoms:
             coords.update(get_coords_from_geometry(polygon))
