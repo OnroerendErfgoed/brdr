@@ -527,12 +527,12 @@ class Aligner:
             dict_thematic = self.dict_thematic
         dict_multi_as_single = {}
 
-        if self.preserve_topology:
-            # TODO implement
-            pass
         if self.multi_as_single_modus:
-            #TODO check if this is also working for multipoints, multilines and even geometrycollection?
             dict_thematic, dict_multi_as_single = multi_to_singles(dict_thematic)
+
+        if self.preserve_topology:
+            # TODO implement: convert the input geometries to topojson, and make a mapping between the inputs and the arcs
+            pass
 
         if self.max_workers != -1:
             with ThreadPoolExecutor(
@@ -587,13 +587,15 @@ class Aligner:
 
                     dict_series[key][relevant_distance] = processed_result
 
+        if self.preserve_topology:
+            # TODO implement
+            # TODO implement: convert the topojson-arcs to geometries based on mapping table
+            pass
         if self.multi_as_single_modus:
             dict_series = merge_process_results(dict_series, dict_multi_as_single)
 
-        if self.preserve_topology:
-            # TODO implement
-            pass
         # Check if geom changes from polygon to multipolygon or vice versa
+        #TODO - generalize to check if input geometry changes from geom_type
         for theme_id, dict_dist_results in dict_series.items():
             original_geometry = self.dict_thematic[theme_id]
             original_geometry_length = -1

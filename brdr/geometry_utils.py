@@ -1051,6 +1051,19 @@ def get_coords_from_geometry(geometry):
             coords.update(get_coords_from_geometry(geom))
     return coords
 
+def get_geoms_from_geometry(geometry):
+    geoms = set()
+    if geometry is None or geometry.is_empty:
+        return geoms
+    elif isinstance(geometry, (Point,LineString,Polygon)):
+        geoms.update([geometry])
+    elif isinstance(geometry, (MultiPoint,MultiLineString,MultiPolygon)):
+        geoms.update(geometry.geoms)
+    elif isinstance(geometry, GeometryCollection):
+        for geom in geometry.geoms:
+            geoms.update(get_geoms_from_geometry(geom))
+    return geoms
+
 
 def remove_shortest_and_merge(multilinestring):
     # Check if the merged result is a LineString
