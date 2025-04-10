@@ -1,5 +1,4 @@
 import json
-import logging
 import os
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
@@ -16,8 +15,6 @@ from shapely import make_valid
 from shapely import remove_repeated_points
 from shapely import to_geojson
 from shapely.geometry.base import BaseGeometry
-from shapely.geometry.linestring import LineString
-from shapely.geometry.point import Point
 
 from brdr import __version__
 from brdr.constants import (
@@ -58,8 +55,6 @@ from brdr.geometry_utils import (
     safe_unary_union,
     get_shape_index,
     geometric_equality,
-    _snap_line_to_reference,
-    _snap_point_to_reference,
     to_multi, snap_geometry_to_reference,
 )
 from brdr.geometry_utils import buffer_neg_pos
@@ -274,7 +269,7 @@ class Aligner:
     ###########################################
 
     def _process_geometry_by_snap(
-        self, input_geometry: BaseGeometry, relevant_distance, od_strategy,snap_strategy,snap_max_segment_length
+        self, input_geometry: BaseGeometry, relevant_distance,snap_strategy,snap_max_segment_length
     ) -> ProcessResult:
         result_dict = {}
         snapped = []
@@ -285,14 +280,14 @@ class Aligner:
 
         # Open Domain
         virtual_reference = Polygon()
-        if od_strategy != OpenDomainStrategy.EXCLUDE:
+        if self.od_strategy != OpenDomainStrategy.EXCLUDE:
             virtual_reference = self._create_virtual_reference(
                 input_geometry, relevant_distance, False
             )
 
-        if od_strategy == OpenDomainStrategy.EXCLUDE:
+        if self.od_strategy == OpenDomainStrategy.EXCLUDE:
             pass
-        elif od_strategy == OpenDomainStrategy.AS_IS:
+        elif self.od_strategy == OpenDomainStrategy.AS_IS:
             geom_od = safe_intersection(input_geometry, virtual_reference)
             snapped.append(geom_od)
         else:
@@ -323,35 +318,6 @@ class Aligner:
         result_dict["remark"] = "no remark"
         return result_dict
 
-    def _snapped_line_point(
-        self,
-        input_geometry,
-        geom_reference,
-        relevant_distance,
-        snap_strategy,
-        max_segment_length,
-    ):
-        geom_type = input_geometry.geom_type
-        geom_intersection = safe_intersection(input_geometry, geom_reference)
-        if geom_type in ("Point", "MultiPoint"):
-            geom_snapped = _snap_point_to_reference(
-                geom_intersection,
-                geom_reference,
-                snap_strategy=snap_strategy,
-                tolerance=relevant_distance,
-                max_segment_length=max_segment_length,
-            )
-            geom_empty = Point()
-        elif geom_type in ("LineString", "MultiLineString"):
-            geom_snapped = _snap_line_to_reference(
-                geom_intersection,
-                geom_reference,
-                snap_strategy=snap_strategy,
-                tolerance=relevant_distance,
-                max_segment_length=2,
-            )
-            geom_empty = LineString()
-        return geom_empty, geom_snapped
 
     def process_geometry(
         self,
@@ -390,11 +356,12 @@ class Aligner:
             *   remark (str): remarks collected when processing the geometry
         """
         # Processing based on thematic geom_type and reference_geom_type
-        #TODO check reference geometries
-
 
         input_geom_type = input_geometry.geom_type
-        logging.info(str(input_geom_type))
+        self.logger.feedback_debug("geometrytype: " + str(input_geom_type))
+        self.od_strategy = od_strategy
+        self.threshold_overlap_percentage = threshold_overlap_percentage
+
         if input_geom_type in "GeometryCollection":
             raise ValueError("GeometryCollection as input is not supported. Please use the individual geometries from the GeometryCollection as input.")
 
@@ -402,56 +369,63 @@ class Aligner:
             return self._process_geometry_by_snap(
                 input_geometry,
                 relevant_distance=relevant_distance,
-                od_strategy=od_strategy,
                 snap_strategy=self.snap_strategy,
                 snap_max_segment_length=self.snap_max_segment_length
             )
         else: #thematic geometry is a (multi)polygon
-            #check reference geometries in outer ring on
-            all_polygons=True
+
+            # Processing thematic polygons
+            if self.area_limit and input_geometry.area > self.area_limit:
+                message = f"The input polygon is too large to process: input area {str(input_geometry.area)} m², limit area: {str(self.area_limit)} m²."
+                raise ValueError(message)
+            self.logger.feedback_debug("process geometry")
+            self.od_strategy = od_strategy
+            self.threshold_overlap_percentage = threshold_overlap_percentage
+
+            #CALCULATE INNER and OUTER INPUT GEOMETRY for performance optimisation on big geometries
+            # combine all parts of the input geometry to one polygon
+            input_geometry_inner, input_geometry_outer = _calculate_inner_outer(input_geometry,relevant_distance)
+
+            # get a list of all ref_ids that are intersecting the thematic geometry
+            ref_intersections = self.reference_items.take(
+                self.reference_tree.query(input_geometry_outer)
+            ).tolist()
+            ref_intersections_geoms = []
+            all_polygons = True
+            for key_ref in ref_intersections:
+                ref_geom = self.dict_reference[key_ref]
+                ref_intersections_geoms.append(ref_geom)
+                if not ref_geom.geom_type in ["Polygon", "MultiPolygon"]:
+                    all_polygons = False
+
             if all_polygons:
                 return self._process_geometry_by_brdr(
                     input_geometry,
-                    relevant_distance=relevant_distance,
-                    od_strategy=od_strategy,
-                    threshold_overlap_percentage=threshold_overlap_percentage,
+                    input_geometry_outer,
+                    input_geometry_inner,
+                    ref_intersections_geoms,
+                    relevant_distance=relevant_distance
                 )
             else:
                 return self._process_geometry_by_snap(
                     input_geometry,
                     relevant_distance=relevant_distance,
-                    od_strategy=od_strategy,
                     snap_strategy=self.snap_strategy,
                     snap_max_segment_length=self.snap_max_segment_length
                 )
 
+
+
     def _process_geometry_by_brdr(
         self,
         input_geometry,
-        relevant_distance,
-        od_strategy,
-        threshold_overlap_percentage,
+        input_geometry_outer,
+        input_geometry_inner,
+        ref_intersections_geoms,
+        relevant_distance
     ):
-        # Processing thematic polygons
-        if self.area_limit and input_geometry.area > self.area_limit:
-            message = "The input geometry is too large to process."
-            raise ValueError(message)
-        self.logger.feedback_debug("process geometry")
-        self.od_strategy = od_strategy
-        self.threshold_overlap_percentage = threshold_overlap_percentage
         buffer_distance = relevant_distance / 2
-        # combine all parts of the input geometry to one polygon
-        input_geometry = safe_unary_union(get_parts(input_geometry))
-        input_geometry_inner = buffer_neg(
-            input_geometry, relevant_distance
-        )  # inner part of the input that must be always available
-        input_geometry_double_inner = buffer_neg(
-            input_geometry, 2 * relevant_distance + MAX_OUTER_BUFFER
-        )  # inner part of the input that must be always available
-        # do the calculation only for the outer border of the geometry. The inner part is added afterwards
-        input_geometry_outer = safe_difference(
-            input_geometry, input_geometry_double_inner
-        )
+
         # array with all relevant parts of a thematic geometry; initial empty Polygon
         (
             preresult,
@@ -460,60 +434,42 @@ class Aligner:
         ) = self._calculate_intersection_between_geometry_and_od(
             input_geometry_outer, input_geometry_inner, relevant_distance
         )
-        # get a list of all ref_ids that are intersecting the thematic geometry
-        ref_intersections = self.reference_items.take(
-            self.reference_tree.query(input_geometry_outer)
-        ).tolist()
-        #relevant_intersection_array=[]
-        #relevant_diff_array = []
-        ref_intersections_geoms = []
-        all_polygons=True
-        for key_ref in ref_intersections:
-            ref_geom = self.dict_reference[key_ref]
-            ref_intersections_geoms.append(ref_geom)
-            if not ref_geom.geom_type in ["Polygon", "MultiPolygon"]:
-                all_polygons = False
-        if all_polygons:
-            for geom_reference in ref_intersections_geoms:
-                #geom_reference = self.dict_reference[key_ref]
-                geom_intersection = safe_intersection(input_geometry_outer, geom_reference)
-                if geom_intersection.is_empty or geom_intersection is None:
-                    continue
-                self.logger.feedback_debug("calculate intersection")
-                (
-                    geom,
-                    relevant_intersection,
-                    relevant_diff,
-                ) = _calculate_geom_by_intersection_and_reference(
-                    geom_intersection,
-                    geom_reference,
-                    input_geometry_inner,
-                    False,
-                    buffer_distance,
-                    self.threshold_overlap_percentage,
-                    self.threshold_exclusion_percentage,
-                    self.threshold_exclusion_area,
-                    self.threshold_inclusion_percentage,
-                    self.mitre_limit,
-                    self.partial_snapping,
-                    self.partial_snap_strategy,
-                    self.partial_snap_max_segment_length
-                )
-                self.logger.feedback_debug("intersection calculated")
 
-                preresult = self._add_multi_polygons_from_geom_to_array(geom, preresult)
-                relevant_intersection_array = self._add_multi_polygons_from_geom_to_array(
-                    relevant_intersection, relevant_intersection_array
-                )
-                relevant_diff_array = self._add_multi_polygons_from_geom_to_array(
-                    relevant_diff, relevant_diff_array
-                )
-        else:
-            reference = GeometryCollection(ref_intersections_geoms)
-            geom = snap_geometry_to_reference(input_geometry_outer,reference,self.snap_strategy,self.snap_max_segment_length, relevant_distance)
+        for geom_reference in ref_intersections_geoms:
+            #geom_reference = self.dict_reference[key_ref]
+            geom_intersection = safe_intersection(input_geometry_outer, geom_reference)
+            if geom_intersection.is_empty or geom_intersection is None:
+                continue
+            self.logger.feedback_debug("calculate intersection")
+            (
+                geom,
+                relevant_intersection,
+                relevant_diff,
+            ) = _calculate_geom_by_intersection_and_reference(
+                geom_intersection,
+                geom_reference,
+                input_geometry_inner,
+                False,
+                buffer_distance,
+                self.threshold_overlap_percentage,
+                self.threshold_exclusion_percentage,
+                self.threshold_exclusion_area,
+                self.threshold_inclusion_percentage,
+                self.mitre_limit,
+                self.partial_snapping,
+                self.partial_snap_strategy,
+                self.partial_snap_max_segment_length
+            )
+            self.logger.feedback_debug("intersection calculated")
+
             preresult = self._add_multi_polygons_from_geom_to_array(geom, preresult)
-            relevant_intersection_array = []#TODO
-            relevant_diff_array = []#TODO
+            relevant_intersection_array = self._add_multi_polygons_from_geom_to_array(
+                relevant_intersection, relevant_intersection_array
+            )
+            relevant_diff_array = self._add_multi_polygons_from_geom_to_array(
+                relevant_diff, relevant_diff_array
+            )
+
 
         # UNION INTERMEDIATE LAYERS
         relevant_intersection = safe_unary_union(relevant_intersection_array)
@@ -595,6 +551,7 @@ class Aligner:
             # TODO implement
             pass
         if self.multi_as_single_modus:
+            #TODO check if this is also working for multipoints, multilines and even geometrycollection?
             dict_thematic, dict_multi_as_single = multi_to_singles(dict_thematic)
 
         if self.max_workers != -1:
@@ -2130,67 +2087,22 @@ def _equal_geom_in_array(geom, geom_array, correction_distance, mitre_limit):
             return True
     return False
 
-
-# def _check_equality(
-#     base_formula, actual_formula, threshold_area=5, threshold_percentage=1
-# ):
-#     """
-#     function that checks if 2 formulas are equal (True,False) and adds an Evaluation
-#     """
-#     if base_formula is None or actual_formula is None:
-#         return False, Evaluation.TO_CHECK_NO_PREDICTION_5
-#     od_alike = False
-#     if base_formula["reference_od"] is None and actual_formula["reference_od"] is None:
-#         od_alike = True
-#     elif base_formula["reference_od"] is None or actual_formula["reference_od"] is None:
-#         od_alike = False
-#     elif (
-#         abs(
-#             base_formula["reference_od"]["area"]
-#             - actual_formula["reference_od"]["area"]
-#         )
-#         * 100
-#         / base_formula["reference_od"]["area"]
-#     ) < threshold_percentage:
-#         od_alike = True
-#
-#     if (
-#         base_formula["reference_features"].keys()
-#         == actual_formula["reference_features"].keys()
-#         and od_alike
-#     ):
-#         if base_formula["full"] and actual_formula["full"]:
-#             return True, Evaluation.EQUALITY_EQUAL_FORMULA_FULL_1
-#
-#         equal_reference_features = True
-#         for key in base_formula["reference_features"].keys():
-#             if (
-#                 (
-#                     base_formula["reference_features"][key]["full"]
-#                     == actual_formula["reference_features"][key]["full"]
-#                 )
-#                 or (
-#                     abs(
-#                         base_formula["reference_features"][key]["area"]
-#                         - actual_formula["reference_features"][key]["area"]
-#                     )
-#                     > threshold_area
-#                 )
-#                 or (
-#                     (
-#                         abs(
-#                             base_formula["reference_features"][key]["area"]
-#                             - actual_formula["reference_features"][key]["area"]
-#                         )
-#                         * 100
-#                         / base_formula["reference_features"][key]["area"]
-#                     )
-#                     > threshold_percentage
-#                 )
-#             ):
-#                 equal_reference_features = False
-#         if equal_reference_features:
-#             return True, Evaluation.EQUALITY_EQUAL_FORMULA_2
-#     if base_formula["full"] and actual_formula["full"] and od_alike:
-#         return True, Evaluation.EQUALITY_FULL_3
-#     return False, Evaluation.TO_CHECK_NO_PREDICTION_5
+def _calculate_inner_outer(input_geometry, relevant_distance):
+    """
+    calculate the inner and outer of a polygon for performance gain when using brdr_algorithm
+    :param input_geometry:
+    :param relevant_distance:
+    :return:
+    """
+    input_geometry = safe_unary_union(get_parts(input_geometry))
+    input_geometry_inner = buffer_neg(
+        input_geometry, relevant_distance
+    )  # inner part of the input that must be always available
+    input_geometry_double_inner = buffer_neg(
+        input_geometry, 2 * relevant_distance + MAX_OUTER_BUFFER
+    )  # inner part of the input that must be always available
+    # do the calculation only for the outer border of the geometry. The inner part is added afterwards
+    input_geometry_outer = safe_difference(
+        input_geometry, input_geometry_double_inner
+    )
+    return input_geometry_inner, input_geometry_outer
