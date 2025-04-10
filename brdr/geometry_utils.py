@@ -891,7 +891,7 @@ def get_bbox(geometry):
 def geojson_polygon_to_multipolygon(geojson):
     """
     #TODO: add an example/test so it is clear this function is used (inside brdrQ)
-    Transforms a geojson: Checks if there are Polygon-features and transforms them into MultiPolygons, so all objects are of type 'MultiPolygon' (or null-geometry).
+    Transforms a geojson: Checks if there are singel-geometry-features and transforms them into Multi-geometries, so all objects are of type 'Multi' (or null-geometry).
     It is important that geometry-type is consitent (f.e. in QGIS) to show and style the geojson-layer
     """
 
@@ -903,6 +903,16 @@ def geojson_polygon_to_multipolygon(geojson):
         if f["geometry"]["type"] == "Polygon":
             f["geometry"] = {
                 "type": "MultiPolygon",
+                "coordinates": [f["geometry"]["coordinates"]],
+            }
+        if f["geometry"]["type"] == "LineString":
+            f["geometry"] = {
+                "type": "MultiLineString",
+                "coordinates": [f["geometry"]["coordinates"]],
+            }
+        if f["geometry"]["type"] == "Point":
+            f["geometry"] = {
+                "type": "MultiPoint",
                 "coordinates": [f["geometry"]["coordinates"]],
             }
     return geojson
