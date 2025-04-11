@@ -6,12 +6,17 @@ DOWNLOAD_LIMIT = 10000
 
 # value that is used to calculate the boundary of a thematic geometry wherefor the calculation has to be done. (inner part is added)
 MAX_OUTER_BUFFER = 50
+SNAP_STRATEGY = (
+    SnapStrategy.PREFER_VERTICES
+)  # when alignment is done by 'snap_geometry_to_reference', This strategy will be applied
+SNAP_MAX_SEGMENT_LENGTH = 2  # when alignment is done by 'snap_geometry_to_reference', the input geometry (line, lineair ring,...) will be split up by default in parts of max X meter
 
-SNAPPING_MAX_SEGMENT_LENGTH = 2  # when real snapping of vertices is used, the input geometry will be split up by default in parts of max X meter
 PARTIAL_SNAPPING = False
-PARTIAL_SNAPPING_STRATEGY = (
+PARTIAL_SNAP_STRATEGY = (
     SnapStrategy.NO_PREFERENCE
 )  # when snapping of partial geometries (geom_x) is executed, This strategy will be applied
+PARTIAL_SNAP_MAX_SEGMENT_LENGTH = 2  # when real snapping of vertices is used, the input geometry will be split up by default in parts of max X meter
+
 # default CRS:
 DEFAULT_CRS = "EPSG:31370"  # BelgianLambert72
 

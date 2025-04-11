@@ -11,7 +11,7 @@ from brdr.aligner import Aligner
 from brdr.constants import AREA_ATTRIBUTE
 from brdr.enums import GRBType, AlignerResultType
 from brdr.enums import OpenDomainStrategy
-from brdr.geometry_utils import _grid_bounds, safe_equals
+from brdr.geometry_utils import _grid_bounds, safe_equals, geom_from_wkt
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.grb import (
     GRBActualLoader,
@@ -156,6 +156,50 @@ class TestAligner(unittest.TestCase):
             relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
         )
         self.assertEqual(len(dict_predictions["id1"]), 2)
+
+    def test_line(self):
+        aligner = Aligner(max_workers=-1)
+        wkt = "MULTILINESTRING ((174024.1298775521281641 179420.42107488788315095, 174042.22504128722357564 179413.1830093938333448, 174044.36356063772109337 179418.28255553735652938, 174049.29860529277357273 179418.94056149138486944, 174050.28561422377242707 179422.72409572688047774, 174054.39815143629675731 179421.90158828438143246, 174057.52367971779312938 179420.75007786488276906, 174054.56265292479656637 179408.08346325031016022, 174047.16008594224695116 179398.54237691726302728, 174036.960993655200582 179404.29992901478544809, 174032.84845644267625175 179400.51639477928983979, 174029.88742964965058491 179397.88437096326379105))"
+        thematic_dict = {"theme_id_1": from_wkt(wkt)}
+
+        loader = DictLoader(thematic_dict)
+        aligner.load_thematic_data(loader)
+        loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
+        aligner.load_reference_data(loader)
+        relevant_distance =3
+        dict_processresults = aligner.process(relevant_distance=relevant_distance)
+        self.assertEqual(dict_processresults['theme_id_1'][relevant_distance]['result'].geom_type,"MultiLineString")
+
+
+    def test_reference_mix(self):
+        "reference exists out of points, lines and polygons"
+        aligner = Aligner(max_workers=-1)
+        wkt ="POLYGON ((174043.1035556931165047 179299.26716663906699978, 174042.53709723605425097 179306.22651339753065258, 174048.52537235378986225 179305.9837454873486422, 174055.16102856534416787 179305.49820966698462144, 174055.16102856534416787 179293.19796888460405171, 174071.26463327385135926 179293.92627261512097903, 174071.34555591057869606 179287.69522958720335737, 174083.40302878280635923 179282.83987138362135738, 174072.154782277852064 179278.14635845352313481, 174072.72124073494342156 179260.58614628392388113, 174056.69855866313446313 179258.88677091267891228, 174048.60629499051719904 179273.21007761321379803, 174038.97650122008053586 179273.85745870703249238, 174041.97063877896289341 179286.72415794650441967, 174044.96477633781614713 179292.71243306424003094, 174035.25405993068125099 179292.14597460714867339, 174043.1035556931165047 179299.26716663906699978))"
+        thematic_dict = {"theme_id_1": from_wkt(wkt)}
+        loader = DictLoader(thematic_dict)
+        aligner.load_thematic_data(loader)
+        point_1 = geom_from_wkt("POINT (174043.75093678693519905 179298.98393741055042483)")
+        point_2 = geom_from_wkt("POINT (174079.35689694649772719 179283.04217797549790703)")
+        line_1 = geom_from_wkt(
+            "LINESTRING (174021.41628905048128217 179291.53905483175185509, 174081.29904022792470641 179294.45226975387777202)")
+        line_2 = geom_from_wkt(
+            "LINESTRING (174039.13834649353520945 179282.79941006531589665, 174038.16727485283627175 179272.92684838469722308, 174052.65242682682583109 179273.33146156833390705, 174093.43743573685060255 179285.46985707725980319)")
+        polygon_1 = geom_from_wkt(
+            "POLYGON ((174029.67039799655321985 179306.67158789956010878, 174048.44444971703342162 179306.18605207919608802, 174048.92998553739744239 179258.92723223107168451, 174030.15593381691724062 179259.41276805143570527, 174029.67039799655321985 179306.67158789956010878))")
+        polygon_2 = geom_from_wkt(
+            "POLYGON ((174054.91826065513305366 179305.53867098540649749, 174056.37486811622511595 179258.76538695761701092, 174072.72124073491431773 179260.38383969213464297, 174070.61725218003266491 179306.99527844646945596, 174054.91826065513305366 179305.53867098540649749))")
+        reference_dict =  {"ref_id_1": point_1,
+                           "ref_id_2": point_2,
+                           "ref_id_3": line_1,
+                           "ref_id_4": line_2,
+                           "ref_id_5": polygon_1,
+                           "ref_id_6": polygon_2}
+
+        loader = DictLoader(reference_dict)
+        aligner.load_reference_data(loader)
+        relevant_distance =5
+        dict_processresults = aligner.process(relevant_distance=relevant_distance)
+        self.assertEqual(dict_processresults['theme_id_1'][relevant_distance]['result'].geom_type,"Polygon")
 
     def test_predictor_no_prediction(self):
         """

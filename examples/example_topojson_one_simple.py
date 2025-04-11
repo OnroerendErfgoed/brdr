@@ -1,45 +1,16 @@
-#TESTSTRATEGY:
-#featurecollection of geometries
-#create topology
-#adapt the arcs
-#to_geojson
-
-
-import topojson
-import json
-
-from shapely.geometry.linestring import LineString
-from shapely.lib import line_merge, union
-#from shapely.linear import line_merge
-from shapely.ops import linemerge, unary_union
-from shapely.set_operations import union_all
+import numpy as np
+from shapely.ops import linemerge
 
 from brdr.aligner import Aligner
-from brdr.enums import GRBType
+from brdr.enums import GRBType, AlignerResultType
 from brdr.grb import GRBActualLoader
-from brdr.loader import DictLoader
+from brdr.loader import GeoJsonFileLoader
+from examples import plot_series, show_map
 
-with open("input/one_simple.geojson", 'r') as f:
-    data = json.load(f)
+aligner = Aligner(crs="EPSG:31370",preserve_topology=True)
+loader = GeoJsonFileLoader(path_to_file="input/one_simple.geojson", id_property="CAPAKEY")
+aligner.load_thematic_data(loader)
 
-assert data['type'] == 'FeatureCollection'
-topo = topojson.Topology(data,prequantize=False)
-print (topo.to_json())
-
-new_arcs =[]
-arc_id = 0
-arc_dict ={}
-for  arc in topo.output['arcs']:
-    print(arc_id)
-    print (arc)
-    linestring = LineString(arc)
-    print (linestring.wkt)
-    print(linestring.geom_type)
-    arc_dict[arc_id] = linestring
-    arc_id = arc_id +1
-
-aligner = Aligner(crs="EPSG:31370")
-aligner.load_thematic_data(DictLoader(arc_dict))
 aligner.load_reference_data(
     GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
 )
@@ -47,27 +18,29 @@ relevant_distance = 5
 process_result = aligner.process(
     relevant_distance=relevant_distance,
 )
-for arc_id in process_result.keys():
-    print (str(arc_id))
-    result_line = process_result[arc_id][relevant_distance]["result"]
+print (process_result)
 
-    linestring = linemerge(result_line)
-    linestring_cleaned = []
-    if linestring.geom_type=="MultiLineString":
-        max_lines=0
-        for line in linestring.geoms:
-            print (line.wkt)
-            new_arc = [list(coord) for coord in line.coords]
-            new_arcs.append(new_arc)
-            max_lines=max_lines +1
-topo.output['arcs']=new_arcs
-topo.output['objects']['data']['geometries'][0]['arcs']=[[list(range(0, max_lines))]]
-print (topo)
-
-#todo uitzoeken
-#Kunnen we multilinestrings toevoegen in arcs, of een boekhouding van arcs aanpassen per object?
-#wat geeft het als je uitstekende linestrings in polygon samenvoegt: testen door topojson te manipuleren en dan om te zetten
+# PREDICT the 'stable' relevant distances, for a series of relevant distances
+series = np.arange(0, 210, 20, dtype=int) / 100
+# predict which relevant distances are interesting to propose as resulting geometry
+dict_series, dict_predictions, diffs = aligner.predictor(
+    relevant_distances=series,
+)
 
 
-# to visualize we use the (optional!) package Altair.
-print(topo.to_geojson())
+
+# SHOW results of the predictions
+fcs = aligner.get_results_as_geojson(
+    resulttype=AlignerResultType.PREDICTIONS, formula=True
+)
+if fcs is None or "result" not in fcs:
+    print("empty predictions")
+else:
+    print(fcs["result"])
+    for key in dict_predictions:
+        plot_series(series, {key: diffs[key]})
+        show_map(
+            {key: dict_predictions[key]},
+            {key: aligner.dict_thematic[key]},
+            aligner.dict_reference,
+        )
