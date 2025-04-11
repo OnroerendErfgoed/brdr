@@ -15,6 +15,8 @@ with open("input/topo_parcels.geojson", 'r') as f:
 
 assert data['type'] == 'FeatureCollection'
 topo = topojson.Topology(data,prequantize=False)
+print (topo.to_geojson())
+print (topo.to_json())
 
 new_arcs =[]
 arc_id = 0
