@@ -534,19 +534,10 @@ class Aligner:
         if self.multi_as_single_modus:
             dict_thematic, dict_multi_as_single = multi_to_singles(dict_thematic)
 
-        #self.preserve_topology=True
         if self.preserve_topology:
-            self.max_workers =-1
-            self.logger.feedback_info("max_workers set to -1 when using 'preserve_topology'")
-            topo_thematic = topojson.Topology(dict_thematic, prequantize=False)
-            print(topo_thematic.to_json())
-            arc_id = 0
-            arc_dict = {}
-            for arc in topo_thematic.output['arcs']:
-                linestring = LineString(arc)
-                arc_dict[arc_id] = linestring
-                arc_id = arc_id + 1
-            dict_thematic = arc_dict
+            # self.max_workers =-1
+            # self.logger.feedback_info("max_workers set to -1 when using 'preserve_topology'")
+            dict_thematic, topo_thematic = self._generate_topo(dict_thematic)
 
         if self.max_workers != -1:
             with ThreadPoolExecutor(
@@ -601,97 +592,27 @@ class Aligner:
 
                     dict_series[key][relevant_distance] = processed_result
         if self.preserve_topology:
-            dict_series_topo = dict()
-            for relevant_distance in self.relevant_distances:
-                for obj in topo_thematic.output['objects']['data']['geometries']:
-                    key = obj['id']
-                    dict_series_topo[key] = {}
-                    topo = copy.deepcopy(topo_thematic)
-                    new_arcs = []
-                    for arc_id in dict_series.keys():
-                        try:
-                            result_line = dict_series[arc_id][relevant_distance]["result"]
-                            result_line = linemerge(result_line)
-                            linestring = remove_shortest_and_merge(result_line)
-                            if linestring.geom_type == "MultiLineString":
-                                raise TypeError
-                            new_arc = [list(coord) for coord in linestring.coords]
-                            new_arcs.append(new_arc)
-                        except:
-                            linestring = dict_thematic[arc_id]
-                            print("old_arc: " + linestring.wkt)
-                            old_arc = [list(coord) for coord in linestring.coords]
-                            new_arcs.append(old_arc)
-                    topo.output['arcs'] = new_arcs
-                    topo_geojson = topo.to_geojson()
-                    print (from_geojson(topo_geojson))
-                    topo_geojson = json.loads(topo_geojson)
-                    result = GeometryCollection()
-                    for feature in topo_geojson["features"]:
-                        if feature['id']==key:
-                            result = geojson_geometry_to_shapely(feature['geometry'])
-                    result_diff_plus = make_valid(safe_difference(result, self.dict_thematic[key]))
-                    result_diff_min =make_valid(safe_difference( self.dict_thematic[key],result))
-                    result_diff = safe_unary_union([result_diff_plus,result_diff_min])
-                    dict_series_topo[key][relevant_distance] = \
-                        {'result':result,
-                         'result_diff':result_diff,
-                         'result_diff_plus':result_diff_plus,
-                         'result_diff_min':result_diff_min,
-                         'result_relevant_intersection': GeometryCollection(),
-                         'result_relevant_diff': GeometryCollection()
-                         }
-            dict_series = dict_series_topo
-                    #
-                    #     result_line = dict_series[arc_id][relevant_distance]["result"]
-                    #     linestring = linemerge(result_line)
-                    #     if linestring.geom_type == "LineString":
-                    #         max_lines = 0
-                    #         new_arc = [list(coord) for coord in linestring.coords]
-                    #         new_arcs.append(new_arc)
-                    #     elif linestring.geom_type == "MultiLineString":
-                    #         max_lines = 0
-                    #         for line in linestring.geoms:
-                    #             print(line.wkt)
-                    #             new_arc = [list(coord) for coord in line.coords]
-                    #             new_arcs.append(new_arc)
-                    #             max_lines = max_lines + 1
-                    # topo.output['arcs'] = new_arcs
-                    # topo.output['objects']['data']['geometries'][0]['arcs'] = [[list(range(0, max_lines))]]
-                    # topo_dict = topo.to_dict()
-                    #
-                    #     print(str(topo_dict))
-
-
-
-            # TODO - research
-            # Kunnen we multilinestrings toevoegen in arcs, of een boekhouding van arcs aanpassen per object?
-            # wat geeft het als je uitstekende linestrings in polygon samenvoegt: testen door topojson te manipuleren en dan om te zetten
-
-            #print(topo.to_geojson())
+            dict_series = self._dissolve_topo(dict_series, dict_thematic, topo_thematic)
 
         if self.multi_as_single_modus:
             dict_series = merge_process_results(dict_series, dict_multi_as_single)
 
-        # Check if geom changes from polygon to multipolygon or vice versa
-        #TODO - generalize to check if input geometry changes from geom_type
+        # Check if geom changes from multi to single or vice versa
         for theme_id, dict_dist_results in dict_series.items():
             original_geometry = self.dict_thematic[theme_id]
-            original_geometry_length = -1
-            if original_geometry.geom_type == "Polygon":
-                original_geometry_length = 1
-            elif original_geometry.geom_type == "MultiPolygon":
-                original_geometry_length = len(original_geometry.geoms)
+            try:
+                original_geometry_length =len(original_geometry.geoms)
+            except:
+                original_geometry_length=1
             for relevant_distance, process_result in dict_dist_results.items():
                 process_result[PREDICTION_SCORE] = -1
                 resulting_geom = process_result["result"]
-                resulting_geometry_length = -1
-                if resulting_geom.geom_type == "Polygon":
-                    resulting_geometry_length = 1
-                elif resulting_geom.geom_type == "MultiPolygon":
+                try:
                     resulting_geometry_length = len(resulting_geom.geoms)
+                except:
+                    resulting_geometry_length = 1
                 if original_geometry_length != resulting_geometry_length:
-                    msg = "Difference in amount of polygons"
+                    msg = "Difference in amount of geometries"
                     self.logger.feedback_debug(msg)
                     process_result["remark"] = process_result["remark"] + " | " + msg
 
@@ -701,6 +622,85 @@ class Aligner:
         self.dict_processresults = dict_series
 
         return self.dict_processresults
+
+    def _dissolve_topo(self, dict_series, dict_thematic, topo_thematic):
+        dict_series_topo = dict()
+        for relevant_distance in self.relevant_distances:
+            for obj in topo_thematic.output['objects']['data']['geometries']:
+                key = obj['id']
+                dict_series_topo[key] = {}
+                topo = copy.deepcopy(topo_thematic)
+                new_arcs = []
+                for arc_id in dict_series.keys():
+                    try:
+                        result_line = dict_series[arc_id][relevant_distance]["result"]
+
+                        linestring = remove_shortest_and_merge(result_line)
+                        if linestring.geom_type == "MultiLineString":
+                            raise TypeError
+                        new_arc = [list(coord) for coord in linestring.coords]
+                        new_arcs.append(new_arc)
+                    except:
+                        linestring = dict_thematic[arc_id]
+                        print("old_arc: " + linestring.wkt)
+                        old_arc = [list(coord) for coord in linestring.coords]
+                        new_arcs.append(old_arc)
+                topo.output['arcs'] = new_arcs
+                topo_geojson = topo.to_geojson()
+                #print(from_geojson(topo_geojson))
+                topo_geojson = json.loads(topo_geojson)
+                result = GeometryCollection()
+                for feature in topo_geojson["features"]:
+                    if feature['id'] == key:
+                        result = geojson_geometry_to_shapely(feature['geometry'])
+                result_diff_plus = make_valid(safe_difference(result, self.dict_thematic[key]))
+                result_diff_min = make_valid(safe_difference(self.dict_thematic[key], result))
+                result_diff = safe_unary_union([result_diff_plus, result_diff_min])
+                dict_series_topo[key][relevant_distance] = \
+                    {'result': result,
+                     'result_diff': result_diff,
+                     'result_diff_plus': result_diff_plus,
+                     'result_diff_min': result_diff_min,
+                     'result_relevant_intersection': GeometryCollection(),
+                     'result_relevant_diff': GeometryCollection()
+                     }
+        dict_series = dict_series_topo
+        #
+        #     result_line = dict_series[arc_id][relevant_distance]["result"]
+        #     linestring = linemerge(result_line)
+        #     if linestring.geom_type == "LineString":
+        #         max_lines = 0
+        #         new_arc = [list(coord) for coord in linestring.coords]
+        #         new_arcs.append(new_arc)
+        #     elif linestring.geom_type == "MultiLineString":
+        #         max_lines = 0
+        #         for line in linestring.geoms:
+        #             print(line.wkt)
+        #             new_arc = [list(coord) for coord in line.coords]
+        #             new_arcs.append(new_arc)
+        #             max_lines = max_lines + 1
+        # topo.output['arcs'] = new_arcs
+        # topo.output['objects']['data']['geometries'][0]['arcs'] = [[list(range(0, max_lines))]]
+        # topo_dict = topo.to_dict()
+        #
+        #     print(str(topo_dict))
+        # TODO - research
+        # Kunnen we multilinestrings toevoegen in arcs, of een boekhouding van arcs aanpassen per object?
+        # wat geeft het als je uitstekende linestrings in polygon samenvoegt: testen door topojson te manipuleren en dan om te zetten
+        # print(topo.to_geojson())
+        return dict_series
+
+    def _generate_topo(self, dict_thematic):
+        topo_thematic = topojson.Topology(dict_thematic, prequantize=False)
+        print(topo_thematic.to_json())
+        arc_id = 0
+        arc_dict = {}
+        for arc in topo_thematic.output['arcs']:
+            linestring = LineString(arc)
+            arc_dict[arc_id] = linestring
+            arc_id = arc_id + 1
+        dict_thematic = arc_dict
+        return dict_thematic, topo_thematic
 
     def predictor(
         self,
