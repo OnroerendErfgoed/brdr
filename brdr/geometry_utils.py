@@ -1,4 +1,3 @@
-
 import logging
 from math import pi
 
@@ -569,6 +568,7 @@ def _snap_line_to_reference(
         linestring = make_valid(LineString(coordinates))
         lines.append((linestring))
     result = safe_unary_union(lines)
+    result = remove_shortest_and_merge(result,relevant_length=0.01)#Solves small (0.01) overshoots in multilinestrings #TODO; maybe this has to be cleaned in another place?
     return result
 
 
@@ -623,8 +623,6 @@ def _get_ref_objects(reference):
                 pass
     ref_line = safe_unary_union(ref_lines)
     return ref_line, ref_lines, ref_coords
-
-
 
 
 def _get_snapped_coordinates(coords, ref_line, ref_lines, ref_coords, snap_strategy, tolerance):
@@ -692,6 +690,8 @@ def _get_snapped_coordinates(coords, ref_line, ref_lines, ref_coords, snap_strat
 def _get_sublinestring_coordinates(p_end, p_end_snapped, p_start, p_start_snapped, ref_lines, tolerance):
     coordinates =[]
     reference_line, distance = closest_line(ref_lines, p_end)
+    if reference_line is None or reference_line.is_empty:
+        return coordinates
     distance_start_end = p_start.distance(p_end)
     line_substring = _get_line_substring(
         reference_line, p_start_snapped, p_end_snapped, distance_start_end
@@ -714,6 +714,8 @@ def geometric_equality(geom_a, geom_b, correction_distance, mitre_limit):
 def _get_line_substring(
     reference_line, p_start_snapped, p_end_snapped, distance_start_end
 ):
+    if  reference_line is None or reference_line.is_empty:
+        return reference_line
     start_fraction = reference_line.project(p_start_snapped, normalized=True)
     end_fraction = reference_line.project(p_end_snapped, normalized=True)
     line_substring = substring(
@@ -792,7 +794,7 @@ def closest_line(lines, point):
     # get distances
     distance_list = [line.distance(point) for line in lines]
     if len(distance_list) == 0:
-        return [], -1
+        return None, -1
     shortest_distance = min(distance_list)  # find the line closest to the point
     return (
         lines[distance_list.index(shortest_distance)],  # return the closest line
@@ -1065,19 +1067,27 @@ def get_geoms_from_geometry(geometry):
     return geoms
 
 
-def remove_shortest_and_merge(multilinestring):
+def remove_shortest_and_merge(multilinestring,relevant_length = float('inf')):
+    """
+    Tries to merge a multilinestring to a linestring, and recursively tries to remove the shortest part of a multilinestring until it can be merged to a linestring,
+    :param multilinestring: MultiLineString to merge
+    :param relevant_length: Value when the length of a part of multilinestring is long enough to be relevant and multilinestring is kept. Default is infinity so it will recursively end into a single LineString.    :return:
+    """
     # Check if the merged result is a LineString
-    merged = line_merge(multilinestring)
-    if isinstance(merged, LineString):
-        return merged
+    multilinestring = line_merge(multilinestring)
+    if isinstance(multilinestring, LineString):
+        return multilinestring
 
     # Find the shortest LineString in the MultiLineString
-    shortest_line = min(multilinestring.geoms, key=lambda line: line.length)
-
+    lines = list(multilinestring.geoms)
+    distance_list = [line.length for line in lines]
+    shortest_distance = min(distance_list)  # find the line closest to the point
+    shortest_line = lines[distance_list.index(shortest_distance)]
+    if shortest_distance>=relevant_length:
+        return multilinestring
     # Create a new MultiLineString without the shortest LineString
-    remaining_lines = [line for line in multilinestring.geoms if line != shortest_line]
+    remaining_lines = [line for line in lines if line != shortest_line]
     new_multilinestring = MultiLineString(remaining_lines)
-
     # Recursively call the function with the new MultiLineString
     return remove_shortest_and_merge(new_multilinestring)
 
@@ -1096,5 +1106,3 @@ def _get_snapped_point(point, ref_line, reference_coords, snap_strategy, toleran
         p1_vertices, p2_vertices = None, None
 
     return _snapped_point_by_snapstrategy(point, p2, p2_vertices, snap_strategy, tolerance)
-
-
