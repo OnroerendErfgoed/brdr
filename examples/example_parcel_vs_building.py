@@ -4,7 +4,7 @@ from brdr.aligner import Aligner
 from brdr.enums import GRBType
 from brdr.grb import GRBActualLoader
 from brdr.loader import GeoJsonFileLoader
-from brdr.utils import diffs_from_dict_processresults
+from brdr.utils import _diffs_from_dict_processresults
 from examples import plot_series
 
 if __name__ == "__main__":
@@ -40,13 +40,13 @@ if __name__ == "__main__":
     x_dict_series = aligner_x.process(
         relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
     )
-    x_resulting_areas = diffs_from_dict_processresults(
+    x_resulting_areas = _diffs_from_dict_processresults(
         x_dict_series, aligner_x.dict_thematic
     )
     y_dict_series = aligner_y.process(
         relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
     )
-    y_resulting_areas = diffs_from_dict_processresults(
+    y_resulting_areas = _diffs_from_dict_processresults(
         y_dict_series, aligner_y.dict_thematic
     )
     # plot_diffs(series,x_resulting_areas)

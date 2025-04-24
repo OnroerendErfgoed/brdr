@@ -1,12 +1,12 @@
 from brdr.aligner import Aligner
-from brdr.enums import OpenbaarDomeinStrategy, GRBType
+from brdr.enums import OpenDomainStrategy, GRBType
 from brdr.geometry_utils import geom_from_wkt
 from brdr.grb import GRBActualLoader
 from brdr.loader import DictLoader, GeoJsonFileLoader
 from examples import print_brdr_formula, show_map
 
 aligner = Aligner(max_workers=None)
-od_strategy = OpenbaarDomeinStrategy.SNAP_ALL_SIDE
+od_strategy = OpenDomainStrategy.SNAP_ALL_SIDE
 relevant_distance = 2
 grb_loader = True
 wkt = "Polygon ((174015.08694170592934825 179025.39916784031083807, 174040.71934808720834553 179031.93985084796440788, 174037.1838437587430235 178986.50862022733781487, 174030.64316075111855753 178982.97311589887249283, 174016.85469387014745735 179002.24161448894301429, 174021.62762471355381422 179005.77711881740833633, 174018.62244603436556645 179008.60552228015149012, 174015.08694170592934825 179025.39916784031083807))"

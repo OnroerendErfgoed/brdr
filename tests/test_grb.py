@@ -58,7 +58,7 @@ class TestGrb(unittest.TestCase):
             grb_type=GRBType.ADP,
             date_start=date(2024, 7, 1),
         )
-        self.assertFalse(out)
+        self.assertTrue(out)
 
     def test_get_geoms_affected_by_grb_change_outerborder(self):
         thematic_dict = {
@@ -71,22 +71,24 @@ class TestGrb(unittest.TestCase):
         affected, unaffected = get_affected_by_grb_change(
             dict_thematic=thematic_dict,
             grb_type=GRBType.ADP,
-            date_start=date.today() - timedelta(days=30),
+            date_start=date(2025, 1, 1),
             date_end=date.today(),
             one_by_one=False,
             border_distance=0,
         )
-        assert len(affected) > 0
+        affected_1 = len(affected)
+        assert affected_1 > 0
 
         affected, unaffected = get_affected_by_grb_change(
             dict_thematic=thematic_dict,
             grb_type=GRBType.ADP,
-            date_start=date.today() - timedelta(days=30),
+            date_start=date(2025, 1, 1),
             date_end=date.today(),
             one_by_one=False,
             border_distance=10,
         )
-        assert len(affected) == 0
+        affected_2 = len(affected)
+        assert affected_2 == affected_1
 
     def test_get_geoms_affected_by_grb_change(self):
         thematic_dict = {

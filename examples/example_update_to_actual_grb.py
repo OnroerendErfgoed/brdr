@@ -12,7 +12,7 @@ if __name__ == "__main__":
     # Create a featurecollection (aligned on 2022), to use for the 'update_to_actual_grb'
     base_year = "2022"
     base_aligner = Aligner()
-    name_thematic_id = "theme_identifier"
+    name_thematic_id = "ID"
     loader = GeoJsonLoader(
         _input={
             "type": "FeatureCollection",

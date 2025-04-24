@@ -53,7 +53,7 @@ if __name__ == "__main__":
     aligner.load_reference_data(loader)
 
     # Example how to use the Aligner
-    dict_results = aligner.process(relevant_distance=6)
+    dict_results = aligner.process(relevant_distance=3)
 
     # show results
     aligner.save_results("output/")

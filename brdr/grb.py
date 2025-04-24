@@ -25,7 +25,7 @@ from brdr.constants import GRB_KNW_ID
 from brdr.constants import GRB_MAX_REFERENCE_BUFFER
 from brdr.constants import GRB_PARCEL_ID
 from brdr.constants import GRB_VERSION_DATE
-from brdr.enums import GRBType, AlignerResultType, Full
+from brdr.enums import GRBType, AlignerResultType, FullStrategy
 from brdr.geometry_utils import buffer_pos, safe_intersection, safe_unary_union
 from brdr.geometry_utils import create_donut
 from brdr.geometry_utils import features_by_geometric_operation
@@ -366,7 +366,7 @@ def update_to_actual_grb(
     grb_type=GRBType.ADP,
     max_distance_for_actualisation=2,
     max_predictions=-1,
-    full_strategy=Full.NO_FULL,
+    full_strategy=FullStrategy.NO_FULL,
     multi_to_best_prediction=True,
     feedback=None,
     attributes=True,

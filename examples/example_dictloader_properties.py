@@ -1,5 +1,5 @@
 from brdr.aligner import Aligner
-from brdr.enums import OpenbaarDomeinStrategy, AlignerResultType
+from brdr.enums import OpenDomainStrategy, AlignerResultType
 from brdr.geometry_utils import geom_from_wkt
 from brdr.loader import DictLoader
 
@@ -28,7 +28,7 @@ if __name__ == "__main__":
     relevant_distance = 1
     process_result = aligner.process(
         relevant_distance=relevant_distance,
-        od_strategy=OpenbaarDomeinStrategy.SNAP_INNER_SIDE,
+        od_strategy=OpenDomainStrategy.SNAP_INNER_SIDE,
         threshold_overlap_percentage=50,
     )
     # PRINT RESULTS IN WKT

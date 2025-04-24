@@ -4,7 +4,7 @@ import os.path
 import numpy as np
 import requests
 from geojson import Feature, FeatureCollection, dump
-from shapely import GeometryCollection, make_valid, node, polygonize, unary_union
+from shapely import GeometryCollection, make_valid, node, polygonize
 from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
 from shapely.geometry.point import Point
@@ -22,8 +22,17 @@ from brdr.constants import (
     AREA_ATTRIBUTE,
 )
 from brdr.enums import DiffMetric
-from brdr.geometry_utils import get_partitions, get_bbox, get_shape_index, to_multi
+from brdr.geometry_utils import (
+    get_partitions,
+    get_bbox,
+    get_shape_index,
+    to_multi,
+    get_geoms_from_geometry,
+    safe_unary_union,
+)
 from brdr.typings import ProcessResult
+
+log = logging.getLogger(__name__)
 
 
 def get_series_geojson_dict(
@@ -160,21 +169,18 @@ def multi_to_singles(dict_geoms):
     for key, geom in dict_geoms.items():
         if geom is None or geom.is_empty:
             continue
-        elif str(geom.geom_type) in ["Polygon", "LineString", "Point"]:
-            resulting_dict_geoms[key] = geom
-        elif str(geom.geom_type) in ["MultiPolygon", "MultiLineString", "MultiPoint"]:
-            geometries = list(geom.geoms)
-            if len(geometries) == 1:
-                resulting_dict_geoms[key] = geometries[0]
-                continue
-            i = 0
-            for p in geometries:
-                new_key = str(key) + MULTI_SINGLE_ID_SEPARATOR + str(i)
-                dict_multi_as_single[new_key] = key
-                resulting_dict_geoms[new_key] = p
-                i = i + 1
-        else:
-            logging.debug("geom excluded: " + str(geom) + " for key: " + str(key))
+
+        geometries = list(get_geoms_from_geometry(geom))
+        if len(geometries) == 1:
+            resulting_dict_geoms[key] = geometries[0]
+            continue
+
+        i = 0
+        for g in geometries:
+            new_key = str(key) + MULTI_SINGLE_ID_SEPARATOR + str(i)
+            dict_multi_as_single[new_key] = key
+            resulting_dict_geoms[new_key] = g
+            i = i + 1
     return resulting_dict_geoms, dict_multi_as_single
 
 
@@ -309,7 +315,7 @@ def _numerical_derivative(x, y):
     return derivative
 
 
-def diffs_from_dict_processresults(
+def _diffs_from_dict_processresults(
     dict_processresults: dict[any, dict[float, ProcessResult]],
     dict_thematic: dict[any, BaseGeometry],
     diff_metric: DiffMetric = DiffMetric.CHANGES_AREA,
@@ -558,8 +564,8 @@ def merge_process_results(
                         ][
                             key
                         ]  # noqa
-                        grouped_results[id_theme_global][rel_dist][key] = unary_union(
-                            [existing, geom]
+                        grouped_results[id_theme_global][rel_dist][key] = (
+                            safe_unary_union([existing, geom])
                         )  # noqa
     return grouped_results
 
