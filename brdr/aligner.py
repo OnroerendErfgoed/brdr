@@ -18,8 +18,6 @@ from shapely import remove_repeated_points
 from shapely import to_geojson
 from shapely.geometry.base import BaseGeometry
 from shapely.geometry.linestring import LineString
-from shapely.io import from_geojson
-from shapely.ops import linemerge
 
 from brdr import __version__
 from brdr.constants import (
@@ -826,6 +824,7 @@ class Aligner:
         relevant_distances = list(set(relevant_distances))
         relevant_distances = sorted(relevant_distances)
         dict_processresults = self.process(
+            dict_thematic=dict_thematic,
             relevant_distances=relevant_distances,
             od_strategy=od_strategy,
             threshold_overlap_percentage=threshold_overlap_percentage,
