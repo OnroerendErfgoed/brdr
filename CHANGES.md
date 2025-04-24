@@ -130,7 +130,6 @@
 - Added a docker-service to repo - experimental [#143]
 - Possibility to align(multi-)linestrings and (multi-)points to referenceborders. experimental[#49]
 
-
 # 0.10.0 (in progress)
 
 ! Not Backwards compatable !
