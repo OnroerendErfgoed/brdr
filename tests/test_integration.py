@@ -77,6 +77,5 @@ class TestExamples(unittest.TestCase):
                     to_geojson(dict_results[rel_dist]["result_diff_plus"])
                 ),
             }
-        assert len(serial_dict)==len(series)
-        assert len(dict_diffs)==len(series)
-
+        assert len(serial_dict) == len(series)
+        assert len(dict_diffs) == len(series)
