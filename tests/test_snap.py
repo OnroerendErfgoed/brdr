@@ -1,16 +1,12 @@
 import unittest
-from datetime import date, timedelta
 
-from shapely import Polygon, GeometryCollection, LineString, make_valid
-from shapely.linear import line_merge
-from shapely.ops import linemerge
+from shapely import GeometryCollection
 
-from brdr.enums import GRBType, SnapStrategy
+from brdr.enums import SnapStrategy
 from brdr.geometry_utils import (
     geom_from_wkt,
     snap_geometry_to_reference,
-    safe_unary_union, buffer_pos,
-)
+    safe_unary_union, )
 
 
 class TestSnap(unittest.TestCase):

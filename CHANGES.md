@@ -130,9 +130,12 @@
 - Added a docker-service to repo - experimental [#143]
 - Possibility to align(multi-)linestrings and (multi-)points to referenceborders. experimental[#49]
 
-# 0.10.0 (in progress)
+# 0.10.0
 
 ! Not Backwards compatable !
 
 - Adapted Enum OpenbaarDomeinStrategy to OpenDomainStrategy
-- 
+- Adapted Enum Full to FullStrategy
+- Added possibilities to align all types of input- and reference-geometries ((multi-)point,line and polygons) [#191]
+- Added parameter 'preserve_topology' to keep relations between imput-geometries [#90]
+- Bugfix on _evaluate-function [#185]

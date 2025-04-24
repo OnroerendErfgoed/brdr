@@ -4,7 +4,7 @@ import os.path
 import numpy as np
 import requests
 from geojson import Feature, FeatureCollection, dump
-from shapely import GeometryCollection, make_valid, node, polygonize, unary_union
+from shapely import GeometryCollection, make_valid, node, polygonize
 from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
 from shapely.geometry.point import Point
@@ -22,11 +22,18 @@ from brdr.constants import (
     AREA_ATTRIBUTE,
 )
 from brdr.enums import DiffMetric
-from brdr.geometry_utils import get_partitions, get_bbox, get_shape_index, to_multi, get_geoms_from_geometry, \
-    safe_unary_union
+from brdr.geometry_utils import (
+    get_partitions,
+    get_bbox,
+    get_shape_index,
+    to_multi,
+    get_geoms_from_geometry,
+    safe_unary_union,
+)
 from brdr.typings import ProcessResult
 
 log = logging.getLogger(__name__)
+
 
 def get_series_geojson_dict(
     series_dict: dict[any, dict[float, ProcessResult]],
@@ -557,8 +564,8 @@ def merge_process_results(
                         ][
                             key
                         ]  # noqa
-                        grouped_results[id_theme_global][rel_dist][key] = safe_unary_union(
-                            [existing, geom]
+                        grouped_results[id_theme_global][rel_dist][key] = (
+                            safe_unary_union([existing, geom])
                         )  # noqa
     return grouped_results
 
