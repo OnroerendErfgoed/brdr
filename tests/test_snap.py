@@ -6,7 +6,8 @@ from brdr.enums import SnapStrategy
 from brdr.geometry_utils import (
     geom_from_wkt,
     snap_geometry_to_reference,
-    safe_unary_union, )
+    safe_unary_union,
+)
 
 
 class TestSnap(unittest.TestCase):
@@ -15,8 +16,12 @@ class TestSnap(unittest.TestCase):
     Testdata is defined here
     """
 
-    point_thematic = geom_from_wkt("POINT (174043.75093678693519905 179298.98393741055042483)")
-    point_reference = geom_from_wkt("POINT (174079.35689694649772719 179283.04217797549790703)")
+    point_thematic = geom_from_wkt(
+        "POINT (174043.75093678693519905 179298.98393741055042483)"
+    )
+    point_reference = geom_from_wkt(
+        "POINT (174079.35689694649772719 179283.04217797549790703)"
+    )
     line_thematic = geom_from_wkt(
         "LINESTRING (174021.41628905048128217 179291.53905483175185509, 174081.29904022792470641 179294.45226975387777202)"
     )
@@ -30,8 +35,12 @@ class TestSnap(unittest.TestCase):
         "POLYGON ((174054.91826065513305366 179305.53867098540649749, 174056.37486811622511595 179258.76538695761701092, 174072.72124073491431773 179260.38383969213464297, 174070.61725218003266491 179306.99527844646945596, 174054.91826065513305366 179305.53867098540649749))"
     )
 
-    point_t1 = geom_from_wkt("POINT (174043.75093678693519905 179298.98393741055042483)")
-    point_t2 = geom_from_wkt("POINT (174079.35689694649772719 179283.04217797549790703)")
+    point_t1 = geom_from_wkt(
+        "POINT (174043.75093678693519905 179298.98393741055042483)"
+    )
+    point_t2 = geom_from_wkt(
+        "POINT (174079.35689694649772719 179283.04217797549790703)"
+    )
     line_t1 = geom_from_wkt(
         "LINESTRING (174021.41628905048128217 179291.53905483175185509, 174081.29904022792470641 179294.45226975387777202)"
     )
@@ -47,8 +56,12 @@ class TestSnap(unittest.TestCase):
     geometries_thematic = [point_t1, point_t2, line_t1, line_t2, polygon_t1, polygon_t2]
     geometrycollection_thematic = GeometryCollection(geometries_thematic)
 
-    point_r1 = geom_from_wkt("POINT (174043.75093678693519905 179298.98393741055042483)")
-    point_r2 = geom_from_wkt("POINT (174079.35689694649772719 179283.04217797549790703)")
+    point_r1 = geom_from_wkt(
+        "POINT (174043.75093678693519905 179298.98393741055042483)"
+    )
+    point_r2 = geom_from_wkt(
+        "POINT (174079.35689694649772719 179283.04217797549790703)"
+    )
     line_r1 = geom_from_wkt(
         "LINESTRING (174021.41628905048128217 179291.53905483175185509, 174081.29904022792470641 179294.45226975387777202)"
     )
@@ -61,7 +74,14 @@ class TestSnap(unittest.TestCase):
     polygon_r2 = geom_from_wkt(
         "POLYGON ((174054.91826065513305366 179305.53867098540649749, 174056.37486811622511595 179258.76538695761701092, 174072.72124073491431773 179260.38383969213464297, 174070.61725218003266491 179306.99527844646945596, 174054.91826065513305366 179305.53867098540649749))"
     )
-    geometries_reference = [point_r1, point_r2, line_r1, line_r2, polygon_r1, polygon_r2]
+    geometries_reference = [
+        point_r1,
+        point_r2,
+        line_r1,
+        line_r2,
+        polygon_r1,
+        polygon_r2,
+    ]
 
     geometrycollection_reference = GeometryCollection(geometries_reference)
 
@@ -118,7 +138,7 @@ class TestSnap(unittest.TestCase):
         Test to snap geometrycollection to polygon reference
         :return:
         """
-        geometrycollection_thematic=self.geometrycollection_thematic
+        geometrycollection_thematic = self.geometrycollection_thematic
         geom_reference = self.polygon_reference
         geom_snapped = snap_geometry_to_reference(
             geometrycollection_thematic,
