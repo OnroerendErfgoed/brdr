@@ -139,3 +139,10 @@
 - Added possibilities to align all types of input- and reference-geometries ((multi-)point,line and polygons) [#191]
 - Added parameter 'preserve_topology' to keep relations between imput-geometries [#90]
 - Bugfix on _evaluate-function [#185]
+
+# 0.11.0 (in progress)
+
+! Not Backwards compatable !
+
+- adapted function-name geojson_to_multi
+- adapted predictor so point_snapping returns also predictions

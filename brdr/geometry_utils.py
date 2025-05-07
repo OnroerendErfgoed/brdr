@@ -927,10 +927,10 @@ def get_bbox(geometry):
     return str(geometry.bounds).strip("()")
 
 
-def geojson_polygon_to_multipolygon(geojson):
+def geojson_to_multi(geojson):
     """
     #TODO: add an example/test so it is clear this function is used (inside brdrQ)
-    Transforms a geojson: Checks if there are singel-geometry-features and transforms them into Multi-geometries, so all objects are of type 'Multi' (or null-geometry).
+    Transforms a geojson: Checks if there are single-geometry-features and transforms them into Multi-geometries, so all objects are of type 'Multi' (or null-geometry).
     It is important that geometry-type is consitent (f.e. in QGIS) to show and style the geojson-layer
     """
 
@@ -1059,9 +1059,9 @@ def to_multi(geometry, geomtype=None):
                     multi_geoms.append(geom)
             return GeometryCollection(multi_geoms)
         else:
-            raise TypeError("Onbekend geometrie type: {}".format(type(geometry)))
+            raise TypeError("Geometry type not supported: {}".format(type(geometry)))
     else:
-        raise TypeError("Onbekend geometrie type: {}".format(type(geometry)))
+        raise TypeError("Geometry type not supported: {}".format(type(geometry)))
 
 
 def get_coords_from_geometry(geometry):
