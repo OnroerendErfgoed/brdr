@@ -1,0 +1,25 @@
+# Function reference {.doc .doc-index}
+
+## Aligner
+
+Aligner class of the brdr package.
+
+| | |
+| --- | --- |
+| [Aligner](Aligner.qmd#brdr.aligner.Aligner) | This class is used to compare and align the thematic data with the reference data. |
+
+## Loaders
+
+Loaders to load data
+
+| | |
+| --- | --- |
+| [Loader](Loader.qmd#brdr.loader.Loader) |  |
+| [DictLoader](DictLoader.qmd#brdr.loader.DictLoader) |  |
+| [GeoJsonLoader](GeoJsonLoader.qmd#brdr.loader.GeoJsonLoader) |  |
+| [GeoJsonFileLoader](GeoJsonFileLoader.qmd#brdr.loader.GeoJsonFileLoader) |  |
+| [GeoJsonUrlLoader](GeoJsonUrlLoader.qmd#brdr.loader.GeoJsonUrlLoader) |  |
+
+## GRB
+
+GRB specific loaders - grb.GRBActualLoader - grb.GRBFiscalParcelLoader - grb.GRBSpecificDateParcelLoader

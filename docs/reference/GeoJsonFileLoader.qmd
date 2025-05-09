@@ -1,0 +1,6 @@
+# GeoJsonFileLoader { #brdr.loader.GeoJsonFileLoader }
+
+```python
+loader.GeoJsonFileLoader(self, path_to_file, id_property)
+```
+

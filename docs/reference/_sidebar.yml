@@ -1,0 +1,18 @@
+website:
+  sidebar:
+  - contents:
+    - reference/index.qmd
+    - contents:
+      - reference/Aligner.qmd
+      section: Aligner
+    - contents:
+      - reference/Loader.qmd
+      - reference/DictLoader.qmd
+      - reference/GeoJsonLoader.qmd
+      - reference/GeoJsonFileLoader.qmd
+      - reference/GeoJsonUrlLoader.qmd
+      section: Loaders
+    - contents: []
+      section: GRB
+    id: reference
+  - id: dummy-sidebar

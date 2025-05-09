@@ -1,0 +1,6 @@
+# DictLoader { #brdr.loader.DictLoader }
+
+```python
+loader.DictLoader(self, data_dict, data_dict_properties={}, data_dict_source={})
+```
+
