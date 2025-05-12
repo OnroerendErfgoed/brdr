@@ -9,13 +9,14 @@ from shapely.geometry import Polygon
 from brdr.aligner import Aligner
 from brdr.constants import FORMULA_FIELD_NAME
 from brdr.enums import GRBType, Evaluation, FullStrategy
+from brdr.geometry_utils import geojson_to_multi
 from brdr.grb import (
     GRBActualLoader,
     GRBFiscalParcelLoader,
     get_affected_by_grb_change,
 )
 from brdr.loader import DictLoader
-from brdr.utils import get_series_geojson_dict
+from brdr.utils import get_dict_geojsons_from_series_dict
 
 
 class TestEvaluate(unittest.TestCase):
@@ -86,7 +87,7 @@ class TestEvaluate(unittest.TestCase):
             ids_to_evaluate=affected, base_formula_field=FORMULA_FIELD_NAME
         )
 
-        fc = get_series_geojson_dict(
+        fc = get_dict_geojsons_from_series_dict(
             dict_evaluated,
             crs=actual_aligner.CRS,
             id_field=actual_aligner.name_thematic_id,
@@ -94,6 +95,10 @@ class TestEvaluate(unittest.TestCase):
         )
         print(fc["result"])
         fcs = actual_aligner.get_results_as_geojson(formula=True)
+        geojson = fcs["result"]
+        print(geojson)
+        geojson = geojson_to_multi(fcs["result"])
+        print(geojson)
 
     def test_evaluate_full_strategy_no_full(self):
         thematic_dict = {
@@ -277,4 +282,31 @@ class TestEvaluate(unittest.TestCase):
         assert (
             prop_dictionary["theme_id_1"][0]["brdr_evaluation"]
             == Evaluation.TO_CHECK_ORIGINAL
+        )
+
+    def test_evaluate_point(self):
+        # Load thematic data & reference data
+        #thematic_dict = {"theme_id": from_wkt("POINT (0 0)")}
+        thematic_dict = {"theme_id": from_wkt("POINT (173966.17483414348680526 172343.78743441699771211)")}
+
+        # ADD A REFERENCE POLYGON TO REFERENCE DICTIONARY
+        reference_dict = {"ref_id": from_wkt("POLYGON ((0 1, 0 10,8 10,10 1,0 1))")}
+
+        aligner = Aligner()
+        aligner.load_thematic_data(DictLoader(thematic_dict))
+        #aligner.load_reference_data(DictLoader(reference_dict))
+        aligner.load_reference_data(
+            GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
+        )
+
+        dict_evaluated, prop_dictionary = aligner.evaluate(
+            relevant_distances=np.arange(0, 1010, 50, dtype=int) / 100,
+            full_strategy=FullStrategy.NO_FULL,
+            max_predictions=3,
+            multi_to_best_prediction=False,
+        )
+        assert len(dict_evaluated["theme_id"]) == 3
+        assert (
+            prop_dictionary["theme_id"][0]["brdr_evaluation"]
+            == Evaluation.TO_CHECK_PREDICTION_MULTI_FULL
         )

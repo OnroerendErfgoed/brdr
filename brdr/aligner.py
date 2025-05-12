@@ -83,7 +83,7 @@ from brdr.utils import (
 )
 from brdr.utils import geojson_from_dict
 from brdr.utils import get_breakpoints_zerostreak
-from brdr.utils import get_series_geojson_dict
+from brdr.utils import get_dict_geojsons_from_series_dict
 from brdr.utils import merge_process_results
 from brdr.utils import write_geojson
 
@@ -864,7 +864,7 @@ class Aligner:
                     predicted_geoms_for_theme_id,
                     self.correction_distance,
                     self.mitre_limit,
-                ) or predicted_geom.geom_type in ("LineString", "MultiLineString"):
+                ) or predicted_geom.geom_type in ("Point","MultiPoint","LineString", "MultiLineString"):
                     dict_predictions_unique[theme_id][rel_dist] = processresults
                     predicted_geoms_for_theme_id.append(processresults["result"])
                 else:
@@ -904,8 +904,9 @@ class Aligner:
         max_predictions: integer that indicates how many predictions are maximally returned. (-1 indicates all predictions are returned)
         relevant_distances: relevant distances to evaluate
         full_strategy: enum, decided which predictions are kept or prefered based on full-ness of the prediction
-        multi_to_best (default True): Only usable in combination with max_predictions=1. If True (and max_predictions=1), the prediction with highest score will be taken.If False, the original geometry is returned.
+        multi_to_best_prediction (default True): Only usable in combination with max_predictions=1. If True (and max_predictions=1), the prediction with highest score will be taken.If False, the original geometry is returned.
         """
+        #TODO: check if value is returned when there are no predictions
         if ids_to_evaluate is None:
             ids_to_evaluate = list(self.dict_thematic.keys())
         dict_affected = {}
@@ -1258,7 +1259,7 @@ class Aligner:
                     prop_dictionary[theme_id][relevant_distance][FORMULA_FIELD_NAME] = (
                         json.dumps(formula)
                     )
-        return get_series_geojson_dict(
+        return get_dict_geojsons_from_series_dict(
             dict_series,
             crs=self.CRS,
             id_field=self.name_thematic_id,
