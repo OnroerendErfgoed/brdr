@@ -80,7 +80,7 @@ def get_dict_geojsons_from_series_dict(
                 features_list_dict[results_type].append(feature)
 
     crs_geojson = {"type": "name", "properties": {"name": crs}}
-    result =  {
+    result = {
         result_type: FeatureCollection(features, crs=crs_geojson)
         for result_type, features in features_list_dict.items()
     }
@@ -336,7 +336,12 @@ def _diffs_from_dict_processresults(
     # all the relevant distances used to calculate the series
     for thematic_id, results_dict in dict_processresults.items():
         diffs[thematic_id] = {}
-        if dict_thematic[thematic_id].geom_type in ("Point","MultiPoint","LineString", "MultiLineString"):
+        if dict_thematic[thematic_id].geom_type in (
+            "Point",
+            "MultiPoint",
+            "LineString",
+            "MultiLineString",
+        ):
             diff_metric = DiffMetric.TOTAL_DISTANCE
         for rel_dist in results_dict:
             result = results_dict.get(rel_dist, {}).get("result")
