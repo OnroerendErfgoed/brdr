@@ -1,23 +1,15 @@
-import os
 import unittest
 
 import numpy as np
-from shapely import Point
 from shapely import from_wkt
 from shapely.geometry import Polygon
-from shapely.geometry import shape
 
 from brdr.aligner import Aligner
-from brdr.constants import AREA_ATTRIBUTE
-from brdr.enums import GRBType, AlignerResultType
-from brdr.enums import OpenDomainStrategy
-from brdr.geometry_utils import _grid_bounds, safe_equals, geom_from_wkt
-from brdr.geometry_utils import buffer_neg_pos
+from brdr.enums import GRBType
 from brdr.grb import (
     GRBActualLoader,
 )
-from brdr.loader import GeoJsonLoader, DictLoader
-from brdr.typings import FeatureCollection, ProcessResult
+from brdr.loader import DictLoader
 
 
 class TestAligner(unittest.TestCase):

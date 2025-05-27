@@ -286,15 +286,19 @@ class TestEvaluate(unittest.TestCase):
 
     def test_evaluate_point(self):
         # Load thematic data & reference data
-        #thematic_dict = {"theme_id": from_wkt("POINT (0 0)")}
-        thematic_dict = {"theme_id": from_wkt("POINT (173966.17483414348680526 172343.78743441699771211)")}
+        # thematic_dict = {"theme_id": from_wkt("POINT (0 0)")}
+        thematic_dict = {
+            "theme_id": from_wkt(
+                "POINT (173966.17483414348680526 172343.78743441699771211)"
+            )
+        }
 
         # ADD A REFERENCE POLYGON TO REFERENCE DICTIONARY
         reference_dict = {"ref_id": from_wkt("POLYGON ((0 1, 0 10,8 10,10 1,0 1))")}
 
         aligner = Aligner()
         aligner.load_thematic_data(DictLoader(thematic_dict))
-        #aligner.load_reference_data(DictLoader(reference_dict))
+        # aligner.load_reference_data(DictLoader(reference_dict))
         aligner.load_reference_data(
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         )

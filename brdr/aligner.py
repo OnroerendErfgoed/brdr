@@ -864,7 +864,12 @@ class Aligner:
                     predicted_geoms_for_theme_id,
                     self.correction_distance,
                     self.mitre_limit,
-                ) or predicted_geom.geom_type in ("Point","MultiPoint","LineString", "MultiLineString"):
+                ) or predicted_geom.geom_type in (
+                    "Point",
+                    "MultiPoint",
+                    "LineString",
+                    "MultiLineString",
+                ):
                     dict_predictions_unique[theme_id][rel_dist] = processresults
                     predicted_geoms_for_theme_id.append(processresults["result"])
                 else:
@@ -906,7 +911,7 @@ class Aligner:
         full_strategy: enum, decided which predictions are kept or prefered based on full-ness of the prediction
         multi_to_best_prediction (default True): Only usable in combination with max_predictions=1. If True (and max_predictions=1), the prediction with highest score will be taken.If False, the original geometry is returned.
         """
-        #TODO: check if value is returned when there are no predictions
+        # TODO: check if value is returned when there are no predictions
         if ids_to_evaluate is None:
             ids_to_evaluate = list(self.dict_thematic.keys())
         dict_affected = {}
@@ -1573,6 +1578,7 @@ class Aligner:
         :param outer: when outer is True, the outer boundary is used, inner is not used
         :return:
         """
+        # TODO: remove outer, as it is not used?
         buffer_distance = relevant_distance / 2
         geom_thematic_buffered = make_valid(
             buffer_pos(
@@ -1771,6 +1777,7 @@ class Aligner:
         )
         # Correction for Inner holes(donuts) / multipolygons
         # fill and remove gaps
+        # TODO improvement: when relevant_distance very big (fe 100m) it could happen that parts of multipolygon-results will be removed unintentionally because part smaller than negative buffer
         geom_thematic_cleaned_holes = fill_and_remove_gaps(
             geom_thematic_preresult, buffer_distance
         )
@@ -2164,10 +2171,15 @@ def _calculate_geom_by_intersection_and_reference(
     elif geom_relevant_intersection.is_empty and not geom_relevant_difference.is_empty:
         geom = geom_relevant_intersection  # (=empty geometry)
     else:
+        # No relevant intersection and no relevant difference
         if is_open_domain:
-            geom = geom_relevant_intersection  # (=empty geometry)
-            # TEST if the snapped geom from below is better?
-            # geom = snap_polygon_to_polygon (geom_intersection, geom_reference, snap_strategy=SnapStrategy.PREFER_VERTICES, tolerance=2*buffer_distance)
+            # geom = geom_relevant_intersection  # (=empty geometry)
+            geom = snap_geometry_to_reference(
+                geom_intersection,
+                geom_reference,
+                snap_strategy=SnapStrategy.PREFER_VERTICES,
+                tolerance=2 * buffer_distance,
+            )
         elif not geom_intersection_inner.is_empty:
             geom_intersection_buffered = buffer_pos(
                 geom_intersection, 2 * buffer_distance

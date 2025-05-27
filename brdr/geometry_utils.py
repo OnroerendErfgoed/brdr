@@ -28,7 +28,7 @@ from shapely.geometry.linestring import LineString
 from shapely.geometry.multipolygon import MultiPolygon
 from shapely.geometry.point import Point
 from shapely.lib import line_merge
-from shapely.ops import nearest_points, substring, snap
+from shapely.ops import nearest_points, substring
 from shapely.prepared import prep
 
 from brdr.enums import SnapStrategy
@@ -562,7 +562,7 @@ def _snap_line_to_reference(
     max_segment_length=-1,
     tolerance=1,
 ):
-    #return snap(geometry,reference,tolerance)
+    # return snap(geometry,reference,tolerance)
     if geometry is None or geometry.is_empty or reference is None or reference.is_empty:
         return geometry
     if max_segment_length > 0:
