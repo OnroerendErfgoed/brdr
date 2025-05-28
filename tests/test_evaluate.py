@@ -54,8 +54,8 @@ class TestEvaluate(unittest.TestCase):
                     base_aligner.get_brdr_formula(thematic_dict_result[key])
                 )
             }
-            print(key + ": " + thematic_dict_result[key].wkt)
-            print(key + ": " + str(thematic_dict_formula[key]))
+            # print(key + ": " + thematic_dict_result[key].wkt)
+            # print(key + ": " + str(thematic_dict_formula[key]))
         base_aligner_result = Aligner()
         base_aligner_result.load_thematic_data(DictLoader(thematic_dict_result))
         affected, unaffected = get_affected_by_grb_change(
@@ -67,9 +67,9 @@ class TestEvaluate(unittest.TestCase):
             border_distance=relevant_distance,
         )
         if len(affected) == 0:
-            print("No affected dicts")
+            # print("No affected dicts")
             exit()
-        print("Affected_IDs: " + str(affected))
+        # print("Affected_IDs: " + str(affected))
         actual_aligner = Aligner()
         actual_aligner.load_thematic_data(
             DictLoader(
@@ -93,12 +93,12 @@ class TestEvaluate(unittest.TestCase):
             id_field=actual_aligner.name_thematic_id,
             series_prop_dict=prop_dictionary,
         )
-        print(fc["result"])
+        #print(fc["result"])
         fcs = actual_aligner.get_results_as_geojson(formula=True)
         geojson = fcs["result"]
-        print(geojson)
+        #print(geojson)
         geojson = geojson_to_multi(fcs["result"])
-        print(geojson)
+        #print(geojson)
 
     def test_evaluate_full_strategy_no_full(self):
         thematic_dict = {
