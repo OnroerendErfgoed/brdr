@@ -1,6 +1,8 @@
 from enum import Enum
 from enum import IntEnum
 
+import requests
+
 
 class OpenDomainStrategy(IntEnum):
     """
@@ -56,20 +58,30 @@ class AlignerInputType(str, Enum):
     THEMATIC = "thematic"
     REFERENCE = "reference"
 
+class GRBTypeLoader:
+    @classmethod
+    def _fetch_values(cls):
+        _url = "https://geo.api.vlaanderen.be/GRB/ogc/features/collections" + "/?f=application%2Fjson"
+        response = requests.get(_url)
+        response.raise_for_status()
+        data = response.json()
+        dict_values = {}
+        for coll in data['collections']:
+            dict_values[coll['id']] = coll['title']
+        return dict_values
 
-class GRBType(str, Enum):
-    """
-    Determines which GRB feature collection is used. Different types are available:
+    @classmethod
+    def get_enum(cls):
+        try:
+            dict_values = cls._fetch_values()
+        except:
+            dict_values = {"ADP": "Administratieve percelen",
+             "GBG":"gebouwen",
+             "KNW":"kunstwerken"}
+        return Enum("GRBType", dict_values)
 
-    * ADP: administrative plots
-    * GBG: buildings on the ground
-    * KNW: artworks
-    """
 
-    ADP = "adp"
-    GBG = "gbg"
-    KNW = "knw"
-
+GRBType = GRBTypeLoader.get_enum()
 
 class DiffMetric(str, Enum):
     """

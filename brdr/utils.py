@@ -337,10 +337,13 @@ def _diffs_from_dict_processresults(
     for thematic_id, results_dict in dict_processresults.items():
         diffs[thematic_id] = {}
         if dict_thematic[thematic_id].geom_type in (
-            "Point",
-            "MultiPoint",
             "LineString",
             "MultiLineString",
+        ):
+            diff_metric = DiffMetric.CHANGES_LENGTH
+        elif dict_thematic[thematic_id].geom_type in (
+            "Point",
+            "MultiPoint",
         ):
             diff_metric = DiffMetric.TOTAL_DISTANCE
         for rel_dist in results_dict:

@@ -718,8 +718,6 @@ def _get_snapped_coordinates(
                     )
                 )
                 coordinates.append(p_end_snapped.coords[0])
-            else:
-                raise Exception("this should not happen when snapping coordinates")
     return coordinates
 
 

@@ -116,7 +116,7 @@ class TestEvaluate(unittest.TestCase):
             relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
             full_strategy=FullStrategy.NO_FULL,
         )
-        assert len(dict_evaluated["theme_id_1"]) == 3
+        assert len(dict_evaluated["theme_id_1"]) == 2
         assert (
             prop_dictionary["theme_id_1"][3.5]["brdr_evaluation"]
             == Evaluation.TO_CHECK_PREDICTION_MULTI_FULL
@@ -138,7 +138,7 @@ class TestEvaluate(unittest.TestCase):
             relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
             full_strategy=FullStrategy.PREFER_FULL,
         )
-        assert len(dict_evaluated["theme_id_1"]) == 3
+        assert len(dict_evaluated["theme_id_1"]) == 2
         assert (
             prop_dictionary["theme_id_1"][3.5]["brdr_evaluation"]
             == Evaluation.TO_CHECK_PREDICTION_FULL
@@ -183,7 +183,7 @@ class TestEvaluate(unittest.TestCase):
             full_strategy=FullStrategy.PREFER_FULL,
             max_predictions=-1,
         )
-        assert len(dict_evaluated["theme_id_1"]) == 3
+        assert len(dict_evaluated["theme_id_1"]) == 2
         assert (
             prop_dictionary["theme_id_1"][3.5]["brdr_evaluation"]
             == Evaluation.TO_CHECK_PREDICTION_FULL

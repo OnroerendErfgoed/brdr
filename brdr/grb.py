@@ -16,12 +16,11 @@ from brdr.constants import (
     VERSION_DATE,
     FORMULA_FIELD_NAME,
     BASE_FORMULA_FIELD_NAME,
+    GRB_GENERIC_ID,
 )
 from brdr.constants import DOWNLOAD_LIMIT
-from brdr.constants import GRB_BUILDING_ID
 from brdr.constants import GRB_FEATURE_URL
 from brdr.constants import GRB_FISCAL_PARCELS_URL
-from brdr.constants import GRB_KNW_ID
 from brdr.constants import GRB_MAX_REFERENCE_BUFFER
 from brdr.constants import GRB_PARCEL_ID
 from brdr.constants import GRB_VERSION_DATE
@@ -202,7 +201,7 @@ def get_last_version_date(
         geometry = create_donut(geometry, border_distance)
     bbox = get_bbox(geometry)
     actual_url = (
-        GRB_FEATURE_URL + "/" + grb_type.upper() + "/items?"
+        GRB_FEATURE_URL + "/" + grb_type.name + "/items?"
         "limit=" + str(limit) + "&crs=" + crs + "&bbox-crs=" + crs + "&bbox=" + bbox
     )
     update_dates = []
@@ -235,7 +234,7 @@ def get_collection_grb_actual(
     url = (
         GRB_FEATURE_URL
         + "/"
-        + grb_type.upper()
+        + grb_type.name
         + "/items?limit="
         + str(limit)
         + "&crs="
@@ -243,15 +242,8 @@ def get_collection_grb_actual(
     )
     if grb_type == GRBType.ADP:
         name_reference_id = GRB_PARCEL_ID
-    elif grb_type == "gbg":
-        name_reference_id = GRB_BUILDING_ID
-    elif grb_type == GRBType.KNW:
-        name_reference_id = GRB_KNW_ID
     else:
-        logging.warning(
-            f"type not implemented: {str(grb_type)} -->No reference-data loaded"
-        )
-        return {}, None
+        name_reference_id = GRB_GENERIC_ID
 
     versiondate_filter = ""
     versiondate_filter_start = ""
