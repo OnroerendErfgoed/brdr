@@ -38,7 +38,7 @@ class TestAligner(unittest.TestCase):
 
     def test_predictor_double_prediction(self):
         """
-        Test if a double prediction is filtered out of the prediction results.
+        Test if a double prediction is filtered out of the prediction results. (from 5 predictions to 4 predictions)
         This testdata has 2 resulting predictions that are the same (at 0.0 and 6.0), and 6.0 will be removed from dict_predictions
         """
         # Initiate an Aligner
@@ -60,8 +60,7 @@ class TestAligner(unittest.TestCase):
         dict_series, dict_predictions, diffs = aligner.predictor(
             relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
         )
-        self.assertEqual(len(dict_predictions["id1"]), 2)
-
+        self.assertEqual(len(dict_predictions["id1"]), 4)
 
     def test_predictor_no_prediction(self):
         """
@@ -103,3 +102,45 @@ class TestAligner(unittest.TestCase):
         )
         self.assertEqual(len(dict_predictions), len(thematic_dict))
         assert  dict_predictions['theme_id'][.0]['brdr_prediction_count'] == 2
+
+    def test_predictor_line(self):
+        # Load thematic data & reference data
+        thematic_dict = {"theme_id": from_wkt("LINESTRING (171741.11190000033820979 171839.01070547936251387, 171751.68948904142598622 171847.23771917796693742, 171762.26707808251376264 171855.69979041084297933, 171772.72713835645117797 171862.9865739724773448, 171783.53978493178146891 171870.8610013697471004, 171794.94007534274714999 171877.79519862998859026, 171801.87427260301774368 171884.2592808217741549)")}
+        self.sample_aligner.load_thematic_data(DictLoader(thematic_dict))
+        # LOAD REFERENCE DICTIONARY
+        self.sample_aligner.load_reference_data(
+            GRBActualLoader(
+                aligner=self.sample_aligner, grb_type=GRBType.ADP, partition=1000
+            )
+        )
+        series = np.arange(0, 310, 10, dtype=int) / 100
+        # predict which relevant distances are interesting to propose as resulting
+        # geometry
+        dict_series, dict_predictions, dict_diffs = self.sample_aligner.predictor(
+            relevant_distances=series,
+        )
+        self.assertEqual(len(dict_predictions), len(thematic_dict))
+        assert dict_predictions["theme_id"][0.0]["brdr_prediction_count"] == 3
+
+
+    def test_predictor_poly_to_point(self):
+        # Load thematic data & reference data
+        thematic_dict = {"theme_id": from_wkt("MULTIPOLYGON (((171807.01653832942247391 171811.64178536087274551, 171806.50108232349157333 171811.20914536342024803, 171801.84252232313156128 171816.64696936681866646, 171798.38581831753253937 171820.68191336840391159, 171767.47471430152654648 171856.76376939192414284, 171767.35881029814481735 171856.89906539395451546, 171771.46146630495786667 171859.87231339514255524, 171777.14249030500650406 171863.9894334003329277, 171779.40213830769062042 171865.62706540152430534, 171783.0694023072719574 171860.27736939489841461, 171789.40066631138324738 171851.0414653904736042, 171790.78703431785106659 171849.01906538754701614, 171812.97858633100986481 171816.6465853676199913, 171809.78524232655763626 171813.96594536304473877, 171807.01653832942247391 171811.64178536087274551)))")}
+        self.sample_aligner.load_thematic_data(DictLoader(thematic_dict))
+        # LOAD REFERENCE DICTIONARY
+        reference_dict = {"ref_id_1": from_wkt("POINT (171766.12778689494007267 171857.04121096828021109)"),
+                          "ref_id_2": from_wkt("POINT (171777.13617191879893653 171865.19089055553195067)")
+                          }
+        # LOAD THEMATIC DICTIONARY
+        self.sample_aligner.load_thematic_data(DictLoader(thematic_dict))
+        # LOAD REFERENCE DICTIONARY
+        self.sample_aligner.load_reference_data(DictLoader(reference_dict))
+
+        series = np.arange(0, 510, 20, dtype=int) / 100
+        # predict which relevant distances are interesting to propose as resulting
+        # geometry
+        dict_series, dict_predictions, dict_diffs = self.sample_aligner.predictor(
+            relevant_distances=series,
+        )
+        self.assertEqual(len(dict_predictions), len(thematic_dict))
+        assert dict_predictions["theme_id"][0.0]["brdr_prediction_count"] == 7

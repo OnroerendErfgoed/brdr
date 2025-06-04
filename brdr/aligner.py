@@ -1127,7 +1127,11 @@ class Aligner:
                 continue
             intersected.append(geom_intersection)
 
-            perc = round(geom_intersection.area * 100 / geom_reference.area, 2)
+            geom_reference_area = geom_reference.area
+            if geom_reference_area > 0:
+                perc = round(geom_intersection.area * 100 / geom_reference.area, 2)
+            else:
+                perc = 0
             if perc < 0.01:
                 continue
             # Add a last_version_date if available in properties
@@ -1144,7 +1148,7 @@ class Aligner:
 
             if perc > 99.99:
                 full = True
-                area = round(geom_reference.area, 2)
+                area = round(geom_reference_area, 2)
                 perc = 100
                 if with_geom:
                     geom = geom_reference
@@ -2122,10 +2126,6 @@ def _calculate_geom_by_intersection_and_reference(
     ):
         # relevant intersection and relevant difference
 
-        # geom_x = safe_intersection(buffer_pos(geom_intersection,buffer_distance),
-        # safe_difference(geom_reference,buffer_neg_pos(geom_difference,buffer_distance)))
-        # this gives a little smaller result, so not as good as the one below
-
         geom_x = safe_intersection(
             geom_reference,
             safe_difference(
@@ -2140,6 +2140,7 @@ def _calculate_geom_by_intersection_and_reference(
                 ),
             ),
         )
+        geom_x = buffer_neg_pos(geom_x, buffer_distance, mitre_limit=mitre_limit)
 
         geom_intersection_buffered = buffer_pos(geom_intersection, 2 * buffer_distance)
         geom_difference_2 = safe_difference(geom_reference, geom_intersection_buffered)

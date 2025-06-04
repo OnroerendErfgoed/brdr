@@ -65,7 +65,5 @@ GRB_FISCAL_PARCELS_URL = "https://geo.api.vlaanderen.be/Adpf/ogc/features/collec
 GRB_VERSION_DATE = "VERSDATUM"
 # Property-name of id of GRB-parcels
 GRB_PARCEL_ID = "CAPAKEY"
-# Property-name of id of GRB-parcels
-GRB_BUILDING_ID = "OIDN"
-# Property-name of id of GRB-parcels
-GRB_KNW_ID = "OIDN"
+# Property-name of id of GRB-objects
+GRB_GENERIC_ID = "OIDN"
