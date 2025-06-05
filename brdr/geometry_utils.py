@@ -725,6 +725,8 @@ def _get_sublinestring_coordinates(
     p_end, p_end_snapped, p_start, p_start_snapped, ref_lines, tolerance
 ):
     coordinates = []
+    if p_start_snapped == p_end_snapped:
+        return coordinates
     reference_line, distance = closest_line(ref_lines, p_end)
     if reference_line is None or reference_line.is_empty:
         return coordinates
@@ -732,6 +734,8 @@ def _get_sublinestring_coordinates(
     line_substring = _get_line_substring(
         reference_line, p_start_snapped, p_end_snapped, distance_start_end
     )
+    if line_substring is None or line_substring.is_empty:
+        return coordinates
     for p in line_substring.coords:
         point = Point(p)
         if (point.distance(p_start) + point.distance(p_end)) / 2 <= tolerance:
