@@ -693,6 +693,8 @@ class Aligner:
                     "result_relevant_diff": GeometryCollection(),
                 }
         dict_series = dict_series_topo
+        # TODO: research
+        # https://github.com/OnroerendErfgoed/brdr/issues/204
         #
         #     result_line = dict_series[arc_id][relevant_distance]["result"]
         #     linestring = linemerge(result_line)
@@ -712,10 +714,6 @@ class Aligner:
         # topo_dict = topo.to_dict()
         #
         #     print(str(topo_dict))
-        # TODO - research
-        # Kunnen we multilinestrings toevoegen in arcs, of een boekhouding van arcs aanpassen per object?
-        # wat geeft het als je uitstekende linestrings in polygon samenvoegt: testen door topojson te manipuleren en dan om te zetten
-        # print(topo.to_geojson())
         return dict_series
 
     def _generate_topo(self, dict_thematic):
@@ -911,7 +909,6 @@ class Aligner:
         full_strategy: enum, decided which predictions are kept or prefered based on full-ness of the prediction
         multi_to_best_prediction (default True): Only usable in combination with max_predictions=1. If True (and max_predictions=1), the prediction with highest score will be taken.If False, the original geometry is returned.
         """
-        # TODO: check if value is returned when there are no predictions
         if ids_to_evaluate is None:
             ids_to_evaluate = list(self.dict_thematic.keys())
         dict_affected = {}
@@ -936,17 +933,20 @@ class Aligner:
             prop_dictionary[theme_id] = {}
             if theme_id not in dict_affected_predictions.keys():
                 # No predictions available
-                dist = relevant_distances[0]
-                prop_dictionary[theme_id][dist] = {}
+                relevant_distance = round(0, RELEVANT_DISTANCE_DECIMALS)
                 props = self._evaluate(
                     id_theme=theme_id,
                     geom_predicted=dict_affected[theme_id],
                     base_formula_field=base_formula_field,
                 )
                 props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
+                props[PREDICTION_COUNT] = 0
                 props[PREDICTION_SCORE] = -1
-                dict_predictions_evaluated[theme_id][dist] = dict_series[theme_id][dist]
-                prop_dictionary[theme_id][dist] = props
+                dict_predictions_evaluated[theme_id][relevant_distance] = {
+                    "result": dict_affected[theme_id],
+                    "remark": "no prediction, original returned",
+                }
+                prop_dictionary[theme_id][relevant_distance] = props
                 continue
 
             # When there are predictions available
@@ -1003,7 +1003,7 @@ class Aligner:
                         if prediction_score > 100:
                             prediction_score = 100
                         props[PREDICTION_SCORE] = prediction_score
-                        props[PREDICTION_COUNT] = -1
+                        props[PREDICTION_COUNT] = prediction_count
                     else:
                         props[EVALUATION_FIELD_NAME] = (
                             Evaluation.TO_CHECK_PREDICTION_MULTI_FULL
@@ -1041,19 +1041,37 @@ class Aligner:
                 props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_ORIGINAL
                 props[PREDICTION_SCORE] = -1
                 dict_predictions_evaluated[theme_id][relevant_distance] = {
-                    "result": dict_affected[theme_id]
+                    "result": dict_affected[theme_id],
+                    "remark": "multiple predictions, original returned",
                 }
                 prop_dictionary[theme_id][relevant_distance] = props
                 continue
 
             if max_predictions > 0 and len_best_ix > max_predictions:
                 best_ix = best_ix[:max_predictions]
-            for ix in best_ix:
-                distance = distances[ix]
-                prediction = predictions[ix]
-                props = prediction_properties[ix]
-                dict_predictions_evaluated[theme_id][distance] = prediction
-                prop_dictionary[theme_id][distance] = props
+            if len(best_ix) > 0:
+                for ix in best_ix:
+                    distance = distances[ix]
+                    prediction = predictions[ix]
+                    props = prediction_properties[ix]
+                    dict_predictions_evaluated[theme_id][distance] = prediction
+                    prop_dictionary[theme_id][distance] = props
+            else:
+                # #when no evaluated predictions, the original is returned
+                relevant_distance = round(0, RELEVANT_DISTANCE_DECIMALS)
+                props = self._evaluate(
+                    id_theme=theme_id,
+                    geom_predicted=dict_affected[theme_id],
+                    base_formula_field=base_formula_field,
+                )
+                props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
+                props[PREDICTION_SCORE] = -1
+                props[PREDICTION_COUNT] = 0
+                dict_predictions_evaluated[theme_id][relevant_distance] = {
+                    "result": dict_affected[theme_id],
+                    "remark": "no prediction, original returned",
+                }
+                prop_dictionary[theme_id][relevant_distance] = props
 
         # UNAFFECTED
         relevant_distance = round(0, RELEVANT_DISTANCE_DECIMALS)
