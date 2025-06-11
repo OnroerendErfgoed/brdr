@@ -31,7 +31,6 @@ from shapely.lib import line_merge
 from shapely.ops import nearest_points, substring
 from shapely.prepared import prep
 
-from brdr.constants import BUFFER_MULTIPLICATION_FACTOR
 from brdr.enums import SnapStrategy
 
 log = logging.getLogger(__name__)

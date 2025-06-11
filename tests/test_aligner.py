@@ -30,6 +30,7 @@ class TestAligner(unittest.TestCase):
         # Check if the result of the _buffer_neg_pos gives an equal geometry
         out = buffer_neg_pos(self.sample_geom, 3)
         self.assertEqual(self.sample_geom, out)
+
     def setUp(self):
         # Create a sample geometry for testing
         self.sample_aligner = Aligner()
@@ -112,10 +113,8 @@ class TestAligner(unittest.TestCase):
         key_ref = "a"
         ref_dict = {key_ref: self.sample_geom}
         self.sample_aligner.load_reference_data(DictLoader(ref_dict))
-        thematic_geom =  self.sample_geom.buffer(0.5)
-        process_result = self.sample_aligner.process_geometry(
-            thematic_geom
-        )
+        thematic_geom = self.sample_geom.buffer(0.5)
+        process_result = self.sample_aligner.process_geometry(thematic_geom)
         self.assertTrue(
             from_wkt(process_result["result"].wkt).equals(
                 from_wkt(self.sample_geom.wkt)
@@ -297,10 +296,8 @@ class TestAligner(unittest.TestCase):
         self.assertEqual(len(result_dict), len(thematic_dict))
 
     def test_process_big_relevant_distance(self):
-        wkt= "POLYGON ((172791.07652649749070406 171319.35066181665752083, 172821.75881976058008149 171308.36308382378774695, 172838.13653035368770361 171321.42378973981249146, 172879.59908881731098518 171303.80220239277696237, 172842.49009899239172228 171205.95056441865745001, 172804.55185799815808423 171219.42589591932483017, 172789.21071136664249934 171221.29171105020213872, 172757.69916693426785059 171270.63215562188997865, 172766.4063042116467841 171279.13198010693304241, 172776.56463103523128666 171296.96088024630444124, 172785.63235233756131493 171305.36084497725823894, 172782.68072999455034733 171312.79389392648590729, 172791.07652649749070406 171319.35066181665752083))"
-        thematic_dict = {
-            "theme_id_1": from_wkt(wkt)
-        }
+        wkt = "POLYGON ((172791.07652649749070406 171319.35066181665752083, 172821.75881976058008149 171308.36308382378774695, 172838.13653035368770361 171321.42378973981249146, 172879.59908881731098518 171303.80220239277696237, 172842.49009899239172228 171205.95056441865745001, 172804.55185799815808423 171219.42589591932483017, 172789.21071136664249934 171221.29171105020213872, 172757.69916693426785059 171270.63215562188997865, 172766.4063042116467841 171279.13198010693304241, 172776.56463103523128666 171296.96088024630444124, 172785.63235233756131493 171305.36084497725823894, 172782.68072999455034733 171312.79389392648590729, 172791.07652649749070406 171319.35066181665752083))"
+        thematic_dict = {"theme_id_1": from_wkt(wkt)}
         self.sample_aligner.load_thematic_data(DictLoader(thematic_dict))
         # LOAD REFERENCE DICTIONARY
         self.sample_aligner.load_reference_data(
@@ -308,7 +305,9 @@ class TestAligner(unittest.TestCase):
                 aligner=self.sample_aligner, grb_type=GRBType.ADP, partition=1000
             )
         )
-        result_dict = self.sample_aligner.process(od_strategy=OpenDomainStrategy.SNAP_ALL_SIDE,relevant_distance=100)
+        result_dict = self.sample_aligner.process(
+            od_strategy=OpenDomainStrategy.SNAP_ALL_SIDE, relevant_distance=100
+        )
         self.assertEqual(len(result_dict), len(thematic_dict))
 
     def test_process_circle(self):
@@ -389,7 +388,12 @@ class TestAligner(unittest.TestCase):
         assert safe_equals(
             result["theme_id_1"][relevant_distance].get("result"), aligned_shape
         )
-        assert geometric_equality(result["theme_id_1"][relevant_distance].get("result"), aligned_shape,self.sample_aligner.correction_distance,self.sample_aligner.mitre_limit)
+        assert geometric_equality(
+            result["theme_id_1"][relevant_distance].get("result"),
+            aligned_shape,
+            self.sample_aligner.correction_distance,
+            self.sample_aligner.mitre_limit,
+        )
         assert result["theme_id_1"][relevant_distance].get("result_diff").is_empty
         assert result["theme_id_1"][relevant_distance].get("result_diff_min").is_empty
         assert result["theme_id_1"][relevant_distance].get("result_diff_plus").is_empty
@@ -404,9 +408,12 @@ class TestAligner(unittest.TestCase):
                 grb_type=GRBType.ADP, partition=1000, aligner=self.sample_aligner
             )
         )
-        rd =2
+        rd = 2
         self.sample_aligner.process(relevant_distances=[rd])
-        assert self.sample_aligner.dict_processresults["theme_id_1"][rd]["remark"] == ' | Difference in amount of geometries'
+        assert (
+            self.sample_aligner.dict_processresults["theme_id_1"][rd]["remark"]
+            == " | Difference in amount of geometries"
+        )
 
     def test_fully_aligned_geojson_output(self):
         aligned_shape = from_wkt(

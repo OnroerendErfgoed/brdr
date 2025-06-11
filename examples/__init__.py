@@ -193,23 +193,22 @@ def _processresult_to_dicts(processresult):
     )
 
 
-def show_geometry(geometry, ax=None,show=True):
+def show_geometry(geometry, ax=None, show=True):
     if ax is None:
         fig, ax = plt.subplots()
-    geometry_type= geometry.geom_type
+    geometry_type = geometry.geom_type
     if geometry_type in ["Polygon", "MultiPolygon"]:
-        plot_polygon(geometry,ax=ax)
+        plot_polygon(geometry, ax=ax)
     elif geometry_type in ["LineString", "MultiLineString"]:
-        plot_line(geometry,ax=ax)
+        plot_line(geometry, ax=ax)
     elif geometry_type in ["Point", "MultiPoint"]:
-        plot_points(geometry,ax=ax)
+        plot_points(geometry, ax=ax)
     elif geometry_type in ["GeometryCollection"]:
         return
         # for g in geometry.geoms:
         #     show_geometry(g,ax=ax,show=False)
     else:
-        print ("no geometry/type to show")
+        print("no geometry/type to show")
         return
     if show:
         plt.show()
-

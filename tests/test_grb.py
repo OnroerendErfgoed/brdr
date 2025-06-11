@@ -254,13 +254,15 @@ class TestGrb(unittest.TestCase):
     def test_wegbaan_reference(self):
         aligner = Aligner()
         # Load thematic data & reference data
-        thematic_dict = {"theme_id": from_wkt("LINESTRING (171741.11190000033820979 171839.01070547936251387, 171751.68948904142598622 171847.23771917796693742, 171762.26707808251376264 171855.69979041084297933, 171772.72713835645117797 171862.9865739724773448, 171783.53978493178146891 171870.8610013697471004, 171794.94007534274714999 171877.79519862998859026, 171801.87427260301774368 171884.2592808217741549)")}
+        thematic_dict = {
+            "theme_id": from_wkt(
+                "LINESTRING (171741.11190000033820979 171839.01070547936251387, 171751.68948904142598622 171847.23771917796693742, 171762.26707808251376264 171855.69979041084297933, 171772.72713835645117797 171862.9865739724773448, 171783.53978493178146891 171870.8610013697471004, 171794.94007534274714999 171877.79519862998859026, 171801.87427260301774368 171884.2592808217741549)"
+            )
+        }
         aligner.load_thematic_data(DictLoader(thematic_dict))
         # LOAD REFERENCE DICTIONARY
         aligner.load_reference_data(
-            GRBActualLoader(
-                aligner=aligner, grb_type=GRBType.WBN, partition=1000
-            )
+            GRBActualLoader(aligner=aligner, grb_type=GRBType.WBN, partition=1000)
         )
         series = np.arange(0, 1010, 100, dtype=int) / 100
         # predict which relevant distances are interesting to propose as resulting

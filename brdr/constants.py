@@ -11,9 +11,7 @@ MAX_OUTER_BUFFER = 50
 SNAP_STRATEGY = (
     SnapStrategy.PREFER_VERTICES
 )  # when alignment is done by 'snap_geometry_to_reference', This strategy will be applied
-SNAP_MAX_SEGMENT_LENGTH = (
-    2
-)  # when alignment is done by 'snap_geometry_to_reference', the input geometry (line, lineair ring,...) will be split up by default in parts of max X meter
+SNAP_MAX_SEGMENT_LENGTH = 2  # when alignment is done by 'snap_geometry_to_reference', the input geometry (line, lineair ring,...) will be split up by default in parts of max X meter
 
 
 # PARTIAL SNAPPING CONSTANTS: snapping-constants when 'brdr' is used, and snapping-function is used inside the 'brdr'-implementation
@@ -62,7 +60,7 @@ DATE_FORMAT = "%Y-%m-%d"
 # GRB_CONSTANTS
 # max buffer (m) around thematic geometry to download reference parcels
 GRB_MAX_REFERENCE_BUFFER = 10
-BUFFER_MULTIPLICATION_FACTOR =1.01
+BUFFER_MULTIPLICATION_FACTOR = 1.01
 # URL of the OGC feature API of actual GRB to extract collections
 GRB_FEATURE_URL = "https://geo.api.vlaanderen.be/GRB/ogc/features/collections"
 # URL of the OGC feature API of GRB fiscal parcels (situation of 1st of January) to

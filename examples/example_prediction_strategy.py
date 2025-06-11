@@ -1,9 +1,8 @@
 import numpy as np
 
-from brdr.constants import EVALUATION_FIELD_NAME
-from brdr.enums import GRBType, AlignerResultType, FullStrategy, Evaluation
-
 from brdr.aligner import Aligner
+from brdr.constants import EVALUATION_FIELD_NAME
+from brdr.enums import GRBType, FullStrategy, Evaluation
 from brdr.grb import GRBActualLoader
 from brdr.loader import GeoJsonLoader
 
