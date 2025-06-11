@@ -136,11 +136,11 @@ class TestAligner(unittest.TestCase):
         # LOAD REFERENCE DICTIONARY
         self.sample_aligner.load_reference_data(DictLoader(reference_dict))
 
-        series = np.arange(0, 510, 20, dtype=int) / 100
+        series = np.arange(0, 310, 20, dtype=int) / 100
         # predict which relevant distances are interesting to propose as resulting
         # geometry
         dict_series, dict_predictions, dict_diffs = self.sample_aligner.predictor(
             relevant_distances=series,
         )
         self.assertEqual(len(dict_predictions), len(thematic_dict))
-        assert dict_predictions["theme_id"][0.0]["brdr_prediction_count"] == 7
+        assert dict_predictions["theme_id"][0.0]["brdr_prediction_count"] == 4

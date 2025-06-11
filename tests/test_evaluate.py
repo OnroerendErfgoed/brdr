@@ -284,6 +284,35 @@ class TestEvaluate(unittest.TestCase):
             == Evaluation.TO_CHECK_ORIGINAL
         )
 
+    def test_evaluate_line(self):
+        # Load thematic data & reference data
+        thematic_dict = {
+            "theme_id": from_wkt(
+                "LINESTRING (171741.11190000033820979 171839.01070547936251387, 171751.68948904142598622 171847.23771917796693742, 171762.26707808251376264 171855.69979041084297933, 171772.72713835645117797 171862.9865739724773448, 171783.53978493178146891 171870.8610013697471004, 171794.94007534274714999 171877.79519862998859026, 171801.87427260301774368 171884.2592808217741549)"
+            )
+        }
+
+        # ADD A REFERENCE POLYGON TO REFERENCE DICTIONARY
+
+        aligner = Aligner()
+        aligner.load_thematic_data(DictLoader(thematic_dict))
+        # aligner.load_reference_data(DictLoader(reference_dict))
+        aligner.load_reference_data(
+            GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
+        )
+
+        dict_evaluated, prop_dictionary = aligner.evaluate(
+            relevant_distances=np.arange(0, 1010, 50, dtype=int) / 100,
+            full_strategy=FullStrategy.NO_FULL,
+            max_predictions=3,
+            multi_to_best_prediction=False,
+        )
+        assert len(dict_evaluated["theme_id"]) == 2
+        assert (
+            prop_dictionary["theme_id"][0]["brdr_evaluation"]
+            == Evaluation.TO_CHECK_PREDICTION_MULTI_FULL
+        )
+
     def test_evaluate_point(self):
         # Load thematic data & reference data
         # thematic_dict = {"theme_id": from_wkt("POINT (0 0)")}

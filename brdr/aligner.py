@@ -33,6 +33,7 @@ from brdr.constants import (
     ID_REFERENCE_FIELD_NAME,
     SNAP_STRATEGY,
     SNAP_MAX_SEGMENT_LENGTH,
+    BUFFER_MULTIPLICATION_FACTOR,
 )
 from brdr.constants import (
     LAST_VERSION_DATE,
@@ -122,7 +123,7 @@ class Aligner:
         threshold_exclusion_area=0,
         threshold_exclusion_percentage=0,
         threshold_inclusion_percentage=100,
-        buffer_multiplication_factor=1.01,
+        buffer_multiplication_factor=BUFFER_MULTIPLICATION_FACTOR,
         threshold_circle_ratio=0.98,
         correction_distance=0.01,
         mitre_limit=10,
@@ -1500,7 +1501,7 @@ class Aligner:
             p_snapped = snap_geometry_to_reference(
                 p,
                 reference,
-                max_segment_length=PARTIAL_SNAP_MAX_SEGMENT_LENGTH,
+                max_segment_length=self.partial_snap_max_segment_length,
                 snap_strategy=snap_strategy,
                 tolerance=relevant_distance,
             )
@@ -2196,8 +2197,9 @@ def _calculate_geom_by_intersection_and_reference(
             geom = snap_geometry_to_reference(
                 geom_intersection,
                 geom_reference,
-                snap_strategy=SnapStrategy.PREFER_VERTICES,
+                snap_strategy=partial_snap_strategy,
                 tolerance=2 * buffer_distance,
+                max_segment_length=partial_snap_max_segment_length,
             )
         elif not geom_intersection_inner.is_empty:
             geom_intersection_buffered = buffer_pos(
