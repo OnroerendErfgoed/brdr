@@ -109,7 +109,7 @@ pip install brdr
 
 ``` python
 from brdr.aligner import Aligner
-from brdr.enums import OpenbaarDomeinStrategy
+from brdr.enums import OpenDomainStrategy
 from brdr.geometry_utils import geom_from_wkt
 from brdr.loader import DictLoader
 
@@ -129,7 +129,7 @@ aligner.load_reference_data(loader)
 relevant_distance = 1
 process_result = aligner.process(
     relevant_distance=relevant_distance,
-    od_strategy=OpenbaarDomeinStrategy.SNAP_SINGLE_SIDE,
+    od_strategy=OpenDomainStrategy.SNAP_INNER_SIDE,
     threshold_overlap_percentage=50,
 )
 # PRINT RESULTS IN WKT
@@ -142,6 +142,7 @@ print(
     "removed area: "
     + process_result["theme_id_1"][relevant_distance]["result_diff_min"].wkt
 )
+
 ```
 
 The resulting figure shows:
