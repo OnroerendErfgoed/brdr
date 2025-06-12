@@ -31,7 +31,6 @@ from shapely.lib import line_merge
 from shapely.ops import nearest_points, substring
 from shapely.prepared import prep
 
-from brdr.constants import BUFFER_MULTIPLICATION_FACTOR
 from brdr.enums import SnapStrategy
 
 log = logging.getLogger(__name__)
@@ -533,7 +532,7 @@ def _snap_point_to_reference(
     if geometry.geom_type == "Point":
         geometry = MultiPoint([geometry])
 
-    ref_line, ref_lines, ref_coords = _get_ref_objects(reference,geometry,tolerance)
+    ref_line, ref_lines, ref_coords = _get_ref_objects(reference, geometry, tolerance)
 
     if len(ref_coords) == 0:
         snap_strategy = SnapStrategy.NO_PREFERENCE
@@ -572,7 +571,7 @@ def _snap_line_to_reference(
     if geometry.geom_type == "LineString":
         geometry = MultiLineString([geometry])
 
-    ref_line, ref_lines, ref_coords = _get_ref_objects(reference,geometry,tolerance)
+    ref_line, ref_lines, ref_coords = _get_ref_objects(reference, geometry, tolerance)
     if len(ref_coords) == 0:
         snap_strategy = SnapStrategy.NO_PREFERENCE
 
@@ -607,7 +606,7 @@ def _snap_polygon_to_reference(
         geometry = segmentize(geometry, max_segment_length=max_segment_length)
     geometry = to_multi(geometry, geomtype="Polygon")
 
-    ref_line, ref_lines, ref_coords = _get_ref_objects(reference,geometry,tolerance)
+    ref_line, ref_lines, ref_coords = _get_ref_objects(reference, geometry, tolerance)
     if len(ref_coords) == 0:
         snap_strategy = SnapStrategy.NO_PREFERENCE
     polygons = []
@@ -622,7 +621,7 @@ def _snap_polygon_to_reference(
     return buffer_neg_pos(safe_unary_union(polygons), correction_distance)
 
 
-def _get_ref_objects(reference,geometry,tolerance):
+def _get_ref_objects(reference, geometry, tolerance):
     # reference = safe_intersection(
     #     reference, buffer_pos(geometry, tolerance * BUFFER_MULTIPLICATION_FACTOR)
     # )
