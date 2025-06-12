@@ -35,7 +35,7 @@ from brdr.typings import ProcessResult
 log = logging.getLogger(__name__)
 
 
-def get_series_geojson_dict(
+def get_dict_geojsons_from_series_dict(
     series_dict: dict[any, dict[float, ProcessResult]],
     crs: str,
     id_field: str,
@@ -80,10 +80,11 @@ def get_series_geojson_dict(
                 features_list_dict[results_type].append(feature)
 
     crs_geojson = {"type": "name", "properties": {"name": crs}}
-    return {
+    result = {
         result_type: FeatureCollection(features, crs=crs_geojson)
         for result_type, features in features_list_dict.items()
     }
+    return result
 
 
 def _feature_from_geom(
@@ -335,7 +336,15 @@ def _diffs_from_dict_processresults(
     # all the relevant distances used to calculate the series
     for thematic_id, results_dict in dict_processresults.items():
         diffs[thematic_id] = {}
-        if dict_thematic[thematic_id].geom_type in ("LineString", "MultiLineString"):
+        if dict_thematic[thematic_id].geom_type in (
+            "LineString",
+            "MultiLineString",
+        ):
+            diff_metric = DiffMetric.CHANGES_LENGTH
+        elif dict_thematic[thematic_id].geom_type in (
+            "Point",
+            "MultiPoint",
+        ):
             diff_metric = DiffMetric.TOTAL_DISTANCE
         for rel_dist in results_dict:
             result = results_dict.get(rel_dist, {}).get("result")

@@ -56,13 +56,13 @@ The figure below shows:
       distance or a range of relevant distances
     * aligner.predictor(): Searches all 'stable' (=predicted) processresults in a range of relevant distances
     * aligner.get_brdr_formula(): Calculating a descriptive formula of a thematic boundary based on a reference layer
-    * evaluate(): Compares & evaluates input geometries with another version and adds a EVALUATION_FIELD_NAME
+    * aligner.evaluate(): Compares & evaluates input geometries with another version and adds a EVALUATION_FIELD_NAME
 * Exporters:
     * aligner.get_results_as_geojson(): Returns a collection of geojson-dictionaries with the processresults (resulting
       geometry, differences,...): This can be used for all processresults or only the 'predicted' results
     * aligner.get_input_as_geojson(): Returns a geojson-featurecollection from input-dictionaries (thematic or
       reference)
-    * aligner.save_results(): Exports the resuling geojson-files to a specified path:This can be used for all
+    * aligner.save_results(): Exports the resulting geojson-files to a specified path:This can be used for all
       processresults or only the 'predicted' results
 
 Besides the generic functionalities, a range of Flanders-specific functionalities are provided:
@@ -83,6 +83,7 @@ Besides the generic functionalities, a range of Flanders-specific functionalitie
     * Alignment after reprojection of data
     * Cleaning data: In a postprocessing-phase, the algorithm executes sliver-cleanup and validity-cleaning on the
       resulting geometries
+    * Version management: visualise differences between versions of geodata
     * ...
 * Data-Analysis: Investigate the pattern in deviation and change between thematic and reference boundaries
 * Update-detection: Investigate the descriptive formula before and after alignment to check for (automatic)

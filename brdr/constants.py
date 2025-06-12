@@ -6,11 +6,15 @@ DOWNLOAD_LIMIT = 10000
 
 # value that is used to calculate the boundary of a thematic geometry wherefor the calculation has to be done. (inner part is added)
 MAX_OUTER_BUFFER = 50
+
+# SNAP_CONSTANTS: constants for snapping when 'brdr'-algorithm is not used. So full geometry will be snapped
 SNAP_STRATEGY = (
     SnapStrategy.PREFER_VERTICES
 )  # when alignment is done by 'snap_geometry_to_reference', This strategy will be applied
 SNAP_MAX_SEGMENT_LENGTH = 2  # when alignment is done by 'snap_geometry_to_reference', the input geometry (line, lineair ring,...) will be split up by default in parts of max X meter
 
+
+# PARTIAL SNAPPING CONSTANTS: snapping-constants when 'brdr' is used, and snapping-function is used inside the 'brdr'-implementation
 PARTIAL_SNAPPING = False
 PARTIAL_SNAP_STRATEGY = (
     SnapStrategy.NO_PREFERENCE
@@ -56,6 +60,7 @@ DATE_FORMAT = "%Y-%m-%d"
 # GRB_CONSTANTS
 # max buffer (m) around thematic geometry to download reference parcels
 GRB_MAX_REFERENCE_BUFFER = 10
+BUFFER_MULTIPLICATION_FACTOR = 1.01
 # URL of the OGC feature API of actual GRB to extract collections
 GRB_FEATURE_URL = "https://geo.api.vlaanderen.be/GRB/ogc/features/collections"
 # URL of the OGC feature API of GRB fiscal parcels (situation of 1st of January) to
@@ -65,7 +70,5 @@ GRB_FISCAL_PARCELS_URL = "https://geo.api.vlaanderen.be/Adpf/ogc/features/collec
 GRB_VERSION_DATE = "VERSDATUM"
 # Property-name of id of GRB-parcels
 GRB_PARCEL_ID = "CAPAKEY"
-# Property-name of id of GRB-parcels
-GRB_BUILDING_ID = "OIDN"
-# Property-name of id of GRB-parcels
-GRB_KNW_ID = "OIDN"
+# Property-name of id of GRB-objects
+GRB_GENERIC_ID = "OIDN"

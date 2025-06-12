@@ -3,6 +3,7 @@ from math import ceil
 
 import geopandas as gpd
 import matplotlib.pyplot as plt
+from shapely.plotting import plot_polygon, plot_line, plot_points
 
 from brdr.typings import ProcessResult
 
@@ -190,3 +191,24 @@ def _processresult_to_dicts(processresult):
         results_relevant_intersection,
         results_relevant_diff,
     )
+
+
+def show_geometry(geometry, ax=None, show=True):
+    if ax is None:
+        fig, ax = plt.subplots()
+    geometry_type = geometry.geom_type
+    if geometry_type in ["Polygon", "MultiPolygon"]:
+        plot_polygon(geometry, ax=ax)
+    elif geometry_type in ["LineString", "MultiLineString"]:
+        plot_line(geometry, ax=ax)
+    elif geometry_type in ["Point", "MultiPoint"]:
+        plot_points(geometry, ax=ax)
+    elif geometry_type in ["GeometryCollection"]:
+        return
+        # for g in geometry.geoms:
+        #     show_geometry(g,ax=ax,show=False)
+    else:
+        print("no geometry/type to show")
+        return
+    if show:
+        plt.show()

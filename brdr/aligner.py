@@ -33,6 +33,7 @@ from brdr.constants import (
     ID_REFERENCE_FIELD_NAME,
     SNAP_STRATEGY,
     SNAP_MAX_SEGMENT_LENGTH,
+    BUFFER_MULTIPLICATION_FACTOR,
 )
 from brdr.constants import (
     LAST_VERSION_DATE,
@@ -83,7 +84,7 @@ from brdr.utils import (
 )
 from brdr.utils import geojson_from_dict
 from brdr.utils import get_breakpoints_zerostreak
-from brdr.utils import get_series_geojson_dict
+from brdr.utils import get_dict_geojsons_from_series_dict
 from brdr.utils import merge_process_results
 from brdr.utils import write_geojson
 
@@ -122,7 +123,7 @@ class Aligner:
         threshold_exclusion_area=0,
         threshold_exclusion_percentage=0,
         threshold_inclusion_percentage=100,
-        buffer_multiplication_factor=1.01,
+        buffer_multiplication_factor=BUFFER_MULTIPLICATION_FACTOR,
         threshold_circle_ratio=0.98,
         correction_distance=0.01,
         mitre_limit=10,
@@ -693,6 +694,8 @@ class Aligner:
                     "result_relevant_diff": GeometryCollection(),
                 }
         dict_series = dict_series_topo
+        # TODO: research
+        # https://github.com/OnroerendErfgoed/brdr/issues/204
         #
         #     result_line = dict_series[arc_id][relevant_distance]["result"]
         #     linestring = linemerge(result_line)
@@ -712,10 +715,6 @@ class Aligner:
         # topo_dict = topo.to_dict()
         #
         #     print(str(topo_dict))
-        # TODO - research
-        # Kunnen we multilinestrings toevoegen in arcs, of een boekhouding van arcs aanpassen per object?
-        # wat geeft het als je uitstekende linestrings in polygon samenvoegt: testen door topojson te manipuleren en dan om te zetten
-        # print(topo.to_geojson())
         return dict_series
 
     def _generate_topo(self, dict_thematic):
@@ -864,7 +863,12 @@ class Aligner:
                     predicted_geoms_for_theme_id,
                     self.correction_distance,
                     self.mitre_limit,
-                ) or predicted_geom.geom_type in ("LineString", "MultiLineString"):
+                ) or predicted_geom.geom_type in (
+                    "Point",
+                    "MultiPoint",
+                    "LineString",
+                    "MultiLineString",
+                ):
                     dict_predictions_unique[theme_id][rel_dist] = processresults
                     predicted_geoms_for_theme_id.append(processresults["result"])
                 else:
@@ -904,7 +908,7 @@ class Aligner:
         max_predictions: integer that indicates how many predictions are maximally returned. (-1 indicates all predictions are returned)
         relevant_distances: relevant distances to evaluate
         full_strategy: enum, decided which predictions are kept or prefered based on full-ness of the prediction
-        multi_to_best (default True): Only usable in combination with max_predictions=1. If True (and max_predictions=1), the prediction with highest score will be taken.If False, the original geometry is returned.
+        multi_to_best_prediction (default True): Only usable in combination with max_predictions=1. If True (and max_predictions=1), the prediction with highest score will be taken.If False, the original geometry is returned.
         """
         if ids_to_evaluate is None:
             ids_to_evaluate = list(self.dict_thematic.keys())
@@ -930,17 +934,20 @@ class Aligner:
             prop_dictionary[theme_id] = {}
             if theme_id not in dict_affected_predictions.keys():
                 # No predictions available
-                dist = relevant_distances[0]
-                prop_dictionary[theme_id][dist] = {}
+                relevant_distance = round(0, RELEVANT_DISTANCE_DECIMALS)
                 props = self._evaluate(
                     id_theme=theme_id,
                     geom_predicted=dict_affected[theme_id],
                     base_formula_field=base_formula_field,
                 )
                 props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
+                props[PREDICTION_COUNT] = 0
                 props[PREDICTION_SCORE] = -1
-                dict_predictions_evaluated[theme_id][dist] = dict_series[theme_id][dist]
-                prop_dictionary[theme_id][dist] = props
+                dict_predictions_evaluated[theme_id][relevant_distance] = {
+                    "result": dict_affected[theme_id],
+                    "remark": "no prediction, original returned",
+                }
+                prop_dictionary[theme_id][relevant_distance] = props
                 continue
 
             # When there are predictions available
@@ -997,7 +1004,7 @@ class Aligner:
                         if prediction_score > 100:
                             prediction_score = 100
                         props[PREDICTION_SCORE] = prediction_score
-                        props[PREDICTION_COUNT] = -1
+                        props[PREDICTION_COUNT] = prediction_count
                     else:
                         props[EVALUATION_FIELD_NAME] = (
                             Evaluation.TO_CHECK_PREDICTION_MULTI_FULL
@@ -1035,19 +1042,37 @@ class Aligner:
                 props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_ORIGINAL
                 props[PREDICTION_SCORE] = -1
                 dict_predictions_evaluated[theme_id][relevant_distance] = {
-                    "result": dict_affected[theme_id]
+                    "result": dict_affected[theme_id],
+                    "remark": "multiple predictions, original returned",
                 }
                 prop_dictionary[theme_id][relevant_distance] = props
                 continue
 
             if max_predictions > 0 and len_best_ix > max_predictions:
                 best_ix = best_ix[:max_predictions]
-            for ix in best_ix:
-                distance = distances[ix]
-                prediction = predictions[ix]
-                props = prediction_properties[ix]
-                dict_predictions_evaluated[theme_id][distance] = prediction
-                prop_dictionary[theme_id][distance] = props
+            if len(best_ix) > 0:
+                for ix in best_ix:
+                    distance = distances[ix]
+                    prediction = predictions[ix]
+                    props = prediction_properties[ix]
+                    dict_predictions_evaluated[theme_id][distance] = prediction
+                    prop_dictionary[theme_id][distance] = props
+            else:
+                # #when no evaluated predictions, the original is returned
+                relevant_distance = round(0, RELEVANT_DISTANCE_DECIMALS)
+                props = self._evaluate(
+                    id_theme=theme_id,
+                    geom_predicted=dict_affected[theme_id],
+                    base_formula_field=base_formula_field,
+                )
+                props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
+                props[PREDICTION_SCORE] = -1
+                props[PREDICTION_COUNT] = 0
+                dict_predictions_evaluated[theme_id][relevant_distance] = {
+                    "result": dict_affected[theme_id],
+                    "remark": "no prediction, original returned",
+                }
+                prop_dictionary[theme_id][relevant_distance] = props
 
         # UNAFFECTED
         relevant_distance = round(0, RELEVANT_DISTANCE_DECIMALS)
@@ -1121,7 +1146,11 @@ class Aligner:
                 continue
             intersected.append(geom_intersection)
 
-            perc = round(geom_intersection.area * 100 / geom_reference.area, 2)
+            geom_reference_area = geom_reference.area
+            if geom_reference_area > 0:
+                perc = round(geom_intersection.area * 100 / geom_reference.area, 2)
+            else:
+                perc = 0
             if perc < 0.01:
                 continue
             # Add a last_version_date if available in properties
@@ -1138,7 +1167,7 @@ class Aligner:
 
             if perc > 99.99:
                 full = True
-                area = round(geom_reference.area, 2)
+                area = round(geom_reference_area, 2)
                 perc = 100
                 if with_geom:
                     geom = geom_reference
@@ -1258,7 +1287,7 @@ class Aligner:
                     prop_dictionary[theme_id][relevant_distance][FORMULA_FIELD_NAME] = (
                         json.dumps(formula)
                     )
-        return get_series_geojson_dict(
+        return get_dict_geojsons_from_series_dict(
             dict_series,
             crs=self.CRS,
             id_field=self.name_thematic_id,
@@ -1472,7 +1501,7 @@ class Aligner:
             p_snapped = snap_geometry_to_reference(
                 p,
                 reference,
-                max_segment_length=PARTIAL_SNAP_MAX_SEGMENT_LENGTH,
+                max_segment_length=self.partial_snap_max_segment_length,
                 snap_strategy=snap_strategy,
                 tolerance=relevant_distance,
             )
@@ -1572,6 +1601,7 @@ class Aligner:
         :param outer: when outer is True, the outer boundary is used, inner is not used
         :return:
         """
+        # TODO: remove outer, as it is not used?
         buffer_distance = relevant_distance / 2
         geom_thematic_buffered = make_valid(
             buffer_pos(
@@ -1770,6 +1800,7 @@ class Aligner:
         )
         # Correction for Inner holes(donuts) / multipolygons
         # fill and remove gaps
+        # TODO improvement: when relevant_distance very big (fe 100m) it could happen that parts of multipolygon-results will be removed unintentionally because part smaller than negative buffer
         geom_thematic_cleaned_holes = fill_and_remove_gaps(
             geom_thematic_preresult, buffer_distance
         )
@@ -2114,10 +2145,6 @@ def _calculate_geom_by_intersection_and_reference(
     ):
         # relevant intersection and relevant difference
 
-        # geom_x = safe_intersection(buffer_pos(geom_intersection,buffer_distance),
-        # safe_difference(geom_reference,buffer_neg_pos(geom_difference,buffer_distance)))
-        # this gives a little smaller result, so not as good as the one below
-
         geom_x = safe_intersection(
             geom_reference,
             safe_difference(
@@ -2132,6 +2159,7 @@ def _calculate_geom_by_intersection_and_reference(
                 ),
             ),
         )
+        geom_x = buffer_neg_pos(geom_x, buffer_distance, mitre_limit=mitre_limit)
 
         geom_intersection_buffered = buffer_pos(geom_intersection, 2 * buffer_distance)
         geom_difference_2 = safe_difference(geom_reference, geom_intersection_buffered)
@@ -2163,10 +2191,16 @@ def _calculate_geom_by_intersection_and_reference(
     elif geom_relevant_intersection.is_empty and not geom_relevant_difference.is_empty:
         geom = geom_relevant_intersection  # (=empty geometry)
     else:
+        # No relevant intersection and no relevant difference
         if is_open_domain:
-            geom = geom_relevant_intersection  # (=empty geometry)
-            # TEST if the snapped geom from below is better?
-            # geom = snap_polygon_to_polygon (geom_intersection, geom_reference, snap_strategy=SnapStrategy.PREFER_VERTICES, tolerance=2*buffer_distance)
+            # geom = geom_relevant_intersection  # (=empty geometry)
+            geom = snap_geometry_to_reference(
+                geom_intersection,
+                geom_reference,
+                snap_strategy=partial_snap_strategy,
+                tolerance=2 * buffer_distance,
+                max_segment_length=partial_snap_max_segment_length,
+            )
         elif not geom_intersection_inner.is_empty:
             geom_intersection_buffered = buffer_pos(
                 geom_intersection, 2 * buffer_distance

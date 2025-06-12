@@ -532,7 +532,7 @@ def _snap_point_to_reference(
     if geometry.geom_type == "Point":
         geometry = MultiPoint([geometry])
 
-    ref_line, ref_lines, ref_coords = _get_ref_objects(reference)
+    ref_line, ref_lines, ref_coords = _get_ref_objects(reference, geometry, tolerance)
 
     if len(ref_coords) == 0:
         snap_strategy = SnapStrategy.NO_PREFERENCE
@@ -562,6 +562,7 @@ def _snap_line_to_reference(
     max_segment_length=-1,
     tolerance=1,
 ):
+    # return snap(geometry,reference,tolerance)
     if geometry is None or geometry.is_empty or reference is None or reference.is_empty:
         return geometry
     if max_segment_length > 0:
@@ -570,7 +571,7 @@ def _snap_line_to_reference(
     if geometry.geom_type == "LineString":
         geometry = MultiLineString([geometry])
 
-    ref_line, ref_lines, ref_coords = _get_ref_objects(reference)
+    ref_line, ref_lines, ref_coords = _get_ref_objects(reference, geometry, tolerance)
     if len(ref_coords) == 0:
         snap_strategy = SnapStrategy.NO_PREFERENCE
 
@@ -605,7 +606,7 @@ def _snap_polygon_to_reference(
         geometry = segmentize(geometry, max_segment_length=max_segment_length)
     geometry = to_multi(geometry, geomtype="Polygon")
 
-    ref_line, ref_lines, ref_coords = _get_ref_objects(reference)
+    ref_line, ref_lines, ref_coords = _get_ref_objects(reference, geometry, tolerance)
     if len(ref_coords) == 0:
         snap_strategy = SnapStrategy.NO_PREFERENCE
     polygons = []
@@ -620,7 +621,10 @@ def _snap_polygon_to_reference(
     return buffer_neg_pos(safe_unary_union(polygons), correction_distance)
 
 
-def _get_ref_objects(reference):
+def _get_ref_objects(reference, geometry, tolerance):
+    # reference = safe_intersection(
+    #     reference, buffer_pos(geometry, tolerance * BUFFER_MULTIPLICATION_FACTOR)
+    # )
     ref_coords = list(get_coords_from_geometry(reference))
     reference_list = []
     if reference.geom_type == "GeometryCollection":
@@ -717,8 +721,6 @@ def _get_snapped_coordinates(
                     )
                 )
                 coordinates.append(p_end_snapped.coords[0])
-            else:
-                raise Exception("this should not happen when snapping coordinates")
     return coordinates
 
 
@@ -726,6 +728,8 @@ def _get_sublinestring_coordinates(
     p_end, p_end_snapped, p_start, p_start_snapped, ref_lines, tolerance
 ):
     coordinates = []
+    if p_start_snapped == p_end_snapped:
+        return coordinates
     reference_line, distance = closest_line(ref_lines, p_end)
     if reference_line is None or reference_line.is_empty:
         return coordinates
@@ -733,6 +737,8 @@ def _get_sublinestring_coordinates(
     line_substring = _get_line_substring(
         reference_line, p_start_snapped, p_end_snapped, distance_start_end
     )
+    if line_substring is None or line_substring.is_empty:
+        return coordinates
     for p in line_substring.coords:
         point = Point(p)
         if (point.distance(p_start) + point.distance(p_end)) / 2 <= tolerance:
@@ -927,10 +933,9 @@ def get_bbox(geometry):
     return str(geometry.bounds).strip("()")
 
 
-def geojson_polygon_to_multipolygon(geojson):
+def geojson_to_multi(geojson):
     """
-    #TODO: add an example/test so it is clear this function is used (inside brdrQ)
-    Transforms a geojson: Checks if there are singel-geometry-features and transforms them into Multi-geometries, so all objects are of type 'Multi' (or null-geometry).
+    Transforms a geojson: Checks if there are single-geometry-features and transforms them into Multi-geometries, so all objects are of type 'Multi' (or null-geometry).
     It is important that geometry-type is consitent (f.e. in QGIS) to show and style the geojson-layer
     """
 
@@ -944,12 +949,12 @@ def geojson_polygon_to_multipolygon(geojson):
                 "type": "MultiPolygon",
                 "coordinates": [f["geometry"]["coordinates"]],
             }
-        if f["geometry"]["type"] == "LineString":
+        elif f["geometry"]["type"] == "LineString":
             f["geometry"] = {
                 "type": "MultiLineString",
                 "coordinates": [f["geometry"]["coordinates"]],
             }
-        if f["geometry"]["type"] == "Point":
+        elif f["geometry"]["type"] == "Point":
             f["geometry"] = {
                 "type": "MultiPoint",
                 "coordinates": [f["geometry"]["coordinates"]],
@@ -1059,9 +1064,9 @@ def to_multi(geometry, geomtype=None):
                     multi_geoms.append(geom)
             return GeometryCollection(multi_geoms)
         else:
-            raise TypeError("Onbekend geometrie type: {}".format(type(geometry)))
+            raise TypeError("Geometry type not supported: {}".format(type(geometry)))
     else:
-        raise TypeError("Onbekend geometrie type: {}".format(type(geometry)))
+        raise TypeError("Geometry type not supported: {}".format(type(geometry)))
 
 
 def get_coords_from_geometry(geometry):
