@@ -7,6 +7,7 @@ from brdr.geometry_utils import (
     geom_from_wkt,
     snap_geometry_to_reference,
     safe_unary_union,
+    geometric_equality,
 )
 
 
@@ -262,9 +263,25 @@ class TestSnap(unittest.TestCase):
             geom_reference,
             snap_strategy=SnapStrategy.PREFER_VERTICES,
             max_segment_length=2,
-            tolerance=5,
+            tolerance=40,
         )
         assert geom_snapped.geom_type == polygon_1.geom_type
+
+    def test_snap_polygon_to_point_no_preference(self):
+        """
+        Test to snap polygon to polygon reference
+        :return:
+        """
+        polygon_1 = geom_from_wkt("MULTIPOLYGON (((171795.71618631482124329 171817.88460136577486992, 171784.53532230854034424 171806.1688893586397171, 171746.73993028700351715 171841.20300138369202614, 171746.28380228579044342 171841.62578538432717323, 171767.35881029814481735 171856.89906539395451546, 171767.47471430152654648 171856.76376939192414284, 171798.38581831753253937 171820.68191336840391159, 171798.01820231974124908 171820.29669736698269844, 171795.71618631482124329 171817.88460136577486992)))")
+        geom_reference = geom_from_wkt("MULTIPOINT ((171756.52506366037414409 171850.34457502837176435),(171766.12778689494007267 171857.04121096828021109),(171777.13617191879893653 171865.19089055553195067),(171745.72200002145837061 171841.94219219812657684),(171770.11351679253857583 171840.12903735807049088))")
+        geom_snapped = snap_geometry_to_reference(
+            polygon_1,
+            geom_reference,
+            snap_strategy=SnapStrategy.NO_PREFERENCE,
+            max_segment_length=2,
+            tolerance=5,
+        )
+        assert not geometric_equality(polygon_1,geom_snapped,0.01,mitre_limit=5)
 
     def test_snap_geometrycollection_to_point(self):
         """

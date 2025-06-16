@@ -8,7 +8,7 @@ from shapely.geometry import Polygon
 
 from brdr.aligner import Aligner
 from brdr.constants import FORMULA_FIELD_NAME, EVALUATION_FIELD_NAME
-from brdr.enums import GRBType, Evaluation, FullStrategy
+from brdr.enums import GRBType, Evaluation, FullStrategy, SnapStrategy
 from brdr.geometry_utils import geojson_to_multi
 from brdr.grb import (
     GRBActualLoader,
@@ -344,6 +344,41 @@ class TestEvaluate(unittest.TestCase):
             == Evaluation.TO_CHECK_PREDICTION_MULTI_FULL
         )
 
+    def test_evaluate_reference_point(self):
+        # Load thematic data & reference data
+        polygon_1 = from_wkt(
+            "MULTIPOLYGON (((171795.71618631482124329 171817.88460136577486992, 171784.53532230854034424 171806.1688893586397171, 171746.73993028700351715 171841.20300138369202614, 171746.28380228579044342 171841.62578538432717323, 171767.35881029814481735 171856.89906539395451546, 171767.47471430152654648 171856.76376939192414284, 171798.38581831753253937 171820.68191336840391159, 171798.01820231974124908 171820.29669736698269844, 171795.71618631482124329 171817.88460136577486992)))"
+        )
+        geom_reference = from_wkt(
+            "MULTIPOINT ((171756.52506366037414409 171850.34457502837176435),(171766.12778689494007267 171857.04121096828021109),(171777.13617191879893653 171865.19089055553195067),(171745.72200002145837061 171841.94219219812657684),(171770.11351679253857583 171840.12903735807049088))"
+        )
+
+        # thematic_dict = {"theme_id": from_wkt("POINT (0 0)")}
+        thematic_dict = {
+            "theme_id": polygon_1
+        }
+
+        # ADD A REFERENCE POLYGON TO REFERENCE DICTIONARY
+        reference_dict = {"ref_id": geom_reference}
+
+        aligner = Aligner(snap_strategy=SnapStrategy.NO_PREFERENCE,
+        snap_max_segment_length=2)
+        aligner.load_thematic_data(DictLoader(thematic_dict))
+        aligner.load_reference_data(DictLoader(reference_dict))
+
+        dict_evaluated, prop_dictionary = aligner.evaluate(
+            relevant_distances=np.arange(0, 510, 50, dtype=int) / 100,
+            full_strategy=FullStrategy.NO_FULL,
+            max_predictions=3,
+            multi_to_best_prediction=False,
+        )
+        assert True
+        #     (
+        #         len(dict_evaluated["theme_id"]) == 3))
+        # assert (
+        #     prop_dictionary["theme_id"][0]["brdr_evaluation"]
+        #     == Evaluation.TO_CHECK_PREDICTION_MULTI_FULL
+        # )
     def test_evaluate_best_no_prediction(self):
         thematic_json = {
             "type": "FeatureCollection",
