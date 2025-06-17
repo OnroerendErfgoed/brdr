@@ -649,6 +649,7 @@ class Aligner:
         return self.dict_processresults
 
     def _dissolve_topo(self, dict_series, dict_thematic, topo_thematic):
+        #TODO: what about dict_thematic, this has te be reset again
         dict_series_topo = dict()
         for relevant_distance in self.relevant_distances:
             for obj in topo_thematic.output["objects"]["data"]["geometries"]:

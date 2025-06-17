@@ -150,3 +150,10 @@
 - prediction-strategy: BEST/ALL/ORIGINAL: check if all records are found in result when using in combination with 'ONLY_FULL-strategy' [#200]
 - GRBACtualLoader: support for all types of GRB collections (also lines and points)
 - Fix for a better prediction of snapped lines
+
+# 0.12.0
+
+! Not Backwards compatable !
+
+- fix for snapping geometries to points
+- Changed OpenDomeinStrategy from IntEnum to Enum
