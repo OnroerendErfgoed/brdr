@@ -157,3 +157,4 @@
 
 - fix for snapping geometries to points
 - Changed OpenDomeinStrategy from IntEnum to Enum
+- Added enum PredictionStrategy

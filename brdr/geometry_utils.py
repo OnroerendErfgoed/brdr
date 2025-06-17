@@ -586,6 +586,7 @@ def _snap_line_to_reference(
         linestring = make_valid(LineString(coordinates))
         lines.append((linestring))
     result = safe_unary_union(lines)
+    #TODO - cleanup; this gives errors with Geometrycollection-empty
     result = remove_shortest_and_merge(
         result, relevant_length=0.01
     )  # Solves small (0.01) overshoots in multilinestrings #TODO; maybe this has to be cleaned in another place?
@@ -1116,6 +1117,8 @@ def remove_shortest_and_merge(multilinestring, relevant_length=float("inf")):
     :param multilinestring: MultiLineString to merge
     :param relevant_length: Value when the length of a part of multilinestring is long enough to be relevant and multilinestring is kept. Default is infinity so it will recursively end into a single LineString.    :return:
     """
+    if multilinestring.is_empty:
+        return multilinestring
     # Check if the merged result is a LineString
     multilinestring = line_merge(multilinestring)
     if isinstance(multilinestring, LineString):

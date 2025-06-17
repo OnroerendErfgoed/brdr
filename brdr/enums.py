@@ -168,3 +168,16 @@ class SnapStrategy(str, Enum):
     ONLY_VERTICES = "only_vertices"
     PREFER_VERTICES = "prefer_vertices"
     NO_PREFERENCE = "no_preference"
+
+class PredictionStrategy(str, Enum):
+    """
+    Enum for prediction strategy when using GRB updater
+
+    ALL = "all"
+    BEST = "best"
+    ORIGINAL = "original"
+    """
+
+    ALL = "all"
+    BEST = "best"
+    ORIGINAL = "original"
