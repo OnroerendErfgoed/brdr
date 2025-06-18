@@ -740,6 +740,7 @@ def _get_sublinestring_coordinates(
     )
     if line_substring is None or line_substring.is_empty:
         return coordinates
+    #TODO what if line_substring is a multilinestring? error detected in brdrQ
     for p in line_substring.coords:
         point = Point(p)
         if (point.distance(p_start) + point.distance(p_end)) / 2 <= tolerance:
@@ -787,7 +788,7 @@ def _get_line_substring(
 
         sublines = [s for s in [subline_a, subline_b] if s.geom_type == "LineString"]
         line_substring_2 = line_merge(MultiLineString(sublines))
-        if line_substring_2.length < line_substring.length:
+        if line_substring_2.length < line_substring.length and line_substring_2.geom_type == ["LineString"]:
             line_substring = line_substring_2
         if line_substring.length > 3 * distance_start_end:
             line_substring = LineString([p_start_snapped, p_end_snapped])

@@ -4,7 +4,12 @@ from shapely import from_wkt
 from shapely.geometry import Point
 from shapely.geometry import Polygon
 
-from brdr.geometry_utils import _grid_bounds, get_shape_index, geom_from_wkt
+from brdr.geometry_utils import (
+    _grid_bounds,
+    get_shape_index,
+    geom_from_wkt,
+    _get_line_substring,
+)
 from brdr.geometry_utils import buffer_neg
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import buffer_pos
@@ -3962,6 +3967,18 @@ class TestSafeOperations(unittest.TestCase):
         for partition in filtered_partitions:
             # assert partition is a Polygon object
             assert isinstance(partition, Polygon)
+
+    def test_get_line_substring(self):
+
+        reference_border = from_wkt( 'LINESTRING (173033.61378717 171235.23224897, 173044.62370718 171235.00223297)')
+        p_start_snapped = from_wkt('POINT (173044.34383518 171238.32223297)')
+        p_end_snapped = from_wkt('POINT (173037.69801117 171242.68933697)')
+        distance_start_end = 1.896910811714787
+
+        line_substring = _get_line_substring(
+            reference_border, p_start_snapped, p_end_snapped, distance_start_end
+        )
+        assert line_substring.geom_type=="LineString"
 
 
 class TestGridBounds(unittest.TestCase):
