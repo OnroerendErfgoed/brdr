@@ -156,5 +156,6 @@
 ! Not Backwards compatable !
 
 - fix for snapping geometries to points
+- fix for snapping geometries to lines
 - Changed OpenDomeinStrategy from IntEnum to Enum
 - Added enum PredictionStrategy
