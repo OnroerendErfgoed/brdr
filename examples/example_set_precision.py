@@ -1,5 +1,4 @@
-import shapely
-from shapely import LineString, Point, from_wkt, set_precision
+from shapely import from_wkt, set_precision
 
 wkt = "POINT (171761.43755743509973399 171790.2652638778090477)"
 geom = from_wkt(wkt)

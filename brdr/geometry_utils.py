@@ -582,7 +582,7 @@ def _snap_line_to_reference(
         linestring = make_valid(LineString(coordinates))
         lines.append((linestring))
     result = safe_unary_union(lines)
-    #TODO - cleanup; this gives errors with Geometrycollection-empty
+    # TODO - cleanup; this gives errors with Geometrycollection-empty
     result = remove_shortest_and_merge(
         result, relevant_length=0.01
     )  # Solves small (0.01) overshoots in multilinestrings #TODO; maybe this has to be cleaned in another place?
@@ -638,7 +638,7 @@ def _get_ref_objects(reference):
             elif g.geom_type == "LineString":
                 ref_borders.append(g)
             elif g.geom_type == "Point":
-                ref_borders.append(g)#point
+                ref_borders.append(g)  # point
     ref_border = safe_unary_union(ref_borders)
     return ref_border, ref_borders, ref_coords
 
@@ -668,7 +668,12 @@ def _get_snapped_coordinates(
         elif bool_start_snapped and bool_end_snapped:
             coordinates.extend(
                 _get_sublinestring_coordinates(
-                    p_end, p_end_snapped, p_start, p_start_snapped, ref_borders, tolerance
+                    p_end,
+                    p_end_snapped,
+                    p_start,
+                    p_start_snapped,
+                    ref_borders,
+                    tolerance,
                 )
             )
             coordinates.append(p_end_snapped.coords[0])
@@ -714,7 +719,12 @@ def _get_snapped_coordinates(
                 coordinates.append(p_mid_snapped.coords[0])
                 coordinates.extend(
                     _get_sublinestring_coordinates(
-                        p_end, p_end_snapped, p_mid, p_mid_snapped, ref_borders, tolerance
+                        p_end,
+                        p_end_snapped,
+                        p_mid,
+                        p_mid_snapped,
+                        ref_borders,
+                        tolerance,
                     )
                 )
                 coordinates.append(p_end_snapped.coords[0])
@@ -736,7 +746,7 @@ def _get_sublinestring_coordinates(
     )
     if line_substring is None or line_substring.is_empty:
         return coordinates
-    #TODO what if line_substring is a multilinestring? error detected in brdrQ
+    # TODO what if line_substring is a multilinestring? error detected in brdrQ
     for p in line_substring.coords:
         point = Point(p)
         if (point.distance(p_start) + point.distance(p_end)) / 2 <= tolerance:
@@ -755,7 +765,12 @@ def geometric_equality(geom_a, geom_b, correction_distance, mitre_limit):
 def _get_line_substring(
     reference_border, p_start_snapped, p_end_snapped, distance_start_end
 ):
-    if reference_border is None or reference_border.is_empty or reference_border.geom_type not in ["LinearRing", "LineString", "MultiLineString"]:
+    if (
+        reference_border is None
+        or reference_border.is_empty
+        or reference_border.geom_type
+        not in ["LinearRing", "LineString", "MultiLineString"]
+    ):
         return reference_border
     start_fraction = reference_border.project(p_start_snapped, normalized=True)
     end_fraction = reference_border.project(p_end_snapped, normalized=True)
@@ -776,7 +791,10 @@ def _get_line_substring(
             )
         else:
             subline_a = substring(
-                reference_border, start_dist=start_fraction, end_dist=100, normalized=True
+                reference_border,
+                start_dist=start_fraction,
+                end_dist=100,
+                normalized=True,
             )
             subline_b = substring(
                 reference_border, start_dist=0, end_dist=end_fraction, normalized=True
@@ -784,7 +802,10 @@ def _get_line_substring(
 
         sublines = [s for s in [subline_a, subline_b] if s.geom_type == "LineString"]
         line_substring_2 = line_merge(MultiLineString(sublines))
-        if line_substring_2.length < line_substring.length and line_substring_2.geom_type == ["LineString"]:
+        if (
+            line_substring_2.length < line_substring.length
+            and line_substring_2.geom_type == ["LineString"]
+        ):
             line_substring = line_substring_2
         if line_substring.length > 3 * distance_start_end:
             line_substring = LineString([p_start_snapped, p_end_snapped])
@@ -1112,6 +1133,7 @@ def get_geoms_from_geometry(geometry):
 
 from shapely.ops import snap
 
+
 def snap_multilinestring_endpoints(multilinestring, tolerance):
     """
     Snapt de begin- en eindpunten van elke LineString in een MultiLineString
@@ -1152,6 +1174,7 @@ def snap_multilinestring_endpoints(multilinestring, tolerance):
 
 from shapely.ops import nearest_points
 
+
 def shortest_connections_between_geometries(geometry):
     """
     Voor elk element in een GeometryCollection, bepaal de kortste verbindingslijn
@@ -1164,10 +1187,10 @@ def shortest_connections_between_geometries(geometry):
     - List van shapely.geometry.LineString objecten die de kortste verbindingen representeren
     """
     connection_lines = []
-    geometry=safe_unary_union(geometry)
-    geometry=to_multi(geometry)
+    geometry = safe_unary_union(geometry)
+    geometry = to_multi(geometry)
 
-    if geometry is None or geometry.is_empty or len(geometry.geoms)<=1:
+    if geometry is None or geometry.is_empty or len(geometry.geoms) <= 1:
         return connection_lines
 
     geometries = list(geometry.geoms)
@@ -1175,10 +1198,11 @@ def shortest_connections_between_geometries(geometry):
     for i, geom in enumerate(geometries):
         other_geometries = list(geometry.geoms)
         del other_geometries[i]
-        connection_line = shortest_line(geom,safe_unary_union(other_geometries))
+        connection_line = shortest_line(geom, safe_unary_union(other_geometries))
         connection_lines.append(connection_line)
 
     return make_linestrings_unique(connection_lines)
+
 
 def make_linestrings_unique(lines):
     """
@@ -1203,7 +1227,6 @@ def make_linestrings_unique(lines):
             unique_lines.append(line)
 
     return unique_lines
-
 
 
 def fill_gaps_in_multilinestring(multilinestring, tolerance):
@@ -1258,7 +1281,10 @@ def find_longest_path_by_weight(graph):
             if source != target:
                 for path in nx.all_simple_paths(graph, source=source, target=target):
                     # Calculate total weight of the path
-                    weight = sum(graph[u][v].get('weight', 1) for u, v in zip(path[:-1], path[1:]))
+                    weight = sum(
+                        graph[u][v].get("weight", 1)
+                        for u, v in zip(path[:-1], path[1:])
+                    )
                     if weight > max_weight:
                         max_weight = weight
                         longest_path = list(zip(path[:-1], path[1:]))
@@ -1296,6 +1322,7 @@ def find_circle_path(directed_graph):
     longest_cycle_coords = longest_cycle + [longest_cycle[0]]
     return LineString(longest_cycle_coords)
 
+
 def find_longest_path_between_points(multilinestring, start_point, end_point):
     """
     Bepaal het langste pad tussen twee punten in een MultiLineString-geometrie.
@@ -1308,7 +1335,7 @@ def find_longest_path_between_points(multilinestring, start_point, end_point):
     Returns:
     - shapely.geometry.LineString van het langste pad tussen de twee punten
     """
-    if isinstance(multilinestring,LineString):
+    if isinstance(multilinestring, LineString):
         return multilinestring
     # Stap 1: maak een graaf van de lijnen
     G = nx.Graph()
@@ -1320,11 +1347,9 @@ def find_longest_path_between_points(multilinestring, start_point, end_point):
             segment = LineString([p1, p2])
             G.add_edge(p1, p2, weight=segment.length, geometry=segment)
 
-
-
     start_node = nearest_node(start_point, G.nodes)
     end_node = nearest_node(end_point, G.nodes)
-    if start_node==end_node:
+    if start_node == end_node:
         return find_circle_path(G.to_directed())
 
     # Stap 3: zoek alle eenvoudige paden tussen start en eind
@@ -1347,7 +1372,7 @@ def find_longest_path_between_points(multilinestring, start_point, end_point):
 
 
 def longest_path_from_multilinestring(mls):
-    if isinstance(mls,LineString):
+    if isinstance(mls, LineString):
         return mls
     # Create an undirected graph
     G = nx.Graph()
@@ -1371,7 +1396,10 @@ def longest_path_from_multilinestring(mls):
             if source != target:
                 try:
                     for path in nx.all_simple_paths(G, source=source, target=target):
-                        path_length = sum(LineString([path[i], path[i+1]]).length for i in range(len(path)-1))
+                        path_length = sum(
+                            LineString([path[i], path[i + 1]]).length
+                            for i in range(len(path) - 1)
+                        )
                         if path_length > max_length:
                             max_length = path_length
                             longest_path = path
@@ -1398,12 +1426,14 @@ def longest_path_from_multilinestring(mls):
 #     else:
 #         return None
 
-def scale_segments(segments,factor=1.01):
+
+def scale_segments(segments, factor=1.01):
     scaled_segments = []
     for segment in segments:
-        scaled_segment = scale(segment, xfact=factor, yfact=factor, origin='center')
+        scaled_segment = scale(segment, xfact=factor, yfact=factor, origin="center")
         scaled_segments.append(scaled_segment)
     return scaled_segments
+
 
 def remove_shortest_and_merge(multilinestring, relevant_length=float("inf")):
     """
@@ -1442,17 +1472,23 @@ def _get_snapped_point(point, ref_line, ref_coords, snap_strategy, tolerance):
     if len(ref_coords) != 0:
         p1_vertices, p2_vertices = nearest_points(point, MultiPoint(ref_coords))
         distance_ref_coords = p2_vertices.distance(point)
-        if distance_ref_coords<distance_ref_line:
+        if distance_ref_coords < distance_ref_line:
             p1, p2 = p1_vertices, p2_vertices
     return _snapped_point_by_snapstrategy(
         point, p2, p2_vertices, snap_strategy, tolerance
     )
 
+
 from shapely.geometry import (
-    Point, LineString, Polygon,
-    MultiPoint, MultiLineString, MultiPolygon,
-    GeometryCollection
+    Point,
+    LineString,
+    Polygon,
+    MultiPoint,
+    MultiLineString,
+    MultiPolygon,
+    GeometryCollection,
 )
+
 
 def extract_points_lines_from_geometry(geometry):
     """
@@ -1474,7 +1510,9 @@ def extract_points_lines_from_geometry(geometry):
     elif isinstance(geometry, LineString):
         geometries.append(geometry)
 
-    elif isinstance(geometry, (MultiPoint,MultiPolygon, MultiLineString, GeometryCollection)):
+    elif isinstance(
+        geometry, (MultiPoint, MultiPolygon, MultiLineString, GeometryCollection)
+    ):
         for geom in geometry.geoms:
             geometries.extend(extract_points_lines_from_geometry(geom).geoms)
 

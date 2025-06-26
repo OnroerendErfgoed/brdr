@@ -9,9 +9,6 @@ from shapely import (
     make_valid,
     node,
     polygonize,
-    MultiPoint,
-    MultiLineString,
-    MultiPolygon,
 )
 from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
@@ -37,8 +34,6 @@ from brdr.geometry_utils import (
     to_multi,
     get_geoms_from_geometry,
     safe_unary_union,
-    buffer_pos,
-    safe_difference,
 )
 from brdr.typings import ProcessResult
 
@@ -353,13 +348,13 @@ def diffs_from_dict_processresults(
             "MultiLineString",
         ):
             diff_metric = DiffMetric.CHANGES_LENGTH
-            #diff_metric = DiffMetric.REFERENCE_USAGE
+            # diff_metric = DiffMetric.REFERENCE_USAGE
         elif dict_thematic[thematic_id].geom_type in (
             "Point",
             "MultiPoint",
         ):
             diff_metric = DiffMetric.TOTAL_DISTANCE
-            #diff_metric = DiffMetric.REFERENCE_USAGE
+            # diff_metric = DiffMetric.REFERENCE_USAGE
         for rel_dist in results_dict:
             result = results_dict.get(rel_dist, {}).get("result")
             result_diff = results_dict.get(rel_dist, {}).get("result_diff")
@@ -406,14 +401,13 @@ def diffs_from_dict_processresults(
             #     elif isinstance(difference,MultiPolygon):
             #         diff = difference.area
 
-
-                # reference_union_buffer =buffer_pos(reference_union,0.01)
-                # result_buffer = buffer_pos(result, 0.01)
-                # reference_usage_geom = safe_intersection(result_buffer, reference_union_buffer)
-                # if reference_usage_geom is not None:
-                #     diff = safe_intersection(result_buffer,reference_union_buffer).area
-                # else:
-                #     diff = 0
+            # reference_union_buffer =buffer_pos(reference_union,0.01)
+            # result_buffer = buffer_pos(result, 0.01)
+            # reference_usage_geom = safe_intersection(result_buffer, reference_union_buffer)
+            # if reference_usage_geom is not None:
+            #     diff = safe_intersection(result_buffer,reference_union_buffer).area
+            # else:
+            #     diff = 0
             elif diff_metric == DiffMetric.TOTAL_DISTANCE:
                 diff = 0
                 result = to_multi(result)
@@ -422,7 +416,7 @@ def diffs_from_dict_processresults(
                         g = g.exterior
                     for coord in g.coords:
                         p = Point(coord)
-                        diff = diff +  shortest_line(p, original).length
+                        diff = diff + shortest_line(p, original).length
 
             # round, so the detected changes are within 10cm² or 0.1%
             diff = round(diff, 1)

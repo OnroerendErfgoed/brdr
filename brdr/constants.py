@@ -13,7 +13,9 @@ SNAP_STRATEGY = (
 )  # when alignment is done by 'snap_geometry_to_reference', This strategy will be applied
 SNAP_MAX_SEGMENT_LENGTH = 2  # when alignment is done by 'snap_geometry_to_reference', the input geometry (line, lineair ring,...) will be split up by default in parts of max X meter
 
-DIFF_METRIC= DiffMetric.CHANGES_AREA #Measurement technique for determining stability in the results ='predictions'
+DIFF_METRIC = (
+    DiffMetric.CHANGES_AREA
+)  # Measurement technique for determining stability in the results ='predictions'
 # PARTIAL SNAPPING CONSTANTS: snapping-constants when 'brdr' is used, and snapping-function is used inside the 'brdr'-implementation
 PARTIAL_SNAPPING = False
 PARTIAL_SNAP_STRATEGY = (
