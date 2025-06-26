@@ -17,7 +17,7 @@ DIFF_METRIC= DiffMetric.CHANGES_AREA #Measurement technique for determining stab
 # PARTIAL SNAPPING CONSTANTS: snapping-constants when 'brdr' is used, and snapping-function is used inside the 'brdr'-implementation
 PARTIAL_SNAPPING = False
 PARTIAL_SNAP_STRATEGY = (
-    SnapStrategy.NO_PREFERENCE
+    SnapStrategy.PREFER_VERTICES
 )  # when snapping of partial geometries (geom_x) is executed, This strategy will be applied
 PARTIAL_SNAP_MAX_SEGMENT_LENGTH = 2  # when real snapping of vertices is used, the input geometry will be split up by default in parts of max X meter
 

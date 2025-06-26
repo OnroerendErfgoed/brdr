@@ -85,6 +85,7 @@ from brdr.geometry_utils import (
     snap_multilinestring_endpoints,
     fill_gaps_in_multilinestring,
     shortest_connections_between_geometries,
+    get_coords_from_geometry,
 )
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import buffer_pos
@@ -358,6 +359,15 @@ class Aligner:
         od_strategy=OpenDomainStrategy.SNAP_ALL_SIDE,
         threshold_overlap_percentage=50,
     ) -> ProcessResult:
+        return self.process_geometry_by_overlap(input_geometry,relevant_distance,snap_strategy=self.partial_snap_strategy)
+
+    def process_geometry_by_overlap(
+        self,
+        input_geometry: BaseGeometry,
+        relevant_distance: float = 1,
+        snap_strategy= SnapStrategy.NO_PREFERENCE
+    ) -> ProcessResult:
+
         input_geometry=to_multi(input_geometry)
         # determine the reference_elements
         input_geometry_buffered= buffer_pos(input_geometry,relevant_distance*self.buffer_multiplication_factor)
@@ -371,7 +381,7 @@ class Aligner:
             self.dict_reference[key] for key in ref_intersections
         ]
         reference = safe_unary_union(extract_points_lines_from_geometry(GeometryCollection(ref_intersections_geoms)))
-        # TODO, mogelijks als optimalisatie voor heel de reference doen (sneller, dan elke keer opnieuw een deel, mogelijks voor grootst mogelijke relevante distance van de evaluatie?
+        # TODO: optional, mogelijks als optimalisatie voor heel de reference doen (sneller, dan elke keer opnieuw een deel, mogelijks voor grootst mogelijke relevante distance van de evaluatie?
 
         geom_processed_list = []
         if isinstance(input_geometry,(MultiPolygon)):
@@ -379,17 +389,17 @@ class Aligner:
             for polygon in input_geometry.geoms:
                 exterior = polygon.exterior
                 interiors = polygon.interiors
-                exterior_processed = self.process_by_overlap(exterior,reference,relevant_distance,close_output=True)
+                exterior_processed = self._process_by_overlap(exterior, reference, relevant_distance,snap_strategy=snap_strategy, close_output=True)
                 interiors_processed = []
                 for i in interiors:
-                    i_processed = self.process_by_overlap(i,reference,relevant_distance,close_output=True)
+                    i_processed = self._process_by_overlap(i, reference, relevant_distance,snap_strategy=snap_strategy, close_output=True)
                     interiors_processed.append(i_processed)
                 geom_processed = Polygon(exterior_processed, interiors_processed)
                 geom_processed_list.append(geom_processed)
 
         else:
             for geom in input_geometry.geoms:
-                geom_processed = self.process_by_overlap(geom,reference,relevant_distance,close_output=False)
+                geom_processed = self._process_by_overlap(geom, reference, relevant_distance,snap_strategy=snap_strategy, close_output=False)
                 geom_processed_list.append(geom_processed)
         geom_processed = safe_unary_union(geom_processed_list)
 
@@ -401,12 +411,13 @@ class Aligner:
             relevant_distance,
         )
 
-    def process_by_overlap(self,geom_to_process,reference,relevant_distance,close_output=False):
+    def _process_by_overlap(self, geom_to_process, reference, relevant_distance,snap_strategy=SnapStrategy.NO_PREFERENCE, close_output=False):
         """
 
         :param geom_to_process: only single geometries are allowed (No Multi)
         :param reference:
         :param relevant_distance:
+        :param snap_strategy:
         :param close_output:
         :return:
         """
@@ -418,6 +429,7 @@ class Aligner:
         if overlap.is_empty:
             return geom_to_process# processresult original
         overlap_buffered = buffer_pos(overlap, buffer_distance)
+
         reference_intersection = safe_intersection(reference, overlap_buffered)
         # reference_intersection=set_precision(reference_intersection,precision)
         reference_intersection = safe_unary_union(reference_intersection)
@@ -433,21 +445,37 @@ class Aligner:
         thematic_difference = safe_unary_union(thematic_difference)
         thematic_difference = to_multi(thematic_difference)
 
+        # Calculate vertices of the reference_intersection
+        if snap_strategy!=SnapStrategy.NO_PREFERENCE:
+            reference_clipped = safe_intersection(reference,reference_buffered)
+            reference_coords_buffered = MultiPoint(
+                list(get_coords_from_geometry(reference_clipped))
+            )
+            reference_coords_intersection = to_multi(
+                safe_intersection(reference_coords_buffered, overlap_buffered)
+            )
+        else:
+            reference_coords_intersection = None
         # Logica die de samenstelling verder managed (aansluiting etc) op basis van welk inputtype
         if isinstance(geom_to_process,Point):
             p1,p2 = nearest_points(geom_to_process,reference_intersection)
+            if not reference_coords_intersection is None and not reference_coords_intersection.is_empty :
+                p1_vertices,p2_vertices = nearest_points(geom_to_process,reference_coords_intersection)
+                if not p2_vertices is None and not p2_vertices.is_empty:
+                    p2=p2_vertices
             geom_processed = p2
         else:
-            p_start = Point(geom_to_process.coords[0])
-            p_end = Point(geom_to_process.coords[-1])
-            geom_processed = self._get_processed_by_overlap(p_start, p_end, reference_intersection, thematic_difference, relevant_distance)
+
+            geom_processed = self._get_processed_network_path(geom_to_process, reference_intersection, reference_coords_intersection, thematic_difference, relevant_distance)
 
             if close_output and geom_processed is not None and not geom_processed.is_ring:
                 closed_coords = list(geom_processed.coords) + [geom_processed.coords[0]]
                 geom_processed = LineString(closed_coords)
         return geom_processed
 
-    def _get_processed_by_overlap(self, start_point, end_point, reference_intersection, thematic_difference, relevant_distance):
+    def _get_processed_network_path(self, geom_to_process, reference_intersection, reference_coords_intersection, thematic_difference, relevant_distance):
+        start_point = Point(geom_to_process.coords[0])
+        end_point = Point(geom_to_process.coords[-1])
         segments = []
         segments.extend(list(reference_intersection.geoms))
         segments.extend(list(thematic_difference.geoms))
@@ -456,17 +484,18 @@ class Aligner:
         extra_segments = []
         for geom in thematic_difference.geoms:
             try:
-                p_start = Point(geom.coords[0])#todo; fix bug - NotImplementedError Component rings have coordinate sequences, but the polygon does not, wss bij een thematic_difference =geometrycollection
+                p_start = Point(geom.coords[0])
                 p_end = Point(geom.coords[-1])
             except:
                 p_start = Point(geom.exterior.coords[0])
                 p_end = Point(geom.exterior.coords[-1])
+                raise ValueError("Something wrong with p_start and p_end") #todo; fix bug - NotImplementedError Component rings have coordinate sequences, but the polygon does not, wss bij een thematic_difference =geometrycollection
 
-            connection_line_start = self._get_connection_line(
-                    p_start, reference_intersection, relevant_distance
+            connection_line_start = self._get_connection_line(geom_to_process,
+                    p_start, reference_intersection,reference_coords_intersection, relevant_distance
                 )
-            connection_line_end = self._get_connection_line(
-                    p_end, reference_intersection, relevant_distance
+            connection_line_end = self._get_connection_line(geom_to_process,
+                    p_end, reference_intersection,reference_coords_intersection, relevant_distance
                 )
             extra_segments.append (connection_line_start)
             extra_segments.append(connection_line_end)
@@ -474,7 +503,7 @@ class Aligner:
 
         # add extra segments (connection lines between reference_intersections)
         extra_segments_2=shortest_connections_between_geometries(reference_intersection)
-        # TODO filter out lines that are not fully in relevant distance
+        # TODO - optional -  filter out lines that are not fully in relevant distance as these are no valid solution-paths
 
         segments.extend(extra_segments_2)
 
@@ -488,15 +517,42 @@ class Aligner:
         merged = fill_gaps_in_multilinestring(merged, 0.1)
         merged = line_merge(safe_unary_union(merged))
         # merged = set_precision(merged,0.001)
-        # geom_preresult = remove_shortest_and_merge(merged)
+        # geom_processed = remove_shortest_and_merge(merged)
 
-        geom_preresult = find_longest_path_between_points(merged,start_point,end_point)
+        geom_processed = find_longest_path_between_points(merged,start_point,end_point)
 
-        return geom_preresult
+        return geom_processed
 
-    def _get_connection_line(self,point,reference_intersection,relevant_distance):
+    def _get_connection_line(self,geom_to_process,point,reference_intersection,reference_coords_intersection,relevant_distance):
         factor =1.001
-        connection_line = shortest_line(point, reference_intersection)
+
+        # also integrate the vertex of the input/thematic geometry
+        thematic_coords =MultiPoint(list(get_coords_from_geometry(geom_to_process)))
+        p_theme_1, p_theme_2 = nearest_points(point, thematic_coords)
+        if p_theme_2.distance(point)<relevant_distance*2:
+            line_theme = LineString([point,p_theme_2])
+        else:
+            line_theme = LineString()
+            p_theme_2 = point
+
+        if not reference_coords_intersection is None and not reference_coords_intersection.is_empty:
+            p_ref_1, p_ref_2 = nearest_points(point, reference_coords_intersection)
+            line_ref = LineString([p_theme_2, p_ref_2])
+        else:
+            p_ref_1, p_ref_2 = nearest_points(point, reference_intersection)
+            line_ref = LineString([p_theme_2, p_ref_2])
+
+        connection_line = safe_unary_union([line_theme,line_ref])
+        # if not reference_coords_intersection is None and not reference_coords_intersection.is_empty:
+        #     thematic_coords =MultiPoint(list(get_coords_from_geometry(geom_to_process)))#also integrate the vertex of the input/thematic geometry
+        #     p_theme_1, p_theme_2 = nearest_points(point, thematic_coords)
+        #     p_ref_1, p_ref_2 = nearest_points(point, reference_coords_intersection)
+        #     line_theme = LineString([point,p_theme_2])
+        #     line_ref = LineString([point,p_ref_2])
+        #     connection_line = safe_unary_union([line_theme,line_ref])
+        #     # connection_line = shortest_line(point, reference_coords_intersection)
+        # else:
+        #     connection_line = shortest_line(point, reference_intersection)
         connection_line = scale(connection_line, factor, factor, origin=point)
         # dist = reference_intersection.project(p_end)
         # p_end_projected = reference_intersection.interpolate(dist)
@@ -505,7 +561,7 @@ class Aligner:
         # line_end=LineString([p_end,p_end_projected])
         if (
             round(connection_line.length, RELEVANT_DISTANCE_DECIMALS)
-            > relevant_distance * factor * factor
+            > relevant_distance * factor * factor * 4 #TODO; is there a safer way to exclude wrong lines?
         ):
             return LineString()
         # reference_intersection =safe_unary_union(split(reference_intersection,MultiPoint([p_start_projected,p_end_projected])))
@@ -1150,7 +1206,7 @@ class Aligner:
             for dist in sorted(dict_predictions_results.keys()):
                 if equality_found:
                     continue
-                #prop_dictionary[theme_id][dist] = {}
+                # prop_dictionary[theme_id][dist] = {}
                 props = self._evaluate(
                     id_theme=theme_id,
                     geom_predicted=dict_predictions_results[dist]["result"],

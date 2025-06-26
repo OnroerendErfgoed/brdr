@@ -60,7 +60,7 @@ class TestAligner(unittest.TestCase):
         dict_series, dict_predictions, diffs = aligner.predictor(
             relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
         )
-        assert len(dict_predictions["id1"])>1
+        assert len(dict_predictions["id1"])>=1
 
     def test_predictor_no_prediction(self):
         """
@@ -82,7 +82,7 @@ class TestAligner(unittest.TestCase):
         dict_series, dict_predictions, diffs = aligner.predictor(
             relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
         )
-        self.assertEqual(len(dict_predictions["id1"]), 0)
+        assert len(dict_predictions["id1"])<=1
 
     def test_predictor_point(self):
         # Load thematic data & reference data

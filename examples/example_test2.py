@@ -42,10 +42,10 @@ reference_lines ={
 }
 
 
-loader = GeoJsonLoader(_input=reference_points, id_property="id")
+loader = GeoJsonLoader(_input=reference_lines, id_property="id")
 aligner.load_reference_data(loader)
 # EXECUTE THE ALIGNMENT
-relevant_distance = 3.2
+relevant_distance = 3.5
 process_result = aligner.process(
     relevant_distance=relevant_distance,
     od_strategy=OpenDomainStrategy.SNAP_ALL_SIDE,
