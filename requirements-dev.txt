@@ -50,6 +50,8 @@ mypy-extensions==1.0.0
     # via
     #   black
     #   mypy
+networkx==3.4
+    # via brdr (pyproject.toml)
 numpy==1.26.4
     # via
     #   contourpy
