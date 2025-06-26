@@ -8,7 +8,7 @@ from brdr.grb import GRBActualLoader
 from brdr.loader import DictLoader
 from brdr.loader import GeoJsonLoader
 from brdr.oe import get_oe_dict_by_ids, OnroerendErfgoedLoader
-from brdr.utils import _diffs_from_dict_processresults
+from brdr.utils import diffs_from_dict_processresults
 from brdr.utils import get_breakpoints_zerostreak
 
 
@@ -194,7 +194,7 @@ class TestExamples(unittest.TestCase):
         dict_series = aligner.process(
             relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
         )
-        resulting_areas = _diffs_from_dict_processresults(
+        resulting_areas = aligner.get_diff_metrics(
             dict_series, aligner.dict_thematic
         )
         for key in resulting_areas:

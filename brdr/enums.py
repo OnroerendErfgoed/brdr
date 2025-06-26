@@ -101,6 +101,7 @@ class DiffMetric(str, Enum):
     * TOTAL_LENGTH ="total_length"
     * CHANGES_LENGTH = "changes_length"
     * TOTAL_DISTANCE = "total_distance"
+    * REFERENCE_USAGE = "reference_usage": Amount of reference borders that is used (m, m²)
     """
 
     TOTAL_AREA = "total_area"
@@ -110,6 +111,7 @@ class DiffMetric(str, Enum):
     TOTAL_LENGTH = "total_length"
     CHANGES_LENGTH = "changes_length"
     TOTAL_DISTANCE = "total_distance"
+    REFERENCE_USAGE = "reference_usage"
 
 
 class Evaluation(str, Enum):

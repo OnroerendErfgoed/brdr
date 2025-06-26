@@ -1,5 +1,4 @@
-from altair import LineString
-from shapely import from_wkt, polygonize, Polygon,LineString, make_valid
+from shapely import from_wkt, Polygon, LineString, make_valid
 from shapely.geometry.polygon import LinearRing
 from shapely.ops import linemerge
 

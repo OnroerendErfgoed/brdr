@@ -1,6 +1,6 @@
-from shapely.geometry import Point, LineString
-from shapely.ops import nearest_points
 import math
+
+from shapely.geometry import Point, LineString
 
 
 def distance(p1, p2):
