@@ -21,7 +21,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: GIS",
 ]
 dependencies = [
@@ -29,7 +29,7 @@ dependencies = [
     "requests~=2.32",
     "shapely~=2.0",
     "topojson~=1.9",
-    "networkx>=3.2"
+    "networkx>=3.3"
 ]
 [project.urls]
 Documentation = "https://github.com/OnroerendErfgoed/brdr/blob/main/README.md"
@@ -63,7 +63,7 @@ build-backend = "hatchling.build"
 packages = ["brdr"]
 
 [tool.black]
-target-version = ['py39', 'py310', 'py311', 'py312']
+target-version = ['py310', 'py311', 'py312', 'py313']
 
 # Config for hatch environments
 [tool.hatch.envs.dev]
@@ -78,4 +78,4 @@ features = [
 ]
 
 [[tool.hatch.envs.hatch-test.matrix]]
-python = ["3.9", "3.10", '3.11', '3.12']
+python = ["3.10", '3.11', '3.12', '3.13']

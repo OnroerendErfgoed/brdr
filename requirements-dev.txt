@@ -50,7 +50,7 @@ mypy-extensions==1.0.0
     # via
     #   black
     #   mypy
-networkx>=3.2
+networkx>=3.3
     # via brdr (pyproject.toml)
 numpy==1.26.4
     # via
