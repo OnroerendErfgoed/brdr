@@ -1172,6 +1172,7 @@ def snap_multilinestring_endpoints(multilinestring, tolerance):
 
     return MultiLineString(snapped_lines)
 
+
 def shortest_connections_between_geometries(geometry):
     """
     Voor elk element in een GeometryCollection, bepaal de kortste verbindingslijn
@@ -1263,6 +1264,7 @@ def fill_gaps_in_multilinestring(multilinestring, tolerance):
     all_lines = lines + new_lines
     return line_merge(all_lines)
 
+
 # Stap 2: vind de dichtstbijzijnde knopen bij start- en eindpunt
 def nearest_node(point, nodes):
     return min(nodes, key=lambda n: Point(n).distance(point))
@@ -1289,7 +1291,7 @@ def find_circle_path(directed_graph):
     # Zet de cyclus om naar een gesloten LineString
     longest_cycle_coords = longest_cycle + [longest_cycle[0]]
     longest_cycle_linestring = LineString(longest_cycle_coords)
-    if not isinstance(safe_unary_union(Polygon(longest_cycle_linestring)),Polygon):
+    if not isinstance(safe_unary_union(Polygon(longest_cycle_linestring)), Polygon):
         longest_cycle_linestring = None
     return longest_cycle_linestring
 

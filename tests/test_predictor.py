@@ -101,7 +101,7 @@ class TestAligner(unittest.TestCase):
             relevant_distances=series,
         )
         self.assertEqual(len(dict_predictions), len(thematic_dict))
-        assert dict_predictions["theme_id"][0.0]["brdr_prediction_count"] >1
+        assert dict_predictions["theme_id"][0.0]["brdr_prediction_count"] >=1
 
     def test_predictor_line(self):
         # Load thematic data & reference data

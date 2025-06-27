@@ -34,6 +34,8 @@ from brdr.geometry_utils import (
     to_multi,
     get_geoms_from_geometry,
     safe_unary_union,
+    buffer_pos,
+    safe_intersection,
 )
 from brdr.typings import ProcessResult
 
@@ -338,7 +340,7 @@ def diffs_from_dict_processresults(
     Returns:
     dict: A dictionary where keys are thematic IDs and values are dictionaries mapping relative distances to calculated difference metrics.
     """
-    # TODO control logic how diff_metric is managed
+
     diffs = {}
     # all the relevant distances used to calculate the series
     for thematic_id, results_dict in dict_processresults.items():
@@ -348,13 +350,13 @@ def diffs_from_dict_processresults(
             "MultiLineString",
         ):
             diff_metric = DiffMetric.CHANGES_LENGTH
-            # diff_metric = DiffMetric.REFERENCE_USAGE
+            diff_metric = DiffMetric.REFERENCE_USAGE
         elif dict_thematic[thematic_id].geom_type in (
             "Point",
             "MultiPoint",
         ):
             diff_metric = DiffMetric.TOTAL_DISTANCE
-            # diff_metric = DiffMetric.REFERENCE_USAGE
+            diff_metric = DiffMetric.REFERENCE_USAGE
         for rel_dist in results_dict:
             result = results_dict.get(rel_dist, {}).get("result")
             result_diff = results_dict.get(rel_dist, {}).get("result_diff")
@@ -374,10 +376,7 @@ def diffs_from_dict_processresults(
                 diff = result.area - original.area
                 diff = diff * 100 / result.area
             elif diff_metric == DiffMetric.CHANGES_AREA:
-                # equals the symmetrical difference, so equal to
-                # result_diff_plus.area + result_diff_min.area
                 diff = result_diff.area
-                # diff = result_diff_plus.area + result_diff_min.area
             elif diff_metric == DiffMetric.CHANGES_PERCENTAGE:
                 diff = result_diff.area
                 diff = diff * 100 / result.area
@@ -385,29 +384,15 @@ def diffs_from_dict_processresults(
                 diff = result.length - original.length
             elif diff_metric == DiffMetric.CHANGES_LENGTH:
                 diff = result_diff.length
-            # elif diff_metric == DiffMetric.REFERENCE_USAGE:
-            #     #take the part from the result that is not the same as the original
-            #     difference = safe_difference(result,buffer_pos(original,0.01))
-            #     difference = to_multi(difference)
-            #     if difference is None or difference.is_empty:
-            #         diff=0
-            #     elif isinstance(difference,MultiPoint):
-            #         diff=0
-            #         for coord in difference.coords:
-            #             p = Point(coord)
-            #             diff = diff +  shortest_line(p, original).length
-            #     elif isinstance(difference,MultiLineString):
-            #         diff = difference.length
-            #     elif isinstance(difference,MultiPolygon):
-            #         diff = difference.area
+            elif diff_metric == DiffMetric.REFERENCE_USAGE:
 
-            # reference_union_buffer =buffer_pos(reference_union,0.01)
-            # result_buffer = buffer_pos(result, 0.01)
-            # reference_usage_geom = safe_intersection(result_buffer, reference_union_buffer)
-            # if reference_usage_geom is not None:
-            #     diff = safe_intersection(result_buffer,reference_union_buffer).area
-            # else:
-            #     diff = 0
+                reference_union_buffer =buffer_pos(reference_union,0.01)
+                result_buffer = buffer_pos(result, 0.01)
+                reference_usage_geom = safe_intersection(result_buffer, reference_union_buffer)
+                if reference_usage_geom is not None and not reference_usage_geom.is_empty :
+                    diff = reference_usage_geom.area
+                else:
+                    diff = 0
             elif diff_metric == DiffMetric.TOTAL_DISTANCE:
                 diff = 0
                 result = to_multi(result)

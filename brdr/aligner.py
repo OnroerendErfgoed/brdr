@@ -376,7 +376,9 @@ class Aligner:
         #     )
         # )
         # Optimized method to get all the reference elements in the surrounding area (reference elements only calculated once fot the full aligner
-        reference = safe_unary_union(safe_intersection(self._get_reference_elements(),input_geometry_buffered))
+        reference = safe_unary_union(
+            safe_intersection(self._get_reference_elements(), input_geometry_buffered)
+        )
 
         geom_processed_list = []
         if isinstance(input_geometry, (MultiPolygon)):
@@ -467,12 +469,11 @@ class Aligner:
 
         # Calculate vertices of the reference_intersection
         if snap_strategy != SnapStrategy.NO_PREFERENCE:
-            reference_clipped = safe_intersection(reference, reference_buffered)
-            reference_coords_buffered = MultiPoint(
-                list(get_coords_from_geometry(reference_clipped))
+            reference_coords = MultiPoint(
+                list(get_coords_from_geometry(reference))
             )
             reference_coords_intersection = to_multi(
-                safe_intersection(reference_coords_buffered, overlap_buffered)
+                safe_intersection(reference_coords, overlap_buffered)
             )
         else:
             reference_coords_intersection = None
@@ -556,12 +557,15 @@ class Aligner:
         extra_segments_ref_intersections = shortest_connections_between_geometries(
             reference_intersection
         )
-        # segments.extend(extra_segments_ref_intersections) #removed as we first going to filter these lines
+        segments.extend(extra_segments_ref_intersections) #removed as we first going to filter these lines
         # Filter out lines that are not fully in relevant distance as these are no valid solution-paths
         # Mostly these lines will already be in the distance as both start en endpoint are in range (but not always fully)
-        geom_to_process_buffered=buffer_pos(geom_to_process,relevant_distance)
-        extra_geomcollection_ref_intersections =safe_intersection(GeometryCollection(extra_segments_ref_intersections),geom_to_process_buffered)
-        segments.append(extra_geomcollection_ref_intersections)
+        # geom_to_process_buffered = buffer_pos(geom_to_process, relevant_distance*1.01)
+        # extra_geomcollection_ref_intersections = safe_intersection(
+        #     GeometryCollection(extra_segments_ref_intersections),
+        #     geom_to_process_buffered,
+        # )
+        # segments.append(extra_geomcollection_ref_intersections)
 
         # segments= scale_segments(segments,factor = 1.001) #to scale or not? necessary to fix floating_points intersection-problem
 
@@ -575,8 +579,9 @@ class Aligner:
     def merge_and_search(self, end_point, segments, start_point):
         merged = line_merge(safe_unary_union(segments))
         merged = snap_multilinestring_endpoints(merged, 0.1)
-        merged = fill_gaps_in_multilinestring(merged,
-                                              0.1)  # also needed to fill 'gaps' to connect reference objects fe points
+        merged = fill_gaps_in_multilinestring(
+            merged, 0.1
+        )  # also needed to fill 'gaps' to connect reference objects fe points
         merged = line_merge(safe_unary_union(merged))
         geom_processed = find_longest_path_between_points(
             merged, start_point, end_point
@@ -607,7 +612,7 @@ class Aligner:
 
         # because of segmentation in former step there will always be a 'close' vertex. So we always take the vertex
         if True:
-        # if p_theme_2.distance(point) < relevant_distance * 2:
+            # if p_theme_2.distance(point) < relevant_distance * 2:
             line_theme = LineString([point, p_theme_2])
         else:
             line_theme = LineString()
@@ -618,14 +623,18 @@ class Aligner:
             and not reference_coords_intersection.is_empty
         ):
             p_ref_1, p_ref_2 = nearest_points(point, reference_coords_intersection)
-            line_ref = LineString([p_theme_2, p_ref_2])
+            if p_ref_2.distance(point)<relevant_distance*1.5:
+                line_ref = LineString([p_theme_2, p_ref_2])
+            else:
+                p_ref_1, p_ref_2 = nearest_points(point, reference_intersection)
+                line_ref = LineString([p_theme_2, p_ref_2])
         else:
             p_ref_1, p_ref_2 = nearest_points(point, reference_intersection)
             line_ref = LineString([p_theme_2, p_ref_2])
 
         connection_line = safe_unary_union([line_theme, line_ref])
 
-        #connection_line = scale(connection_line, factor, factor, origin=p_theme_2)
+        connection_line = scale(connection_line, factor, factor, origin=p_theme_2)
         # To scale or not to scale, that's the question.
         # At this moment scaling is not necessary because we use the vertices of the segmentized input_geometry, so no problem with floating point-intersections.
         # When we do not use vertices it could be necessary (due to floating point error) to make sure lines are intersecting so they are split on these intersecting points
@@ -1947,7 +1956,8 @@ class Aligner:
         :return:
         """
         if self.reference_elements is None:
-            self.reference_elements =  extract_points_lines_from_geometry(GeometryCollection(list(self.dict_reference.values()))
+            self.reference_elements = extract_points_lines_from_geometry(
+                GeometryCollection(list(self.dict_reference.values()))
             )
         return self.reference_elements
 
