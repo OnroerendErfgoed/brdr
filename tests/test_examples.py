@@ -193,9 +193,7 @@ class TestExamples(unittest.TestCase):
         dict_series = aligner.process(
             relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
         )
-        resulting_areas = aligner.get_diff_metrics(
-            dict_series, aligner.dict_thematic
-        )
+        resulting_areas = aligner.get_diff_metrics(dict_series, aligner.dict_thematic)
         for key in resulting_areas:
             if len(resulting_areas[key]) == len(series):
                 lst_diffs = list(resulting_areas[key].values())
