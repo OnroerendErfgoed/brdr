@@ -1,10 +1,10 @@
 import logging
-from math import pi
+from itertools import combinations
+from math import pi, inf
 
+import networkx as nx
 import numpy as np
-from shapely import GEOSException, equals
-from shapely import MultiPoint, MultiLineString
-from shapely import Polygon
+from shapely import GEOSException, equals, shortest_line
 from shapely import STRtree
 from shapely import buffer
 from shapely import difference
@@ -22,13 +22,10 @@ from shapely import symmetric_difference
 from shapely import to_wkt
 from shapely import unary_union
 from shapely import union
+from shapely.affinity import scale
 from shapely.geometry.base import BaseGeometry
-from shapely.geometry.collection import GeometryCollection
-from shapely.geometry.linestring import LineString
-from shapely.geometry.multipolygon import MultiPolygon
-from shapely.geometry.point import Point
 from shapely.lib import line_merge
-from shapely.ops import nearest_points, substring
+from shapely.ops import substring, nearest_points
 from shapely.prepared import prep
 
 from brdr.enums import SnapStrategy
@@ -532,7 +529,7 @@ def _snap_point_to_reference(
     if geometry.geom_type == "Point":
         geometry = MultiPoint([geometry])
 
-    ref_line, ref_lines, ref_coords = _get_ref_objects(reference, geometry, tolerance)
+    ref_border, ref_borders, ref_coords = _get_ref_objects(reference)
 
     if len(ref_coords) == 0:
         snap_strategy = SnapStrategy.NO_PREFERENCE
@@ -544,7 +541,7 @@ def _snap_point_to_reference(
         for idx, coord in enumerate(coords):
             p = Point(coords[idx])
             p_snapped, bool_snapped, ref_vertices = _get_snapped_point(
-                p, ref_line, ref_coords, snap_strategy, tolerance
+                p, ref_border, ref_coords, snap_strategy, tolerance
             )
             coordinates.append(p_snapped.coords[0])
 
@@ -571,7 +568,7 @@ def _snap_line_to_reference(
     if geometry.geom_type == "LineString":
         geometry = MultiLineString([geometry])
 
-    ref_line, ref_lines, ref_coords = _get_ref_objects(reference, geometry, tolerance)
+    ref_border, ref_borders, ref_coords = _get_ref_objects(reference)
     if len(ref_coords) == 0:
         snap_strategy = SnapStrategy.NO_PREFERENCE
 
@@ -579,13 +576,14 @@ def _snap_line_to_reference(
     for geom in geometry.geoms:
         coords = list(geom.coords)
         coordinates = _get_snapped_coordinates(
-            coords, ref_line, ref_lines, ref_coords, snap_strategy, tolerance
+            coords, ref_border, ref_borders, ref_coords, snap_strategy, tolerance
         )
 
         # convert coordinates back to a line
         linestring = make_valid(LineString(coordinates))
         lines.append((linestring))
     result = safe_unary_union(lines)
+    # TODO - cleanup; this gives errors with Geometrycollection-empty
     result = remove_shortest_and_merge(
         result, relevant_length=0.01
     )  # Solves small (0.01) overshoots in multilinestrings #TODO; maybe this has to be cleaned in another place?
@@ -606,14 +604,14 @@ def _snap_polygon_to_reference(
         geometry = segmentize(geometry, max_segment_length=max_segment_length)
     geometry = to_multi(geometry, geomtype="Polygon")
 
-    ref_line, ref_lines, ref_coords = _get_ref_objects(reference, geometry, tolerance)
+    ref_border, ref_borders, ref_coords = _get_ref_objects(reference)
     if len(ref_coords) == 0:
         snap_strategy = SnapStrategy.NO_PREFERENCE
     polygons = []
     for geom in geometry.geoms:
         coords = list(geom.exterior.coords)
         coordinates = _get_snapped_coordinates(
-            coords, ref_line, ref_lines, ref_coords, snap_strategy, tolerance
+            coords, ref_border, ref_borders, ref_coords, snap_strategy, tolerance
         )
         # convert coordinates back to a polygon
         polygon = make_valid(Polygon(coordinates))
@@ -621,7 +619,7 @@ def _snap_polygon_to_reference(
     return buffer_neg_pos(safe_unary_union(polygons), correction_distance)
 
 
-def _get_ref_objects(reference, geometry, tolerance):
+def _get_ref_objects(reference):
     # reference = safe_intersection(
     #     reference, buffer_pos(geometry, tolerance * BUFFER_MULTIPLICATION_FACTOR)
     # )
@@ -632,22 +630,22 @@ def _get_ref_objects(reference, geometry, tolerance):
             reference_list.append(to_multi(r, geomtype=None))
     else:
         reference_list.append(to_multi(reference, geomtype=None))
-    ref_lines = []
+    ref_borders = []
     for r in reference_list:
         for g in r.geoms:
             if g.geom_type == "Polygon":
-                ref_lines.append(g.exterior)
-                ref_lines.extend([interior for interior in g.interiors])
+                ref_borders.append(g.exterior)
+                ref_borders.extend([interior for interior in g.interiors])
             elif g.geom_type == "LineString":
-                ref_lines.append(g)
+                ref_borders.append(g)
             elif g.geom_type == "Point":
-                pass
-    ref_line = safe_unary_union(ref_lines)
-    return ref_line, ref_lines, ref_coords
+                ref_borders.append(g)  # point
+    ref_border = safe_unary_union(ref_borders)
+    return ref_border, ref_borders, ref_coords
 
 
 def _get_snapped_coordinates(
-    coords, ref_line, ref_lines, ref_coords, snap_strategy, tolerance
+    coords, ref_border, ref_borders, ref_coords, snap_strategy, tolerance
 ):
     coordinates = []
     for idx, coord in enumerate(coords):  # for each vertex in the first line
@@ -657,10 +655,10 @@ def _get_snapped_coordinates(
         p_end = Point(coords[idx])
 
         p_start_snapped, bool_start_snapped, ref_vertices_start = _get_snapped_point(
-            p_start, ref_line, ref_coords, snap_strategy, tolerance
+            p_start, ref_border, ref_coords, snap_strategy, tolerance
         )
         p_end_snapped, bool_end_snapped, ref_vertices_end = _get_snapped_point(
-            p_end, ref_line, ref_coords, snap_strategy, tolerance
+            p_end, ref_border, ref_coords, snap_strategy, tolerance
         )
 
         coordinates.append(p_start_snapped.coords[0])
@@ -671,7 +669,12 @@ def _get_snapped_coordinates(
         elif bool_start_snapped and bool_end_snapped:
             coordinates.extend(
                 _get_sublinestring_coordinates(
-                    p_end, p_end_snapped, p_start, p_start_snapped, ref_lines, tolerance
+                    p_end,
+                    p_end_snapped,
+                    p_start,
+                    p_start_snapped,
+                    ref_borders,
+                    tolerance,
                 )
             )
             coordinates.append(p_end_snapped.coords[0])
@@ -683,7 +686,7 @@ def _get_snapped_coordinates(
             if ref_vertices_start or ref_vertices_end:
                 ref_buffered = buffer_pos(MultiPoint(ref_coords), tolerance)
             else:
-                ref_buffered = buffer_pos(ref_line, tolerance)
+                ref_buffered = buffer_pos(ref_border, tolerance)
             intersected_line = safe_intersection(line, ref_buffered)
             if intersected_line.is_empty or intersected_line.geom_type != "LineString":
                 coordinates.append(p_end_snapped.coords[0])
@@ -694,7 +697,7 @@ def _get_snapped_coordinates(
             if first == p_start:
                 p_mid = last
                 p_mid_snapped, bool_mid_snapped, ref_vertices_mid = _get_snapped_point(
-                    p_mid, ref_line, ref_coords, snap_strategy, tolerance
+                    p_mid, ref_border, ref_coords, snap_strategy, tolerance
                 )
 
                 coordinates.extend(
@@ -703,7 +706,7 @@ def _get_snapped_coordinates(
                         p_mid_snapped,
                         p_start,
                         p_start_snapped,
-                        ref_lines,
+                        ref_borders,
                         tolerance,
                     )
                 )
@@ -712,12 +715,17 @@ def _get_snapped_coordinates(
             elif last == p_end:
                 p_mid = first
                 p_mid_snapped, bool_mid_snapped, ref_vertices_mid = _get_snapped_point(
-                    p_mid, ref_line, ref_coords, snap_strategy, tolerance
+                    p_mid, ref_border, ref_coords, snap_strategy, tolerance
                 )
                 coordinates.append(p_mid_snapped.coords[0])
                 coordinates.extend(
                     _get_sublinestring_coordinates(
-                        p_end, p_end_snapped, p_mid, p_mid_snapped, ref_lines, tolerance
+                        p_end,
+                        p_end_snapped,
+                        p_mid,
+                        p_mid_snapped,
+                        ref_borders,
+                        tolerance,
                     )
                 )
                 coordinates.append(p_end_snapped.coords[0])
@@ -725,20 +733,21 @@ def _get_snapped_coordinates(
 
 
 def _get_sublinestring_coordinates(
-    p_end, p_end_snapped, p_start, p_start_snapped, ref_lines, tolerance
+    p_end, p_end_snapped, p_start, p_start_snapped, ref_borders, tolerance
 ):
     coordinates = []
     if p_start_snapped == p_end_snapped:
         return coordinates
-    reference_line, distance = closest_line(ref_lines, p_end)
-    if reference_line is None or reference_line.is_empty:
+    reference_border, distance = closest_line(ref_borders, p_end)
+    if reference_border is None or reference_border.is_empty:
         return coordinates
     distance_start_end = p_start.distance(p_end)
     line_substring = _get_line_substring(
-        reference_line, p_start_snapped, p_end_snapped, distance_start_end
+        reference_border, p_start_snapped, p_end_snapped, distance_start_end
     )
     if line_substring is None or line_substring.is_empty:
         return coordinates
+    # TODO what if line_substring is a multilinestring? error detected in brdrQ
     for p in line_substring.coords:
         point = Point(p)
         if (point.distance(p_start) + point.distance(p_end)) / 2 <= tolerance:
@@ -755,14 +764,19 @@ def geometric_equality(geom_a, geom_b, correction_distance, mitre_limit):
 
 
 def _get_line_substring(
-    reference_line, p_start_snapped, p_end_snapped, distance_start_end
+    reference_border, p_start_snapped, p_end_snapped, distance_start_end
 ):
-    if reference_line is None or reference_line.is_empty:
-        return reference_line
-    start_fraction = reference_line.project(p_start_snapped, normalized=True)
-    end_fraction = reference_line.project(p_end_snapped, normalized=True)
+    if (
+        reference_border is None
+        or reference_border.is_empty
+        or reference_border.geom_type
+        not in ["LinearRing", "LineString", "MultiLineString"]
+    ):
+        return reference_border
+    start_fraction = reference_border.project(p_start_snapped, normalized=True)
+    end_fraction = reference_border.project(p_end_snapped, normalized=True)
     line_substring = substring(
-        reference_line,
+        reference_border,
         start_dist=start_fraction,
         end_dist=end_fraction,
         normalized=True,
@@ -771,22 +785,28 @@ def _get_line_substring(
 
         if start_fraction < end_fraction:
             subline_a = substring(
-                reference_line, start_dist=start_fraction, end_dist=0, normalized=True
+                reference_border, start_dist=start_fraction, end_dist=0, normalized=True
             )
             subline_b = substring(
-                reference_line, start_dist=100, end_dist=end_fraction, normalized=True
+                reference_border, start_dist=100, end_dist=end_fraction, normalized=True
             )
         else:
             subline_a = substring(
-                reference_line, start_dist=start_fraction, end_dist=100, normalized=True
+                reference_border,
+                start_dist=start_fraction,
+                end_dist=100,
+                normalized=True,
             )
             subline_b = substring(
-                reference_line, start_dist=0, end_dist=end_fraction, normalized=True
+                reference_border, start_dist=0, end_dist=end_fraction, normalized=True
             )
 
         sublines = [s for s in [subline_a, subline_b] if s.geom_type == "LineString"]
         line_substring_2 = line_merge(MultiLineString(sublines))
-        if line_substring_2.length < line_substring.length:
+        if (
+            line_substring_2.length < line_substring.length
+            and line_substring_2.geom_type == ["LineString"]
+        ):
             line_substring = line_substring_2
         if line_substring.length > 3 * distance_start_end:
             line_substring = LineString([p_start_snapped, p_end_snapped])
@@ -995,6 +1015,8 @@ def to_multi(geometry, geomtype=None):
     >>> to_multi(collection)
     <shapely.geometry.collection.GeometryCollection object at 0x...>
     """
+    if geometry is None:
+        return geometry
     if geomtype in ["Point", "MultiPoint"]:
         if isinstance(geometry, Point):
             return MultiPoint([geometry])
@@ -1110,14 +1132,292 @@ def get_geoms_from_geometry(geometry):
     return geoms
 
 
+from shapely.ops import snap
+
+
+def snap_multilinestring_endpoints(multilinestring, tolerance):
+    """
+    Snapt de begin- en eindpunten van elke LineString in een MultiLineString
+    aan nabijgelegen lijnen binnen een gegeven tolerantie.
+
+    Parameters:
+    - multilinestring: shapely.geometry.MultiLineString
+    - tolerance: float, afstandstolerantie voor snappen
+
+    Returns:
+    - Een nieuwe MultiLineString met gesnapte eindpunten
+    """
+    if isinstance(multilinestring, LineString):
+        return MultiLineString([multilinestring])
+    lines = list(multilinestring.geoms)
+    snapped_lines = []
+
+    for i, line in enumerate(lines):
+        start = Point(line.coords[0])
+        end = Point(line.coords[-1])
+
+        # Verzamel alle andere lijnen
+        other_lines = [l for j, l in enumerate(lines) if j != i]
+
+        # Snap begin- en eindpunt indien binnen tolerantie
+        for other in other_lines:
+            if start.distance(other) <= tolerance:
+                start = snap(start, other, tolerance)
+            if end.distance(other) <= tolerance:
+                end = snap(end, other, tolerance)
+
+        # Herbouw de lijn met eventueel gesnapte punten
+        new_coords = [start.coords[0]] + list(line.coords[1:-1]) + [end.coords[0]]
+        snapped_lines.append(LineString(new_coords))
+
+    return MultiLineString(snapped_lines)
+
+
+def shortest_connections_between_geometries(geometry):
+    """
+    Voor elk element in een GeometryCollection, bepaal de kortste verbindingslijn
+    naar het dichtstbijzijnde andere element.
+
+    Parameters:
+    - geometry_collection: shapely.geometry.GeometryCollection
+
+    Returns:
+    - List van shapely.geometry.LineString objecten die de kortste verbindingen representeren
+    """
+    connection_lines = []
+    geometry = safe_unary_union(geometry)
+    geometry = to_multi(geometry)
+
+    if geometry is None or geometry.is_empty or len(geometry.geoms) <= 1:
+        return connection_lines
+
+    geometries = list(geometry.geoms)
+
+    for i, geom in enumerate(geometries):
+        other_geometries = list(geometry.geoms)
+        del other_geometries[i]
+        connection_line = shortest_line(geom, safe_unary_union(other_geometries))
+        connection_lines.append(connection_line)
+
+    return make_linestrings_unique(connection_lines)
+
+
+def make_linestrings_unique(lines):
+    """
+    Verwijder dubbele LineStrings uit een lijst, waarbij lijnen met omgekeerde richting
+    als gelijk worden beschouwd.
+
+    Parameters:
+    - lines: lijst van shapely.geometry.LineString objecten
+
+    Returns:
+    - lijst van unieke LineStrings
+    """
+    seen = set()
+    unique_lines = []
+
+    for line in lines:
+        coords = tuple(line.coords)
+        # Sorteer de coördinaten zodat richting niet uitmaakt
+        key = tuple(sorted([coords[0], coords[-1]]))
+        if key not in seen:
+            seen.add(key)
+            unique_lines.append(line)
+
+    return unique_lines
+
+
+def fill_gaps_in_multilinestring(multilinestring, tolerance):
+    """
+    Vul kleine gaps in een MultiLineString op door verbindingslijnen toe te voegen
+    tussen eindpunten die binnen een bepaalde tolerantie van elkaar liggen.
+
+    Parameters:
+    - multilinestring: shapely.geometry.MultiLineString
+    - tolerance: float, maximale afstand tussen eindpunten om een verbindingslijn toe te voegen
+
+    Returns:
+    - Een nieuwe MultiLineString met toegevoegde verbindingslijnen
+    """
+
+    if isinstance(multilinestring, LineString):
+        return MultiLineString([multilinestring])
+    lines = list(multilinestring.geoms)
+    endpoints = []
+
+    # Verzamel alle begin- en eindpunten
+    for line in lines:
+        endpoints.append(Point(line.coords[0]))
+        endpoints.append(Point(line.coords[-1]))
+
+    # Zoek paren van eindpunten die dicht bij elkaar liggen
+    new_lines = []
+    used_pairs = set()
+    for p1, p2 in combinations(endpoints, 2):
+        if p1.equals(p2) or (p1, p2) in used_pairs or (p2, p1) in used_pairs:
+            continue
+        if p1.distance(p2) <= tolerance:
+            new_lines.append(LineString([p1, p2]))
+            used_pairs.add((p1, p2))
+
+    # Voeg originele lijnen en nieuwe verbindingslijnen samen
+    all_lines = lines + new_lines
+    return line_merge(all_lines)
+
+
+# Stap 2: vind de dichtstbijzijnde knopen bij start- en eindpunt
+def nearest_node(point, nodes):
+    return min(nodes, key=lambda n: Point(n).distance(point))
+
+
+def find_circle_path(directed_graph):
+    # Vind alle eenvoudige cycli
+    cycles = list(nx.simple_cycles(directed_graph))
+
+    # Bepaal de langste cyclus op basis van gewichten
+    def cycle_weight(cycle):
+        weight = 0
+        for i in range(len(cycle)):
+            u = cycle[i]
+            v = cycle[(i + 1) % len(cycle)]
+            if directed_graph.has_edge(u, v):
+                weight += directed_graph[u][v]["weight"]
+            else:
+                return -1  # ongeldig pad
+        return weight
+
+    # Selecteer de langste cyclus
+    longest_cycle = max(cycles, key=cycle_weight)
+    # Zet de cyclus om naar een gesloten LineString
+    longest_cycle_coords = longest_cycle + [longest_cycle[0]]
+    longest_cycle_linestring = LineString(longest_cycle_coords)
+    if not isinstance(safe_unary_union(Polygon(longest_cycle_linestring)), Polygon):
+        longest_cycle_linestring = None
+    return longest_cycle_linestring
+
+
+def find_longest_path_between_points(multilinestring, start_point, end_point):
+    """
+    Bepaal het langste pad tussen twee punten in een MultiLineString-geometrie.
+
+    Parameters:
+    - multilinestring: shapely.geometry.MultiLineString
+    - start_point: shapely.geometry.Point
+    - end_point: shapely.geometry.Point
+
+    Returns:
+    - shapely.geometry.LineString van het langste pad tussen de twee punten
+    """
+    if isinstance(multilinestring, LineString):
+        return multilinestring
+    # Stap 1: maak een graaf van de lijnen
+    G = nx.Graph()
+    for line in multilinestring.geoms:
+        coords = list(line.coords)
+        for i in range(len(coords) - 1):
+            p1 = tuple(coords[i])
+            p2 = tuple(coords[i + 1])
+            segment = LineString([p1, p2])
+            G.add_edge(p1, p2, weight=segment.length, geometry=segment)
+
+    start_node = nearest_node(start_point, G.nodes)
+    end_node = nearest_node(end_point, G.nodes)
+    if start_node == end_node:
+        return find_circle_path(G.to_directed())
+
+    # Stap 3: zoek alle eenvoudige paden tussen start en eind
+    all_paths = nx.all_simple_paths(G, source=start_node, target=end_node)
+
+    # Stap 4: bepaal het pad met de grootste som van gewichten
+    max_length = 0
+    longest_path = []
+    for path in all_paths:
+        length = sum(G[path[i]][path[i + 1]]["weight"] for i in range(len(path) - 1))
+        if length > max_length:
+            max_length = length
+            longest_path = path
+
+    # Stap 5: zet het pad om naar een LineString
+    if longest_path:
+        return LineString(longest_path)
+    else:
+        return None
+
+
+def longest_path_from_multilinestring(mls):
+    if isinstance(mls, LineString):
+        return mls
+    # Create an undirected graph
+    G = nx.Graph()
+
+    # Add edges to the graph from the MultiLineString
+    for line in mls.geoms:
+        coords = list(line.coords)
+        for i in range(len(coords) - 1):
+            start = coords[i]
+            end = coords[i + 1]
+            length = LineString([start, end]).length
+            G.add_edge(start, end, weight=length)
+
+    # Find the longest simple path by checking all simple paths
+
+    longest_path = []
+    max_length = 0
+
+    for source in G.nodes:
+        for target in G.nodes:
+            if source != target:
+                try:
+                    for path in nx.all_simple_paths(G, source=source, target=target):
+                        path_length = sum(
+                            LineString([path[i], path[i + 1]]).length
+                            for i in range(len(path) - 1)
+                        )
+                        if path_length > max_length:
+                            max_length = path_length
+                            longest_path = path
+                except nx.NetworkXNoPath:
+                    continue
+
+    # Convert the longest path to a LineString
+    if longest_path:
+        return LineString(longest_path)
+    else:
+        return None
+
+
+# def longest_connected_linestring(multilinestring):
+#     # Merge connected lines into LineStrings
+#     merged = line_merge(unary_union(multilinestring))
+#
+#     # Ensure result is iterable (could be a single LineString or MultiLineString)
+#     if isinstance(merged, LineString):
+#         return merged
+#     elif isinstance(merged, MultiLineString):
+#         # Return the longest LineString
+#         return max(merged.geoms, key=lambda line: line.length)
+#     else:
+#         return None
+
+
+def scale_segments(segments, factor=1.01):
+    scaled_segments = []
+    for segment in segments:
+        scaled_segment = scale(segment, xfact=factor, yfact=factor, origin="center")
+        scaled_segments.append(scaled_segment)
+    return scaled_segments
+
+
 def remove_shortest_and_merge(multilinestring, relevant_length=float("inf")):
     """
     Tries to merge a multilinestring to a linestring, and recursively tries to remove the shortest part of a multilinestring until it can be merged to a linestring,
     :param multilinestring: MultiLineString to merge
     :param relevant_length: Value when the length of a part of multilinestring is long enough to be relevant and multilinestring is kept. Default is infinity so it will recursively end into a single LineString.    :return:
     """
+    if multilinestring.is_empty:
+        return multilinestring
     # Check if the merged result is a LineString
-    multilinestring = line_merge(multilinestring)
+    multilinestring = line_merge(safe_unary_union(multilinestring))
     if isinstance(multilinestring, LineString):
         return multilinestring
 
@@ -1135,20 +1435,61 @@ def remove_shortest_and_merge(multilinestring, relevant_length=float("inf")):
     return remove_shortest_and_merge(new_multilinestring)
 
 
-def _get_snapped_point(point, ref_line, reference_coords, snap_strategy, tolerance):
-
+def _get_snapped_point(point, ref_line, ref_coords, snap_strategy, tolerance):
+    p1, p2 = None, None
+    p1_vertices, p2_vertices = None, None
+    distance_ref_line = inf
     if not ref_line.is_empty:
         p1, p2 = nearest_points(point, ref_line)
-    elif len(reference_coords) != 0:
-        p1, p2 = nearest_points(point, MultiPoint(reference_coords))
-    else:
-        p1, p2 = None, None
-
-    if len(reference_coords) != 0:
-        p1_vertices, p2_vertices = nearest_points(point, MultiPoint(reference_coords))
-    else:
-        p1_vertices, p2_vertices = None, None
-
+        distance_ref_line = p2.distance(point)
+    if len(ref_coords) != 0:
+        p1_vertices, p2_vertices = nearest_points(point, MultiPoint(ref_coords))
+        distance_ref_coords = p2_vertices.distance(point)
+        if distance_ref_coords < distance_ref_line:
+            p1, p2 = p1_vertices, p2_vertices
     return _snapped_point_by_snapstrategy(
         point, p2, p2_vertices, snap_strategy, tolerance
     )
+
+
+from shapely.geometry import (
+    Point,
+    LineString,
+    Polygon,
+    MultiPoint,
+    MultiLineString,
+    MultiPolygon,
+    GeometryCollection,
+)
+
+
+def extract_points_lines_from_geometry(geometry):
+    """
+    Recursief haalt deze functie alle LineStrings uit een Shapely-geometrie.
+    Polygonen worden omgezet naar hun exterior en interior ringen als LineStrings.
+    GeometryCollections worden volledig doorlopen.
+    Andere geometrieën zoals punten worden genegeerd.
+    """
+    geometries = []
+
+    if geometry.is_empty:
+        return GeometryCollection()
+
+    if isinstance(geometry, Polygon):
+        geometries.append(LineString(geometry.exterior.coords))
+        for interior in geometry.interiors:
+            geometries.append(LineString(interior.coords))
+
+    elif isinstance(geometry, LineString):
+        geometries.append(geometry)
+
+    elif isinstance(
+        geometry, (MultiPoint, MultiPolygon, MultiLineString, GeometryCollection)
+    ):
+        for geom in geometry.geoms:
+            geometries.extend(extract_points_lines_from_geometry(geom).geoms)
+
+    elif isinstance(geometry, (Point)):
+        geometries.append(geometry)
+
+    return GeometryCollection(geometries)

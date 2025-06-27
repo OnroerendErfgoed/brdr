@@ -1,6 +1,6 @@
 [project]
 name = "brdr"
-version = "0.11.0"
+version = "0.12.0"
 description = "BRDR - a Python library to assist in realigning (multi-)polygons (OGC Simple Features) to reference borders "
 readme = { file = "README.md", content-type = "text/markdown" }
 license = { file = "LICENSE" }
@@ -28,7 +28,8 @@ dependencies = [
     "geojson~=3.1",
     "requests~=2.32",
     "shapely~=2.0",
-    "topojson~=1.9"
+    "topojson~=1.9",
+    "networkx>=3.2"
 ]
 [project.urls]
 Documentation = "https://github.com/OnroerendErfgoed/brdr/blob/main/README.md"

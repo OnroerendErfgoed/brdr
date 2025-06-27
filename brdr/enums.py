@@ -1,37 +1,36 @@
 from enum import Enum
-from enum import IntEnum
 
 import requests
 
 
-class OpenDomainStrategy(IntEnum):
+class OpenDomainStrategy(Enum):
     """
     Determines how the algorithm deals with parts of the geometry that are not on the
     reference layer. (=public domain in the case of plots as a reference layer).
     Different strategies have been developed:
 
-    *   -1 (EXCLUDE): Completely exclude everything that is not on the reference layer
-    *   0 (AS_IS): All parts that are not covered by the reference layer are added to
+    *   (EXCLUDE): Completely exclude everything that is not on the reference layer
+    *   (AS_IS): All parts that are not covered by the reference layer are added to
         the resulting geometry AS IS
-    *   1 (SNAP_INNER_SIDE): Everything that falls within the relevant distance over
+    *   (SNAP_INNER_SIDE): Everything that falls within the relevant distance over
         the plot boundary is snapped to the plot. The outer boundary is not used.
-    *   2 (SNAP_ALL_SIDE): Everything that falls within the relevant distance over the
+    *   (SNAP_ALL_SIDE): Everything that falls within the relevant distance over the
         plot boundary is snapped to the plot. The inner and outer boundary is used where possible.
-    *   3 (SNAP_PREFER_VERTICES): The part on the OD is 'snapped' to the closest reference-polygons.
+    *   (SNAP_PREFER_VERTICES): The part on the OD is 'snapped' to the closest reference-polygons.
         Vertices of the reference-polygons are preferred above edges if they are within the relevant distance
-    *   4 (SNAP_NO_PREFERENCE): The part on the OD is 'snapped' to the closest reference-polygons.
+    *   (SNAP_NO_PREFERENCE): The part on the OD is 'snapped' to the closest reference-polygons.
         The full edge of the reference-polygons is used. (No preference of reference-vertices.
-    *   5 (SNAP_ONLY_VERTICES): The part on the OD is 'snapped' to the vertices of reference-polygons.
+    *   (SNAP_ONLY_VERTICES): The part on the OD is 'snapped' to the vertices of reference-polygons.
 
     """
 
-    EXCLUDE = -1
-    AS_IS = 0
-    SNAP_INNER_SIDE = 1
-    SNAP_ALL_SIDE = 2
-    SNAP_PREFER_VERTICES = 3
-    SNAP_NO_PREFERENCE = 4
-    SNAP_ONLY_VERTICES = 5
+    EXCLUDE = "EXCLUDE"
+    AS_IS = "AS_IS"
+    SNAP_INNER_SIDE = "SNAP_INNER_SIDE"
+    SNAP_ALL_SIDE = "SNAP_ALL_SIDE"
+    SNAP_PREFER_VERTICES = "SNAP_PREFER_VERTICES"
+    SNAP_NO_PREFERENCE = "SNAP_NO_PREFERENCE"
+    SNAP_ONLY_VERTICES = "SNAP_ONLY_VERTICES"
 
 
 class AlignerResultType(str, Enum):
@@ -102,6 +101,7 @@ class DiffMetric(str, Enum):
     * TOTAL_LENGTH ="total_length"
     * CHANGES_LENGTH = "changes_length"
     * TOTAL_DISTANCE = "total_distance"
+    * REFERENCE_USAGE = "reference_usage": Amount of reference borders that is used (m, m²)
     """
 
     TOTAL_AREA = "total_area"
@@ -111,6 +111,7 @@ class DiffMetric(str, Enum):
     TOTAL_LENGTH = "total_length"
     CHANGES_LENGTH = "changes_length"
     TOTAL_DISTANCE = "total_distance"
+    REFERENCE_USAGE = "reference_usage"
 
 
 class Evaluation(str, Enum):
@@ -169,3 +170,17 @@ class SnapStrategy(str, Enum):
     ONLY_VERTICES = "only_vertices"
     PREFER_VERTICES = "prefer_vertices"
     NO_PREFERENCE = "no_preference"
+
+
+class PredictionStrategy(str, Enum):
+    """
+    Enum for prediction strategy when using GRB updater
+
+    ALL = "all"
+    BEST = "best"
+    ORIGINAL = "original"
+    """
+
+    ALL = "all"
+    BEST = "best"
+    ORIGINAL = "original"

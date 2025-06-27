@@ -8,11 +8,13 @@ idna==3.7
     # via requests
 numpy==1.26.4
     # via shapely
-requests==2.32.2
+requests==2.32.4
     # via brdr (pyproject.toml)
 shapely==2.0.4
     # via brdr (pyproject.toml)
 topojson==1.9
+    # via brdr (pyproject.toml)
+networkx>=3.2
     # via brdr (pyproject.toml)
 urllib3==2.2.1
     # via requests

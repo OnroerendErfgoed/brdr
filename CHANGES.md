@@ -9,7 +9,7 @@
   parts ([#17](https://github.com/OnroerendErfgoed/brdr/issues/17), ([#7](https://github.com/OnroerendErfgoed/brdr/issues/7))
 - add functionality to set a maximum feature size for input
   features (([#50](https://github.com/OnroerendErfgoed/brdr/issues/50))
-- fix bug reulting from overlapping features in thematic
+- fix bug resulting from overlapping features in thematic
   layer ([#46](https://github.com/OnroerendErfgoed/brdr/issues/46))
 
 # 0.2.1
@@ -20,7 +20,7 @@
 
 # 0.3.0
 
-! Not Backwards compatable !
+! Not Backwards compatible !
 
 - Refactoring:
     - refactor the structure of the (internal) dicts: dict_series, dict_predicted. More logical and faster [#57]
@@ -37,12 +37,12 @@
     - Added GRB-function"update_to_actual_version", to be used in brdrQ [#64]
     - Added GRBSpecificDateLoader: Alignment on GRB (parcels) on specific date [#63]
     - Added OnroerendErfgoedLoader, to load OnroerendErfgoed-data [#65]
-- Bugfixing:
+- Bug fixing:
     - adding a safe_equals-function to catch GEOsException bug [#71]
 
 # 0.4.0
 
-! Not Backwards compatable !
+! Not Backwards compatible !
 
 - Refactoring:
     - Possibility for parallel processing [#97]
@@ -55,7 +55,7 @@
     - processing-remarks available in geojson-output [#103]
     - Added warning when input/output changed from polygon/multipolygon [#107]
 
-- Bugfixing:
+- Bug fixing:
     - Bugfix on version_date [#96]
     - Bugfix on disappearing features [#105]
 
@@ -68,7 +68,7 @@
 - Functionalities:
     - *no new functionalities*
 
-- Bugfixing:
+- Bug fixing:
     - Bugfix needed when using non-textual identifiers (f.e. integers) when searching for GRB changes [#115]
     - Bugfix in predicted geometries: When no stable geometries found an empty list has to be returned instead of
       0.0 [#118]
@@ -92,7 +92,7 @@
     - Added new OD-strategies based on new snapping-function: SNAP_PREFER_VERTICES,
       SNAP_NO_PREFERENCE,SNAP_ONLY_VERTICES [#147]
 
-- Bugfixing:
+- Bug fixing:
     - Bugfix for empty geometry[#140]
     - Bugfix for OD-snapping strategies [#146]
 
@@ -106,10 +106,10 @@
 
 # 0.8.0
 
-! Not Backwards compatable !
+! Not Backwards compatible !
 
 - Always '0'(zero) added to the relevant distances when calculating predictions, so a (cleaned-up) original geometry is
-  avalailable in the processresults[#167]
+  available in the process results[#167]
 - evaluate()-function: improved and adapted parameters[#164]
 - prediction_score: adapted that is an absolute value, expressing the stability-length (in cm)[#162]
 - augmented prediction_score when this is stable at max_relevant_distance [#163]
@@ -128,25 +128,35 @@
 - bugfix - catch exception when the content of a formula_field cannot be loaded/interpreted[#178]
 - Change the default name 'theme_identifier' to 'brdr_id'[#179]
 - Added a docker-service to repo - experimental [#143]
-- Possibility to align(multi-)linestrings and (multi-)points to referenceborders. experimental[#49]
+- Possibility to align (multi-) linestrings and (multi-)points to reference borders. experimental[#49]
 
 # 0.10.0
 
-! Not Backwards compatable !
+! Not Backwards compatible !
 
 - Adapted Enum OpenbaarDomeinStrategy to OpenDomainStrategy
 - Adapted Enum Full to FullStrategy
 - Added possibilities to align all types of input- and reference-geometries ((multi-)point,line and polygons) [#191]
-- Added parameter 'preserve_topology' to keep relations between imput-geometries [#90]
+- Added parameter 'preserve_topology' to keep relations between input-geometries [#90]
 - Bugfix on _evaluate-function [#185]
 
 # 0.11.0
 
-! Not Backwards compatable !
+! Not Backwards compatible !
 
 - adapted function-name geojson_to_multi
 - adapted predictor so point_snapping returns also predictions
 - Bugfix for SNAP_ALL_SIDE with big relevant distance (100m) resulting in wrong result [#199]
 - prediction-strategy: BEST/ALL/ORIGINAL: check if all records are found in result when using in combination with 'ONLY_FULL-strategy' [#200]
-- GRBACtualLoader: support for all types of GRB collections (also lines and points)
+- GRBActualLoader: support for all types of GRB collections (also lines and points)
 - Fix for a better prediction of snapped lines
+
+# 0.12.0
+
+! Not Backwards compatible !
+
+- fix for snapping geometries to points
+- fix for snapping geometries to lines
+- Changed OpenDomainStrategy from IntEnum to Enum [#210]
+- Added enum PredictionStrategy
+- New implementation to align points and lines (faster)

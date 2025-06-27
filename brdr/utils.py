@@ -4,11 +4,16 @@ import os.path
 import numpy as np
 import requests
 from geojson import Feature, FeatureCollection, dump
-from shapely import GeometryCollection, make_valid, node, polygonize
+from shapely import (
+    GeometryCollection,
+    make_valid,
+    node,
+    polygonize,
+)
 from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
 from shapely.geometry.point import Point
-from shapely.ops import nearest_points
+from shapely.lib import shortest_line
 
 from brdr.constants import (
     MULTI_SINGLE_ID_SEPARATOR,
@@ -29,6 +34,8 @@ from brdr.geometry_utils import (
     to_multi,
     get_geoms_from_geometry,
     safe_unary_union,
+    buffer_pos,
+    safe_intersection,
 )
 from brdr.typings import ProcessResult
 
@@ -316,9 +323,10 @@ def _numerical_derivative(x, y):
     return derivative
 
 
-def _diffs_from_dict_processresults(
+def diffs_from_dict_processresults(
     dict_processresults: dict[any, dict[float, ProcessResult]],
     dict_thematic: dict[any, BaseGeometry],
+    reference_union: BaseGeometry,
     diff_metric: DiffMetric = DiffMetric.CHANGES_AREA,
 ):
     """
@@ -332,6 +340,7 @@ def _diffs_from_dict_processresults(
     Returns:
     dict: A dictionary where keys are thematic IDs and values are dictionaries mapping relative distances to calculated difference metrics.
     """
+
     diffs = {}
     # all the relevant distances used to calculate the series
     for thematic_id, results_dict in dict_processresults.items():
@@ -341,11 +350,13 @@ def _diffs_from_dict_processresults(
             "MultiLineString",
         ):
             diff_metric = DiffMetric.CHANGES_LENGTH
+            diff_metric = DiffMetric.REFERENCE_USAGE
         elif dict_thematic[thematic_id].geom_type in (
             "Point",
             "MultiPoint",
         ):
             diff_metric = DiffMetric.TOTAL_DISTANCE
+            diff_metric = DiffMetric.REFERENCE_USAGE
         for rel_dist in results_dict:
             result = results_dict.get(rel_dist, {}).get("result")
             result_diff = results_dict.get(rel_dist, {}).get("result_diff")
@@ -365,10 +376,7 @@ def _diffs_from_dict_processresults(
                 diff = result.area - original.area
                 diff = diff * 100 / result.area
             elif diff_metric == DiffMetric.CHANGES_AREA:
-                # equals the symmetrical difference, so equal to
-                # result_diff_plus.area + result_diff_min.area
                 diff = result_diff.area
-                # diff = result_diff_plus.area + result_diff_min.area
             elif diff_metric == DiffMetric.CHANGES_PERCENTAGE:
                 diff = result_diff.area
                 diff = diff * 100 / result.area
@@ -376,6 +384,20 @@ def _diffs_from_dict_processresults(
                 diff = result.length - original.length
             elif diff_metric == DiffMetric.CHANGES_LENGTH:
                 diff = result_diff.length
+            elif diff_metric == DiffMetric.REFERENCE_USAGE:
+
+                reference_union_buffer = buffer_pos(reference_union, 0.01)
+                result_buffer = buffer_pos(result, 0.01)
+                reference_usage_geom = safe_intersection(
+                    result_buffer, reference_union_buffer
+                )
+                if (
+                    reference_usage_geom is not None
+                    and not reference_usage_geom.is_empty
+                ):
+                    diff = reference_usage_geom.area
+                else:
+                    diff = 0
             elif diff_metric == DiffMetric.TOTAL_DISTANCE:
                 diff = 0
                 result = to_multi(result)
@@ -384,8 +406,7 @@ def _diffs_from_dict_processresults(
                         g = g.exterior
                     for coord in g.coords:
                         p = Point(coord)
-                        p1, p2 = nearest_points(p, original)
-                        diff = diff + p2.distance(p)
+                        diff = diff + shortest_line(p, original).length
 
             # round, so the detected changes are within 10cm² or 0.1%
             diff = round(diff, 1)

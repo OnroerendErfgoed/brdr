@@ -7,7 +7,7 @@ from shapely.geometry import Polygon
 from brdr.constants import MULTI_SINGLE_ID_SEPARATOR
 from brdr.oe import get_oe_dict_by_ids
 from brdr.typings import ProcessResult
-from brdr.utils import _diffs_from_dict_processresults
+from brdr.utils import diffs_from_dict_processresults
 from brdr.utils import get_breakpoints_zerostreak
 from brdr.utils import get_collection
 from brdr.utils import merge_process_results
@@ -145,8 +145,8 @@ class TestUtils(unittest.TestCase):
         }
         expected_diffs = {"theme_id1": {10: 16.0}, "theme_id2": {10: 4.0}}
 
-        assert expected_diffs == _diffs_from_dict_processresults(
-            dict_series.copy(), dict_thematic.copy()
+        assert expected_diffs == diffs_from_dict_processresults(
+            dict_series.copy(), dict_thematic.copy(), reference_union=None
         )
 
     def test_get_collection(self):
