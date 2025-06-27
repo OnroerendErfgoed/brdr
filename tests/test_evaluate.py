@@ -1,22 +1,16 @@
-import json
 import unittest
-from datetime import date
 
 import numpy as np
 from shapely import from_wkt
 from shapely.geometry import Polygon
 
 from brdr.aligner import Aligner
-from brdr.constants import FORMULA_FIELD_NAME, EVALUATION_FIELD_NAME
+from brdr.constants import EVALUATION_FIELD_NAME
 from brdr.enums import GRBType, Evaluation, FullStrategy, SnapStrategy
-from brdr.geometry_utils import geojson_to_multi
 from brdr.grb import (
     GRBActualLoader,
-    GRBFiscalParcelLoader,
-    get_affected_by_grb_change,
 )
 from brdr.loader import DictLoader, GeoJsonLoader
-from brdr.utils import get_dict_geojsons_from_series_dict
 
 
 class TestEvaluate(unittest.TestCase):

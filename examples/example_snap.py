@@ -9,7 +9,7 @@ def distance(p1, p2):
 
 def snap_point_to_nodes(point, target_lines, tolerance):
     closest_point = None
-    min_dist = float('inf')
+    min_dist = float("inf")
     for line in target_lines:
         for coord in line.coords:
             d = distance(point, coord)
@@ -22,7 +22,7 @@ def snap_point_to_nodes(point, target_lines, tolerance):
 def snap_point_to_edges(point, target_lines, tolerance):
     p = Point(point)
     closest_proj = None
-    min_dist = float('inf')
+    min_dist = float("inf")
     for line in target_lines:
         proj = line.interpolate(line.project(p))
         d = p.distance(proj)
@@ -76,4 +76,3 @@ if __name__ == "__main__":
 
     print("Origineel:", list(source.coords))
     print("Gesnapt:  ", list(snapped.coords))
-

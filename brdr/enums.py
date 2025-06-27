@@ -171,6 +171,7 @@ class SnapStrategy(str, Enum):
     PREFER_VERTICES = "prefer_vertices"
     NO_PREFERENCE = "no_preference"
 
+
 class PredictionStrategy(str, Enum):
     """
     Enum for prediction strategy when using GRB updater

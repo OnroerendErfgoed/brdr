@@ -8,7 +8,6 @@ from brdr.grb import GRBActualLoader
 from brdr.loader import DictLoader
 from brdr.loader import GeoJsonLoader
 from brdr.oe import get_oe_dict_by_ids, OnroerendErfgoedLoader
-from brdr.utils import diffs_from_dict_processresults
 from brdr.utils import get_breakpoints_zerostreak
 
 

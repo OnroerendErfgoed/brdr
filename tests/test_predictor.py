@@ -60,7 +60,7 @@ class TestAligner(unittest.TestCase):
         dict_series, dict_predictions, diffs = aligner.predictor(
             relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
         )
-        assert len(dict_predictions["id1"])>=1
+        assert len(dict_predictions["id1"]) >= 1
 
     def test_predictor_no_prediction(self):
         """
@@ -82,7 +82,7 @@ class TestAligner(unittest.TestCase):
         dict_series, dict_predictions, diffs = aligner.predictor(
             relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
         )
-        assert len(dict_predictions["id1"])<=1
+        assert len(dict_predictions["id1"]) <= 1
 
     def test_predictor_point(self):
         # Load thematic data & reference data
@@ -101,7 +101,7 @@ class TestAligner(unittest.TestCase):
             relevant_distances=series,
         )
         self.assertEqual(len(dict_predictions), len(thematic_dict))
-        assert dict_predictions["theme_id"][0.0]["brdr_prediction_count"] >=1
+        assert dict_predictions["theme_id"][0.0]["brdr_prediction_count"] >= 1
 
     def test_predictor_line(self):
         # Load thematic data & reference data
@@ -124,7 +124,7 @@ class TestAligner(unittest.TestCase):
             relevant_distances=series,
         )
         self.assertEqual(len(dict_predictions), len(thematic_dict))
-        assert dict_predictions["theme_id"][0.0]["brdr_prediction_count"] >=1
+        assert dict_predictions["theme_id"][0.0]["brdr_prediction_count"] >= 1
 
     def test_predictor_poly_to_point(self):
         # Load thematic data & reference data
@@ -155,4 +155,4 @@ class TestAligner(unittest.TestCase):
             relevant_distances=series,
         )
         self.assertEqual(len(dict_predictions), len(thematic_dict))
-        assert dict_predictions["theme_id"][0.0]["brdr_prediction_count"] >=1
+        assert dict_predictions["theme_id"][0.0]["brdr_prediction_count"] >= 1
