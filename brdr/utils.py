@@ -386,10 +386,15 @@ def diffs_from_dict_processresults(
                 diff = result_diff.length
             elif diff_metric == DiffMetric.REFERENCE_USAGE:
 
-                reference_union_buffer =buffer_pos(reference_union,0.01)
+                reference_union_buffer = buffer_pos(reference_union, 0.01)
                 result_buffer = buffer_pos(result, 0.01)
-                reference_usage_geom = safe_intersection(result_buffer, reference_union_buffer)
-                if reference_usage_geom is not None and not reference_usage_geom.is_empty :
+                reference_usage_geom = safe_intersection(
+                    result_buffer, reference_union_buffer
+                )
+                if (
+                    reference_usage_geom is not None
+                    and not reference_usage_geom.is_empty
+                ):
                     diff = reference_usage_geom.area
                 else:
                     diff = 0

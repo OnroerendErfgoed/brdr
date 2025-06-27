@@ -1,22 +1,16 @@
-import json
 import unittest
-from datetime import date
 
 import numpy as np
 from shapely import from_wkt
 from shapely.geometry import Polygon
 
 from brdr.aligner import Aligner
-from brdr.constants import FORMULA_FIELD_NAME, EVALUATION_FIELD_NAME
+from brdr.constants import EVALUATION_FIELD_NAME
 from brdr.enums import GRBType, Evaluation, FullStrategy, SnapStrategy
-from brdr.geometry_utils import geojson_to_multi
 from brdr.grb import (
     GRBActualLoader,
-    GRBFiscalParcelLoader,
-    get_affected_by_grb_change,
 )
 from brdr.loader import DictLoader, GeoJsonLoader
-from brdr.utils import get_dict_geojsons_from_series_dict
 
 
 class TestEvaluate(unittest.TestCase):
@@ -116,7 +110,7 @@ class TestEvaluate(unittest.TestCase):
             relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
             full_strategy=FullStrategy.NO_FULL,
         )
-        assert len(dict_evaluated["theme_id_1"]) >1
+        assert len(dict_evaluated["theme_id_1"]) > 1
         assert (
             prop_dictionary["theme_id_1"][3.5]["brdr_evaluation"]
             == Evaluation.TO_CHECK_PREDICTION_MULTI_FULL
@@ -138,7 +132,7 @@ class TestEvaluate(unittest.TestCase):
             relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
             full_strategy=FullStrategy.PREFER_FULL,
         )
-        assert len(dict_evaluated["theme_id_1"]) >1
+        assert len(dict_evaluated["theme_id_1"]) > 1
         assert (
             prop_dictionary["theme_id_1"][3.5]["brdr_evaluation"]
             == Evaluation.TO_CHECK_PREDICTION_FULL
@@ -183,7 +177,7 @@ class TestEvaluate(unittest.TestCase):
             full_strategy=FullStrategy.PREFER_FULL,
             max_predictions=-1,
         )
-        assert len(dict_evaluated["theme_id_1"]) >1
+        assert len(dict_evaluated["theme_id_1"]) > 1
         assert (
             prop_dictionary["theme_id_1"][3.5]["brdr_evaluation"]
             == Evaluation.TO_CHECK_PREDICTION_FULL
@@ -206,7 +200,7 @@ class TestEvaluate(unittest.TestCase):
             full_strategy=FullStrategy.NO_FULL,
             max_predictions=2,
         )
-        assert len(dict_evaluated["theme_id_1"]) >1
+        assert len(dict_evaluated["theme_id_1"]) > 1
         # assert (
         #     prop_dictionary["theme_id_1"][3.5]["brdr_evaluation"]
         #     == Evaluation.TO_CHECK_PREDICTION_MULTI_FULL
@@ -232,7 +226,10 @@ class TestEvaluate(unittest.TestCase):
         )
         assert len(dict_evaluated["theme_id_1"]) == 1
         assert (
-            prop_dictionary["theme_id_1"][list(prop_dictionary["theme_id_1"].keys())[0]]["brdr_prediction_count"]>1
+            prop_dictionary["theme_id_1"][
+                list(prop_dictionary["theme_id_1"].keys())[0]
+            ]["brdr_prediction_count"]
+            > 1
         )
 
     def test_evaluate_multi_to_best_prediction_false(self):
@@ -306,7 +303,7 @@ class TestEvaluate(unittest.TestCase):
             max_predictions=3,
             multi_to_best_prediction=False,
         )
-        assert len(dict_evaluated["theme_id"]) >=1
+        assert len(dict_evaluated["theme_id"]) >= 1
         assert (
             prop_dictionary["theme_id"][0]["brdr_evaluation"]
             == Evaluation.TO_CHECK_PREDICTION_MULTI_FULL
@@ -333,7 +330,7 @@ class TestEvaluate(unittest.TestCase):
             max_predictions=3,
             multi_to_best_prediction=False,
         )
-        assert len(dict_evaluated["theme_id"]) >0
+        assert len(dict_evaluated["theme_id"]) > 0
         # assert (
         #     prop_dictionary["theme_id"][0]["brdr_evaluation"]
         #     == Evaluation.TO_CHECK_PREDICTION_MULTI_FULL
@@ -349,15 +346,14 @@ class TestEvaluate(unittest.TestCase):
         )
 
         # thematic_dict = {"theme_id": from_wkt("POINT (0 0)")}
-        thematic_dict = {
-            "theme_id": polygon_1
-        }
+        thematic_dict = {"theme_id": polygon_1}
 
         # ADD A REFERENCE POLYGON TO REFERENCE DICTIONARY
         reference_dict = {"ref_id": geom_reference}
 
-        aligner = Aligner(snap_strategy=SnapStrategy.NO_PREFERENCE,
-        snap_max_segment_length=2)
+        aligner = Aligner(
+            snap_strategy=SnapStrategy.NO_PREFERENCE, snap_max_segment_length=2
+        )
         aligner.load_thematic_data(DictLoader(thematic_dict))
         aligner.load_reference_data(DictLoader(reference_dict))
 
@@ -374,6 +370,7 @@ class TestEvaluate(unittest.TestCase):
         #     prop_dictionary["theme_id"][0]["brdr_evaluation"]
         #     == Evaluation.TO_CHECK_PREDICTION_MULTI_FULL
         # )
+
     def test_evaluate_best_no_prediction(self):
         thematic_json = {
             "type": "FeatureCollection",
@@ -475,7 +472,17 @@ class TestEvaluate(unittest.TestCase):
             multi_to_best_prediction=True,
         )
 
-        assert prop_dictionary[1][list(prop_dictionary[1].keys())[0]][EVALUATION_FIELD_NAME] == Evaluation.PREDICTION_UNIQUE_FULL
-        assert prop_dictionary[2][list(prop_dictionary[2].keys())[0]][EVALUATION_FIELD_NAME] == Evaluation.TO_CHECK_NO_PREDICTION
-        #TODO; check below as this gives a extra prediction without prop_dictionary parameters
-        #assert prop_dictionary[3][list(prop_dictionary[3].keys())[0]][EVALUATION_FIELD_NAME] == Evaluation.TO_CHECK_NO_PREDICTION
+        assert (
+            prop_dictionary[1][list(prop_dictionary[1].keys())[0]][
+                EVALUATION_FIELD_NAME
+            ]
+            == Evaluation.PREDICTION_UNIQUE_FULL
+        )
+        assert (
+            prop_dictionary[2][list(prop_dictionary[2].keys())[0]][
+                EVALUATION_FIELD_NAME
+            ]
+            == Evaluation.TO_CHECK_NO_PREDICTION
+        )
+        # TODO; check below as this gives a extra prediction without prop_dictionary parameters
+        # assert prop_dictionary[3][list(prop_dictionary[3].keys())[0]][EVALUATION_FIELD_NAME] == Evaluation.TO_CHECK_NO_PREDICTION

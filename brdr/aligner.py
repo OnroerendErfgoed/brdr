@@ -469,9 +469,7 @@ class Aligner:
 
         # Calculate vertices of the reference_intersection
         if snap_strategy != SnapStrategy.NO_PREFERENCE:
-            reference_coords = MultiPoint(
-                list(get_coords_from_geometry(reference))
-            )
+            reference_coords = MultiPoint(list(get_coords_from_geometry(reference)))
             reference_coords_intersection = to_multi(
                 safe_intersection(reference_coords, overlap_buffered)
             )
@@ -557,7 +555,9 @@ class Aligner:
         extra_segments_ref_intersections = shortest_connections_between_geometries(
             reference_intersection
         )
-        segments.extend(extra_segments_ref_intersections) #removed as we first going to filter these lines
+        segments.extend(
+            extra_segments_ref_intersections
+        )  # removed as we first going to filter these lines
         # Filter out lines that are not fully in relevant distance as these are no valid solution-paths
         # Mostly these lines will already be in the distance as both start en endpoint are in range (but not always fully)
         # geom_to_process_buffered = buffer_pos(geom_to_process, relevant_distance*1.01)
@@ -623,7 +623,7 @@ class Aligner:
             and not reference_coords_intersection.is_empty
         ):
             p_ref_1, p_ref_2 = nearest_points(point, reference_coords_intersection)
-            if p_ref_2.distance(point)<relevant_distance*1.5:
+            if p_ref_2.distance(point) < relevant_distance * 1.5:
                 line_ref = LineString([p_theme_2, p_ref_2])
             else:
                 p_ref_1, p_ref_2 = nearest_points(point, reference_intersection)

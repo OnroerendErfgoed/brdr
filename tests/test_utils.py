@@ -146,7 +146,7 @@ class TestUtils(unittest.TestCase):
         expected_diffs = {"theme_id1": {10: 16.0}, "theme_id2": {10: 4.0}}
 
         assert expected_diffs == diffs_from_dict_processresults(
-            dict_series.copy(), dict_thematic.copy(),reference_union=None
+            dict_series.copy(), dict_thematic.copy(), reference_union=None
         )
 
     def test_get_collection(self):
