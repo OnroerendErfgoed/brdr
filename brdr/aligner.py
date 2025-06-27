@@ -363,7 +363,7 @@ class Aligner:
         input_geometry_buffered = buffer_pos(
             input_geometry, relevant_distance * self.buffer_multiplication_factor
         )
-        #Former method to get all the reference elements in the surrounding area, replaced by optimized method below
+        # Former method to get all the reference elements in the surrounding area, replaced by optimized method below
         # ref_intersections = self.reference_items.take(
         #     self.reference_tree.query(input_geometry_buffered)
         # ).tolist()
@@ -563,21 +563,7 @@ class Aligner:
         extra_geomcollection_ref_intersections =safe_intersection(GeometryCollection(extra_segments_ref_intersections),geom_to_process_buffered)
         segments.append(extra_geomcollection_ref_intersections)
 
-
-        # experimental: add a concave hull
-        # hull =concave_hull(reference_intersection, ratio=0.0, allow_holes=False)
-        # hull_line = hull.exterior
-        # segments.append(hull_line)
-
-        # triangles = delaunay_triangles(reference_intersection, tolerance=0.0, only_edges=True)
-        # segments.append(triangles)
-
-        # hull =convex_hull(reference_intersection)
-        # if isinstance(hull,Polygon):
-        #     hull = hull.exterior
-        # segments.append(hull)
-
-        # segments= scale_segments(segments,factor = 1.001)#TODO check if necessary to fix floating_points intersections
+        # segments= scale_segments(segments,factor = 1.001) #to scale or not? necessary to fix floating_points intersection-problem
 
         geom_processed = self.merge_and_search(end_point, segments, start_point)
         if geom_processed is None:
@@ -607,12 +593,21 @@ class Aligner:
     ):
         factor = 1.001
 
-        # also integrate the vertex of the input/thematic geometry #TODO decide if we do this always or only in SnapStrategy
-        thematic_coords = MultiPoint(list(get_coords_from_geometry(segmentize(geom_to_process,self.partial_snap_max_segment_length))))
+        # Integrate vertices of the input/thematic geometry
+        # we segmentize the input so there are fixed points to snap to, so evaluation is more stable
+        # It could also be an option to do this at specific SnapStrategy's but for now we always do this for stability reasons when evaluating
+        thematic_coords = MultiPoint(
+            list(
+                get_coords_from_geometry(
+                    segmentize(geom_to_process, self.partial_snap_max_segment_length)
+                )
+            )
+        )
         p_theme_1, p_theme_2 = nearest_points(point, thematic_coords)
 
-        # if p_theme_2.distance(point) < relevant_distance * 2:
+        # because of segmentation in former step there will always be a 'close' vertex. So we always take the vertex
         if True:
+        # if p_theme_2.distance(point) < relevant_distance * 2:
             line_theme = LineString([point, p_theme_2])
         else:
             line_theme = LineString()
@@ -630,37 +625,20 @@ class Aligner:
 
         connection_line = safe_unary_union([line_theme, line_ref])
 
-        # if not reference_coords_intersection is None and not reference_coords_intersection.is_empty:
-        #     thematic_coords =MultiPoint(list(get_coords_from_geometry(geom_to_process)))#also integrate the vertex of the input/thematic geometry
-        #     p_theme_1, p_theme_2 = nearest_points(point, thematic_coords)
-        #     p_ref_1, p_ref_2 = nearest_points(point, reference_coords_intersection)
-        #     line_theme = LineString([point,p_theme_2])
-        #     line_ref = LineString([point,p_ref_2])
-        #     connection_line = safe_unary_union([line_theme,line_ref])
-        #     # connection_line = shortest_line(point, reference_coords_intersection)
-        # else:
-        #     connection_line = shortest_line(point, reference_intersection)
+        #connection_line = scale(connection_line, factor, factor, origin=p_theme_2)
+        # To scale or not to scale, that's the question.
+        # At this moment scaling is not necessary because we use the vertices of the segmentized input_geometry, so no problem with floating point-intersections.
+        # When we do not use vertices it could be necessary (due to floating point error) to make sure lines are intersecting so they are split on these intersecting points
 
-        connection_line = scale(connection_line, factor, factor, origin=p_theme_2)
-        # TODO to scale or not to scale, that's the question. At this moment scaling is necessary (due to floating point error) to make sure lines are intersecting so they are split on these intersecting points
+        if (
+            round(connection_line.length, RELEVANT_DISTANCE_DECIMALS)
+            > relevant_distance * self.partial_snap_max_segment_length * 2
+            # * factor
+            # * factor
+            # * 4  # There could be a better way to exclude invalid connection-lines?
+        ):
+            return LineString()
 
-        # dist = reference_intersection.project(p_end)
-        # p_end_projected = reference_intersection.interpolate(dist)
-        # p_end_projected = snap(p_end_projected,reference_intersection,5)
-        # p1,p2 = nearest_points(p_start,reference_intersection)
-        # line_end=LineString([p_end,p_end_projected])
-
-        # if (
-        #     round(connection_line.length, RELEVANT_DISTANCE_DECIMALS)
-        #     > relevant_distance
-        #     * factor
-        #     * factor
-        #     * 4  # TODO; is there a safer way to exclude wrong lines?
-        # ):
-        #     return LineString()
-
-        # reference_intersection =safe_unary_union(split(reference_intersection,MultiPoint([p_start_projected,p_end_projected])))
-        # line_end = shortest_line(p_end, reference_intersection)
         return connection_line
 
     def process_geometry(
