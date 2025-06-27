@@ -2,6 +2,7 @@ import logging
 from itertools import combinations
 from math import pi, inf
 
+import networkx as nx
 import numpy as np
 from shapely import GEOSException, equals, shortest_line
 from shapely import STRtree
@@ -24,7 +25,7 @@ from shapely import union
 from shapely.affinity import scale
 from shapely.geometry.base import BaseGeometry
 from shapely.lib import line_merge
-from shapely.ops import substring
+from shapely.ops import substring, nearest_points
 from shapely.prepared import prep
 
 from brdr.enums import SnapStrategy
@@ -1171,10 +1172,6 @@ def snap_multilinestring_endpoints(multilinestring, tolerance):
 
     return MultiLineString(snapped_lines)
 
-
-from shapely.ops import nearest_points
-
-
 def shortest_connections_between_geometries(geometry):
     """
     Voor elk element in een GeometryCollection, bepaal de kortste verbindingslijn
@@ -1266,35 +1263,6 @@ def fill_gaps_in_multilinestring(multilinestring, tolerance):
     all_lines = lines + new_lines
     return line_merge(all_lines)
 
-
-def find_longest_path_by_weight(graph):
-    """
-    Finds the longest path in a weighted graph based on edge weights.
-    Returns the list of edges that form this path.
-    """
-    longest_path = []
-    max_weight = 0
-
-    # Try all simple paths between all pairs of nodes
-    for source in graph.nodes:
-        for target in graph.nodes:
-            if source != target:
-                for path in nx.all_simple_paths(graph, source=source, target=target):
-                    # Calculate total weight of the path
-                    weight = sum(
-                        graph[u][v].get("weight", 1)
-                        for u, v in zip(path[:-1], path[1:])
-                    )
-                    if weight > max_weight:
-                        max_weight = weight
-                        longest_path = list(zip(path[:-1], path[1:]))
-    return longest_path
-
-
-from shapely.ops import unary_union
-import networkx as nx
-
-
 # Stap 2: vind de dichtstbijzijnde knopen bij start- en eindpunt
 def nearest_node(point, nodes):
     return min(nodes, key=lambda n: Point(n).distance(point))
@@ -1320,7 +1288,10 @@ def find_circle_path(directed_graph):
     longest_cycle = max(cycles, key=cycle_weight)
     # Zet de cyclus om naar een gesloten LineString
     longest_cycle_coords = longest_cycle + [longest_cycle[0]]
-    return LineString(longest_cycle_coords)
+    longest_cycle_linestring = LineString(longest_cycle_coords)
+    if not isinstance(safe_unary_union(Polygon(longest_cycle_linestring)),Polygon):
+        longest_cycle_linestring = None
+    return longest_cycle_linestring
 
 
 def find_longest_path_between_points(multilinestring, start_point, end_point):

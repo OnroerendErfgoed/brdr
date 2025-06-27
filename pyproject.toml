@@ -29,7 +29,7 @@ dependencies = [
     "requests~=2.32",
     "shapely~=2.0",
     "topojson~=1.9",
-    "networkx~=3.4"
+    "networkx~=3.5"
 ]
 [project.urls]
 Documentation = "https://github.com/OnroerendErfgoed/brdr/blob/main/README.md"

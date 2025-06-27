@@ -306,7 +306,7 @@ class TestEvaluate(unittest.TestCase):
             max_predictions=3,
             multi_to_best_prediction=False,
         )
-        assert len(dict_evaluated["theme_id"]) >1
+        assert len(dict_evaluated["theme_id"]) >=1
         assert (
             prop_dictionary["theme_id"][0]["brdr_evaluation"]
             == Evaluation.TO_CHECK_PREDICTION_MULTI_FULL

@@ -15,6 +15,7 @@ from shapely import (
     Point,
     MultiPolygon,
     MultiPoint,
+    segmentize,
 )
 from shapely import Polygon
 from shapely import STRtree
@@ -240,6 +241,10 @@ class Aligner:
         # in most OD-strategies
         self.reference_union = None
 
+        # to save a the reference_elements (points and lines) that form the reference borders; needed for networkx-calculation
+        # in most OD-strategies
+        self.reference_elements = None
+
         # results
 
         # output-dictionaries (all results of process()), grouped by theme_id and relevant_distance
@@ -358,21 +363,20 @@ class Aligner:
         input_geometry_buffered = buffer_pos(
             input_geometry, relevant_distance * self.buffer_multiplication_factor
         )
-        # reference_area = safe_intersection(self._get_reference_union(),input_geometry_buffered)
-        # # change all 'polygon' reference elements to lines
-        # reference = safe_unary_union(extract_points_lines_from_geometry(reference).geoms)
-        ref_intersections = self.reference_items.take(
-            self.reference_tree.query(input_geometry_buffered)
-        ).tolist()
-        ref_intersections_geoms = [
-            self.dict_reference[key] for key in ref_intersections
-        ]
-        reference = safe_unary_union(
-            extract_points_lines_from_geometry(
-                GeometryCollection(ref_intersections_geoms)
-            )
-        )
-        # TODO: optional, mogelijks als optimalisatie voor heel de reference doen (sneller, dan elke keer opnieuw een deel, mogelijks voor grootst mogelijke relevante distance van de evaluatie?
+        #Former method to get all the reference elements in the surrounding area, replaced by optimized method below
+        # ref_intersections = self.reference_items.take(
+        #     self.reference_tree.query(input_geometry_buffered)
+        # ).tolist()
+        # ref_intersections_geoms = [
+        #     self.dict_reference[key] for key in ref_intersections
+        # ]
+        # reference = safe_unary_union(
+        #     extract_points_lines_from_geometry(
+        #         GeometryCollection(ref_intersections_geoms)
+        #     )
+        # )
+        # Optimized method to get all the reference elements in the surrounding area (reference elements only calculated once fot the full aligner
+        reference = safe_unary_union(safe_intersection(self._get_reference_elements(),input_geometry_buffered))
 
         geom_processed_list = []
         if isinstance(input_geometry, (MultiPolygon)):
@@ -528,9 +532,8 @@ class Aligner:
                 p_start = Point(geom.exterior.coords[0])
                 p_end = Point(geom.exterior.coords[-1])
                 raise ValueError(
-                    "Something wrong with p_start and p_end"
-                )  # todo; fix bug - NotImplementedError Component rings have coordinate sequences, but the polygon does not, wss bij een thematic_difference =geometrycollection
-
+                    "Something wrong with p_start and p_end.This may not happen as these should be the startpoint and enpoint of a LineString. Fix needed"
+                )
             connection_line_start = self._get_connection_line(
                 geom_to_process,
                 p_start,
@@ -550,29 +553,48 @@ class Aligner:
         segments.extend(extra_segments)
 
         # add extra segments (connection lines between reference_intersections)
-        extra_segments_2 = shortest_connections_between_geometries(
+        extra_segments_ref_intersections = shortest_connections_between_geometries(
             reference_intersection
         )
-        # TODO - optional -  filter out lines that are not fully in relevant distance as these are no valid solution-paths
+        # segments.extend(extra_segments_ref_intersections) #removed as we first going to filter these lines
+        # Filter out lines that are not fully in relevant distance as these are no valid solution-paths
+        # Mostly these lines will already be in the distance as both start en endpoint are in range (but not always fully)
+        geom_to_process_buffered=buffer_pos(geom_to_process,relevant_distance)
+        extra_geomcollection_ref_intersections =safe_intersection(GeometryCollection(extra_segments_ref_intersections),geom_to_process_buffered)
+        segments.append(extra_geomcollection_ref_intersections)
 
-        segments.extend(extra_segments_2)
+
+        # experimental: add a concave hull
+        # hull =concave_hull(reference_intersection, ratio=0.0, allow_holes=False)
+        # hull_line = hull.exterior
+        # segments.append(hull_line)
+
+        # triangles = delaunay_triangles(reference_intersection, tolerance=0.0, only_edges=True)
+        # segments.append(triangles)
+
+        # hull =convex_hull(reference_intersection)
+        # if isinstance(hull,Polygon):
+        #     hull = hull.exterior
+        # segments.append(hull)
 
         # segments= scale_segments(segments,factor = 1.001)#TODO check if necessary to fix floating_points intersections
-        # print (segments)
-        # segments = set_precision(segments,0.01)
-        # print(segments)
 
+        geom_processed = self.merge_and_search(end_point, segments, start_point)
+        if geom_processed is None:
+            # add original so a connected path will be found
+            segments.append(geom_to_process)
+            geom_processed = self.merge_and_search(end_point, segments, start_point)
+        return geom_processed
+
+    def merge_and_search(self, end_point, segments, start_point):
         merged = line_merge(safe_unary_union(segments))
         merged = snap_multilinestring_endpoints(merged, 0.1)
-        merged = fill_gaps_in_multilinestring(merged, 0.1)
+        merged = fill_gaps_in_multilinestring(merged,
+                                              0.1)  # also needed to fill 'gaps' to connect reference objects fe points
         merged = line_merge(safe_unary_union(merged))
-        # merged = set_precision(merged,0.001)
-        # geom_processed = remove_shortest_and_merge(merged)
-
         geom_processed = find_longest_path_between_points(
             merged, start_point, end_point
         )
-
         return geom_processed
 
     def _get_connection_line(
@@ -585,10 +607,12 @@ class Aligner:
     ):
         factor = 1.001
 
-        # also integrate the vertex of the input/thematic geometry
-        thematic_coords = MultiPoint(list(get_coords_from_geometry(geom_to_process)))
+        # also integrate the vertex of the input/thematic geometry #TODO decide if we do this always or only in SnapStrategy
+        thematic_coords = MultiPoint(list(get_coords_from_geometry(segmentize(geom_to_process,self.partial_snap_max_segment_length))))
         p_theme_1, p_theme_2 = nearest_points(point, thematic_coords)
-        if p_theme_2.distance(point) < relevant_distance * 2:
+
+        # if p_theme_2.distance(point) < relevant_distance * 2:
+        if True:
             line_theme = LineString([point, p_theme_2])
         else:
             line_theme = LineString()
@@ -605,6 +629,7 @@ class Aligner:
             line_ref = LineString([p_theme_2, p_ref_2])
 
         connection_line = safe_unary_union([line_theme, line_ref])
+
         # if not reference_coords_intersection is None and not reference_coords_intersection.is_empty:
         #     thematic_coords =MultiPoint(list(get_coords_from_geometry(geom_to_process)))#also integrate the vertex of the input/thematic geometry
         #     p_theme_1, p_theme_2 = nearest_points(point, thematic_coords)
@@ -615,20 +640,25 @@ class Aligner:
         #     # connection_line = shortest_line(point, reference_coords_intersection)
         # else:
         #     connection_line = shortest_line(point, reference_intersection)
-        connection_line = scale(connection_line, factor, factor, origin=point)
+
+        connection_line = scale(connection_line, factor, factor, origin=p_theme_2)
+        # TODO to scale or not to scale, that's the question. At this moment scaling is necessary (due to floating point error) to make sure lines are intersecting so they are split on these intersecting points
+
         # dist = reference_intersection.project(p_end)
         # p_end_projected = reference_intersection.interpolate(dist)
         # p_end_projected = snap(p_end_projected,reference_intersection,5)
         # p1,p2 = nearest_points(p_start,reference_intersection)
         # line_end=LineString([p_end,p_end_projected])
-        if (
-            round(connection_line.length, RELEVANT_DISTANCE_DECIMALS)
-            > relevant_distance
-            * factor
-            * factor
-            * 4  # TODO; is there a safer way to exclude wrong lines?
-        ):
-            return LineString()
+
+        # if (
+        #     round(connection_line.length, RELEVANT_DISTANCE_DECIMALS)
+        #     > relevant_distance
+        #     * factor
+        #     * factor
+        #     * 4  # TODO; is there a safer way to exclude wrong lines?
+        # ):
+        #     return LineString()
+
         # reference_intersection =safe_unary_union(split(reference_intersection,MultiPoint([p_start_projected,p_end_projected])))
         # line_end = shortest_line(p_end, reference_intersection)
         return connection_line
@@ -939,7 +969,7 @@ class Aligner:
         return self.dict_processresults
 
     def _dissolve_topo(self, dict_series, dict_thematic, topo_thematic):
-        # TODO: what about dict_thematic, this has te be reset again
+        # TODO: what about dict_thematic, this has to be reset again
         dict_series_topo = dict()
         for relevant_distance in self.relevant_distances:
             for obj in topo_thematic.output["objects"]["data"]["geometries"]:
@@ -1932,6 +1962,16 @@ class Aligner:
         if self.reference_union is None:
             self.reference_union = safe_unary_union(list(self.dict_reference.values()))
         return self.reference_union
+
+    def _get_reference_elements(self):
+        """
+        returns the points and lines from the reference geometries
+        :return:
+        """
+        if self.reference_elements is None:
+            self.reference_elements =  extract_points_lines_from_geometry(GeometryCollection(list(self.dict_reference.values()))
+            )
+        return self.reference_elements
 
     def _postprocess_preresult(
         self,
