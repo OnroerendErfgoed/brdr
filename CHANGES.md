@@ -157,6 +157,6 @@
 
 - fix for snapping geometries to points
 - fix for snapping geometries to lines
-- Changed OpenDomainStrategy from IntEnum to Enum
+- Changed OpenDomainStrategy from IntEnum to Enum [#210]
 - Added enum PredictionStrategy
 - New implementation to align points and lines (faster)
