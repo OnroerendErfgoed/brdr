@@ -24,7 +24,7 @@ from shapely import unary_union
 from shapely import union
 from shapely.affinity import scale
 from shapely.geometry.base import BaseGeometry
-from shapely.lib import line_merge
+from shapely.lib import line_merge, snap
 from shapely.ops import substring, nearest_points
 from shapely.prepared import prep
 
@@ -1132,9 +1132,6 @@ def get_geoms_from_geometry(geometry):
     return geoms
 
 
-from shapely.ops import snap
-
-
 def snap_multilinestring_endpoints(multilinestring, tolerance):
     """
     Snapt de begin- en eindpunten van elke LineString in een MultiLineString
@@ -1226,7 +1223,6 @@ def make_linestrings_unique(lines):
 
     return unique_lines
 
-
 def fill_gaps_in_multilinestring(multilinestring, tolerance):
     """
     Vul kleine gaps in een MultiLineString op door verbindingslijnen toe te voegen
@@ -1270,9 +1266,24 @@ def nearest_node(point, nodes):
     return min(nodes, key=lambda n: Point(n).distance(point))
 
 
+def find_best_circle_path(directed_graph,geom_to_process):
+    cycles = list(nx.simple_cycles(directed_graph))
+    min_dist = inf
+    best_cycle_line = None
+    for cycle in cycles:
+        cycle_coords = cycle + [cycle[0]]
+        cycle_line = LineString(cycle_coords)
+        dist = total_vertex_distance(cycle_line,geom_to_process)
+        if dist < min_dist:
+            min_dist = dist
+            best_cycle_line = cycle_line
+    return best_cycle_line
+
+
 def find_circle_path(directed_graph):
     # Vind alle eenvoudige cycli
     cycles = list(nx.simple_cycles(directed_graph))
+
 
     # Bepaal de langste cyclus op basis van gewichten
     def cycle_weight(cycle):
@@ -1295,8 +1306,7 @@ def find_circle_path(directed_graph):
         longest_cycle_linestring = None
     return longest_cycle_linestring
 
-
-def find_longest_path_between_points(multilinestring, start_point, end_point):
+def find_longest_path_in_network(geom_to_process, multilinestring):
     """
     Bepaal het langste pad tussen twee punten in een MultiLineString-geometrie.
 
@@ -1310,7 +1320,10 @@ def find_longest_path_between_points(multilinestring, start_point, end_point):
     """
     if isinstance(multilinestring, LineString):
         return multilinestring
-    # Stap 1: maak een graaf van de lijnen
+
+    start_point = Point(geom_to_process.coords[0])
+    end_point = Point(geom_to_process.coords[-1])
+
     G = nx.Graph()
     for line in multilinestring.geoms:
         coords = list(line.coords)
@@ -1325,10 +1338,8 @@ def find_longest_path_between_points(multilinestring, start_point, end_point):
     if start_node == end_node:
         return find_circle_path(G.to_directed())
 
-    # Stap 3: zoek alle eenvoudige paden tussen start en eind
     all_paths = nx.all_simple_paths(G, source=start_node, target=end_node)
 
-    # Stap 4: bepaal het pad met de grootste som van gewichten
     max_length = 0
     longest_path = []
     for path in all_paths:
@@ -1337,65 +1348,199 @@ def find_longest_path_between_points(multilinestring, start_point, end_point):
             max_length = length
             longest_path = path
 
-    # Stap 5: zet het pad om naar een LineString
+
     if longest_path:
         return LineString(longest_path)
     else:
         return None
 
+def prepare_network(segments):
+    network = line_merge(safe_unary_union(segments))
+    network = snap_multilinestring_endpoints(network, 0.1)
+    network = fill_gaps_in_multilinestring(
+        network, 0.1
+    )  # also needed to fill 'gaps' to connect reference objects fe points
+    return line_merge(safe_unary_union(network))
 
-def longest_path_from_multilinestring(mls):
-    if isinstance(mls, LineString):
-        return mls
-    # Create an undirected graph
+def insert_vertex(multilinestring, point):
+    new_lines = []
+    if isinstance(multilinestring,LineString):
+        multilinestring=to_multi(multilinestring,None)
+
+    for line in multilinestring.geoms:
+        # Find the nearest point on the line to the given point
+        nearest_point = line.interpolate(line.project(point))
+
+        # Split the line at the nearest point
+        coords = list(line.coords)
+        min_dist = float('inf')
+        insert_index = None
+
+        for i in range(len(coords) - 1):
+            segment = LineString([coords[i], coords[i + 1]])
+            dist = segment.distance(nearest_point)
+            if dist < min_dist:
+                min_dist = dist
+                insert_index = i + 1
+
+        # Insert the nearest point into the coordinates
+        new_coords = coords[:insert_index] + [(nearest_point.x, nearest_point.y)] + coords[insert_index:]
+        new_lines.append(LineString(new_coords))
+
+    return MultiLineString(new_lines)
+
+
+from shapely.geometry import Point, MultiPoint, LineString, MultiLineString, Polygon, MultiPolygon
+from shapely.geometry.base import BaseGeometry
+
+# def extract_vertices(geom: BaseGeometry):
+#     """Extract all coordinate points (vertices) from a Shapely geometry."""
+#     if isinstance(geom, Point):
+#         return [geom]
+#     elif isinstance(geom, MultiPoint):
+#         return list(geom.geoms)
+#     elif isinstance(geom, (LineString, LinearRing)):
+#         return [Point(coord) for coord in geom.coords]
+#     elif isinstance(geom, MultiLineString):
+#         return [Point(coord) for line in geom.geoms for coord in line.coords]
+#     elif isinstance(geom, Polygon):
+#         exterior = [Point(coord) for coord in geom.exterior.coords]
+#         interiors = [Point(coord) for ring in geom.interiors for coord in ring.coords]
+#         return exterior + interiors
+#     elif isinstance(geom, MultiPolygon):
+#         return [pt for poly in geom.geoms for pt in extract_vertices(poly)]
+#     else:
+#         raise TypeError("Unsupported geometry type")
+
+def total_vertex_distance(geom1: BaseGeometry, geom2: BaseGeometry,bidirectional=True) -> float:
+    """Compute the total vertex-based distance between two geometries."""
+    vertices1 = get_coords_from_geometry(geom1)
+    total_distance_1 = 0.0
+    len_vertices_1 = len (vertices1)
+    # Sum of distances from vertices1 to geom2
+    for pt in vertices1:
+        total_distance_1 += Point(pt).distance(geom2)
+    total_distance = total_distance_1
+    len_vertices= len_vertices_1
+
+    if bidirectional:
+        # Sum of distances from vertices2 to geom1
+        total_distance_2 = 0.0
+        vertices2 = get_coords_from_geometry(geom2)
+        len_vertices_2 = len(vertices2)
+        for pt in vertices2:
+            total_distance_2 += Point(pt).distance(geom1)
+        total_distance = total_distance+total_distance_2
+        len_vertices = len_vertices +len_vertices_2
+
+    return total_distance/len_vertices
+
+
+# def total_vertex_distance(line1, line2):
+#     """
+#     Calculates the sum of shortest distances from each vertex in line1 to line2,
+#     and from each vertex in line2 to line1.
+#     """
+#     # Ensure input are LineString objects
+#     if not isinstance(line1, LineString) or not isinstance(line2, LineString):
+#         raise TypeError("Both inputs must be shapely.geometry.LineString objects.")
+#     # Sum of distances from vertices of line1 to line2
+#     dist1 = sum(line2.distance(Point(p)) for p in line1.coords)
+#
+#     # Sum of distances from vertices of line2 to line1
+#     dist2 = sum(line1.distance(Point(p)) for p in line2.coords)
+#
+#     return (dist1 + dist2) / 2
+
+
+def find_best_path_in_network(geom_to_process, nw_multilinestring):
+    """
+    Detrlmine the best path between 2 points in the network using the Hausdorf-distance
+    Parameters:
+    - geom_to_process: shapely.geometry.MultiLineString -  geometry (line) with startpoint-endpoint and to determine hausdorf-distance
+    - nw_multilinestring: shapely.geometry.MultiLineString - MultiLineString with all parts of a network
+
+    Returns:
+    - shapely.geometry.LineString van het langste pad tussen de twee punten
+    """
+    if isinstance(nw_multilinestring, LineString):
+        return nw_multilinestring
+
+    start_point = Point(geom_to_process.coords[0])
+    end_point = Point(geom_to_process.coords[-1])
+    nw_multilinestring = insert_vertex(nw_multilinestring,start_point)
+    nw_multilinestring = insert_vertex(nw_multilinestring, end_point)
+
+    # Create graph
     G = nx.Graph()
 
-    # Add edges to the graph from the MultiLineString
-    for line in mls.geoms:
+    for line in nw_multilinestring.geoms:
         coords = list(line.coords)
         for i in range(len(coords) - 1):
-            start = coords[i]
-            end = coords[i + 1]
-            length = LineString([start, end]).length
-            G.add_edge(start, end, weight=length)
+            p1 = tuple(coords[i])
+            p2 = tuple(coords[i + 1])
+            segment = LineString([p1, p2])
+            G.add_edge(p1, p2, weight=segment.length, geometry=segment)
 
-    # Find the longest simple path by checking all simple paths
+    start_node = nearest_node(start_point, G.nodes)
+    end_node = nearest_node(end_point, G.nodes)
 
-    longest_path = []
-    max_length = 0
+    if start_node == end_node:
+        return find_best_circle_path(G.to_directed(),geom_to_process)
 
-    for source in G.nodes:
-        for target in G.nodes:
-            if source != target:
-                try:
-                    for path in nx.all_simple_paths(G, source=source, target=target):
-                        path_length = sum(
-                            LineString([path[i], path[i + 1]]).length
-                            for i in range(len(path) - 1)
-                        )
-                        if path_length > max_length:
-                            max_length = path_length
-                            longest_path = path
-                except nx.NetworkXNoPath:
-                    continue
+    # Stap 3: zoek alle eenvoudige paden tussen start en eind
+    all_paths = nx.all_simple_paths(G, source=start_node, target=end_node)
 
-    # Convert the longest path to a LineString
-    if longest_path:
-        return LineString(longest_path)
-    else:
-        return None
+    # Stap 4: bepaal het pad met de grootste som van gewichten
+    min_dist = inf
+    best_line = None
+    for path in all_paths:
+        line = LineString(path)
+        dist = total_vertex_distance(line,geom_to_process)
+        if dist < min_dist:
+            min_dist = dist
+            best_line = line
+    return best_line
 
 
-# def longest_connected_linestring(multilinestring):
-#     # Merge connected lines into LineStrings
-#     merged = line_merge(unary_union(multilinestring))
+# def longest_path_from_multilinestring(mls):
+#     if isinstance(mls, LineString):
+#         return mls
+#     # Create an undirected graph
+#     G = nx.Graph()
 #
-#     # Ensure result is iterable (could be a single LineString or MultiLineString)
-#     if isinstance(merged, LineString):
-#         return merged
-#     elif isinstance(merged, MultiLineString):
-#         # Return the longest LineString
-#         return max(merged.geoms, key=lambda line: line.length)
+#     # Add edges to the graph from the MultiLineString
+#     for line in mls.geoms:
+#         coords = list(line.coords)
+#         for i in range(len(coords) - 1):
+#             start = coords[i]
+#             end = coords[i + 1]
+#             length = LineString([start, end]).length
+#             G.add_edge(start, end, weight=length)
+#
+#     # Find the longest simple path by checking all simple paths
+#
+#     longest_path = []
+#     max_length = 0
+#
+#     for source in G.nodes:
+#         for target in G.nodes:
+#             if source != target:
+#                 try:
+#                     for path in nx.all_simple_paths(G, source=source, target=target):
+#                         path_length = sum(
+#                             LineString([path[i], path[i + 1]]).length
+#                             for i in range(len(path) - 1)
+#                         )
+#                         if path_length > max_length:
+#                             max_length = path_length
+#                             longest_path = path
+#                 except nx.NetworkXNoPath:
+#                     continue
+#
+#     # Convert the longest path to a LineString
+#     if longest_path:
+#         return LineString(longest_path)
 #     else:
 #         return None
 

@@ -76,11 +76,14 @@ from brdr.geometry_utils import (
     snap_geometry_to_reference,
     remove_shortest_and_merge,
     extract_points_lines_from_geometry,
-    find_longest_path_between_points,
     snap_multilinestring_endpoints,
     fill_gaps_in_multilinestring,
     shortest_connections_between_geometries,
     get_coords_from_geometry,
+    find_best_path_in_network,
+    insert_vertex,
+    find_longest_path_in_network,
+    prepare_network,
 )
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import buffer_pos
@@ -515,8 +518,8 @@ class Aligner:
         thematic_difference,
         relevant_distance,
     ):
-        start_point = Point(geom_to_process.coords[0])
-        end_point = Point(geom_to_process.coords[-1])
+        # start_point = Point(geom_to_process.coords[0])
+        # end_point = Point(geom_to_process.coords[-1])
         segments = []
         segments.extend(list(reference_intersection.geoms))
         segments.extend(list(thematic_difference.geoms))
@@ -569,24 +572,19 @@ class Aligner:
 
         # segments= scale_segments(segments,factor = 1.001) #to scale or not? necessary to fix floating_points intersection-problem
 
-        geom_processed = self.merge_and_search(end_point, segments, start_point)
+        network = prepare_network(segments)
+        geom_processed = find_best_path_in_network(geom_to_process,
+            network
+        )
         if geom_processed is None:
             # add original so a connected path will be found
             segments.append(geom_to_process)
-            geom_processed = self.merge_and_search(end_point, segments, start_point)
+            network = prepare_network(segments)
+            geom_processed = find_longest_path_in_network(geom_to_process, network)
+
         return geom_processed
 
-    def merge_and_search(self, end_point, segments, start_point):
-        merged = line_merge(safe_unary_union(segments))
-        merged = snap_multilinestring_endpoints(merged, 0.1)
-        merged = fill_gaps_in_multilinestring(
-            merged, 0.1
-        )  # also needed to fill 'gaps' to connect reference objects fe points
-        merged = line_merge(safe_unary_union(merged))
-        geom_processed = find_longest_path_between_points(
-            merged, start_point, end_point
-        )
-        return geom_processed
+
 
     def _get_connection_line(
         self,
@@ -601,22 +599,30 @@ class Aligner:
         # Integrate vertices of the input/thematic geometry
         # we segmentize the input so there are fixed points to snap to, so evaluation is more stable
         # It could also be an option to do this at specific SnapStrategy's but for now we always do this for stability reasons when evaluating
+        # thematic_coords = MultiPoint(
+        #     list(
+        #         get_coords_from_geometry(
+        #             segmentize(geom_to_process, self.partial_snap_max_segment_length)
+        #         )
+        #     )
+        # )
+
         thematic_coords = MultiPoint(
             list(
                 get_coords_from_geometry(
-                    segmentize(geom_to_process, self.partial_snap_max_segment_length)
+                    insert_vertex(geom_to_process, point)
                 )
             )
         )
         p_theme_1, p_theme_2 = nearest_points(point, thematic_coords)
 
         # because of segmentation in former step there will always be a 'close' vertex. So we always take the vertex
-        if True:
-            # if p_theme_2.distance(point) < relevant_distance * 2:
-            line_theme = LineString([point, p_theme_2])
-        else:
-            line_theme = LineString()
-            p_theme_2 = point
+
+        # if p_theme_2.distance(point) < relevant_distance * 2:
+        line_theme = LineString([point, p_theme_2])
+        # else:
+        #     line_theme = LineString()
+        #     p_theme_2 = point
 
         if (
             not reference_coords_intersection is None
@@ -635,8 +641,9 @@ class Aligner:
         connection_line = safe_unary_union([line_theme, line_ref])
 
         connection_line = scale(connection_line, factor, factor, origin=p_theme_2)
+
         # To scale or not to scale, that's the question.
-        # At this moment scaling is not necessary because we use the vertices of the segmentized input_geometry, so no problem with floating point-intersections.
+        # When vertices are used it is possibly not necessary to scale because we use the vertices of the segmentized input_geometry, so no problem with floating point-intersections.
         # When we do not use vertices it could be necessary (due to floating point error) to make sure lines are intersecting so they are split on these intersecting points
 
         if (
