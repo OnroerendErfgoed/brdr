@@ -28,7 +28,9 @@ dependencies = [
     "requests~=2.32",
     "shapely~=2.0",
     "topojson~=1.9",
-    "networkx>=3.3"
+    "networkx>=3.3",
+    "osmnx~=2.0",
+    "geopandas~=1.1"
 ]
 [project.urls]
 Documentation = "https://github.com/OnroerendErfgoed/brdr/blob/main/README.md"

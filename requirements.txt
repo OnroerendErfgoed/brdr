@@ -18,3 +18,7 @@ networkx>=3.3
     # via brdr (pyproject.toml)
 urllib3==2.2.1
     # via requests
+osmnx>=2.0.3
+    # via brdr (pyproject.toml)
+geopandas>=1.1.0
+    # via brdr (pyproject.toml)
