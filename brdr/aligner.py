@@ -290,7 +290,9 @@ class Aligner:
         self.dict_thematic, self.dict_thematic_properties, self.dict_thematic_source = (
             loader.load_data()
         )
+
         self.thematic_union = None
+        # TODO reset all aligner variables too? fe dict_processresults etc
 
     def load_reference_data(self, loader: Loader):
         """
@@ -304,6 +306,7 @@ class Aligner:
             self.dict_reference_source,
         ) = loader.load_data()
         self._prepare_reference_data()
+        # TODO reset all aligner variables too? fe dict_processresults etc
 
     ##########PROCESSORS#######################
     ###########################################
@@ -354,7 +357,7 @@ class Aligner:
         )
         return result_dict
 
-    def _process_geometry_by_overlap(
+    def _process_geometry_by_network(
         self,
         input_geometry: BaseGeometry,
         relevant_distance: float = 1,
@@ -378,7 +381,7 @@ class Aligner:
         #         GeometryCollection(ref_intersections_geoms)
         #     )
         # )
-        # Optimized method to get all the reference elements in the surrounding area (reference elements only calculated once fot the full aligner
+        # Optimized method to get all the reference elements in the surrounding area (reference elements only calculated once for the full aligner
         reference = safe_unary_union(
             safe_intersection(self._get_reference_elements(), input_geometry_buffered)
         )
@@ -389,7 +392,7 @@ class Aligner:
             for polygon in input_geometry.geoms:
                 exterior = polygon.exterior
                 interiors = polygon.interiors
-                exterior_processed = self._process_by_overlap(
+                exterior_processed = self._process_by_network(
                     exterior,
                     reference,
                     relevant_distance,
@@ -398,7 +401,7 @@ class Aligner:
                 )
                 interiors_processed = []
                 for i in interiors:
-                    i_processed = self._process_by_overlap(
+                    i_processed = self._process_by_network(
                         i,
                         reference,
                         relevant_distance,
@@ -411,7 +414,7 @@ class Aligner:
 
         else:
             for geom in input_geometry.geoms:
-                geom_processed = self._process_by_overlap(
+                geom_processed = self._process_by_network(
                     geom,
                     reference,
                     relevant_distance,
@@ -429,7 +432,7 @@ class Aligner:
             relevant_distance,
         )
 
-    def _process_by_overlap(
+    def _process_by_network(
         self,
         geom_to_process,
         reference,
@@ -584,8 +587,6 @@ class Aligner:
 
         return geom_processed
 
-
-
     def _get_connection_line(
         self,
         geom_to_process,
@@ -739,7 +740,7 @@ class Aligner:
                     ref_intersections_geoms,
                     relevant_distance=relevant_distance,
                 )
-        return self._process_geometry_by_overlap(
+        return self._process_geometry_by_network(
             input_geometry,
             relevant_distance,
             snap_strategy=self.partial_snap_strategy,
@@ -944,7 +945,6 @@ class Aligner:
             except:
                 original_geometry_length = 1
             for relevant_distance, process_result in dict_dist_results.items():
-                process_result[PREDICTION_SCORE] = -1
                 resulting_geom = process_result["result"]
                 try:
                     resulting_geometry_length = len(resulting_geom.geoms)
@@ -1556,11 +1556,10 @@ class Aligner:
             dict_processresults = self.dict_processresults
         if dict_thematic is None:
             dict_thematic = self.dict_thematic
-        reference_union = self._get_reference_union()
         return diffs_from_dict_processresults(
             dict_processresults=dict_processresults,
             dict_thematic=dict_thematic,
-            reference_union=reference_union,
+            reference_union=self._get_reference_union(),
             diff_metric=diff_metric,
         )
 
@@ -2002,19 +2001,6 @@ class Aligner:
         """
         remark = ""
         geom_thematic = make_valid(geom_thematic)
-        # if geom_preresult.geom_type in ['LineString', 'MultiLineString']:
-        #     result_diff_plus = safe_difference(geom_preresult, buffer_pos(geom_thematic, self.correction_distance))
-        #     result_diff_min = safe_difference(geom_thematic, buffer_pos(geom_preresult, self.correction_distance))
-        #     result_diff = safe_unary_union([result_diff_plus, result_diff_min])
-        #     return _unary_union_result_dict({
-        #         "result": line_merge(geom_preresult),
-        #         "result_diff": line_merge(result_diff),
-        #         "result_diff_plus": line_merge(result_diff_plus),
-        #         "result_diff_min": line_merge(result_diff_min),
-        #         "result_relevant_intersection": relevant_intersection,
-        #         "result_relevant_diff": relevant_diff,
-        #         "remark": remark,
-        #     })
         if geom_preresult is None or geom_preresult.is_empty:
             geom_preresult = geom_thematic
             remark = (
