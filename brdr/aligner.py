@@ -1,4 +1,3 @@
-import copy
 import json
 import os
 from collections import defaultdict
@@ -8,14 +7,11 @@ from datetime import datetime
 from typing import Iterable
 
 import numpy as np
-import topojson
 from shapely import (
     GeometryCollection,
-    line_merge,
     Point,
     MultiPolygon,
     MultiPoint,
-    segmentize,
 )
 from shapely import Polygon
 from shapely import STRtree
@@ -74,10 +70,7 @@ from brdr.geometry_utils import (
     geometric_equality,
     to_multi,
     snap_geometry_to_reference,
-    remove_shortest_and_merge,
     extract_points_lines_from_geometry,
-    snap_multilinestring_endpoints,
-    fill_gaps_in_multilinestring,
     shortest_connections_between_geometries,
     get_coords_from_geometry,
     find_best_path_in_network,
@@ -94,12 +87,12 @@ from brdr.geometry_utils import safe_symmetric_difference
 from brdr.geometry_utils import safe_union
 from brdr.loader import Loader
 from brdr.logger import Logger
+from brdr.topo import dissolve_topo, generate_topo
 from brdr.typings import ProcessResult
 from brdr.utils import (
     diffs_from_dict_processresults,
     multi_to_singles,
     is_brdr_formula,
-    geojson_geometry_to_shapely,
 )
 from brdr.utils import geojson_from_dict
 from brdr.utils import get_breakpoints_zerostreak
@@ -867,23 +860,24 @@ class Aligner:
         dict_series = {}
         dict_series_queue = {}
         futures = []
-        if dict_thematic is None:
-            dict_thematic = self.dict_thematic
+        dict_thematic_to_process= dict_thematic
+        if dict_thematic_to_process is None:
+            dict_thematic_to_process = self.dict_thematic
         dict_multi_as_single = {}
 
         if self.multi_as_single_modus:
-            dict_thematic, dict_multi_as_single = multi_to_singles(dict_thematic)
+            dict_thematic_to_process, dict_multi_as_single = multi_to_singles(dict_thematic_to_process)
 
         if self.preserve_topology:
             # self.max_workers =-1
             # self.logger.feedback_info("max_workers set to -1 when using 'preserve_topology'")
-            dict_thematic, topo_thematic = self._generate_topo(dict_thematic)
+            dict_thematic_to_process, topo_thematic = generate_topo(dict_thematic_to_process)
 
         if self.max_workers != -1:
             with ThreadPoolExecutor(
                 max_workers=self.max_workers
             ) as executor:  # max_workers=5
-                for key, geometry in dict_thematic.items():
+                for key, geometry in dict_thematic_to_process.items():
                     self.logger.feedback_info(
                         f"thematic id {str(key)} processed with relevant distances (m) [{str(self.relevant_distances)}]"
                     )
@@ -913,7 +907,7 @@ class Aligner:
                 for relevant_distance, future in dict_dist.items():
                     dict_series[id_theme][relevant_distance] = future.result()
         else:
-            for key, geometry in dict_thematic.items():
+            for key, geometry in dict_thematic_to_process.items():
                 self.logger.feedback_info(
                     f"thematic id {str(key)} processed with relevant distances (m) [{str(self.relevant_distances)}]"
                 )
@@ -932,7 +926,7 @@ class Aligner:
 
                     dict_series[key][relevant_distance] = processed_result
         if self.preserve_topology:
-            dict_series = self._dissolve_topo(dict_series, dict_thematic, topo_thematic)
+            dict_series = dissolve_topo(dict_series,self.dict_thematic, dict_thematic_to_process, topo_thematic,relevant_distances)
 
         if self.multi_as_single_modus:
             dict_series = merge_process_results(dict_series, dict_multi_as_single)
@@ -961,88 +955,6 @@ class Aligner:
         self.dict_processresults = dict_series
 
         return self.dict_processresults
-
-    def _dissolve_topo(self, dict_series, dict_thematic, topo_thematic):
-        # TODO: what about dict_thematic, this has to be reset again
-        dict_series_topo = dict()
-        for relevant_distance in self.relevant_distances:
-            for obj in topo_thematic.output["objects"]["data"]["geometries"]:
-                key = obj["id"]
-                dict_series_topo[key] = {}
-                topo = copy.deepcopy(topo_thematic)
-                new_arcs = []
-                for arc_id in dict_series.keys():
-                    try:
-                        result_line = dict_series[arc_id][relevant_distance]["result"]
-
-                        linestring = remove_shortest_and_merge(result_line)
-                        if linestring.geom_type == "MultiLineString":
-                            raise TypeError
-                        new_arc = [list(coord) for coord in linestring.coords]
-                        new_arcs.append(new_arc)
-                    except:
-                        linestring = dict_thematic[arc_id]
-                        print("old_arc: " + linestring.wkt)
-                        old_arc = [list(coord) for coord in linestring.coords]
-                        new_arcs.append(old_arc)
-                topo.output["arcs"] = new_arcs
-                topo_geojson = topo.to_geojson()
-                # print(from_geojson(topo_geojson))
-                topo_geojson = json.loads(topo_geojson)
-                result = GeometryCollection()
-                for feature in topo_geojson["features"]:
-                    if feature["id"] == key:
-                        result = geojson_geometry_to_shapely(feature["geometry"])
-                result_diff_plus = make_valid(
-                    safe_difference(result, self.dict_thematic[key])
-                )
-                result_diff_min = make_valid(
-                    safe_difference(self.dict_thematic[key], result)
-                )
-                result_diff = safe_unary_union([result_diff_plus, result_diff_min])
-                dict_series_topo[key][relevant_distance] = {
-                    "result": result,
-                    "result_diff": result_diff,
-                    "result_diff_plus": result_diff_plus,
-                    "result_diff_min": result_diff_min,
-                    "result_relevant_intersection": GeometryCollection(),
-                    "result_relevant_diff": GeometryCollection(),
-                }
-        dict_series = dict_series_topo
-        # TODO: research
-        # https://github.com/OnroerendErfgoed/brdr/issues/204
-        #
-        #     result_line = dict_series[arc_id][relevant_distance]["result"]
-        #     linestring = linemerge(result_line)
-        #     if linestring.geom_type == "LineString":
-        #         max_lines = 0
-        #         new_arc = [list(coord) for coord in linestring.coords]
-        #         new_arcs.append(new_arc)
-        #     elif linestring.geom_type == "MultiLineString":
-        #         max_lines = 0
-        #         for line in linestring.geoms:
-        #             print(line.wkt)
-        #             new_arc = [list(coord) for coord in line.coords]
-        #             new_arcs.append(new_arc)
-        #             max_lines = max_lines + 1
-        # topo.output['arcs'] = new_arcs
-        # topo.output['objects']['data']['geometries'][0]['arcs'] = [[list(range(0, max_lines))]]
-        # topo_dict = topo.to_dict()
-        #
-        #     print(str(topo_dict))
-        return dict_series
-
-    def _generate_topo(self, dict_thematic):
-        topo_thematic = topojson.Topology(dict_thematic, prequantize=False)
-        print(topo_thematic.to_json())
-        arc_id = 0
-        arc_dict = {}
-        for arc in topo_thematic.output["arcs"]:
-            linestring = LineString(arc)
-            arc_dict[arc_id] = linestring
-            arc_id = arc_id + 1
-        dict_thematic = arc_dict
-        return dict_thematic, topo_thematic
 
     def predictor(
         self,
@@ -1277,6 +1189,7 @@ class Aligner:
             scores = []
             distances = []
             predictions = []
+            #Moet dit niet naar de predictor verhuizen?
             prediction_properties = []
             equality_found = False
 
@@ -2002,18 +1915,21 @@ class Aligner:
         remark = ""
         geom_thematic = make_valid(geom_thematic)
         if geom_preresult is None or geom_preresult.is_empty:
-            geom_preresult = geom_thematic
+            #geom_preresult = geom_thematic
+            geom_preresult = GeometryCollection()
             remark = (
-                "Empty geometry calculated: -->resulting geometry = original geometry"
+                "Empty geometry calculated: -->resulting geometry = empty geometry"
             )
         if to_multi(geom_preresult).geom_type != to_multi(geom_thematic).geom_type:
-            geom_preresult = geom_thematic
-            remark = "Calculated geometry of different geomtype: -->resulting geometry = original geometry"
+            #geom_preresult = geom_thematic
+            geom_preresult = GeometryCollection()
+            remark = "Calculated geometry of different geomtype: -->resulting geometry = empty geometry"
         if geom_preresult.geom_type in [
             "Point",
             "MultiPoint",
             "LineString",
             "MultiLineString",
+            "GeometryCollection"
         ]:
             result_diff_plus = safe_difference(
                 geom_preresult, buffer_pos(geom_thematic, self.correction_distance)
@@ -2062,7 +1978,8 @@ class Aligner:
                 )
 
             # Correction for unchanged geometries
-            if safe_symmetric_difference(geom_preresult, geom_thematic).is_empty:
+            #if safe_symmetric_difference(geom_preresult, geom_thematic).is_empty:
+            if geometric_equality(geom_preresult, geom_thematic,correction_distance=self.correction_distance,mitre_limit=self.mitre_limit):
                 remark = "Unchanged geometry: -->resulting geometry = original geometry"
                 self.logger.feedback_debug(remark)
                 return _unary_union_result_dict(

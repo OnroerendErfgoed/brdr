@@ -10,13 +10,13 @@ from brdr.grb import (
 from brdr.loader import GeoJsonLoader
 
 
-class TestToplogy(unittest.TestCase):
+class TestTopology(unittest.TestCase):
     def setUp(self):
         # Create a sample geometry for testing
         self.sample_aligner = Aligner()
         self.sample_geom = Polygon([(0, 0), (0, 10), (10, 10), (10, 0)])
 
-    def test_topolgy(self):
+    def test_topology(self):
         """
         Test if parameter preserve_topology is working"""
         # Initiate an Aligner
@@ -143,3 +143,6 @@ class TestToplogy(unittest.TestCase):
         )
 
         self.assertEqual(len(process_result), 2)
+        dict_predictions_evaluated, prop_dictionary = aligner.evaluate()
+        print (dict_predictions_evaluated)
+        print(prop_dictionary)

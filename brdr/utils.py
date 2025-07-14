@@ -1,6 +1,5 @@
 import logging
 import os.path
-
 import numpy as np
 import requests
 from geojson import Feature, FeatureCollection, dump
@@ -23,8 +22,6 @@ from brdr.constants import (
     PERIMETER_ATTRIBUTE,
     SHAPE_INDEX_ATTRIBUTE,
     AREA_ATTRIBUTE,
-    CORRECTION_INDICATION,
-    PREDICTION_SCORE,
     DIFF_INDICATION,
 )
 from brdr.enums import DiffMetric
@@ -78,16 +75,13 @@ def get_dict_geojsons_from_series_dict(
             properties[REMARK_FIELD_NAME] = ""
             if "remark" in process_result:
                 properties[REMARK_FIELD_NAME] = process_result["remark"]
-            properties[CORRECTION_INDICATION] = 1
-            properties[DIFF_INDICATION] = -1
             result_diff = process_result["result_diff"]
-            if properties[REMARK_FIELD_NAME] == "" and (result_diff is None or result_diff.is_empty):
-                properties[CORRECTION_INDICATION] = 0
-            if not result_diff is None and not result_diff.is_empty:
-                properties[DIFF_INDICATION] = result_diff.area
-                if result_diff.area == 0:
-                    properties[DIFF_INDICATION] = result_diff.length
-
+            if result_diff is None:
+                result_diff = GeometryCollection()
+            properties[DIFF_INDICATION] = 0
+            properties[DIFF_INDICATION] = result_diff.area
+            if result_diff.area == 0:
+                properties[DIFF_INDICATION] = result_diff.length
             for results_type, geom in process_result.items():
                 if not isinstance(geom, BaseGeometry):
                     continue

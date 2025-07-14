@@ -1554,13 +1554,14 @@ def scale_segments(segments, factor=1.01):
 
 
 def remove_shortest_and_merge(multilinestring, relevant_length=float("inf")):
+    #TODO make a better implementation of this function as this is not always correct,fe a line inthe middle of a linestring could be removed. #Check to make a implementation based on graph (networkx)?
     """
     Tries to merge a multilinestring to a linestring, and recursively tries to remove the shortest part of a multilinestring until it can be merged to a linestring,
     :param multilinestring: MultiLineString to merge
     :param relevant_length: Value when the length of a part of multilinestring is long enough to be relevant and multilinestring is kept. Default is infinity so it will recursively end into a single LineString.    :return:
     """
-    if multilinestring.is_empty:
-        return multilinestring
+    if multilinestring is None or multilinestring.is_empty:
+        return GeometryCollection()
     # Check if the merged result is a LineString
     multilinestring = line_merge(safe_unary_union(multilinestring))
     if isinstance(multilinestring, LineString):

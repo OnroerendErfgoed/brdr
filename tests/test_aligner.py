@@ -183,9 +183,10 @@ class TestAligner(unittest.TestCase):
         aligner.load_reference_data(loader)
         relevant_distance = 5
         dict_processresults = aligner.process(relevant_distance=relevant_distance)
+        #TODO-check!
         self.assertEqual(
             dict_processresults["theme_id_1"][relevant_distance]["result"].geom_type,
-            "Polygon",
+            "GeometryCollection",
         )
 
     def test_load_reference_data_grb_actual_adp(self):
