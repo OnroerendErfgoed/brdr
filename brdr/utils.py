@@ -1,5 +1,6 @@
 import logging
 import os.path
+
 import numpy as np
 import requests
 from geojson import Feature, FeatureCollection, dump
@@ -408,7 +409,7 @@ def diffs_from_dict_processresults(
                 else:
                     diff = 0
             elif diff_metric == DiffMetric.TOTAL_DISTANCE:
-                diff = total_vertex_distance(original,result,bidirectional=False)
+                diff = total_vertex_distance(original, result, bidirectional=False)
 
             # round, so the detected changes are within 10cm, 10cm² or 0.1%
             diff = round(diff, 1)

@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 from centerline.geometry import Centerline
 from shapely import from_wkt
-from shapely.geometry import LineString, MultiLineString
+from shapely.geometry import LineString
 
 #polygon = Polygon([[0, 0], [0, 4], [4, 4], [4, 0]])
 polygon = from_wkt(

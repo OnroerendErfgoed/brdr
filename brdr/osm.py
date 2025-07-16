@@ -1,6 +1,7 @@
-import osmnx as ox
-import geopandas as gpd
 from datetime import datetime
+
+import geopandas as gpd
+import osmnx as ox
 
 from brdr.constants import (
     DATE_FORMAT,
@@ -8,7 +9,7 @@ from brdr.constants import (
     OSM_MAX_REFERENCE_BUFFER,
 )
 from brdr.geometry_utils import buffer_pos
-from brdr.loader import  DictLoader
+from brdr.loader import DictLoader
 
 
 class OSMLoader(DictLoader):

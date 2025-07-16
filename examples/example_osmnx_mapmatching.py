@@ -1,7 +1,7 @@
-import osmnx as ox
-import networkx as nx
-import matplotlib.pyplot as plt
 import geopandas as gpd
+import matplotlib.pyplot as plt
+import networkx as nx
+import osmnx as ox
 from shapely.geometry import Point
 
 # 1. Download het straatnetwerk

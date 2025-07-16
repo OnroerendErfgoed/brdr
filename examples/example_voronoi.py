@@ -1,9 +1,9 @@
-import numpy as np
 import matplotlib.pyplot as plt
-from shapely import from_wkt
-from shapely.geometry import Polygon, LineString, Point, MultiLineString
-from shapely.ops import unary_union
+import numpy as np
 from scipy.spatial import Voronoi
+from shapely import from_wkt
+from shapely.geometry import Polygon, LineString, MultiLineString
+from shapely.ops import unary_union
 
 # Step 1: Define a sample polygon
 polygon = Polygon([(1, 1), (5, 1), (6, 3), (5, 5), (1, 5)])
@@ -26,6 +26,7 @@ def segmentize(polygon, segment_length=0.1):
             new_coords.append(tuple(point))
     new_coords.append(coords[-1])
     return new_coords
+
 
 segmented_points = segmentize(polygon)
 
@@ -52,6 +53,7 @@ for vpair in vor.ridge_vertices:
 # Step 6: Determine the best line (union of all valid Voronoi edges)
 centerline = unary_union(lines)
 
+
 # Step 7: Smooth the line (simple moving average for demonstration)
 def smooth_line(line, window_size=3):
     if isinstance(line, LineString):
@@ -71,22 +73,23 @@ def smooth_line(line, window_size=3):
     else:
         return line
 
+
 smoothed_centerline = smooth_line(centerline)
 
 # Plotting the result
 x, y = polygon.exterior.xy
-plt.plot(x, y, 'black', label='Polygon')
+plt.plot(x, y, "black", label="Polygon")
 for line in lines:
     x, y = line.xy
-    plt.plot(x, y, 'blue', alpha=0.5)
+    plt.plot(x, y, "blue", alpha=0.5)
 if isinstance(smoothed_centerline, LineString):
     x, y = smoothed_centerline.xy
-    plt.plot(x, y, 'red', linewidth=2, label='Smoothed Centerline')
+    plt.plot(x, y, "red", linewidth=2, label="Smoothed Centerline")
 elif isinstance(smoothed_centerline, MultiLineString):
     for line in smoothed_centerline.geoms:
         x, y = line.xy
-        plt.plot(x, y, 'red', linewidth=2)
+        plt.plot(x, y, "red", linewidth=2)
 plt.legend()
-plt.axis('equal')
+plt.axis("equal")
 plt.title("Centerline Extraction from Polygon")
 plt.show()

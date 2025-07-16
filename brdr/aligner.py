@@ -1,3 +1,4 @@
+import heapq
 import json
 import os
 from collections import defaultdict
@@ -12,6 +13,9 @@ from shapely import (
     Point,
     MultiPolygon,
     MultiPoint,
+    segmentize,
+    shortest_line,
+    LinearRing,
 )
 from shapely import Polygon
 from shapely import STRtree
@@ -19,10 +23,10 @@ from shapely import get_parts
 from shapely import make_valid
 from shapely import remove_repeated_points
 from shapely import to_geojson
-from shapely.affinity import scale
+from shapely.errors import GeometryTypeError
 from shapely.geometry.base import BaseGeometry
 from shapely.geometry.linestring import LineString
-from shapely.ops import nearest_points
+from shapely.ops import nearest_points, split
 
 from brdr import __version__
 from brdr.constants import (
@@ -74,7 +78,6 @@ from brdr.geometry_utils import (
     shortest_connections_between_geometries,
     get_coords_from_geometry,
     find_best_path_in_network,
-    insert_vertex,
     find_longest_path_in_network,
     prepare_network,
 )
@@ -474,7 +477,8 @@ class Aligner:
             )
         else:
             reference_coords_intersection = None
-        # Logica die de samenstelling verder managed (aansluiting etc) op basis van welk inputtype
+        # Logic that manages the composition of the lines (connections etc) based on the geom-inputtype
+        # POINT
         if isinstance(geom_to_process, Point):
             p1, p2 = nearest_points(geom_to_process, reference_intersection)
             if (
@@ -487,8 +491,8 @@ class Aligner:
                 if not p2_vertices is None and not p2_vertices.is_empty:
                     p2 = p2_vertices
             geom_processed = p2
+        # LINESTRING OR POLYGON
         else:
-
             geom_processed = self._get_processed_network_path(
                 geom_to_process,
                 reference_intersection,
@@ -514,33 +518,29 @@ class Aligner:
         thematic_difference,
         relevant_distance,
     ):
-        # start_point = Point(geom_to_process.coords[0])
-        # end_point = Point(geom_to_process.coords[-1])
+        thematic_points = self._get_thematic_points(
+            geom_to_process, reference_intersection
+        )
         segments = []
         segments.extend(list(reference_intersection.geoms))
         segments.extend(list(thematic_difference.geoms))
 
-        # add extra segments (connectionlines between theme and reference
+        # add extra segments (connectionlines between theme and reference)
         extra_segments = []
         for geom in thematic_difference.geoms:
-            try:
-                p_start = Point(geom.coords[0])
-                p_end = Point(geom.coords[-1])
-            except:
-                p_start = Point(geom.exterior.coords[0])
-                p_end = Point(geom.exterior.coords[-1])
-                raise ValueError(
-                    "Something wrong with p_start and p_end.This may not happen as these should be the startpoint and enpoint of a LineString. Fix needed"
-                )
+            p_start = Point(geom.coords[0])
+            p_end = Point(geom.coords[-1])
             connection_line_start = self._get_connection_line(
-                geom_to_process,
+                thematic_points,
+                thematic_difference,
                 p_start,
                 reference_intersection,
                 reference_coords_intersection,
                 relevant_distance,
             )
             connection_line_end = self._get_connection_line(
-                geom_to_process,
+                thematic_points,
+                thematic_difference,
                 p_end,
                 reference_intersection,
                 reference_coords_intersection,
@@ -557,6 +557,7 @@ class Aligner:
         segments.extend(
             extra_segments_ref_intersections
         )  # removed as we first going to filter these lines
+
         # Filter out lines that are not fully in relevant distance as these are no valid solution-paths
         # Mostly these lines will already be in the distance as both start en endpoint are in range (but not always fully)
         # geom_to_process_buffered = buffer_pos(geom_to_process, relevant_distance*1.01)
@@ -566,12 +567,8 @@ class Aligner:
         # )
         # segments.append(extra_geomcollection_ref_intersections)
 
-        # segments= scale_segments(segments,factor = 1.001) #to scale or not? necessary to fix floating_points intersection-problem
-
         network = prepare_network(segments)
-        geom_processed = find_best_path_in_network(geom_to_process,
-            network
-        )
+        geom_processed = find_best_path_in_network(geom_to_process, network)
         if geom_processed is None:
             # add original so a connected path will be found
             segments.append(geom_to_process)
@@ -580,62 +577,74 @@ class Aligner:
 
         return geom_processed
 
+    def _get_thematic_points(self, geom_to_process, reference_intersection):
+        """
+        returns a MultiPoint geometry with points on the thematic geometry that are used for consistency while creating connection_lines
+        :param geom_to_process:
+        :param reference_intersection:
+        :return: MultiPoint
+        """
+        geom_to_process_line = geom_to_process
+        if isinstance(geom_to_process_line, LinearRing):
+            geom_to_process_line = LineString(geom_to_process_line.coords)
+        geom_to_process_segmentized = segmentize(
+            geom_to_process_line, self.partial_snap_max_segment_length
+        )
+        # Split the line at all intersection points with the MultiLineString
+        splitter = safe_unary_union(reference_intersection)
+        try:
+            geom_to_process_splitted = split(geom_to_process_segmentized, splitter)
+        except GeometryTypeError:
+            geom_to_process_splitted = geom_to_process_segmentized
+        thematic_points = MultiPoint(
+            list(get_coords_from_geometry(geom_to_process_splitted))
+        )
+        return thematic_points
+
     def _get_connection_line(
         self,
-        geom_to_process,
+        thematic_points,
+        thematic_difference,
         point,
         reference_intersection,
         reference_coords_intersection,
         relevant_distance,
     ):
-        factor = 1.001
+        # factor = 1.001
 
-        # Integrate vertices of the input/thematic geometry
-        # we segmentize the input so there are fixed points to snap to, so evaluation is more stable
-        # It could also be an option to do this at specific SnapStrategy's but for now we always do this for stability reasons when evaluating
-        # thematic_coords = MultiPoint(
-        #     list(
-        #         get_coords_from_geometry(
-        #             segmentize(geom_to_process, self.partial_snap_max_segment_length)
-        #         )
-        #     )
-        # )
-
-        thematic_coords = MultiPoint(
-            list(
-                get_coords_from_geometry(
-                    insert_vertex(geom_to_process, point)
-                )
-            )
+        closest_points = heapq.nsmallest(
+            2, thematic_points.geoms, key=lambda p: point.distance(p)
         )
-        p_theme_1, p_theme_2 = nearest_points(point, thematic_coords)
-
-        # because of segmentation in former step there will always be a 'close' vertex. So we always take the vertex
-
-        # if p_theme_2.distance(point) < relevant_distance * 2:
-        line_theme = LineString([point, p_theme_2])
-        # else:
-        #     line_theme = LineString()
-        #     p_theme_2 = point
+        points = [closest_points[0], point, closest_points[-1]]
+        line_theme = LineString(points)
+        dist_1 = closest_points[0].distance(thematic_difference)
+        dist_2 = closest_points[-1].distance(thematic_difference)
+        if dist_1 > dist_2:
+            line_theme_furthest_point = closest_points[0]
+        elif dist_1 < dist_2:
+            line_theme_furthest_point = closest_points[-1]
+        else:
+            line_theme_furthest_point = point
 
         if (
             not reference_coords_intersection is None
             and not reference_coords_intersection.is_empty
         ):
-            p_ref_1, p_ref_2 = nearest_points(point, reference_coords_intersection)
-            if p_ref_2.distance(point) < relevant_distance * 1.5:
-                line_ref = LineString([p_theme_2, p_ref_2])
-            else:
-                p_ref_1, p_ref_2 = nearest_points(point, reference_intersection)
-                line_ref = LineString([p_theme_2, p_ref_2])
+            line_ref = shortest_line(
+                line_theme_furthest_point, reference_coords_intersection
+            )
+
+            if line_ref.length > relevant_distance * 1.5:
+                line_ref = shortest_line(
+                    line_theme_furthest_point, reference_intersection
+                )
         else:
-            p_ref_1, p_ref_2 = nearest_points(point, reference_intersection)
-            line_ref = LineString([p_theme_2, p_ref_2])
+            line_ref = shortest_line(line_theme_furthest_point, reference_intersection)
 
+        # connection_line = scale(connection_line, factor, factor)
+        # line_theme = scale(line_theme, factor, factor)
+        # line_ref= scale(line_ref, factor, factor)
         connection_line = safe_unary_union([line_theme, line_ref])
-
-        connection_line = scale(connection_line, factor, factor, origin=p_theme_2)
-
         # To scale or not to scale, that's the question.
         # When vertices are used it is possibly not necessary to scale because we use the vertices of the segmentized input_geometry, so no problem with floating point-intersections.
         # When we do not use vertices it could be necessary (due to floating point error) to make sure lines are intersecting so they are split on these intersecting points
@@ -860,18 +869,22 @@ class Aligner:
         dict_series = {}
         dict_series_queue = {}
         futures = []
-        dict_thematic_to_process= dict_thematic
+        dict_thematic_to_process = dict_thematic
         if dict_thematic_to_process is None:
             dict_thematic_to_process = self.dict_thematic
         dict_multi_as_single = {}
 
         if self.multi_as_single_modus:
-            dict_thematic_to_process, dict_multi_as_single = multi_to_singles(dict_thematic_to_process)
+            dict_thematic_to_process, dict_multi_as_single = multi_to_singles(
+                dict_thematic_to_process
+            )
 
         if self.preserve_topology:
             # self.max_workers =-1
             # self.logger.feedback_info("max_workers set to -1 when using 'preserve_topology'")
-            dict_thematic_to_process, topo_thematic = generate_topo(dict_thematic_to_process)
+            dict_thematic_to_process, topo_thematic = generate_topo(
+                dict_thematic_to_process
+            )
 
         if self.max_workers != -1:
             with ThreadPoolExecutor(
@@ -926,7 +939,13 @@ class Aligner:
 
                     dict_series[key][relevant_distance] = processed_result
         if self.preserve_topology:
-            dict_series = dissolve_topo(dict_series,self.dict_thematic, dict_thematic_to_process, topo_thematic,relevant_distances)
+            dict_series = dissolve_topo(
+                dict_series,
+                self.dict_thematic,
+                dict_thematic_to_process,
+                topo_thematic,
+                relevant_distances,
+            )
 
         if self.multi_as_single_modus:
             dict_series = merge_process_results(dict_series, dict_multi_as_single)
@@ -1189,7 +1208,7 @@ class Aligner:
             scores = []
             distances = []
             predictions = []
-            #Moet dit niet naar de predictor verhuizen?
+            # Moet dit niet naar de predictor verhuizen?
             prediction_properties = []
             equality_found = False
 
@@ -1915,13 +1934,11 @@ class Aligner:
         remark = ""
         geom_thematic = make_valid(geom_thematic)
         if geom_preresult is None or geom_preresult.is_empty:
-            #geom_preresult = geom_thematic
+            # geom_preresult = geom_thematic
             geom_preresult = GeometryCollection()
-            remark = (
-                "Empty geometry calculated: -->resulting geometry = empty geometry"
-            )
+            remark = "Empty geometry calculated: -->resulting geometry = empty geometry"
         if to_multi(geom_preresult).geom_type != to_multi(geom_thematic).geom_type:
-            #geom_preresult = geom_thematic
+            # geom_preresult = geom_thematic
             geom_preresult = GeometryCollection()
             remark = "Calculated geometry of different geomtype: -->resulting geometry = empty geometry"
         if geom_preresult.geom_type in [
@@ -1929,7 +1946,7 @@ class Aligner:
             "MultiPoint",
             "LineString",
             "MultiLineString",
-            "GeometryCollection"
+            "GeometryCollection",
         ]:
             result_diff_plus = safe_difference(
                 geom_preresult, buffer_pos(geom_thematic, self.correction_distance)
@@ -1978,8 +1995,13 @@ class Aligner:
                 )
 
             # Correction for unchanged geometries
-            #if safe_symmetric_difference(geom_preresult, geom_thematic).is_empty:
-            if geometric_equality(geom_preresult, geom_thematic,correction_distance=self.correction_distance,mitre_limit=self.mitre_limit):
+            # if safe_symmetric_difference(geom_preresult, geom_thematic).is_empty:
+            if geometric_equality(
+                geom_preresult,
+                geom_thematic,
+                correction_distance=self.correction_distance,
+                mitre_limit=self.mitre_limit,
+            ):
                 remark = "Unchanged geometry: -->resulting geometry = original geometry"
                 self.logger.feedback_debug(remark)
                 return _unary_union_result_dict(

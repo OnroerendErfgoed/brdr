@@ -7,7 +7,7 @@ from shapely import GeometryCollection, make_valid, LineString
 from brdr.geometry_utils import (
     safe_unary_union,
     safe_difference,
-    remove_shortest_and_merge,
+    longest_linestring_from_multilinestring,
 )
 from brdr.utils import geojson_geometry_to_shapely
 
@@ -36,7 +36,7 @@ def dissolve_topo(dict_series,dict_thematic, dict_thematic_to_process, topo_them
                 try:
                     result_line = dict_series[arc_id][relevant_distance]["result"]
 
-                    linestring = remove_shortest_and_merge(result_line)
+                    linestring = longest_linestring_from_multilinestring(result_line)
                     if linestring.geom_type == "MultiLineString":
                         raise TypeError
                     new_arc = [list(coord) for coord in linestring.coords]

@@ -1,7 +1,7 @@
 import osmnx as ox
 
 # Stel het type infrastructuur in (bijv. 'cycleway' voor fietspaden)
-tags = {'highway': 'cycleway'}
+tags = {"highway": "cycleway"}
 
 # Download alle fietspaden in Leuven
 leuven_fietspaden = ox.features_from_place("Leuven, Belgium", tags)
