@@ -498,6 +498,7 @@ class Aligner:
                 reference_intersection,
                 reference_coords_intersection,
                 thematic_difference,
+                snap_strategy,
                 relevant_distance,
             )
 
@@ -516,6 +517,7 @@ class Aligner:
         reference_intersection,
         reference_coords_intersection,
         thematic_difference,
+            snap_strategy,
         relevant_distance,
     ):
         thematic_points = self._get_thematic_points(
@@ -568,12 +570,12 @@ class Aligner:
         # segments.append(extra_geomcollection_ref_intersections)
 
         network = prepare_network(segments)
-        geom_processed = find_best_path_in_network(geom_to_process, network)
+        geom_processed = find_best_path_in_network(geom_to_process, network,snap_strategy,relevant_distance)
         if geom_processed is None:
             # add original so a connected path will be found
             segments.append(geom_to_process)
             network = prepare_network(segments)
-            geom_processed = find_longest_path_in_network(geom_to_process, network)
+            geom_processed = find_longest_path_in_network(geom_to_process, network,snap_strategy,relevant_distance)
 
         return geom_processed
 

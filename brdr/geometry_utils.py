@@ -1359,7 +1359,7 @@ def longest_linestring_from_multilinestring(multilinestring):
     return LineString(longest_path)
 
 
-def find_longest_path_in_network(geom_to_process, multilinestring):
+def find_longest_path_in_network(geom_to_process, multilinestring,snap_strategy,relevant_distance):
     """
     Bepaal het langste pad tussen twee punten in een MultiLineString-geometrie.
 
@@ -1386,6 +1386,10 @@ def find_longest_path_in_network(geom_to_process, multilinestring):
     end_node = nearest_node(end_point, G.nodes)
     if start_node == end_node:
         return find_circle_path(G.to_directed())
+    if not snap_strategy is None and snap_strategy  != SnapStrategy.NO_PREFERENCE:
+        #when SnapStrategy = PREFER_VERTICES or ONLY_VERTICES
+        start_node = get_vertex_node(G, relevant_distance, start_node, start_point)
+        end_node = get_vertex_node(G, relevant_distance, end_node, end_point)
 
     all_paths = nx.all_simple_paths(G, source=start_node, target=end_node)
 
@@ -1483,7 +1487,7 @@ def total_vertex_distance(
     return total_distance / len_vertices
 
 
-def find_best_path_in_network(geom_to_process, nw_multilinestring):
+def find_best_path_in_network(geom_to_process, nw_multilinestring,snap_strategy,relevant_distance):
     """
     Detrlmine the best path between 2 points in the network using the Hausdorf-distance
     Parameters:
@@ -1510,11 +1514,10 @@ def find_best_path_in_network(geom_to_process, nw_multilinestring):
     if start_node == end_node:
         return find_best_circle_path(G.to_directed(), geom_to_process)
 
-    # # TODO, check for other start_node & end_node based on ref_intersection
-    # for node in G.neighbors(start_node):
-    #     start_node=node
-    # for node in G.neighbors(end_node):
-    #     end_node=node
+    if not snap_strategy is None and snap_strategy  != SnapStrategy.NO_PREFERENCE:
+        #when SnapStrategy = PREFER_VERTICES or ONLY_VERTICES
+        start_node = get_vertex_node(G, relevant_distance, start_node, start_point)
+        end_node = get_vertex_node(G, relevant_distance, end_node, end_point)
 
     # Stap 3: zoek alle eenvoudige paden tussen start en eind
     all_paths = nx.all_simple_paths(G, source=start_node, target=end_node)
@@ -1531,6 +1534,16 @@ def find_best_path_in_network(geom_to_process, nw_multilinestring):
     return best_line
 
 
+def get_vertex_node(G, relevant_distance, input_node, point):
+    min_dist = inf
+    for node in G.neighbors(input_node):
+        dist = point.distance(Point(node))
+        if dist <= relevant_distance and dist < min_dist:
+            min_dist = dist
+            input_node = node
+    return input_node
+
+
 # def scale_segments(segments, factor=1.01):
 #     scaled_segments = []
 #     for segment in segments:
@@ -1539,32 +1552,32 @@ def find_best_path_in_network(geom_to_process, nw_multilinestring):
 #     return scaled_segments
 
 
-def extend_line_in_graph(existing_line, graph):
-    # TODO; check if we are going to use this
-
-    start_node = nearest_node(Point(existing_line.coords[0]), graph.nodes)
-    end_node = nearest_node(Point(existing_line.coords[-1]), graph.nodes)
-
-    # Zoek de bijbehorende node in de graph
-    # (je moet hier mogelijk een mapping hebben tussen coördinaten en node IDs)
-
-    start_geom = get_next_geometry(graph, start_node)
-    end_geom = get_next_geometry(graph, end_node)
-
-    # Voeg toe aan bestaande lijn
-    return safe_unary_union([existing_line, start_geom, end_geom])
-
-
-def get_next_geometry(graph, node):
-    # TODO; check if we are going to use this
-
-    # Stel dat je de node ID hebt:
-    neighbors = list(graph.neighbors(node))
-    # Kies een volgende node (bijv. de eerste)
-    next_node = neighbors[0]
-    # Haal de edge geometrie op
-    edge_data = graph.get_edge_data(node, next_node)
-    return edge_data[0]["geometry"]
+# def extend_line_in_graph(existing_line, graph):
+#     # TODO; check if we are going to use this
+#
+#     start_node = nearest_node(Point(existing_line.coords[0]), graph.nodes)
+#     end_node = nearest_node(Point(existing_line.coords[-1]), graph.nodes)
+#
+#     # Zoek de bijbehorende node in de graph
+#     # (je moet hier mogelijk een mapping hebben tussen coördinaten en node IDs)
+#
+#     start_geom = get_next_geometry(graph, start_node)
+#     end_geom = get_next_geometry(graph, end_node)
+#
+#     # Voeg toe aan bestaande lijn
+#     return safe_unary_union([existing_line, start_geom, end_geom])
+#
+#
+# def get_next_geometry(graph, node):
+#     # TODO; check if we are going to use this
+#
+#     # Stel dat je de node ID hebt:
+#     neighbors = list(graph.neighbors(node))
+#     # Kies een volgende node (bijv. de eerste)
+#     next_node = neighbors[0]
+#     # Haal de edge geometrie op
+#     edge_data = graph.get_edge_data(node, next_node)
+#     return edge_data[0]["geometry"]
 
 
 def _get_snapped_point(point, ref_line, ref_coords, snap_strategy, tolerance):
