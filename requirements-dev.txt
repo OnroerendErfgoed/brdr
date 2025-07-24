@@ -129,7 +129,7 @@ six==1.16.0
     # via python-dateutil
 toml==0.10.2
     # via brdr (pyproject.toml)
-topojson==1.9
+topojson>=1.10
     # via brdr (pyproject.toml)
 trove-classifiers==2024.5.22
     # via hatchling
