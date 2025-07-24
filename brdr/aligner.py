@@ -80,6 +80,7 @@ from brdr.geometry_utils import (
     find_best_path_in_network,
     find_longest_path_in_network,
     prepare_network,
+    get_connection_lines_to_nearest,
 )
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import buffer_pos
@@ -509,7 +510,7 @@ class Aligner:
             ):
                 closed_coords = list(geom_processed.coords) + [geom_processed.coords[0]]
                 geom_processed = LineString(closed_coords)
-        return geom_processed
+        return make_valid(geom_processed)
 
     def _get_processed_network_path(
         self,
@@ -517,7 +518,7 @@ class Aligner:
         reference_intersection,
         reference_coords_intersection,
         thematic_difference,
-            snap_strategy,
+        snap_strategy,
         relevant_distance,
     ):
         thematic_points = self._get_thematic_points(
@@ -553,9 +554,13 @@ class Aligner:
         segments.extend(extra_segments)
 
         # add extra segments (connection lines between reference_intersections)
+        #TODO, when passing OpenDomain, there is not always connection between the reference-parts. How to solve this?
         extra_segments_ref_intersections = shortest_connections_between_geometries(
             reference_intersection
         )
+        # extra_segments_ref_intersections = get_connection_lines_to_nearest(
+        #     reference_intersection
+        # )
         segments.extend(
             extra_segments_ref_intersections
         )  # removed as we first going to filter these lines
@@ -570,12 +575,16 @@ class Aligner:
         # segments.append(extra_geomcollection_ref_intersections)
 
         network = prepare_network(segments)
-        geom_processed = find_best_path_in_network(geom_to_process, network,snap_strategy,relevant_distance)
-        if geom_processed is None:
-            # add original so a connected path will be found
-            segments.append(geom_to_process)
-            network = prepare_network(segments)
-            geom_processed = find_longest_path_in_network(geom_to_process, network,snap_strategy,relevant_distance)
+        geom_processed = find_best_path_in_network(
+            geom_to_process, network, snap_strategy, relevant_distance
+        )
+        # if geom_processed is None:
+        #     # add original so a connected path will be found
+        #     segments.append(geom_to_process)
+        #     network = prepare_network(segments)
+        #     geom_processed = find_longest_path_in_network(
+        #         geom_to_process, network, snap_strategy, relevant_distance
+        #     )
 
         return geom_processed
 

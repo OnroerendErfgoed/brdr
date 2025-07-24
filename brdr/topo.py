@@ -12,7 +12,13 @@ from brdr.geometry_utils import (
 from brdr.utils import geojson_geometry_to_shapely
 
 
-def dissolve_topo(dict_series,dict_thematic, dict_thematic_to_process, topo_thematic, relevant_distances):
+def dissolve_topo(
+    dict_series,
+    dict_thematic,
+    dict_thematic_to_process,
+    topo_thematic,
+    relevant_distances,
+):
     """
     Dissolves a processed dict_series of LineStrings (Arcs) into a dict_series of the original geometries
     :param dict_series:
@@ -24,8 +30,8 @@ def dissolve_topo(dict_series,dict_thematic, dict_thematic_to_process, topo_them
     """
 
     dict_series_topo = dict()
-    for k,v in dict_thematic.items():
-        dict_series_topo[k]={}
+    for k, v in dict_thematic.items():
+        dict_series_topo[k] = {}
 
     for relevant_distance in relevant_distances:
         for obj in topo_thematic.output["objects"]["data"]["geometries"]:
@@ -53,12 +59,8 @@ def dissolve_topo(dict_series,dict_thematic, dict_thematic_to_process, topo_them
             for feature in topo_geojson["features"]:
                 if feature["id"] == key:
                     result = geojson_geometry_to_shapely(feature["geometry"])
-            result_diff_plus = make_valid(
-                safe_difference(result, dict_thematic[key])
-            )
-            result_diff_min = make_valid(
-                safe_difference(dict_thematic[key], result)
-            )
+            result_diff_plus = make_valid(safe_difference(result, dict_thematic[key]))
+            result_diff_min = make_valid(safe_difference(dict_thematic[key], result))
             result_diff = safe_unary_union([result_diff_plus, result_diff_min])
             dict_series_topo[key][relevant_distance] = {
                 "result": result,
