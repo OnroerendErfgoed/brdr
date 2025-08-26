@@ -30,7 +30,7 @@ fonttools==4.51.0
     # via matplotlib
 geojson==3.1.0
     # via brdr (pyproject.toml)
-geopandas==1.0.1
+geopandas>=1.1.0
     # via brdr (pyproject.toml)
 hatchling==1.26.1
     # via brdr (pyproject.toml)
@@ -69,7 +69,7 @@ packaging==24.2
     #   matplotlib
     #   pyogrio
     #   pytest
-pandas==2.2.2
+pandas==2.2.3
     # via geopandas
 pathspec==0.12.1
     # via

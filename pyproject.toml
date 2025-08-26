@@ -47,7 +47,7 @@ dev = [
     "brdr[test]",
     "black==24.10.0",
     "flake8==7.1.1",
-    "geopandas==1.0.1",
+    "geopandas==1.1.0",
     "hatchling==1.27.0",
     "matplotlib==3.8.4",
     "mypy==1.13.0",
