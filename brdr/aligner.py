@@ -78,9 +78,7 @@ from brdr.geometry_utils import (
     shortest_connections_between_geometries,
     get_coords_from_geometry,
     find_best_path_in_network,
-    find_longest_path_in_network,
     prepare_network,
-    get_connection_lines_to_nearest,
 )
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import buffer_pos

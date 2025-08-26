@@ -3,16 +3,13 @@ from collections import Counter
 from itertools import combinations, islice
 from math import pi, inf, dist
 
-import networkx as nx
 import numpy as np
 from shapely import (
     GEOSException,
     equals,
     shortest_line,
     GeometryCollection,
-    LineString,
     MultiLineString,
-    Point,
     MultiPolygon,
     Polygon,
     MultiPoint,
@@ -1465,10 +1462,6 @@ def graph_from_multilinestring(multilinestring):
     return G
 
 
-import networkx as nx
-from shapely.geometry import Point
-import matplotlib.pyplot as plt
-
 def euclidean_distance(p1, p2):
     return Point(p1).distance(Point(p2))
 
@@ -1688,7 +1681,6 @@ def total_vertex_distance(
 
 
 import networkx as nx
-import matplotlib.pyplot as plt
 from shapely.geometry import LineString, Point
 from shapely.ops import split
 import math
