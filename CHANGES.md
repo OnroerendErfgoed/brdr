@@ -160,3 +160,8 @@
 - Changed OpenDomainStrategy from IntEnum to Enum [#210]
 - Added enum PredictionStrategy
 - New implementation to align points and lines (faster)
+
+# 0.12.1
+
+- removed python 3.9 support [#217]
+- added python 3.13 support [#218]
