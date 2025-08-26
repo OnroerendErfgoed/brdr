@@ -71,7 +71,7 @@ packaging==24.2
     #   matplotlib
     #   pyogrio
     #   pytest
-pandas==2.2.2
+pandas==2.2.3
     # via geopandas
 pathspec==0.12.1
     # via

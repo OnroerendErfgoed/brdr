@@ -30,7 +30,7 @@ dependencies = [
     "topojson>=1.10",
     "networkx>=3.3",
     "osmnx~=2.0",
-    "geopandas~=1.1"
+    "geopandas>=1.1"
 ]
 [project.urls]
 Documentation = "https://github.com/OnroerendErfgoed/brdr/blob/main/README.md"
@@ -48,7 +48,7 @@ dev = [
     "brdr[test]",
     "black==24.10.0",
     "flake8==7.1.1",
-    "geopandas==1.0.1",
+    "geopandas==1.1.0",
     "hatchling==1.27.0",
     "matplotlib==3.8.4",
     "mypy==1.13.0",
@@ -64,7 +64,7 @@ build-backend = "hatchling.build"
 packages = ["brdr"]
 
 [tool.black]
-target-version = ['py310', 'py311', 'py312']
+target-version = ['py310', 'py311', 'py312','py313']
 
 # Config for hatch environments
 [tool.hatch.envs.dev]
@@ -79,4 +79,4 @@ features = [
 ]
 
 [[tool.hatch.envs.hatch-test.matrix]]
-python = ["3.10", '3.11', '3.12']
+python = ["3.10", '3.11', '3.12','3.13']
