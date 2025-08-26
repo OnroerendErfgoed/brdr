@@ -11,7 +11,6 @@ from brdr.enums import GRBType
 from brdr.enums import OpenDomainStrategy
 from brdr.grb import GRBActualLoader
 from brdr.loader import DictLoader
-from brdr.utils import diffs_from_dict_processresults
 
 
 class TestExamples(unittest.TestCase):

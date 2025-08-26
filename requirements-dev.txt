@@ -31,6 +31,7 @@ fonttools==4.51.0
 geojson==3.1.0
     # via brdr (pyproject.toml)
 geopandas>=1.1.0
+
     # via brdr (pyproject.toml)
 hatchling==1.26.1
     # via brdr (pyproject.toml)
@@ -60,6 +61,8 @@ numpy==1.26.4
     #   pandas
     #   pyogrio
     #   shapely
+osmnx>=2.0.3
+    # via brdr (pyproject.toml)
 packaging==24.2
     # via
     #   black
@@ -127,7 +130,7 @@ six==1.16.0
     # via python-dateutil
 toml==0.10.2
     # via brdr (pyproject.toml)
-topojson==1.9
+topojson>=1.10
     # via brdr (pyproject.toml)
 trove-classifiers==2024.5.22
     # via hatchling

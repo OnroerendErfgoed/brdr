@@ -77,7 +77,7 @@ class TestEvaluate(unittest.TestCase):
     #         )
     #     )
     #     actual_aligner.relevant_distances = np.arange(0, 210, 10, dtype=int) / 100
-    #     dict_evaluated, prop_dictionary = actual_aligner.evaluate(
+    #     dict_evaluated, prop_dictionary  = actual_aligner.evaluate(
     #         ids_to_evaluate=affected, base_formula_field=FORMULA_FIELD_NAME
     #     )
     #
@@ -106,7 +106,7 @@ class TestEvaluate(unittest.TestCase):
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         )
 
-        dict_evaluated, prop_dictionary = aligner.evaluate(
+        dict_evaluated, prop_dictionary  = aligner.evaluate(
             relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
             full_strategy=FullStrategy.NO_FULL,
         )
@@ -128,7 +128,7 @@ class TestEvaluate(unittest.TestCase):
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         )
 
-        dict_evaluated, prop_dictionary = aligner.evaluate(
+        dict_evaluated, prop_dictionary  = aligner.evaluate(
             relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
             full_strategy=FullStrategy.PREFER_FULL,
         )
@@ -150,7 +150,7 @@ class TestEvaluate(unittest.TestCase):
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         )
 
-        dict_evaluated, prop_dictionary = aligner.evaluate(
+        dict_evaluated, prop_dictionary  = aligner.evaluate(
             relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
             full_strategy=FullStrategy.ONLY_FULL,
         )
@@ -195,7 +195,7 @@ class TestEvaluate(unittest.TestCase):
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         )
 
-        dict_evaluated, prop_dictionary = aligner.evaluate(
+        dict_evaluated, prop_dictionary  = aligner.evaluate(
             relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
             full_strategy=FullStrategy.NO_FULL,
             max_predictions=2,
@@ -218,7 +218,7 @@ class TestEvaluate(unittest.TestCase):
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         )
 
-        dict_evaluated, prop_dictionary = aligner.evaluate(
+        dict_evaluated, prop_dictionary  = aligner.evaluate(
             relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
             full_strategy=FullStrategy.NO_FULL,
             max_predictions=1,
@@ -244,7 +244,7 @@ class TestEvaluate(unittest.TestCase):
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         )
 
-        dict_evaluated, prop_dictionary = aligner.evaluate(
+        dict_evaluated, prop_dictionary  = aligner.evaluate(
             relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
             full_strategy=FullStrategy.NO_FULL,
             max_predictions=1,
@@ -268,7 +268,7 @@ class TestEvaluate(unittest.TestCase):
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         )
 
-        dict_evaluated, prop_dictionary = aligner.evaluate(
+        dict_evaluated, prop_dictionary  = aligner.evaluate(
             relevant_distances=np.arange(10, 410, 10, dtype=int) / 100,
             full_strategy=FullStrategy.NO_FULL,
             max_predictions=1,
@@ -297,7 +297,7 @@ class TestEvaluate(unittest.TestCase):
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         )
 
-        dict_evaluated, prop_dictionary = aligner.evaluate(
+        dict_evaluated, prop_dictionary  = aligner.evaluate(
             relevant_distances=np.arange(0, 1010, 50, dtype=int) / 100,
             full_strategy=FullStrategy.NO_FULL,
             max_predictions=3,
@@ -324,7 +324,7 @@ class TestEvaluate(unittest.TestCase):
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         )
 
-        dict_evaluated, prop_dictionary = aligner.evaluate(
+        dict_evaluated, prop_dictionary  = aligner.evaluate(
             relevant_distances=np.arange(0, 1010, 50, dtype=int) / 100,
             full_strategy=FullStrategy.NO_FULL,
             max_predictions=3,
@@ -357,7 +357,7 @@ class TestEvaluate(unittest.TestCase):
         aligner.load_thematic_data(DictLoader(thematic_dict))
         aligner.load_reference_data(DictLoader(reference_dict))
 
-        dict_evaluated, prop_dictionary = aligner.evaluate(
+        dict_evaluated, prop_dictionary  = aligner.evaluate(
             relevant_distances=np.arange(0, 510, 50, dtype=int) / 100,
             full_strategy=FullStrategy.NO_FULL,
             max_predictions=3,
@@ -466,7 +466,7 @@ class TestEvaluate(unittest.TestCase):
         aligner.load_reference_data(loader)
 
         # Use the EVALUATE-function
-        dict_predictions_evaluated, prop_dictionary = aligner.evaluate(
+        dict_predictions_evaluated, prop_dictionary  = aligner.evaluate(
             max_predictions=1,
             full_strategy=FullStrategy.ONLY_FULL,
             multi_to_best_prediction=True,

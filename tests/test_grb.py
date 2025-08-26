@@ -270,4 +270,4 @@ class TestGrb(unittest.TestCase):
         dict_series, dict_predictions, dict_diffs = aligner.predictor(
             relevant_distances=series,
         )
-        self.assertEqual(len(dict_predictions), len(thematic_dict))
+        self.assertEqual(len(dict_series), len(thematic_dict))

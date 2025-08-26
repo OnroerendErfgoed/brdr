@@ -13,7 +13,7 @@ maintainers = [
     { name = "Koen Van Daele", email = "koen.vandaele@vlaanderen.be" },
     { name = "Vermeyen Maerten", email = "maarten.vermeyen@vlaanderen.be" }
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "License :: OSI Approved :: MIT License",
@@ -21,15 +21,16 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: GIS",
 ]
 dependencies = [
     "geojson~=3.1",
     "requests~=2.32",
     "shapely~=2.0",
-    "topojson~=1.9",
-    "networkx>=3.3"
+    "topojson>=1.10",
+    "networkx>=3.3",
+    "osmnx~=2.0",
+    "geopandas>=1.1"
 ]
 [project.urls]
 Documentation = "https://github.com/OnroerendErfgoed/brdr/blob/main/README.md"

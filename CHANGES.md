@@ -147,7 +147,8 @@
 - adapted function-name geojson_to_multi
 - adapted predictor so point_snapping returns also predictions
 - Bugfix for SNAP_ALL_SIDE with big relevant distance (100m) resulting in wrong result [#199]
-- prediction-strategy: BEST/ALL/ORIGINAL: check if all records are found in result when using in combination with 'ONLY_FULL-strategy' [#200]
+- prediction-strategy: BEST/ALL/ORIGINAL: check if all records are found in result when using in combination with '
+  ONLY_FULL-strategy' [#200]
 - GRBActualLoader: support for all types of GRB collections (also lines and points)
 - Fix for a better prediction of snapped lines
 
