@@ -14,7 +14,7 @@ from brdr.loader import DictLoader
 
 class OSMLoader(DictLoader):
     def __init__(self, osm_tags, aligner):
-        super().__init__(data_dict={},data_dict_properties={})
+        super().__init__(data_dict={}, data_dict_properties={})
         self.aligner = aligner
         self.osm_tags = osm_tags
         self.data_dict_source["source"] = "OSM"
@@ -33,10 +33,12 @@ class OSMLoader(DictLoader):
         osm_data = ox.features_from_bbox(geom_union_wgs84.bounds, tags=self.osm_tags)
         osm_data = osm_data.reset_index(drop=False)
         osm_data = osm_data.rename(columns={"id": "osm_id"})
-        osm_data.to_crs(crs=self.aligner.CRS,inplace=True)
-        #osm_data.to_file("dataframe.geojson", driver="GeoJSON")
-        self.data_dict = {row['osm_id']: row["geometry"] for idx, row in osm_data.iterrows()}
-        #self.data_dict_properties = {row['osm_id']: row["geometry"] for idx, row in osm_data.iterrows()}
+        osm_data.to_crs(crs=self.aligner.CRS, inplace=True)
+        # osm_data.to_file("dataframe.geojson", driver="GeoJSON")
+        self.data_dict = {
+            row["osm_id"]: row["geometry"] for idx, row in osm_data.iterrows()
+        }
+        # self.data_dict_properties = {row['osm_id']: row["geometry"] for idx, row in osm_data.iterrows()}
         self.data_dict_source[VERSION_DATE] = datetime.now().strftime(DATE_FORMAT)
         self.aligner.logger.feedback_info(f"OSM downloaded: {self.osm_tags}")
         return super().load_data()

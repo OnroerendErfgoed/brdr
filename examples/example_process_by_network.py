@@ -24,7 +24,7 @@ from brdr.enums import OpenDomainStrategy, GRBType
 from brdr.geometry_utils import geom_from_wkt
 from brdr.loader import DictLoader
 
-print (datetime.now())
+print(datetime.now())
 # CREATE AN ALIGNER
 aligner = Aligner(
     crs="EPSG:31370",
@@ -55,6 +55,6 @@ print(
     "removed area: "
     + process_result["theme_id_1"][relevant_distance]["result_diff_min"].wkt
 )
-print (datetime.now())
-#aligner.predictor()
-print (datetime.now())
+print(datetime.now())
+# aligner.predictor()
+print(datetime.now())
