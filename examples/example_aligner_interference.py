@@ -25,7 +25,7 @@ if __name__ == "__main__":
     # PREDICT the 'stable' relevant distances, for a series of relevant distances
 
     # predict which relevant distances are interesting to propose as resulting geometry
-    dict_evaluated1, prop_dictionary1  = aligner.evaluate()
+    dict_evaluated1, prop_dictionary1 = aligner.evaluate()
 
     wkt = "Polygon ((174015.08694170592934825 179025.39916784031083807, 174040.71934808720834553 179031.93985084796440788, 174037.1838437587430235 178986.50862022733781487, 174030.64316075111855753 178982.97311589887249283, 174016.85469387014745735 179002.24161448894301429, 174021.62762471355381422 179005.77711881740833633, 174018.62244603436556645 179008.60552228015149012, 174015.08694170592934825 179025.39916784031083807))"
     thematic_dict = {"id_1": geom_from_wkt(wkt)}
@@ -47,9 +47,9 @@ if __name__ == "__main__":
     loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
     aligner.load_reference_data(loader)
 
-    dict_evaluated3, prop_dictionary3  = aligner.evaluate()
+    dict_evaluated3, prop_dictionary3 = aligner.evaluate()
 
-    print( dict_evaluated1==dict_evaluated3)
+    print(dict_evaluated1 == dict_evaluated3)
     print("END POLYGON")
 
     "LINESTRING (171741.11190000033820979 171839.01070547936251387, 171751.68948904142598622 171847.23771917796693742, 171762.26707808251376264 171855.69979041084297933, 171772.72713835645117797 171862.9865739724773448, 171783.53978493178146891 171870.8610013697471004, 171794.94007534274714999 171877.79519862998859026, 171801.87427260301774368 171884.2592808217741549)"

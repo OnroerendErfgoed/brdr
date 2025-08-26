@@ -552,7 +552,7 @@ class Aligner:
         segments.extend(extra_segments)
 
         # add extra segments (connection lines between reference_intersections)
-        #TODO, when passing OpenDomain, there is not always connection between the reference-parts. How to solve this?
+        # TODO, when passing OpenDomain, there is not always connection between the reference-parts. How to solve this?
         extra_segments_ref_intersections = shortest_connections_between_geometries(
             reference_intersection
         )

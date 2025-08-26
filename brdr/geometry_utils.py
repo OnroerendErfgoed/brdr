@@ -1205,7 +1205,7 @@ def get_connection_lines_to_nearest(multilinestring):
         closest_pt = min(
             (other for other in loose_endpoints if (other.x, other.y) not in used),
             key=lambda p: pt.distance(p),
-            default=None
+            default=None,
         )
         if closest_pt:
             connection_lines.append(LineString([pt, closest_pt]))
@@ -1214,8 +1214,8 @@ def get_connection_lines_to_nearest(multilinestring):
             loose_endpoints.remove(closest_pt)
 
     # Combine original lines with connection lines
-    #all_lines = list(multilinestring.geoms) + connection_lines
-    #return MultiLineString(all_lines)
+    # all_lines = list(multilinestring.geoms) + connection_lines
+    # return MultiLineString(all_lines)
     return connection_lines
 
 
@@ -1436,7 +1436,7 @@ def find_longest_path_in_network(
 
     max_length = 0
     longest_path = []
-    #TODO; when having long lines, this loop becomes very slow due to amount of possibities to check
+    # TODO; when having long lines, this loop becomes very slow due to amount of possibities to check
     for path in all_paths:
         length = sum(G[path[i]][path[i + 1]]["weight"] for i in range(len(path) - 1))
         if length > max_length:
@@ -1458,19 +1458,20 @@ def graph_from_multilinestring(multilinestring):
             p2 = tuple(coords[i + 1])
             segment = LineString([p1, p2])
             G.add_edge(p1, p2, weight=segment.length, geometry=segment)
-        G,added_edges = connect_components_greedy(G)
+        G, added_edges = connect_components_greedy(G)
     return G
 
 
 def euclidean_distance(p1, p2):
     return Point(p1).distance(Point(p2))
 
+
 def connect_components_greedy(G):
     added_edges = []
 
     while not nx.is_connected(G):
         components = list(nx.connected_components(G))
-        min_dist = float('inf')
+        min_dist = float("inf")
         best_pair = None
 
         # Compare nodes from different components
@@ -1679,27 +1680,30 @@ def total_vertex_distance(
     return total_distance / len_vertices
 
 
-
 import networkx as nx
 from shapely.geometry import LineString, Point
 from shapely.ops import split
 import math
 
+
 def euclidean_distance(p1, p2):
     return math.hypot(p1[0] - p2[0], p1[1] - p2[1])
+
 
 def hausdorff_distance(ls1, ls2):
     return ls1.hausdorff_distance(ls2)
 
+
 def path_to_linestring(path):
     return LineString(path)
+
 
 def find_cycle_paths(cycle):
     """Split a cycle into two alternative paths between the furthest nodes"""
     max_dist = 0
     start, end = cycle[0], cycle[1]
     for i in range(len(cycle)):
-        for j in range(i+1, len(cycle)):
+        for j in range(i + 1, len(cycle)):
             d = euclidean_distance(cycle[i], cycle[j])
             if d > max_dist:
                 max_dist = d
@@ -1709,18 +1713,19 @@ def find_cycle_paths(cycle):
     idx_end = cycle.index(end)
 
     if idx_start < idx_end:
-        path1 = cycle[idx_start:idx_end+1]
-        path2 = cycle[idx_end:] + cycle[:idx_start+1]
+        path1 = cycle[idx_start : idx_end + 1]
+        path2 = cycle[idx_end:] + cycle[: idx_start + 1]
     else:
-        path1 = cycle[idx_end:idx_start+1]
-        path2 = cycle[idx_start:] + cycle[:idx_end+1]
+        path1 = cycle[idx_end : idx_start + 1]
+        path2 = cycle[idx_start:] + cycle[: idx_end + 1]
 
     return path1, path2
 
+
 def remove_path_from_graph(G, path):
-    for i in range(len(path)-1):
-        if G.has_edge(path[i], path[i+1]):
-            G.remove_edge(path[i], path[i+1])
+    for i in range(len(path) - 1):
+        if G.has_edge(path[i], path[i + 1]):
+            G.remove_edge(path[i], path[i + 1])
 
 
 def simplify_graph_by_best_cycle_path(G, input_line):
@@ -1744,7 +1749,7 @@ def simplify_graph_by_best_cycle_path(G, input_line):
         # Genereer beide richtingen van het pad in de cycle
         paths = [
             [(cycle[i], cycle[(i + 1) % len(cycle)]) for i in range(len(cycle))],
-            [(cycle[i], cycle[i - 1]) for i in range(len(cycle))]
+            [(cycle[i], cycle[i - 1]) for i in range(len(cycle))],
         ]
 
         path_distances = []
@@ -1775,11 +1780,6 @@ def simplify_graph_by_best_cycle_path(G, input_line):
     return G_simplified
 
 
-
-
-
-
-
 def find_best_path_in_network(
     geom_to_process, nw_multilinestring, snap_strategy, relevant_distance
 ):
@@ -1803,7 +1803,7 @@ def find_best_path_in_network(
     # Create graph
     G = graph_from_multilinestring(nw_multilinestring)
     # remove cycles #todo test if this improves
-    #G,removed_edges = simplify_graph_by_best_cycle_path(G,geom_to_process)
+    # G,removed_edges = simplify_graph_by_best_cycle_path(G,geom_to_process)
 
     start_node = nearest_node(start_point, G.nodes)
     end_node = nearest_node(end_point, G.nodes)
@@ -1817,7 +1817,7 @@ def find_best_path_in_network(
         end_node = get_vertex_node(G, relevant_distance, end_node, end_point)
 
     # Search all simple paths (limited to 100, because cyclic paths can result in a lot of simple paths
-    all_paths = islice(nx.all_simple_paths(G, source=start_node, target=end_node),1000)
+    all_paths = islice(nx.all_simple_paths(G, source=start_node, target=end_node), 1000)
 
     # Determine the network-path that fits the best to the original inputgeometry
     min_dist = inf
@@ -1846,7 +1846,7 @@ def get_vertex_node(G, relevant_distance, input_node, point):
 
 
 def remove_pseudonodes(G):
-    #TODO; research if removing pseudonodes can improve performance.
+    # TODO; research if removing pseudonodes can improve performance.
     # Maybe better to control when making the initial graph?
     G = G.copy()
     for node in list(G.nodes):
