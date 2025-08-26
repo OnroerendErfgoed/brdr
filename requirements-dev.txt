@@ -1,4 +1,4 @@
-black==24.10.0
+black==25.1.0
     # via brdr (pyproject.toml)
 build==1.2.1
     # via pip-tools
@@ -30,7 +30,7 @@ fonttools==4.51.0
     # via matplotlib
 geojson==3.1.0
     # via brdr (pyproject.toml)
-geopandas==1.0.1
+geopandas==1.1.0
     # via brdr (pyproject.toml)
 hatchling==1.26.1
     # via brdr (pyproject.toml)
@@ -60,6 +60,8 @@ numpy==1.26.4
     #   pandas
     #   pyogrio
     #   shapely
+osmnx>=2.0.3
+    # via brdr (pyproject.toml)
 packaging==24.2
     # via
     #   black
@@ -69,7 +71,7 @@ packaging==24.2
     #   matplotlib
     #   pyogrio
     #   pytest
-pandas==2.2.2
+pandas==2.2.3
     # via geopandas
 pathspec==0.12.1
     # via
@@ -127,7 +129,7 @@ six==1.16.0
     # via python-dateutil
 toml==0.10.2
     # via brdr (pyproject.toml)
-topojson==1.9
+topojson>=1.10
     # via brdr (pyproject.toml)
 trove-classifiers==2024.5.22
     # via hatchling

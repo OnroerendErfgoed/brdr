@@ -1,6 +1,6 @@
 import unittest
 
-from shapely import from_wkt
+from shapely import from_wkt, MultiLineString, LineString
 from shapely.geometry import Point
 from shapely.geometry import Polygon
 
@@ -9,6 +9,7 @@ from brdr.geometry_utils import (
     get_shape_index,
     geom_from_wkt,
     _get_line_substring,
+    longest_linestring_from_multilinestring,
 )
 from brdr.geometry_utils import buffer_neg
 from brdr.geometry_utils import buffer_neg_pos
@@ -4001,3 +4002,18 @@ class TestGridBounds(unittest.TestCase):
         polygon = Polygon([(0, 0), (0, 5), (5, 5), (5, 0), (0, 0)])
         result = _grid_bounds(polygon, 1.0)
         self.assertEqual(len(result), 25)
+
+
+    def test_longest_linestring_from_multilinestring(self):
+        """Tests longest_linestring_from_multilinestring"""
+        #Example MultiLineString with overshoots
+        mls = MultiLineString([
+            LineString([(0, 0), (1, 1)]),
+            LineString([(1, 1), (2, 2)]),
+            LineString([(2, 2), (3, 3)]),
+            LineString([(3, 3), (4, 4)]),
+            LineString([(1, 1), (1, 2)]),  # overshoot
+            LineString([(2, 2), (2, 3)]),  # overshoot
+        ])
+        result = longest_linestring_from_multilinestring(mls)
+        assert isinstance(result,LineString)

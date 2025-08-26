@@ -161,6 +161,7 @@ cython_debug/
 
 /tests/output/
 /examples/output/
+/examples/cache/
 # PyCharm
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
 #  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
@@ -169,3 +170,4 @@ cython_debug/
 #.idea/
 /.idea
 /.python-version
+/tests/cache/

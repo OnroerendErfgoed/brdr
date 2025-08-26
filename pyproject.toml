@@ -13,7 +13,7 @@ maintainers = [
     { name = "Koen Van Daele", email = "koen.vandaele@vlaanderen.be" },
     { name = "Vermeyen Maerten", email = "maarten.vermeyen@vlaanderen.be" }
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "License :: OSI Approved :: MIT License",
@@ -27,8 +27,10 @@ dependencies = [
     "geojson~=3.1",
     "requests~=2.32",
     "shapely~=2.0",
-    "topojson~=1.9",
-    "networkx>=3.3"
+    "topojson>=1.10",
+    "networkx>=3.3",
+    "osmnx~=2.0",
+    "geopandas>=1.1"
 ]
 [project.urls]
 Documentation = "https://github.com/OnroerendErfgoed/brdr/blob/main/README.md"
@@ -44,9 +46,9 @@ test = [
 ]
 dev = [
     "brdr[test]",
-    "black==24.10.0",
+    "black==25.1.0",
     "flake8==7.1.1",
-    "geopandas==1.0.1",
+    "geopandas==1.1.0",
     "hatchling==1.27.0",
     "matplotlib==3.8.4",
     "mypy==1.13.0",

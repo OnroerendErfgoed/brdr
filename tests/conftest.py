@@ -14,6 +14,7 @@ def requests_mock():
         rsps.add_passthru("https://www.mercator.vlaanderen.be")
         rsps.add_passthru("https://geo.api.vlaanderen.be")
         rsps.add_passthru("https://inventaris.onroerenderfgoed.be")
+        rsps.add_passthru("https://overpass-api.de")
         yield rsps
 
 

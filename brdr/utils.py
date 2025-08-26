@@ -12,8 +12,6 @@ from shapely import (
 )
 from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
-from shapely.geometry.point import Point
-from shapely.lib import shortest_line
 
 from brdr.constants import (
     MULTI_SINGLE_ID_SEPARATOR,
@@ -25,17 +23,18 @@ from brdr.constants import (
     PERIMETER_ATTRIBUTE,
     SHAPE_INDEX_ATTRIBUTE,
     AREA_ATTRIBUTE,
+    DIFF_INDICATION,
 )
 from brdr.enums import DiffMetric
 from brdr.geometry_utils import (
     get_partitions,
     get_bbox,
     get_shape_index,
-    to_multi,
     get_geoms_from_geometry,
     safe_unary_union,
     buffer_pos,
     safe_intersection,
+    total_vertex_distance,
 )
 from brdr.typings import ProcessResult
 
@@ -72,9 +71,18 @@ def get_dict_geojsons_from_series_dict(
             properties[id_field] = theme_id
             properties[NR_CALCULATION_FIELD_NAME] = nr_calculations
             properties[RELEVANT_DISTANCE_FIELD_NAME] = relative_distance
+            # if PREDICTION_SCORE not in properties:
+            #     properties[PREDICTION_SCORE] = -1
+            properties[REMARK_FIELD_NAME] = ""
             if "remark" in process_result:
                 properties[REMARK_FIELD_NAME] = process_result["remark"]
-
+            result_diff = process_result["result_diff"]
+            if result_diff is None:
+                result_diff = GeometryCollection()
+            properties[DIFF_INDICATION] = 0
+            properties[DIFF_INDICATION] = result_diff.area
+            if result_diff.area == 0:
+                properties[DIFF_INDICATION] = result_diff.length
             for results_type, geom in process_result.items():
                 if not isinstance(geom, BaseGeometry):
                     continue
@@ -350,13 +358,15 @@ def diffs_from_dict_processresults(
             "MultiLineString",
         ):
             diff_metric = DiffMetric.CHANGES_LENGTH
-            diff_metric = DiffMetric.REFERENCE_USAGE
+            # diff_metric = DiffMetric.REFERENCE_USAGE
+            # diff_metric = DiffMetric.TOTAL_DISTANCE
         elif dict_thematic[thematic_id].geom_type in (
             "Point",
             "MultiPoint",
         ):
             diff_metric = DiffMetric.TOTAL_DISTANCE
             diff_metric = DiffMetric.REFERENCE_USAGE
+            diff_metric = DiffMetric.TOTAL_DISTANCE
         for rel_dist in results_dict:
             result = results_dict.get(rel_dist, {}).get("result")
             result_diff = results_dict.get(rel_dist, {}).get("result_diff")
@@ -399,16 +409,9 @@ def diffs_from_dict_processresults(
                 else:
                     diff = 0
             elif diff_metric == DiffMetric.TOTAL_DISTANCE:
-                diff = 0
-                result = to_multi(result)
-                for g in result.geoms:
-                    if g.geom_type == "Polygon":
-                        g = g.exterior
-                    for coord in g.coords:
-                        p = Point(coord)
-                        diff = diff + shortest_line(p, original).length
+                diff = total_vertex_distance(original, result, bidirectional=False)
 
-            # round, so the detected changes are within 10cm² or 0.1%
+            # round, so the detected changes are within 10cm, 10cm² or 0.1%
             diff = round(diff, 1)
             diffs[thematic_id][rel_dist] = diff
 
