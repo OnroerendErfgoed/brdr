@@ -2421,17 +2421,17 @@ def _calculate_geom_by_intersection_and_reference(
     ):
         # relevant intersection and relevant difference
 
-        geom_x =  safe_difference(
-                geom_reference,
-                safe_intersection(
+        geom_x = safe_difference(
+            geom_reference,
+            safe_intersection(
+                geom_difference,
+                buffer_neg_pos(
                     geom_difference,
-                    buffer_neg_pos(
-                        geom_difference,
-                        buffer_distance,
-                        mitre_limit=mitre_limit,
-                    ),
+                    buffer_distance,
+                    mitre_limit=mitre_limit,
                 ),
-            )
+            ),
+        )
         geom_x = buffer_neg_pos(geom_x, buffer_distance, mitre_limit=mitre_limit)
 
         geom_intersection_buffered = buffer_pos(geom_intersection, 2 * buffer_distance)
@@ -2440,7 +2440,7 @@ def _calculate_geom_by_intersection_and_reference(
 
         geom_x = safe_difference(geom_x, geom_difference_2_buffered)
 
-        geom_x = safe_intersection(geom_x,geom_reference)
+        geom_x = safe_intersection(geom_x, geom_reference)
 
         if partial_snapping:
             geom_x = snap_geometry_to_reference(

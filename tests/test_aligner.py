@@ -313,7 +313,8 @@ class TestAligner(unittest.TestCase):
         process_result = aligner.process(
             relevant_distance=relevant_distance,
             od_strategy=OpenDomainStrategy.SNAP_INNER_SIDE,
-            threshold_overlap_percentage=50)
+            threshold_overlap_percentage=50,
+        )
 
         result = process_result[id][relevant_distance]["result"]
         result_diff_plus = process_result[id][relevant_distance]["result_diff_plus"]
