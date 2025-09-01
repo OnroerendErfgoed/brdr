@@ -1688,7 +1688,6 @@ def total_vertex_distance(
 
 import networkx as nx
 from shapely.geometry import LineString, Point
-from shapely.ops import split
 import math
 
 
