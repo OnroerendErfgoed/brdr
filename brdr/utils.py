@@ -76,7 +76,9 @@ def get_dict_geojsons_from_series_dict(
             properties[REMARK_FIELD_NAME] = ""
             if "remark" in process_result:
                 properties[REMARK_FIELD_NAME] = process_result["remark"]
-            result_diff = process_result["result_diff"]
+            result_diff = None
+            if "result_diff" in process_result:
+                result_diff = process_result["result_diff"]
             if result_diff is None:
                 result_diff = GeometryCollection()
             properties[DIFF_INDICATION] = 0
@@ -343,6 +345,7 @@ def diffs_from_dict_processresults(
     Parameters:
     dict_series (dict): A dictionary where keys are thematic IDs and values are dictionaries mapping relative distances to ProcessResult objects.
     dict_thematic (dict): A dictionary where keys are thematic IDs and values are BaseGeometry objects representing the original geometries.
+    reference_union:
     diff_metric (DiffMetric, optional): The metric to use for calculating differences. Default is DiffMetric.CHANGES_AREA.
 
     Returns:
@@ -395,12 +398,14 @@ def diffs_from_dict_processresults(
             elif diff_metric == DiffMetric.CHANGES_LENGTH:
                 diff = result_diff.length
             elif diff_metric == DiffMetric.REFERENCE_USAGE:
-
-                reference_union_buffer = buffer_pos(reference_union, 0.01)
-                result_buffer = buffer_pos(result, 0.01)
-                reference_usage_geom = safe_intersection(
-                    result_buffer, reference_union_buffer
-                )
+                if not reference_union is None and not reference_union.is_empty:
+                    reference_union_buffer = buffer_pos(reference_union, 0.01)
+                    result_buffer = buffer_pos(result, 0.01)
+                    reference_usage_geom = safe_intersection(
+                        result_buffer, reference_union_buffer
+                    )
+                else:
+                    reference_usage_geom = None
                 if (
                         reference_usage_geom is not None
                         and not reference_usage_geom.is_empty
@@ -414,7 +419,6 @@ def diffs_from_dict_processresults(
             # round, so the detected changes are within 10cm, 10cm² or 0.1%
             diff = round(diff, 1)
             diffs[thematic_id][rel_dist] = diff
-
     return diffs
 
 

@@ -6,7 +6,7 @@ from datetime import datetime
 
 import numpy as np
 from shapely import intersects
-from shapely.geometry import shape
+from shapely.geometry import shape,Polygon
 
 from brdr.aligner import Aligner
 from brdr.constants import (
@@ -384,7 +384,10 @@ def update_to_actual_grb(
     last_version_date = None
     for feature in featurecollection["features"]:
         id_theme = feature["properties"][id_theme_fieldname]
-        geom = shape(feature["geometry"])
+        try:
+            geom = shape(feature["geometry"])
+        except:
+            geom = Polygon()
         dict_thematic[id_theme] = geom
         dict_thematic_props[id_theme] = feature["properties"]
         try:

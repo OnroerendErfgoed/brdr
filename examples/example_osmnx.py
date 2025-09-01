@@ -1,15 +1,23 @@
+#Demo osmx usage
 # https://medium.com/@callumjamesscoby/routing-shortest-path-analysis-in-python-and-qgis-39da55da5099
-
 import osmnx as ox
 
+# Choose tags (fe cycleway)
+tags = {"highway": "cycleway"}
+# Download cycleways in Leuven
+leuven_cycleways = ox.features_from_place("Leuven, Belgium", tags)
+# show rows
+print(leuven_cycleways.head())
+# Sava as geopackage
+leuven_cycleways.to_file("output/leuven_cycleways.gpkg", driver="GPKG")
+
+
+
+#Demo osmnx routing
 G = ox.graph_from_place("Heverlee, Belgium", network_type="drive")
-
 Gp = ox.project_graph(G, to_crs=31370)
-
 ox.plot_graph(Gp)
-
-ox.save_graph_geopackage(Gp, filepath="as.gpkg")
-
+ox.save_graph_geopackage(Gp, filepath="output/heverlee.gpkg")
 list(Gp)
 
 X0 = 200000, 0  # Point A

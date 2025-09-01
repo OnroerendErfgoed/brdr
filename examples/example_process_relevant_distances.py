@@ -61,6 +61,8 @@ if __name__ == "__main__":
     # SHOW results: map and plotted changes
     show_map(dict_results, aligner.dict_thematic, aligner.dict_reference)
     resulting_areas = diffs_from_dict_processresults(
-        dict_results, aligner.dict_thematic
+        dict_processresults=dict_results,
+        dict_thematic=aligner.dict_thematic,
+        reference_union=aligner._get_reference_union()
     )
     plot_series(relevant_distances, resulting_areas)

@@ -15,7 +15,7 @@ def main():
     """
     # Initiate brdr
     aligner = Aligner(max_workers=None)
-    iterations = 5
+    iterations = 2
     od_strategy = OpenDomainStrategy.SNAP_PREFER_VERTICES
     relevant_distance = 3
     grb_loader = True
