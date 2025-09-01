@@ -6,7 +6,7 @@ from datetime import datetime
 
 import numpy as np
 from shapely import intersects
-from shapely.geometry import shape,Polygon
+from shapely.geometry import shape, Polygon
 
 from brdr.aligner import Aligner
 from brdr.constants import (

@@ -62,8 +62,8 @@ class GRBTypeLoader:
     @classmethod
     def _fetch_values(cls):
         _url = (
-                "https://geo.api.vlaanderen.be/GRB/ogc/features/collections"
-                + "/?f=application%2Fjson"
+            "https://geo.api.vlaanderen.be/GRB/ogc/features/collections"
+            + "/?f=application%2Fjson"
         )
         response = requests.get(_url)
         response.raise_for_status()

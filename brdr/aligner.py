@@ -116,34 +116,34 @@ class Aligner:
     """
 
     def __init__(
-            self,
-            *,
-            feedback=None,
-            relevant_distance=1,
-            relevant_distances=[
-                round(k, RELEVANT_DISTANCE_DECIMALS)
-                for k in np.arange(0, 310, 10, dtype=int) / 100
-            ],
-            threshold_overlap_percentage=50,
-            od_strategy=OpenDomainStrategy.SNAP_ALL_SIDE,
-            crs=DEFAULT_CRS,
-            multi_as_single_modus=True,
-            preserve_topology=False,
-            snap_strategy=SNAP_STRATEGY,
-            snap_max_segment_length=SNAP_MAX_SEGMENT_LENGTH,
-            partial_snapping=PARTIAL_SNAPPING,
-            partial_snap_strategy=PARTIAL_SNAP_STRATEGY,
-            partial_snap_max_segment_length=PARTIAL_SNAP_MAX_SEGMENT_LENGTH,
-            threshold_exclusion_area=0,
-            threshold_exclusion_percentage=0,
-            threshold_inclusion_percentage=100,
-            buffer_multiplication_factor=BUFFER_MULTIPLICATION_FACTOR,
-            threshold_circle_ratio=0.98,
-            correction_distance=0.01,
-            diff_metric=DIFF_METRIC,
-            mitre_limit=10,
-            area_limit=None,
-            max_workers=None,
+        self,
+        *,
+        feedback=None,
+        relevant_distance=1,
+        relevant_distances=[
+            round(k, RELEVANT_DISTANCE_DECIMALS)
+            for k in np.arange(0, 310, 10, dtype=int) / 100
+        ],
+        threshold_overlap_percentage=50,
+        od_strategy=OpenDomainStrategy.SNAP_ALL_SIDE,
+        crs=DEFAULT_CRS,
+        multi_as_single_modus=True,
+        preserve_topology=False,
+        snap_strategy=SNAP_STRATEGY,
+        snap_max_segment_length=SNAP_MAX_SEGMENT_LENGTH,
+        partial_snapping=PARTIAL_SNAPPING,
+        partial_snap_strategy=PARTIAL_SNAP_STRATEGY,
+        partial_snap_max_segment_length=PARTIAL_SNAP_MAX_SEGMENT_LENGTH,
+        threshold_exclusion_area=0,
+        threshold_exclusion_percentage=0,
+        threshold_inclusion_percentage=100,
+        buffer_multiplication_factor=BUFFER_MULTIPLICATION_FACTOR,
+        threshold_circle_ratio=0.98,
+        correction_distance=0.01,
+        diff_metric=DIFF_METRIC,
+        mitre_limit=10,
+        area_limit=None,
+        max_workers=None,
     ):
         """
         Initializes the Aligner object
@@ -307,12 +307,12 @@ class Aligner:
     ###########################################
 
     def _process_geometry_by_snap(
-            self,
-            input_geometry: BaseGeometry,
-            ref_intersections_geoms,
-            relevant_distance,
-            snap_strategy,
-            snap_max_segment_length,
+        self,
+        input_geometry: BaseGeometry,
+        ref_intersections_geoms,
+        relevant_distance,
+        snap_strategy,
+        snap_max_segment_length,
     ) -> ProcessResult:
         snapped = []
 
@@ -353,10 +353,10 @@ class Aligner:
         return result_dict
 
     def _process_geometry_by_network(
-            self,
-            input_geometry: BaseGeometry,
-            relevant_distance: float = 1,
-            snap_strategy=SnapStrategy.NO_PREFERENCE,
+        self,
+        input_geometry: BaseGeometry,
+        relevant_distance: float = 1,
+        snap_strategy=SnapStrategy.NO_PREFERENCE,
     ) -> ProcessResult:
 
         input_geometry = to_multi(input_geometry)
@@ -428,12 +428,12 @@ class Aligner:
         )
 
     def _process_by_network(
-            self,
-            geom_to_process,
-            reference,
-            relevant_distance,
-            snap_strategy=SnapStrategy.NO_PREFERENCE,
-            close_output=False,
+        self,
+        geom_to_process,
+        reference,
+        relevant_distance,
+        snap_strategy=SnapStrategy.NO_PREFERENCE,
+        close_output=False,
     ):
         """
 
@@ -481,8 +481,8 @@ class Aligner:
         if isinstance(geom_to_process, Point):
             p1, p2 = nearest_points(geom_to_process, reference_intersection)
             if (
-                    not reference_coords_intersection is None
-                    and not reference_coords_intersection.is_empty
+                not reference_coords_intersection is None
+                and not reference_coords_intersection.is_empty
             ):
                 p1_vertices, p2_vertices = nearest_points(
                     geom_to_process, reference_coords_intersection
@@ -502,22 +502,22 @@ class Aligner:
             )
 
             if (
-                    close_output
-                    and geom_processed is not None
-                    and not geom_processed.is_ring
+                close_output
+                and geom_processed is not None
+                and not geom_processed.is_ring
             ):
                 closed_coords = list(geom_processed.coords) + [geom_processed.coords[0]]
                 geom_processed = LineString(closed_coords)
         return make_valid(geom_processed)
 
     def _get_processed_network_path(
-            self,
-            geom_to_process,
-            reference_intersection,
-            reference_coords_intersection,
-            thematic_difference,
-            snap_strategy,
-            relevant_distance,
+        self,
+        geom_to_process,
+        reference_intersection,
+        reference_coords_intersection,
+        thematic_difference,
+        snap_strategy,
+        relevant_distance,
     ):
         thematic_points = self._get_thematic_points(
             geom_to_process, reference_intersection
@@ -611,13 +611,13 @@ class Aligner:
         return thematic_points
 
     def _get_connection_line(
-            self,
-            thematic_points,
-            thematic_difference,
-            point,
-            reference_intersection,
-            reference_coords_intersection,
-            relevant_distance,
+        self,
+        thematic_points,
+        thematic_difference,
+        point,
+        reference_intersection,
+        reference_coords_intersection,
+        relevant_distance,
     ):
         # factor = 1.001
 
@@ -636,8 +636,8 @@ class Aligner:
             line_theme_furthest_point = point
 
         if (
-                not reference_coords_intersection is None
-                and not reference_coords_intersection.is_empty
+            not reference_coords_intersection is None
+            and not reference_coords_intersection.is_empty
         ):
             line_ref = shortest_line(
                 line_theme_furthest_point, reference_coords_intersection
@@ -659,22 +659,22 @@ class Aligner:
         # When we do not use vertices it could be necessary (due to floating point error) to make sure lines are intersecting so they are split on these intersecting points
 
         if (
-                round(connection_line.length, RELEVANT_DISTANCE_DECIMALS)
-                > relevant_distance * self.partial_snap_max_segment_length * 2
-                # * factor
-                # * factor
-                # * 4  # There could be a better way to exclude invalid connection-lines?
+            round(connection_line.length, RELEVANT_DISTANCE_DECIMALS)
+            > relevant_distance * self.partial_snap_max_segment_length * 2
+            # * factor
+            # * factor
+            # * 4  # There could be a better way to exclude invalid connection-lines?
         ):
             return LineString()
 
         return connection_line
 
     def process_geometry(
-            self,
-            input_geometry: BaseGeometry,
-            relevant_distance: float = 1,
-            od_strategy=OpenDomainStrategy.SNAP_ALL_SIDE,
-            threshold_overlap_percentage=50,
+        self,
+        input_geometry: BaseGeometry,
+        relevant_distance: float = 1,
+        od_strategy=OpenDomainStrategy.SNAP_ALL_SIDE,
+        threshold_overlap_percentage=50,
     ) -> ProcessResult:
         """
         method to align a geometry to the reference layer
@@ -758,12 +758,12 @@ class Aligner:
         )
 
     def _process_geometry_by_brdr(
-            self,
-            input_geometry,
-            input_geometry_outer,
-            input_geometry_inner,
-            ref_intersections_geoms,
-            relevant_distance,
+        self,
+        input_geometry,
+        input_geometry_outer,
+        input_geometry_inner,
+        ref_intersections_geoms,
+        relevant_distance,
     ):
         buffer_distance = relevant_distance / 2
 
@@ -834,12 +834,12 @@ class Aligner:
         return result_dict
 
     def process(
-            self,
-            dict_thematic=None,
-            relevant_distances: Iterable[float] = None,
-            relevant_distance=1,
-            od_strategy=OpenDomainStrategy.SNAP_ALL_SIDE,
-            threshold_overlap_percentage=50,
+        self,
+        dict_thematic=None,
+        relevant_distances: Iterable[float] = None,
+        relevant_distance=1,
+        od_strategy=OpenDomainStrategy.SNAP_ALL_SIDE,
+        threshold_overlap_percentage=50,
     ) -> dict[any, dict[float, ProcessResult]]:
         """
         Calculates the resulting dictionaries for thematic data based on a series of
@@ -897,7 +897,7 @@ class Aligner:
 
         if self.max_workers != -1:
             with ThreadPoolExecutor(
-                    max_workers=self.max_workers
+                max_workers=self.max_workers
             ) as executor:  # max_workers=5
                 for key, geometry in dict_thematic_to_process.items():
                     self.logger.feedback_info(
@@ -985,15 +985,15 @@ class Aligner:
         return self.dict_processresults
 
     def predictor(
-            self,
-            dict_thematic=None,
-            relevant_distances=[
-                round(k, RELEVANT_DISTANCE_DECIMALS)
-                for k in np.arange(0, 310, 10, dtype=int) / 100
-            ],
-            od_strategy=OpenDomainStrategy.SNAP_ALL_SIDE,
-            threshold_overlap_percentage=50,
-            diff_metric=None,
+        self,
+        dict_thematic=None,
+        relevant_distances=[
+            round(k, RELEVANT_DISTANCE_DECIMALS)
+            for k in np.arange(0, 310, 10, dtype=int) / 100
+        ],
+        od_strategy=OpenDomainStrategy.SNAP_ALL_SIDE,
+        threshold_overlap_percentage=50,
+        diff_metric=None,
     ):
         """
         Predicts the 'most interesting' relevant distances for changes in thematic
@@ -1120,15 +1120,15 @@ class Aligner:
             for rel_dist, processresults in dist_results.items():
                 predicted_geom = processresults["result"]
                 if not _equal_geom_in_array(
-                        predicted_geom,
-                        predicted_geoms_for_theme_id,
-                        self.correction_distance,
-                        self.mitre_limit,
+                    predicted_geom,
+                    predicted_geoms_for_theme_id,
+                    self.correction_distance,
+                    self.mitre_limit,
                 ) or predicted_geom.geom_type in (
-                        "Point",
-                        "MultiPoint",
-                        "LineString",
-                        "MultiLineString",
+                    "Point",
+                    "MultiPoint",
+                    "LineString",
+                    "MultiLineString",
                 ):
                     dict_predictions_unique[theme_id][rel_dist] = processresults
                     predicted_geoms_for_theme_id.append(processresults["result"])
@@ -1150,16 +1150,16 @@ class Aligner:
         )
 
     def evaluate(
-            self,
-            ids_to_evaluate=None,
-            base_formula_field=FORMULA_FIELD_NAME,
-            relevant_distances=[
-                round(k, RELEVANT_DISTANCE_DECIMALS)
-                for k in np.arange(0, 310, 10, dtype=int) / 100
-            ],
-            full_strategy=FullStrategy.NO_FULL,
-            max_predictions=-1,
-            multi_to_best_prediction=True,
+        self,
+        ids_to_evaluate=None,
+        base_formula_field=FORMULA_FIELD_NAME,
+        relevant_distances=[
+            round(k, RELEVANT_DISTANCE_DECIMALS)
+            for k in np.arange(0, 310, 10, dtype=int) / 100
+        ],
+        full_strategy=FullStrategy.NO_FULL,
+        max_predictions=-1,
+        multi_to_best_prediction=True,
     ):
         """
         Compares and evaluate input-geometries (with formula). Attributes are added to evaluate and decide if new
@@ -1242,13 +1242,13 @@ class Aligner:
                 if full_strategy == FullStrategy.ONLY_FULL and not full:
                     continue
                 if (
-                        props[EVALUATION_FIELD_NAME] == Evaluation.TO_CHECK_NO_PREDICTION
-                        and props[PREDICTION_COUNT] == 1
+                    props[EVALUATION_FIELD_NAME] == Evaluation.TO_CHECK_NO_PREDICTION
+                    and props[PREDICTION_COUNT] == 1
                 ):
                     props[EVALUATION_FIELD_NAME] = Evaluation.PREDICTION_UNIQUE
                 elif (
-                        props[EVALUATION_FIELD_NAME] == Evaluation.TO_CHECK_NO_PREDICTION
-                        and props[PREDICTION_COUNT] > 1
+                    props[EVALUATION_FIELD_NAME] == Evaluation.TO_CHECK_NO_PREDICTION
+                    and props[PREDICTION_COUNT] > 1
                 ):
                     props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_PREDICTION_MULTI
                 elif props[EVALUATION_FIELD_NAME] != Evaluation.TO_CHECK_NO_PREDICTION:
@@ -1284,8 +1284,8 @@ class Aligner:
             # if there is only one prediction left,  evaluation is set to PREDICTION_UNIQUE_FULL
             if len_best_ix == 1:
                 if (
-                        FULL_ACTUAL_FIELD_NAME in prediction_properties[0]
-                        and prediction_properties[0][FULL_ACTUAL_FIELD_NAME]
+                    FULL_ACTUAL_FIELD_NAME in prediction_properties[0]
+                    and prediction_properties[0][FULL_ACTUAL_FIELD_NAME]
                 ):
                     prediction_properties[0][
                         EVALUATION_FIELD_NAME
@@ -1297,9 +1297,9 @@ class Aligner:
 
             # if there are multiple predictions, but we want only one and we ask for the original
             if (
-                    len_best_ix > 1
-                    and max_predictions == 1
-                    and not multi_to_best_prediction
+                len_best_ix > 1
+                and max_predictions == 1
+                and not multi_to_best_prediction
             ):
                 relevant_distance = round(0, RELEVANT_DISTANCE_DECIMALS)
                 props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_ORIGINAL
@@ -1418,8 +1418,8 @@ class Aligner:
                 continue
             # Add a last_version_date if available in properties
             if (
-                    key_ref in self.dict_reference_properties
-                    and VERSION_DATE in self.dict_reference_properties[key_ref]
+                key_ref in self.dict_reference_properties
+                and VERSION_DATE in self.dict_reference_properties[key_ref]
             ):
                 str_version_date = self.dict_reference_properties[key_ref][VERSION_DATE]
                 version_date = datetime.strptime(str_version_date, DATE_FORMAT)
@@ -1477,10 +1477,10 @@ class Aligner:
         return dict_formula
 
     def get_diff_metrics(
-            self,
-            dict_processresults=None,
-            dict_thematic=None,
-            diff_metric=DiffMetric.CHANGES_AREA,
+        self,
+        dict_processresults=None,
+        dict_thematic=None,
+        diff_metric=DiffMetric.CHANGES_AREA,
     ):
         """
         Calculates a dictionary containing difference metrics for thematic elements based on a distance series.
@@ -1507,10 +1507,10 @@ class Aligner:
     ##########EXPORTERS########################
     ###########################################
     def get_results_as_geojson(
-            self,
-            resulttype=AlignerResultType.PROCESSRESULTS,
-            formula=False,
-            attributes=False,
+        self,
+        resulttype=AlignerResultType.PROCESSRESULTS,
+        formula=False,
+        attributes=False,
     ):
         """
         get a geojson of a dictionary containing the resulting geometries for all
@@ -1544,7 +1544,7 @@ class Aligner:
                     for attr, value in self.dict_thematic_properties[theme_id].items():
                         prop_dictionary[theme_id][relevant_distance][attr] = value
                 if (
-                        formula
+                    formula
                 ):  # and not (theme_id in prop_dictionary and relevant_distance in prop_dictionary[theme_id] and NEW_FORMULA_FIELD_NAME in prop_dictionary[theme_id][relevant_distance]):
                     result = process_results["result"]
                     formula = self.get_brdr_formula(result)
@@ -1585,7 +1585,7 @@ class Aligner:
         )
 
     def save_results(
-            self, path, resulttype=AlignerResultType.PROCESSRESULTS, formula=True
+        self, path, resulttype=AlignerResultType.PROCESSRESULTS, formula=True
     ):
         """
         Exports analysis results (as geojson) to path.
@@ -1661,7 +1661,7 @@ class Aligner:
         return
 
     def _calculate_intersection_between_geometry_and_od(
-            self, input_geometry, input_geometry_inner, relevant_distance
+        self, input_geometry, input_geometry_inner, relevant_distance
     ):
         """
         Calculates the intersecting parts between a thematic geometry and the Open Domain( domain, not coverd by reference-polygons)
@@ -1685,8 +1685,8 @@ class Aligner:
             )
 
         elif (
-                self.od_strategy == OpenDomainStrategy.SNAP_INNER_SIDE
-                or self.od_strategy == OpenDomainStrategy.EXCLUDE
+            self.od_strategy == OpenDomainStrategy.SNAP_INNER_SIDE
+            or self.od_strategy == OpenDomainStrategy.EXCLUDE
         ):
             # integrates the entire inner area of the input geometry,
             # so Open Domain of the inner area is included in the result
@@ -1803,7 +1803,7 @@ class Aligner:
         return geom_thematic_od
 
     def _od_snap_all_side(
-            self, geometry, input_geometry_inner, relevant_distance, outer=False
+        self, geometry, input_geometry_inner, relevant_distance, outer=False
     ):
         """
 
@@ -1909,12 +1909,12 @@ class Aligner:
         return self.reference_elements
 
     def _postprocess_preresult(
-            self,
-            geom_preresult,
-            geom_thematic,
-            relevant_intersection,
-            relevant_diff,
-            relevant_distance,
+        self,
+        geom_preresult,
+        geom_thematic,
+        relevant_intersection,
+        relevant_diff,
+        relevant_distance,
     ) -> ProcessResult:
         """
         Postprocess the preresulting geometry with the following actions to create the final result
@@ -1994,8 +1994,8 @@ class Aligner:
             # calculate ratio to see if it is a circle, and keep the original geometry
             #  if a circle: (Polsby-Popper score)
             if (
-                    get_shape_index(geom_thematic.area, geom_thematic.length)
-                    > self.threshold_circle_ratio
+                get_shape_index(geom_thematic.area, geom_thematic.length)
+                > self.threshold_circle_ratio
             ):
                 remark = "Circle detected: -->resulting geometry = original geometry"
                 self.logger.feedback_debug(remark)
@@ -2006,10 +2006,10 @@ class Aligner:
             # Correction for unchanged geometries
             # if safe_symmetric_difference(geom_preresult, geom_thematic).is_empty:
             if geometric_equality(
-                    geom_preresult,
-                    geom_thematic,
-                    correction_distance=self.correction_distance,
-                    mitre_limit=self.mitre_limit,
+                geom_preresult,
+                geom_thematic,
+                correction_distance=self.correction_distance,
+                mitre_limit=self.mitre_limit,
             ):
                 remark = "Unchanged geometry: -->resulting geometry = original geometry"
                 self.logger.feedback_debug(remark)
@@ -2161,7 +2161,7 @@ class Aligner:
         )
 
     def _evaluate(
-            self, id_theme, geom_predicted, base_formula_field=FORMULA_FIELD_NAME
+        self, id_theme, geom_predicted, base_formula_field=FORMULA_FIELD_NAME
     ):
         """
         function that evaluates a predicted geometry and returns a properties-dictionary
@@ -2198,38 +2198,38 @@ class Aligner:
         properties[FULL_BASE_FIELD_NAME] = base_formula["full"]
         od_alike = False
         if (
-                base_formula["reference_od"] is None
-                and actual_formula["reference_od"] is None
+            base_formula["reference_od"] is None
+            and actual_formula["reference_od"] is None
         ):
             od_alike = True
         elif (
-                base_formula["reference_od"] is None
-                or actual_formula["reference_od"] is None
+            base_formula["reference_od"] is None
+            or actual_formula["reference_od"] is None
         ):
             od_alike = False
         elif (
-                abs(
-                    base_formula["reference_od"]["area"]
-                    - actual_formula["reference_od"]["area"]
-                )
-                * 100
-                / base_formula["reference_od"]["area"]
+            abs(
+                base_formula["reference_od"]["area"]
+                - actual_formula["reference_od"]["area"]
+            )
+            * 100
+            / base_formula["reference_od"]["area"]
         ) < threshold_od_percentage:
             od_alike = True
         properties[OD_ALIKE_FIELD_NAME] = od_alike
 
         equal_reference_features = True
         if (
-                base_formula["reference_features"].keys()
-                == actual_formula["reference_features"].keys()
+            base_formula["reference_features"].keys()
+            == actual_formula["reference_features"].keys()
         ):
             equal_reference_features = True
             max_diff_area_reference_feature = 0
             max_diff_percentage_reference_feature = 0
             for key in base_formula["reference_features"].keys():
                 if (
-                        base_formula["reference_features"][key]["full"]
-                        != actual_formula["reference_features"][key]["full"]
+                    base_formula["reference_features"][key]["full"]
+                    != actual_formula["reference_features"][key]["full"]
                 ):
                     equal_reference_features = False
 
@@ -2238,18 +2238,18 @@ class Aligner:
                     - actual_formula["reference_features"][key]["area"]
                 )
                 diff_percentage_reference_feature = (
-                        abs(
-                            base_formula["reference_features"][key]["area"]
-                            - actual_formula["reference_features"][key]["area"]
-                        )
-                        * 100
-                        / base_formula["reference_features"][key]["area"]
+                    abs(
+                        base_formula["reference_features"][key]["area"]
+                        - actual_formula["reference_features"][key]["area"]
+                    )
+                    * 100
+                    / base_formula["reference_features"][key]["area"]
                 )
                 if diff_area_reference_feature > max_diff_area_reference_feature:
                     max_diff_area_reference_feature = diff_area_reference_feature
                 if (
-                        diff_percentage_reference_feature
-                        > max_diff_percentage_reference_feature
+                    diff_percentage_reference_feature
+                    > max_diff_percentage_reference_feature
                 ):
                     max_diff_percentage_reference_feature = (
                         diff_percentage_reference_feature
@@ -2261,20 +2261,20 @@ class Aligner:
             )
         # EVALUATION
         if (
-                equal_reference_features
-                and od_alike
-                and base_formula["full"]
-                and actual_formula["full"]
+            equal_reference_features
+            and od_alike
+            and base_formula["full"]
+            and actual_formula["full"]
         ):  # formula is the same, and both geometries are 'full'
             properties[EVALUATION_FIELD_NAME] = Evaluation.EQUALITY_EQUAL_FORMULA_FULL_1
         elif (
-                equal_reference_features
-                and od_alike
-                and base_formula["full"] == actual_formula["full"]
+            equal_reference_features
+            and od_alike
+            and base_formula["full"] == actual_formula["full"]
         ):  # formula is the same,  both geometries are not 'full'
             properties[EVALUATION_FIELD_NAME] = Evaluation.EQUALITY_EQUAL_FORMULA_2
         elif (
-                base_formula["full"] and actual_formula["full"] and od_alike
+            base_formula["full"] and actual_formula["full"] and od_alike
         ):  # formula not the same but geometries are full
             properties[EVALUATION_FIELD_NAME] = Evaluation.EQUALITY_FULL_3
         # elif base_formula["full"] == actual_formula["full"] and od_alike:
@@ -2317,19 +2317,19 @@ class Aligner:
 
 
 def _calculate_geom_by_intersection_and_reference(
-        geom_intersection: BaseGeometry,
-        geom_reference: BaseGeometry,
-        input_geometry_inner: BaseGeometry,
-        is_open_domain,
-        buffer_distance,
-        threshold_overlap_percentage,
-        threshold_exclusion_percentage,
-        threshold_exclusion_area,
-        threshold_inclusion_percentage,
-        mitre_limit,
-        partial_snapping,
-        partial_snap_strategy,
-        partial_snap_max_segment_length,
+    geom_intersection: BaseGeometry,
+    geom_reference: BaseGeometry,
+    input_geometry_inner: BaseGeometry,
+    is_open_domain,
+    buffer_distance,
+    threshold_overlap_percentage,
+    threshold_exclusion_percentage,
+    threshold_exclusion_area,
+    threshold_inclusion_percentage,
+    mitre_limit,
+    partial_snapping,
+    partial_snap_strategy,
+    partial_snap_max_segment_length,
 ):
     """
     Calculates the geometry based on intersection and reference geometries.
@@ -2373,8 +2373,8 @@ def _calculate_geom_by_intersection_and_reference(
         overlap = geom_intersection.area * 100 / geom_reference.area
 
     if (
-            overlap < threshold_exclusion_percentage
-            or geom_intersection.area < threshold_exclusion_area
+        overlap < threshold_exclusion_percentage
+        or geom_intersection.area < threshold_exclusion_area
     ):
         return Polygon(), Polygon(), Polygon()
 
@@ -2398,9 +2398,9 @@ def _calculate_geom_by_intersection_and_reference(
     )
 
     if (
-            not geom_intersection_inner.is_empty
-            and geom_relevant_intersection.is_empty
-            and not geom_relevant_difference.is_empty
+        not geom_intersection_inner.is_empty
+        and geom_relevant_intersection.is_empty
+        and not geom_relevant_difference.is_empty
     ):
         geom_x = safe_intersection(
             geom_intersection, buffer_pos(geom_intersection_inner, 2 * buffer_distance)
@@ -2416,8 +2416,8 @@ def _calculate_geom_by_intersection_and_reference(
 
         geom = geom_x
     elif (
-            not geom_relevant_intersection.is_empty
-            and not geom_relevant_difference.is_empty
+        not geom_relevant_intersection.is_empty
+        and not geom_relevant_difference.is_empty
     ):
         # relevant intersection and relevant difference
 
@@ -2498,7 +2498,7 @@ def _calculate_geom_by_intersection_and_reference(
 
 
 def _get_relevant_polygons_from_geom(
-        geometry: BaseGeometry, buffer_distance: float, mitre_limit
+    geometry: BaseGeometry, buffer_distance: float, mitre_limit
 ):
     """
     Get only the relevant parts (polygon) from a geometry.

@@ -1,4 +1,4 @@
-#Demo osmx usage
+# Demo osmx usage
 # https://medium.com/@callumjamesscoby/routing-shortest-path-analysis-in-python-and-qgis-39da55da5099
 import osmnx as ox
 
@@ -12,8 +12,7 @@ print(leuven_cycleways.head())
 leuven_cycleways.to_file("output/leuven_cycleways.gpkg", driver="GPKG")
 
 
-
-#Demo osmnx routing
+# Demo osmnx routing
 G = ox.graph_from_place("Heverlee, Belgium", network_type="drive")
 Gp = ox.project_graph(G, to_crs=31370)
 ox.plot_graph(Gp)

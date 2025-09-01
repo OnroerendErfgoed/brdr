@@ -42,11 +42,11 @@ log = logging.getLogger(__name__)
 
 
 def get_dict_geojsons_from_series_dict(
-        series_dict: dict[any, dict[float, ProcessResult]],
-        crs: str,
-        id_field: str,
-        series_prop_dict: dict[any, dict[float, any]] = None,
-        geom_attributes=True,
+    series_dict: dict[any, dict[float, ProcessResult]],
+    crs: str,
+    id_field: str,
+    series_prop_dict: dict[any, dict[float, any]] = None,
+    geom_attributes=True,
 ):
     """
     Convert a series of process results to a GeoJSON feature collection.
@@ -105,10 +105,10 @@ def get_dict_geojsons_from_series_dict(
 
 
 def _feature_from_geom(
-        geom: BaseGeometry,
-        feature_id: any,
-        properties: dict = None,
-        geom_attributes=True,
+    geom: BaseGeometry,
+    feature_id: any,
+    properties: dict = None,
+    geom_attributes=True,
 ) -> Feature:
     """
     Convert a geometry to a GeoJSON feature.
@@ -285,18 +285,18 @@ def get_breakpoints_zerostreak(x, y, extra_score=10):
             write_zero_streak = False
             logging.debug("end_streak")
         if (
-                i < len(x) - 1
-                and round(derivative[i], 2) > 0  # noqa
-                and derivative[i - 1] <= derivative[i]
-                and derivative[i] >= derivative[i + 1]
+            i < len(x) - 1
+            and round(derivative[i], 2) > 0  # noqa
+            and derivative[i - 1] <= derivative[i]
+            and derivative[i] >= derivative[i + 1]
         ):
             last_extreme = derivative[i]
             extremes.append((x[i], derivative[i], "maximum"))
         if (
-                i < len(x) - 1
-                and round(derivative[i], 2) < 0  # noqa
-                and derivative[i - 1] >= derivative[i]
-                and derivative[i] <= derivative[i + 1]
+            i < len(x) - 1
+            and round(derivative[i], 2) < 0  # noqa
+            and derivative[i - 1] >= derivative[i]
+            and derivative[i] <= derivative[i + 1]
         ):
             last_extreme = derivative[i]
             extremes.append((x[i], derivative[i], "minimum"))
@@ -334,10 +334,10 @@ def _numerical_derivative(x, y):
 
 
 def diffs_from_dict_processresults(
-        dict_processresults: dict[any, dict[float, ProcessResult]],
-        dict_thematic: dict[any, BaseGeometry],
-        reference_union: BaseGeometry,
-        diff_metric: DiffMetric = DiffMetric.CHANGES_AREA,
+    dict_processresults: dict[any, dict[float, ProcessResult]],
+    dict_thematic: dict[any, BaseGeometry],
+    reference_union: BaseGeometry,
+    diff_metric: DiffMetric = DiffMetric.CHANGES_AREA,
 ):
     """
     Calculates a dictionary containing difference metrics for thematic elements based on a distance series.
@@ -357,15 +357,15 @@ def diffs_from_dict_processresults(
     for thematic_id, results_dict in dict_processresults.items():
         diffs[thematic_id] = {}
         if dict_thematic[thematic_id].geom_type in (
-                "LineString",
-                "MultiLineString",
+            "LineString",
+            "MultiLineString",
         ):
             diff_metric = DiffMetric.CHANGES_LENGTH
             # diff_metric = DiffMetric.REFERENCE_USAGE
             # diff_metric = DiffMetric.TOTAL_DISTANCE
         elif dict_thematic[thematic_id].geom_type in (
-                "Point",
-                "MultiPoint",
+            "Point",
+            "MultiPoint",
         ):
             diff_metric = DiffMetric.TOTAL_DISTANCE
             diff_metric = DiffMetric.REFERENCE_USAGE
@@ -377,10 +377,10 @@ def diffs_from_dict_processresults(
             diff = 0
             original = dict_thematic[thematic_id]
             if (
-                    result_diff is None
-                    or result_diff.is_empty
-                    or result is None
-                    or result.is_empty
+                result_diff is None
+                or result_diff.is_empty
+                or result is None
+                or result.is_empty
             ):
                 diff = 0
             elif diff_metric == DiffMetric.TOTAL_AREA:
@@ -407,8 +407,8 @@ def diffs_from_dict_processresults(
                 else:
                     reference_usage_geom = None
                 if (
-                        reference_usage_geom is not None
-                        and not reference_usage_geom.is_empty
+                    reference_usage_geom is not None
+                    and not reference_usage_geom.is_empty
                 ):
                     diff = reference_usage_geom.area
                 else:
@@ -450,8 +450,8 @@ def get_collection(ref_url, limit):
         json = requests.get(url).json()
         feature_collection = dict(json)
         if (
-                "features" not in feature_collection
-                or len(feature_collection["features"]) == 0
+            "features" not in feature_collection
+            or len(feature_collection["features"]) == 0
         ):
             break
         start_index = start_index + limit
@@ -501,7 +501,7 @@ def geojson_to_dicts(collection, id_property):
 
 
 def get_collection_by_partition(
-        url, geometry, partition=1000, limit=DOWNLOAD_LIMIT, crs=DEFAULT_CRS
+    url, geometry, partition=1000, limit=DOWNLOAD_LIMIT, crs=DEFAULT_CRS
 ):
     """
     Retrieves a collection of geographic data by partitioning the input geometry.
@@ -557,7 +557,7 @@ def _add_bbox_to_url(url, crs=DEFAULT_CRS, bbox=None):
 
 
 def merge_process_results(
-        result_dict: dict[any, dict[float, ProcessResult]], dict_multi_as_single: dict
+    result_dict: dict[any, dict[float, ProcessResult]], dict_multi_as_single: dict
 ) -> dict[any, dict[float, ProcessResult]]:
     """
      Merges processresults in a dictionary from multiple themeIDs into a single themeID.
@@ -589,7 +589,7 @@ def merge_process_results(
                             key
                         ]  # noqa
                         grouped_results[id_theme_global][rel_dist][key] = (
-                                existing_remark + " | " + str(value)
+                            existing_remark + " | " + str(value)
                         )
                         continue
                     elif isinstance(value, BaseGeometry):

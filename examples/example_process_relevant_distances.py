@@ -63,6 +63,6 @@ if __name__ == "__main__":
     resulting_areas = diffs_from_dict_processresults(
         dict_processresults=dict_results,
         dict_thematic=aligner.dict_thematic,
-        reference_union=aligner._get_reference_union()
+        reference_union=aligner._get_reference_union(),
     )
     plot_series(relevant_distances, resulting_areas)
