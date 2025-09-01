@@ -1370,6 +1370,10 @@ def longest_linestring_from_multilinestring(multilinestring):
     if isinstance(multilinestring, LineString):
         return multilinestring
 
+    if not isinstance(multilinestring, MultiLineString):
+        logging.warning("Multilinestring expected. Other type detected; empty geometry returned")
+        return GeometryCollection()
+
     # Create a graph from the MultiLineString
     G = graph_from_multilinestring(multilinestring)
 
@@ -1450,6 +1454,8 @@ def find_longest_path_in_network(
 
 
 def graph_from_multilinestring(multilinestring):
+    if not isinstance(multilinestring,MultiLineString):
+        raise TypeError ("multilinstring expected")
     G = nx.Graph()
     for line in multilinestring.geoms:
         coords = list(line.coords)
@@ -1959,61 +1965,61 @@ def add_point_as_node_on_closest_edge(G, point):
     return G
 
 
-def multilinestring_to_graph(mls):
-    """
-    Converts a Shapely MultiLineString into a NetworkX graph.
-    Nodes are only endpoints and intersection points.
-    Edges represent segments between these nodes and include length as an attribute.
-    """
-    # Step 1: Merge all lines into a single geometry and find intersections
-    merged = linemerge(mls)
-    if isinstance(merged, LineString):
-        lines = [merged]
-    else:
-        lines = list(merged)
-
-    # Step 2: Collect all endpoints
-    endpoints = set()
-    for line in lines:
-        endpoints.add(Point(line.coords[0]))
-        endpoints.add(Point(line.coords[-1]))
-
-    # Step 3: Find all intersection points
-    intersections = set()
-    for i, line1 in enumerate(lines):
-        for j, line2 in enumerate(lines):
-            if i < j:
-                inter = line1.intersection(line2)
-                if "Point" in inter.geom_type:
-                    intersections.add(inter)
-                elif inter.geom_type == "MultiPoint":
-                    intersections.update(inter.geoms)
-
-    # Combine endpoints and intersections
-    split_points = list(endpoints.union(intersections))
-
-    # Step 4: Split lines at split_points
-    split_lines = []
-    for line in lines:
-        for pt in split_points:
-            if not line.contains(pt):
-                continue
-            line = snap(line, pt, 1e-8)
-        result = split(line, unary_union(split_points))
-        split_lines.extend(result.geoms)
-
-    # Step 5: Build graph
-    G = nx.Graph()
-    for segment in split_lines:
-        coords = list(segment.coords)
-        if len(coords) < 2:
-            continue
-        p1 = tuple(coords[0])
-        p2 = tuple(coords[-1])
-        length = segment.length
-        G.add_edge(p1, p2, length=length)
-
-    return G
+# def multilinestring_to_graph(mls):
+#     """
+#     Converts a Shapely MultiLineString into a NetworkX graph.
+#     Nodes are only endpoints and intersection points.
+#     Edges represent segments between these nodes and include length as an attribute.
+#     """
+#     # Step 1: Merge all lines into a single geometry and find intersections
+#     merged = linemerge(mls)
+#     if isinstance(merged, LineString):
+#         lines = [merged]
+#     else:
+#         lines = list(merged)
+#
+#     # Step 2: Collect all endpoints
+#     endpoints = set()
+#     for line in lines:
+#         endpoints.add(Point(line.coords[0]))
+#         endpoints.add(Point(line.coords[-1]))
+#
+#     # Step 3: Find all intersection points
+#     intersections = set()
+#     for i, line1 in enumerate(lines):
+#         for j, line2 in enumerate(lines):
+#             if i < j:
+#                 inter = line1.intersection(line2)
+#                 if "Point" in inter.geom_type:
+#                     intersections.add(inter)
+#                 elif inter.geom_type == "MultiPoint":
+#                     intersections.update(inter.geoms)
+#
+#     # Combine endpoints and intersections
+#     split_points = list(endpoints.union(intersections))
+#
+#     # Step 4: Split lines at split_points
+#     split_lines = []
+#     for line in lines:
+#         for pt in split_points:
+#             if not line.contains(pt):
+#                 continue
+#             line = snap(line, pt, 1e-8)
+#         result = split(line, unary_union(split_points))
+#         split_lines.extend(result.geoms)
+#
+#     # Step 5: Build graph
+#     G = nx.Graph()
+#     for segment in split_lines:
+#         coords = list(segment.coords)
+#         if len(coords) < 2:
+#             continue
+#         p1 = tuple(coords[0])
+#         p2 = tuple(coords[-1])
+#         length = segment.length
+#         G.add_edge(p1, p2, length=length)
+#
+#     return G
 
 
 def extract_points_lines_from_geometry(geometry):
