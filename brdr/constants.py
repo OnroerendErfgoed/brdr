@@ -33,7 +33,7 @@ RELEVANT_DISTANCE_DECIMALS = 2
 
 PREFIX_FIELDNAME = "brdr_"
 BASE_FORMULA_FIELD_NAME = (
-    PREFIX_FIELDNAME + "base_formula"
+        PREFIX_FIELDNAME + "base_formula"
 )  # for use in grb_actualisation
 ID_THEME_FIELD_NAME = PREFIX_FIELDNAME + "id"
 ID_REFERENCE_FIELD_NAME = PREFIX_FIELDNAME + "ref_id"

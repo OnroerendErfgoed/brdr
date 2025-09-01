@@ -4,7 +4,6 @@ from brdr.grb import GRBFiscalParcelLoader
 from brdr.grb import update_to_actual_grb
 from brdr.loader import GeoJsonLoader
 
-
 if __name__ == "__main__":
     """
     EXAMPLE of the use of GRB (flanders-specific) function: Update_to_actual_grb

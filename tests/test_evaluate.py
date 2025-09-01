@@ -112,8 +112,8 @@ class TestEvaluate(unittest.TestCase):
         )
         assert len(dict_evaluated["theme_id_1"]) > 1
         assert (
-            prop_dictionary["theme_id_1"][3.5]["brdr_evaluation"]
-            == Evaluation.TO_CHECK_PREDICTION_MULTI_FULL
+                prop_dictionary["theme_id_1"][3.5]["brdr_evaluation"]
+                == Evaluation.TO_CHECK_PREDICTION_MULTI_FULL
         )
 
     def test_evaluate_full_strategy_prefer_full(self):
@@ -134,8 +134,8 @@ class TestEvaluate(unittest.TestCase):
         )
         assert len(dict_evaluated["theme_id_1"]) > 1
         assert (
-            prop_dictionary["theme_id_1"][3.5]["brdr_evaluation"]
-            == Evaluation.TO_CHECK_PREDICTION_FULL
+                prop_dictionary["theme_id_1"][3.5]["brdr_evaluation"]
+                == Evaluation.TO_CHECK_PREDICTION_FULL
         )
 
     def test_evaluate_full_strategy_only_full(self):
@@ -156,8 +156,8 @@ class TestEvaluate(unittest.TestCase):
         )
         assert len(dict_evaluated["theme_id_1"]) == 1
         assert (
-            prop_dictionary["theme_id_1"][3.5]["brdr_evaluation"]
-            == Evaluation.PREDICTION_UNIQUE_FULL
+                prop_dictionary["theme_id_1"][3.5]["brdr_evaluation"]
+                == Evaluation.PREDICTION_UNIQUE_FULL
         )
 
     def test_evaluate_all_predictions(self):
@@ -179,8 +179,8 @@ class TestEvaluate(unittest.TestCase):
         )
         assert len(dict_evaluated["theme_id_1"]) > 1
         assert (
-            prop_dictionary["theme_id_1"][3.5]["brdr_evaluation"]
-            == Evaluation.TO_CHECK_PREDICTION_FULL
+                prop_dictionary["theme_id_1"][3.5]["brdr_evaluation"]
+                == Evaluation.TO_CHECK_PREDICTION_FULL
         )
 
     def test_evaluate_limited_predictions(self):
@@ -226,10 +226,10 @@ class TestEvaluate(unittest.TestCase):
         )
         assert len(dict_evaluated["theme_id_1"]) == 1
         assert (
-            prop_dictionary["theme_id_1"][
-                list(prop_dictionary["theme_id_1"].keys())[0]
-            ]["brdr_prediction_count"]
-            > 1
+                prop_dictionary["theme_id_1"][
+                    list(prop_dictionary["theme_id_1"].keys())[0]
+                ]["brdr_prediction_count"]
+                > 1
         )
 
     def test_evaluate_multi_to_best_prediction_false(self):
@@ -252,8 +252,8 @@ class TestEvaluate(unittest.TestCase):
         )
         assert len(dict_evaluated["theme_id_1"]) == 1
         assert (
-            prop_dictionary["theme_id_1"][0]["brdr_evaluation"]
-            == Evaluation.TO_CHECK_ORIGINAL
+                prop_dictionary["theme_id_1"][0]["brdr_evaluation"]
+                == Evaluation.TO_CHECK_ORIGINAL
         )
 
     def test_evaluate_relevant_distances_without_0(self):
@@ -276,8 +276,8 @@ class TestEvaluate(unittest.TestCase):
         )
         assert len(dict_evaluated["theme_id_1"]) == 1
         assert (
-            prop_dictionary["theme_id_1"][0]["brdr_evaluation"]
-            == Evaluation.TO_CHECK_ORIGINAL
+                prop_dictionary["theme_id_1"][0]["brdr_evaluation"]
+                == Evaluation.TO_CHECK_ORIGINAL
         )
 
     def test_evaluate_line(self):
@@ -305,8 +305,8 @@ class TestEvaluate(unittest.TestCase):
         )
         assert len(dict_evaluated["theme_id"]) >= 1
         assert (
-            prop_dictionary["theme_id"][0]["brdr_evaluation"]
-            == Evaluation.TO_CHECK_PREDICTION_MULTI_FULL
+                prop_dictionary["theme_id"][0]["brdr_evaluation"]
+                == Evaluation.TO_CHECK_PREDICTION_MULTI_FULL
         )
 
     def test_evaluate_point(self):
@@ -473,16 +473,16 @@ class TestEvaluate(unittest.TestCase):
         )
 
         assert (
-            prop_dictionary[1][list(prop_dictionary[1].keys())[0]][
-                EVALUATION_FIELD_NAME
-            ]
-            == Evaluation.PREDICTION_UNIQUE_FULL
+                prop_dictionary[1][list(prop_dictionary[1].keys())[0]][
+                    EVALUATION_FIELD_NAME
+                ]
+                == Evaluation.PREDICTION_UNIQUE_FULL
         )
         assert (
-            prop_dictionary[2][list(prop_dictionary[2].keys())[0]][
-                EVALUATION_FIELD_NAME
-            ]
-            == Evaluation.TO_CHECK_NO_PREDICTION
+                prop_dictionary[2][list(prop_dictionary[2].keys())[0]][
+                    EVALUATION_FIELD_NAME
+                ]
+                == Evaluation.TO_CHECK_NO_PREDICTION
         )
         # TODO; check below as this gives a extra prediction without prop_dictionary parameters
         # assert prop_dictionary[3][list(prop_dictionary[3].keys())[0]][EVALUATION_FIELD_NAME] == Evaluation.TO_CHECK_NO_PREDICTION

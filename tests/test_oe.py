@@ -26,7 +26,6 @@ class TestOE(unittest.TestCase):
         assert len(aligner.dict_thematic.keys()) > 0
 
     def test_onroerenderfgoedloader_by_bbox_and_objectid(self):
-
         with self.assertRaises(Exception) as context:
             loader = OnroerendErfgoedLoader(
                 objectids=[42549],

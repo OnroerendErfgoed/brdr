@@ -90,9 +90,9 @@ def _make_map(ax, processresult, thematic_dict, reference_dict):
 
 
 def show_map(
-    dict_results: dict[any, dict[float, ProcessResult]],
-    dict_thematic,
-    dict_reference,
+        dict_results: dict[any, dict[float, ProcessResult]],
+        dict_thematic,
+        dict_reference,
 ):
     """
     Show results on a map
@@ -138,11 +138,11 @@ def print_brdr_formula(dict_results, aligner):
 
 
 def plot_series(
-    series,
-    dictionary,
-    xlabel="relevant distance",
-    ylabel="difference",
-    title="Relevant distance vs difference",
+        series,
+        dictionary,
+        xlabel="relevant distance",
+        ylabel="difference",
+        title="Relevant distance vs difference",
 ):
     for key in dictionary:
         if len(dictionary[key]) == len(series):

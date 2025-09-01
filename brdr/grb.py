@@ -41,12 +41,12 @@ datetime_format_TZ = "%Y-%m-%dT%H:%M:%SZ"
 
 
 def is_grb_changed(
-    geometry,
-    grb_type=GRBType.ADP,
-    date_start=date.today(),
-    date_end=date.today(),
-    border_distance=0,
-    crs=DEFAULT_CRS,
+        geometry,
+        grb_type=GRBType.ADP,
+        date_start=date.today(),
+        date_end=date.today(),
+        border_distance=0,
+        crs=DEFAULT_CRS,
 ):
     """
        checks if a geometry is possibly affected by changes in the reference layer
@@ -77,14 +77,14 @@ def is_grb_changed(
 
 
 def get_affected_by_grb_change(
-    dict_thematic,
-    grb_type=GRBType.ADP,
-    date_start=date.today(),
-    date_end=date.today(),
-    one_by_one=False,
-    border_distance=0,
-    geometry_thematic_union=None,
-    crs=DEFAULT_CRS,
+        dict_thematic,
+        grb_type=GRBType.ADP,
+        date_start=date.today(),
+        date_end=date.today(),
+        one_by_one=False,
+        border_distance=0,
+        geometry_thematic_union=None,
+        crs=DEFAULT_CRS,
 ):
     """
     Get a list of affected and unaffected IDs by GRB-changes in a
@@ -113,7 +113,7 @@ def get_affected_by_grb_change(
         for key in dict_thematic:
             geom = dict_thematic[key]
             if is_grb_changed(
-                geom, grb_type, date_start, date_end, border_distance=border_distance
+                    geom, grb_type, date_start, date_end, border_distance=border_distance
             ):
                 affected.append(key)
             else:
@@ -172,11 +172,11 @@ def get_affected_by_grb_change(
 
 
 def get_last_version_date(
-    geometry,
-    grb_type=GRBType.ADP,
-    crs=DEFAULT_CRS,
-    limit=DOWNLOAD_LIMIT,
-    border_distance=0,
+        geometry,
+        grb_type=GRBType.ADP,
+        crs=DEFAULT_CRS,
+        limit=DOWNLOAD_LIMIT,
+        border_distance=0,
 ):
     """
     Retrieves the date of the last version for a specific geographic area within
@@ -201,8 +201,9 @@ def get_last_version_date(
         geometry = create_donut(geometry, border_distance)
     bbox = get_bbox(geometry)
     actual_url = (
-        GRB_FEATURE_URL + "/" + grb_type.name + "/items?"
-        "limit=" + str(limit) + "&crs=" + crs + "&bbox-crs=" + crs + "&bbox=" + bbox
+            GRB_FEATURE_URL + "/" + grb_type.name + "/items?"
+                                                    "limit=" + str(
+        limit) + "&crs=" + crs + "&bbox-crs=" + crs + "&bbox=" + bbox
     )
     update_dates = []
     collection = get_collection(actual_url, limit)
@@ -222,23 +223,22 @@ def get_last_version_date(
 
 
 def get_collection_grb_actual(
-    geometry,
-    grb_type=GRBType.ADP,
-    partition=1000,
-    limit=DOWNLOAD_LIMIT,
-    crs=DEFAULT_CRS,
-    date_start=None,
-    date_end=None,
+        geometry,
+        grb_type=GRBType.ADP,
+        partition=1000,
+        limit=DOWNLOAD_LIMIT,
+        crs=DEFAULT_CRS,
+        date_start=None,
+        date_end=None,
 ):
-
     url = (
-        GRB_FEATURE_URL
-        + "/"
-        + grb_type.name
-        + "/items?limit="
-        + str(limit)
-        + "&crs="
-        + crs
+            GRB_FEATURE_URL
+            + "/"
+            + grb_type.name
+            + "/items?limit="
+            + str(limit)
+            + "&crs="
+            + crs
     )
     if grb_type == GRBType.ADP:
         name_reference_id = GRB_PARCEL_ID
@@ -250,7 +250,7 @@ def get_collection_grb_actual(
     versiondate_filter_end = ""
     if date_start is not None:
         versiondate_filter_start = (
-            GRB_VERSION_DATE + ">" + date_start.strftime(DATE_FORMAT)
+                GRB_VERSION_DATE + ">" + date_start.strftime(DATE_FORMAT)
         )
         versiondate_filter = versiondate_filter_start
     if date_end is not None:
@@ -268,15 +268,15 @@ def get_collection_grb_actual(
 
 
 def get_collection_grb_fiscal_parcels(
-    geometry,
-    year=str(datetime.now().year),
-    partition=1000,
-    limit=DOWNLOAD_LIMIT,
-    crs=DEFAULT_CRS,
+        geometry,
+        year=str(datetime.now().year),
+        partition=1000,
+        limit=DOWNLOAD_LIMIT,
+        crs=DEFAULT_CRS,
 ):
     url = (
-        GRB_FISCAL_PARCELS_URL + "/Adpf" + year + "/items?"
-        "limit=" + str(limit) + "&crs=" + crs
+            GRB_FISCAL_PARCELS_URL + "/Adpf" + year + "/items?"
+                                                      "limit=" + str(limit) + "&crs=" + crs
     )
     return get_collection_by_partition(
         url, geometry=geometry, partition=partition, limit=limit, crs=crs
@@ -284,11 +284,11 @@ def get_collection_grb_fiscal_parcels(
 
 
 def get_collection_grb_parcels_by_date(
-    geometry,
-    date,
-    partition=1000,
-    limit=DOWNLOAD_LIMIT,
-    crs=DEFAULT_CRS,
+        geometry,
+        date,
+        partition=1000,
+        limit=DOWNLOAD_LIMIT,
+        crs=DEFAULT_CRS,
 ):
     collection_year_after = get_collection_grb_fiscal_parcels(
         year=str(date.year),
@@ -302,8 +302,8 @@ def get_collection_grb_parcels_by_date(
     collection_year_after_filtered = deepcopy(collection_year_after)
     logging.debug(len(collection_year_after_filtered["features"]))
     if (
-        "features" in collection_year_after_filtered
-        and len(collection_year_after_filtered["features"]) > 0
+            "features" in collection_year_after_filtered
+            and len(collection_year_after_filtered["features"]) > 0
     ):
         removed_features = []
         for feature in collection_year_after_filtered["features"]:
@@ -352,16 +352,16 @@ def get_collection_grb_parcels_by_date(
 
 
 def update_to_actual_grb(
-    featurecollection,
-    id_theme_fieldname,
-    base_formula_field=FORMULA_FIELD_NAME,
-    grb_type=GRBType.ADP,
-    max_distance_for_actualisation=2,
-    max_predictions=-1,
-    full_strategy=FullStrategy.NO_FULL,
-    multi_to_best_prediction=True,
-    feedback=None,
-    attributes=True,
+        featurecollection,
+        id_theme_fieldname,
+        base_formula_field=FORMULA_FIELD_NAME,
+        grb_type=GRBType.ADP,
+        max_distance_for_actualisation=2,
+        max_predictions=-1,
+        full_strategy=FullStrategy.NO_FULL,
+        multi_to_best_prediction=True,
+        feedback=None,
+        attributes=True,
 ):
     """
     Function to update a thematic featurecollection to the most actual version of GRB.
@@ -399,9 +399,9 @@ def update_to_actual_grb(
                 try:
                     logger.feedback_debug(str(dict_thematic_props[id_theme]))
                     if (
-                        LAST_VERSION_DATE in base_formula
-                        and base_formula[LAST_VERSION_DATE] is not None
-                        and base_formula[LAST_VERSION_DATE] != ""
+                            LAST_VERSION_DATE in base_formula
+                            and base_formula[LAST_VERSION_DATE] is not None
+                            and base_formula[LAST_VERSION_DATE] != ""
                     ):
                         str_lvd = base_formula[LAST_VERSION_DATE]
                         lvd = datetime.strptime(str_lvd, DATE_FORMAT).date()
@@ -466,7 +466,7 @@ def update_to_actual_grb(
         for k in np.arange(
             0, max_distance_for_actualisation * 100 + rd_step, rd_step, dtype=int
         )
-        / 100
+                 / 100
     ]
     # EXECUTE evaluation
     actual_aligner.evaluate(

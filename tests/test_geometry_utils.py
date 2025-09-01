@@ -3970,7 +3970,6 @@ class TestSafeOperations(unittest.TestCase):
             assert isinstance(partition, Polygon)
 
     def test_get_line_substring(self):
-
         reference_border = from_wkt(
             "LINESTRING (173033.61378717 171235.23224897, 173044.62370718 171235.00223297)"
         )

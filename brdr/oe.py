@@ -79,12 +79,12 @@ def get_oe_dict_by_ids(objectids, oetype=OEType.AO):
 
 
 def get_collection_oe_objects(
-    oetype=OEType.AO,
-    objectids=None,
-    bbox=None,
-    limit=DOWNLOAD_LIMIT,
-    partition=1000,
-    crs=DEFAULT_CRS,
+        oetype=OEType.AO,
+        objectids=None,
+        bbox=None,
+        limit=DOWNLOAD_LIMIT,
+        partition=1000,
+        crs=DEFAULT_CRS,
 ):
     """
     Fetches GeoJSON data for designated heritage objects (aanduidingsobjecten) within
@@ -126,9 +126,9 @@ def get_collection_oe_objects(
     )
     if objectids is not None:
         filter = (
-            f"&CQL_FILTER={id_property} IN ("
-            + ", ".join(str(o) for o in objectids)
-            + ")"
+                f"&CQL_FILTER={id_property} IN ("
+                + ", ".join(str(o) for o in objectids)
+                + ")"
         )
         theme_url = theme_url + filter
     bbox_polygon = None
@@ -145,16 +145,16 @@ def get_collection_oe_objects(
 
 class OnroerendErfgoedLoader(GeoJsonLoader):
     def __init__(
-        self,
-        objectids=None,
-        oetype=OEType.AO,
-        bbox=None,
-        limit=DOWNLOAD_LIMIT,
-        partition=1000,
-        crs=DEFAULT_CRS,
+            self,
+            objectids=None,
+            oetype=OEType.AO,
+            bbox=None,
+            limit=DOWNLOAD_LIMIT,
+            partition=1000,
+            crs=DEFAULT_CRS,
     ):
         if (objectids is None and bbox is None) or (
-            objectids is not None and bbox is not None
+                objectids is not None and bbox is not None
         ):
             raise ValueError("Please provide a ID-filter OR a BBOX-filter, not both")
         super().__init__()
@@ -167,7 +167,6 @@ class OnroerendErfgoedLoader(GeoJsonLoader):
         self.data_dict_source["source"] = "Onroerend Erfgoed"
 
     def load_data(self):
-
         # geom_union = buffer_pos(self.aligner.get_thematic_union(), MAX_REFERENCE_BUFFER)
         collection, id_property = get_collection_oe_objects(
             oetype=self.oetype,

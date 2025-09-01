@@ -13,11 +13,11 @@ from brdr.utils import geojson_geometry_to_shapely
 
 
 def dissolve_topo(
-    dict_series,
-    dict_thematic,
-    dict_thematic_to_process,
-    topo_thematic,
-    relevant_distances,
+        dict_series,
+        dict_thematic,
+        dict_thematic_to_process,
+        topo_thematic,
+        relevant_distances,
 ):
     """
     Dissolves a processed dict_series of LineStrings (Arcs) into a dict_series of the original geometries

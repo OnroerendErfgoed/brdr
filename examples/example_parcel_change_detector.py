@@ -91,7 +91,6 @@ write_geojson(
     os.path.join("output/", "parcel_change_detector_with.geojson"), fcs["result"]
 )
 
-
 counter_equality = 0
 counter_equality_by_alignment = 0
 counter_difference = 0

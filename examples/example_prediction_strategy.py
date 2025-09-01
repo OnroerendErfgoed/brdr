@@ -104,7 +104,6 @@ dict_predictions_evaluated, prop_dictionary = aligner.evaluate(
     multi_to_best_prediction=True,
 )
 
-
 assert prop_dictionary[1][0][EVALUATION_FIELD_NAME] == Evaluation.PREDICTION_UNIQUE_FULL
 assert prop_dictionary[2][0][EVALUATION_FIELD_NAME] == Evaluation.TO_CHECK_NO_PREDICTION
 assert prop_dictionary[3][0][EVALUATION_FIELD_NAME] == Evaluation.TO_CHECK_NO_PREDICTION

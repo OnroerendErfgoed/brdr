@@ -155,10 +155,10 @@ class TestUtils(unittest.TestCase):
         crs = "EPSG:31370"
         bbox = "173500,173500,174000,174000"
         ref_url = (
-            "https://geo.api.vlaanderen.be/Adpf/ogc/features/collections/Adpf"
-            + str(base_year)
-            + "/items?"
-            "limit=" + str(limit) + "&crs=" + crs + "&bbox-crs=EPSG:31370&bbox=" + bbox
+                "https://geo.api.vlaanderen.be/Adpf/ogc/features/collections/Adpf"
+                + str(base_year)
+                + "/items?"
+                  "limit=" + str(limit) + "&crs=" + crs + "&bbox-crs=EPSG:31370&bbox=" + bbox
         )
         collection = get_collection(ref_url, limit)
         self.assertTrue("features" in collection.keys())
