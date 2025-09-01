@@ -162,7 +162,9 @@
 - Added enum PredictionStrategy
 - New implementation to align points and lines (faster)
 
-# 0.12.1
+# 0.13.0
 
 - removed python 3.9 support [#217]
-- added python 3.13 support [#218]
+- Added OSMLoader [#212]
+- Added logic to align by lines (process by graph/network) - experimental
+- Bugfix: Problem calculating graph_by_multilinestring [#228]
