@@ -26,7 +26,7 @@ counter_excluded = 0
 # PARAMS
 # =========
 crs = "EPSG:31370"
-limit = 100
+limit = 10
 bbox = [172800, 170900, 173000, 171100]
 bbox = [172000, 172000, 174000, 174000]
 base_year = "2022"
@@ -90,7 +90,6 @@ fcs = update_to_actual_grb(
 write_geojson(
     os.path.join("output/", "parcel_change_detector_with.geojson"), fcs["result"]
 )
-
 
 counter_equality = 0
 counter_equality_by_alignment = 0

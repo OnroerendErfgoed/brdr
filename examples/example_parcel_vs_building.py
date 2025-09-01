@@ -41,13 +41,17 @@ if __name__ == "__main__":
         relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
     )
     x_resulting_areas = diffs_from_dict_processresults(
-        x_dict_series, aligner_x.dict_thematic
+        dict_processresults=x_dict_series,
+        dict_thematic=aligner_x.dict_thematic,
+        reference_union=aligner_x._get_reference_union(),
     )
     y_dict_series = aligner_y.process(
         relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
     )
     y_resulting_areas = diffs_from_dict_processresults(
-        y_dict_series, aligner_y.dict_thematic
+        dict_processresults=y_dict_series,
+        dict_thematic=aligner_y.dict_thematic,
+        reference_union=aligner_y._get_reference_union(),
     )
     # plot_diffs(series,x_resulting_areas)
     # plot_diffs(series,y_resulting_areas)

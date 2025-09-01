@@ -27,7 +27,6 @@ test_theme_one_geojson = {
     ],
 }
 
-
 test_theme_small_geojson = {
     "type": "FeatureCollection",
     "name": "theme2",

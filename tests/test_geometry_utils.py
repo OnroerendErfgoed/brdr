@@ -3970,7 +3970,6 @@ class TestSafeOperations(unittest.TestCase):
             assert isinstance(partition, Polygon)
 
     def test_get_line_substring(self):
-
         reference_border = from_wkt(
             "LINESTRING (173033.61378717 171235.23224897, 173044.62370718 171235.00223297)"
         )
@@ -4003,17 +4002,18 @@ class TestGridBounds(unittest.TestCase):
         result = _grid_bounds(polygon, 1.0)
         self.assertEqual(len(result), 25)
 
-
     def test_longest_linestring_from_multilinestring(self):
         """Tests longest_linestring_from_multilinestring"""
-        #Example MultiLineString with overshoots
-        mls = MultiLineString([
-            LineString([(0, 0), (1, 1)]),
-            LineString([(1, 1), (2, 2)]),
-            LineString([(2, 2), (3, 3)]),
-            LineString([(3, 3), (4, 4)]),
-            LineString([(1, 1), (1, 2)]),  # overshoot
-            LineString([(2, 2), (2, 3)]),  # overshoot
-        ])
+        # Example MultiLineString with overshoots
+        mls = MultiLineString(
+            [
+                LineString([(0, 0), (1, 1)]),
+                LineString([(1, 1), (2, 2)]),
+                LineString([(2, 2), (3, 3)]),
+                LineString([(3, 3), (4, 4)]),
+                LineString([(1, 1), (1, 2)]),  # overshoot
+                LineString([(2, 2), (2, 3)]),  # overshoot
+            ]
+        )
         result = longest_linestring_from_multilinestring(mls)
-        assert isinstance(result,LineString)
+        assert isinstance(result, LineString)

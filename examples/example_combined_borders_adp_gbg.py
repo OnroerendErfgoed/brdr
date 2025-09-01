@@ -4,7 +4,6 @@ from brdr.grb import GRBActualLoader
 from brdr.loader import GeoJsonFileLoader, DictLoader
 from examples import show_map, print_brdr_formula
 
-
 if __name__ == "__main__":
     """
     # example to test what happens if we combine borders

@@ -20,4 +20,4 @@ class TestOsm(unittest.TestCase):
         # Use a OSMLoader for the reference data
         loader = OSMLoader(osm_tags={"building": True}, aligner=aligner)
         aligner.load_reference_data(loader)
-        assert len(aligner.dict_reference.keys()) >0
+        assert len(aligner.dict_reference.keys()) > 0

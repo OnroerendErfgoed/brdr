@@ -144,5 +144,5 @@ class TestTopology(unittest.TestCase):
 
         self.assertEqual(len(process_result), 2)
         dict_predictions_evaluated, prop_dictionary = aligner.evaluate()
-        print (dict_predictions_evaluated)
+        print(dict_predictions_evaluated)
         print(prop_dictionary)

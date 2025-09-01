@@ -45,7 +45,6 @@ else:
             aligner.dict_reference,
         )
 
-
 # aligner = Aligner(crs="EPSG:31370", preserve_topology=True)
 # loader = GeoJsonFileLoader(
 #     path_to_file="input/one_simple.geojson", id_property="CAPAKEY"

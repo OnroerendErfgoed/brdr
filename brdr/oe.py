@@ -167,7 +167,6 @@ class OnroerendErfgoedLoader(GeoJsonLoader):
         self.data_dict_source["source"] = "Onroerend Erfgoed"
 
     def load_data(self):
-
         # geom_union = buffer_pos(self.aligner.get_thematic_union(), MAX_REFERENCE_BUFFER)
         collection, id_property = get_collection_oe_objects(
             oetype=self.oetype,
