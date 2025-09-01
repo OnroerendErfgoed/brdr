@@ -439,8 +439,8 @@ class TestAligner(unittest.TestCase):
         rd = 2
         self.sample_aligner.process(relevant_distances=[rd])
         assert (
-                self.sample_aligner.dict_processresults["theme_id_1"][rd]["remark"]
-                == " | Difference in amount of geometries"
+            self.sample_aligner.dict_processresults["theme_id_1"][rd]["remark"]
+            == " | Difference in amount of geometries"
         )
 
     def test_fully_aligned_geojson_output(self):
