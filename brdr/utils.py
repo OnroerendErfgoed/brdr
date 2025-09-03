@@ -17,13 +17,10 @@ from brdr.constants import (
     MULTI_SINGLE_ID_SEPARATOR,
     DEFAULT_CRS,
     DOWNLOAD_LIMIT,
-    RELEVANT_DISTANCE_FIELD_NAME,
-    NR_CALCULATION_FIELD_NAME,
     PERIMETER_ATTRIBUTE,
     SHAPE_INDEX_ATTRIBUTE,
     AREA_ATTRIBUTE,
-    DIFF_INDEX, STABILITY, ZERO_STREAK, DIFF_PERC_INDEX, REMARK_FIELD_NAME,
-)
+    STABILITY, ZERO_STREAK, )
 from brdr.enums import DiffMetric
 from brdr.geometry_utils import (
     get_partitions,
@@ -63,34 +60,11 @@ def get_dict_geojsons_from_series_dict(
     features_list_dict = {}
 
     for theme_id, results_dict in series_dict.items():
-        nr_calculations = len(results_dict)
+
         prop_dict = dict(series_prop_dict or {}).get(theme_id, {})
-        for relative_distance, process_result in results_dict.items():
-            properties = prop_dict.get(relative_distance, {})
+        for relevant_distance, process_result in results_dict.items():
+            properties = prop_dict.get(relevant_distance, {})
             properties[id_field] = theme_id
-            properties[NR_CALCULATION_FIELD_NAME] = nr_calculations
-            properties[RELEVANT_DISTANCE_FIELD_NAME] = relative_distance
-            properties[STABILITY] = None
-            if STABILITY in process_result["properties"]:
-                properties[STABILITY] = process_result["properties"][STABILITY]
-            if REMARK_FIELD_NAME in process_result["properties"]:
-                properties[REMARK_FIELD_NAME] = process_result["properties"][REMARK_FIELD_NAME]
-            result = process_result["result"]
-            result_diff = None
-            if "result_diff" in process_result:
-                result_diff = process_result["result_diff"]
-            if result_diff is None:
-                result_diff = GeometryCollection()
-            #TODO: reuse diff_metrics?
-            properties[DIFF_INDEX] = -1
-            properties[DIFF_PERC_INDEX] = -1
-            properties[DIFF_INDEX] = result_diff.area
-            if result.area != 0:
-                properties[DIFF_PERC_INDEX] = result_diff.area*100/result.area
-            if result_diff.area == 0:
-                properties[DIFF_INDEX] = result_diff.length
-                if result.length != 0:
-                    properties[DIFF_PERC_INDEX] = result_diff.length*100/result.length
             for results_type, geom in process_result.items():
                 if not isinstance(geom, BaseGeometry):
                     continue
@@ -320,13 +294,13 @@ def diffs_from_dict_processresults(
     Calculates a dictionary containing difference metrics for thematic elements based on a distance series.
 
     Parameters:
-    dict_series (dict): A dictionary where keys are thematic IDs and values are dictionaries mapping relative distances to ProcessResult objects.
+    dict_series (dict): A dictionary where keys are thematic IDs and values are dictionaries mapping relevant distances to ProcessResult objects.
     dict_thematic (dict): A dictionary where keys are thematic IDs and values are BaseGeometry objects representing the original geometries.
     reference_union:
     diff_metric (DiffMetric, optional): The metric to use for calculating differences. Default is DiffMetric.CHANGES_AREA.
 
     Returns:
-    dict: A dictionary where keys are thematic IDs and values are dictionaries mapping relative distances to calculated difference metrics.
+    dict: A dictionary where keys are thematic IDs and values are dictionaries mapping relevant distances to calculated difference metrics.
     """
 
     diffs = {}

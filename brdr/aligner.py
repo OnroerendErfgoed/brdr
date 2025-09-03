@@ -43,7 +43,8 @@ from brdr.constants import (
     SNAP_STRATEGY,
     SNAP_MAX_SEGMENT_LENGTH,
     BUFFER_MULTIPLICATION_FACTOR,
-    DIFF_METRIC, STABILITY, ZERO_STREAK, REMARK_FIELD_NAME,
+    DIFF_METRIC, STABILITY, ZERO_STREAK, REMARK_FIELD_NAME, DIFF_PERC_INDEX, DIFF_INDEX, RELEVANT_DISTANCE_FIELD_NAME,
+    NR_CALCULATION_FIELD_NAME,
 )
 from brdr.constants import (
     LAST_VERSION_DATE,
@@ -1491,12 +1492,12 @@ class Aligner:
         Calculates a dictionary containing difference metrics for thematic elements based on a distance series.
 
         Parameters:
-        dict_series (dict): A dictionary where keys are thematic IDs and values are dictionaries mapping relative distances to ProcessResult objects.
+        dict_series (dict): A dictionary where keys are thematic IDs and values are dictionaries mapping relevant distances to ProcessResult objects.
         dict_thematic (dict): A dictionary where keys are thematic IDs and values are BaseGeometry objects representing the original geometries.
         diff_metric (DiffMetric, optional): The metric to use for calculating differences. Default is DiffMetric.CHANGES_AREA.
 
         Returns:
-        dict: A dictionary where keys are thematic IDs and values are dictionaries mapping relative distances to calculated difference metrics.
+        dict: A dictionary where keys are thematic IDs and values are dictionaries mapping relevant distances to calculated difference metrics.
         """
         if dict_processresults is None:
             dict_processresults = self.dict_processresults
@@ -1523,7 +1524,7 @@ class Aligner:
         formula (boolean, Optional): The descriptive formula is added as an attribute to the result
         attributes (boolean, Optional): The original attributes/properties are added to the result
         """
-        prop_dictionary = None
+
         if resulttype == AlignerResultType.PROCESSRESULTS:
             dict_series = self.dict_processresults
         elif resulttype == AlignerResultType.PREDICTIONS:
@@ -1537,20 +1538,41 @@ class Aligner:
                 "Empty results: No calculated results to export."
             )
             return {}
-        if prop_dictionary is None:
-            prop_dictionary = defaultdict(dict)
+
+        prop_dictionary = defaultdict(dict)
 
         for theme_id, results_dict in dict_series.items():
-            for relevant_distance, process_results in results_dict.items():
-                if relevant_distance not in prop_dictionary[theme_id]:
-                    prop_dictionary[theme_id][relevant_distance] = {}
+            nr_calculations = len(results_dict)
+            for relevant_distance, process_result in results_dict.items():
+                properties = process_result["properties"]
+
+                properties[NR_CALCULATION_FIELD_NAME] = nr_calculations
+                properties[RELEVANT_DISTANCE_FIELD_NAME] = relevant_distance
+
+                result = process_result["result"]
+                result_diff = None
+                if "result_diff" in process_result:
+                    result_diff = process_result["result_diff"]
+                if result_diff is None:
+                    result_diff = GeometryCollection()
+                #TODO: reuse diff_metrics?
+                properties[DIFF_INDEX] = -1
+                properties[DIFF_PERC_INDEX] = -1
+                properties[DIFF_INDEX] = result_diff.area
+                if result.area != 0:
+                    properties[DIFF_PERC_INDEX] = result_diff.area*100/result.area
+                if result_diff.area == 0:
+                    properties[DIFF_INDEX] = result_diff.length
+                    if result.length != 0:
+                        properties[DIFF_PERC_INDEX] = result_diff.length*100/result.length
+                prop_dictionary[theme_id][relevant_distance] = properties
                 if attributes and theme_id in self.dict_thematic_properties.keys():
                     for attr, value in self.dict_thematic_properties[theme_id].items():
                         prop_dictionary[theme_id][relevant_distance][attr] = value
                 if (
                     formula
                 ):  # and not (theme_id in prop_dictionary and relevant_distance in prop_dictionary[theme_id] and NEW_FORMULA_FIELD_NAME in prop_dictionary[theme_id][relevant_distance]):
-                    result = process_results["result"]
+                    result = process_result["result"]
                     formula = self.get_brdr_formula(result)
                     prop_dictionary[theme_id][relevant_distance][FORMULA_FIELD_NAME] = (
                         json.dumps(formula)
