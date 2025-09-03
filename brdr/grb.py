@@ -274,7 +274,7 @@ def get_collection_grb_fiscal_parcels(
     crs=DEFAULT_CRS,
 ):
     url = (
-        GRB_FISCAL_PARCELS_URL + "/Adpf" + year + "/items?"
+        GRB_FISCAL_PARCELS_URL + "/Adpf" + str(year) + "/items?"
         "limit=" + str(limit) + "&crs=" + crs
     )
     return get_collection_by_partition(
