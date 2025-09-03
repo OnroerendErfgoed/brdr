@@ -22,7 +22,7 @@ from brdr.constants import (
     PERIMETER_ATTRIBUTE,
     SHAPE_INDEX_ATTRIBUTE,
     AREA_ATTRIBUTE,
-    DIFF_INDEX, STABILITY, ZERO_STREAK, DIFF_PERC_INDEX,
+    DIFF_INDEX, STABILITY, ZERO_STREAK, DIFF_PERC_INDEX, REMARK_FIELD_NAME,
 )
 from brdr.enums import DiffMetric
 from brdr.geometry_utils import (
@@ -71,11 +71,10 @@ def get_dict_geojsons_from_series_dict(
             properties[NR_CALCULATION_FIELD_NAME] = nr_calculations
             properties[RELEVANT_DISTANCE_FIELD_NAME] = relative_distance
             properties[STABILITY] = None
-            if STABILITY in process_result:
-                properties[STABILITY] = process_result[STABILITY]
-            # properties[REMARK_FIELD_NAME] = ""
-            # if "remark" in process_result:
-            #     properties[REMARK_FIELD_NAME] = process_result["remark"]
+            if STABILITY in process_result["properties"]:
+                properties[STABILITY] = process_result["properties"][STABILITY]
+            if REMARK_FIELD_NAME in process_result["properties"]:
+                properties[REMARK_FIELD_NAME] = process_result["properties"][REMARK_FIELD_NAME]
             result = process_result["result"]
             result_diff = None
             if "result_diff" in process_result:
