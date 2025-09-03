@@ -4,7 +4,6 @@ import os.path
 import numpy as np
 import requests
 from geojson import Feature, FeatureCollection, dump
-from matplotlib import pyplot as plt
 from shapely import (
     GeometryCollection,
     make_valid,
@@ -20,7 +19,6 @@ from brdr.constants import (
     DOWNLOAD_LIMIT,
     RELEVANT_DISTANCE_FIELD_NAME,
     NR_CALCULATION_FIELD_NAME,
-    REMARK_FIELD_NAME,
     PERIMETER_ATTRIBUTE,
     SHAPE_INDEX_ATTRIBUTE,
     AREA_ATTRIBUTE,
@@ -75,9 +73,9 @@ def get_dict_geojsons_from_series_dict(
             properties[STABILITY] = None
             if STABILITY in process_result:
                 properties[STABILITY] = process_result[STABILITY]
-            properties[REMARK_FIELD_NAME] = ""
-            if "remark" in process_result:
-                properties[REMARK_FIELD_NAME] = process_result["remark"]
+            # properties[REMARK_FIELD_NAME] = ""
+            # if "remark" in process_result:
+            #     properties[REMARK_FIELD_NAME] = process_result["remark"]
             result = process_result["result"]
             result_diff = None
             if "result_diff" in process_result:

@@ -43,7 +43,7 @@ from brdr.constants import (
     SNAP_STRATEGY,
     SNAP_MAX_SEGMENT_LENGTH,
     BUFFER_MULTIPLICATION_FACTOR,
-    DIFF_METRIC, STABILITY, ZERO_STREAK,
+    DIFF_METRIC, STABILITY, ZERO_STREAK, REMARK_FIELD_NAME,
 )
 from brdr.constants import (
     LAST_VERSION_DATE,
@@ -727,7 +727,7 @@ class Aligner:
                 return _unary_union_result_dict(
                     {
                         "result": input_geometry,
-                        "remark": "relevant distance 0 --> original geometry returned",
+                        "properties": {REMARK_FIELD_NAME: "relevant distance 0 --> original geometry returned"},
                     }
                 )
 
@@ -985,7 +985,7 @@ class Aligner:
                 if original_geometry_length != resulting_geometry_length:
                     msg = "Difference in amount of geometries"
                     self.logger.feedback_debug(msg)
-                    process_result["remark"] = process_result["remark"] + " | " + msg
+                    process_result["properties"][REMARK_FIELD_NAME] = process_result["properties"][REMARK_FIELD_NAME] + " | " + msg
 
         self.logger.feedback_info(
             "End of processing series: " + str(self.relevant_distances)
@@ -1225,7 +1225,8 @@ class Aligner:
                 props[PREDICTION_SCORE] = -1
                 dict_predictions_evaluated[theme_id][relevant_distance] = {
                     "result": dict_affected[theme_id],
-                    "remark": "no prediction, original returned",
+                    "properties": {
+                    REMARK_FIELD_NAME: "no prediction, original returned"},
                 }
                 prop_dictionary[theme_id][relevant_distance] = props
                 continue
@@ -1324,8 +1325,9 @@ class Aligner:
                 props[PREDICTION_SCORE] = -1
                 dict_predictions_evaluated[theme_id][relevant_distance] = {
                     "result": dict_affected[theme_id],
-                    "remark": "multiple predictions, original returned",
+                    "properties":{REMARK_FIELD_NAME: "multiple predictions, original returned"},
                 }
+
                 prop_dictionary[theme_id][relevant_distance] = props
                 continue
 
@@ -1351,7 +1353,7 @@ class Aligner:
                 props[PREDICTION_COUNT] = 0
                 dict_predictions_evaluated[theme_id][relevant_distance] = {
                     "result": dict_affected[theme_id],
-                    "remark": "no prediction, original returned",
+                    "properties":{REMARK_FIELD_NAME: "no prediction, original returned"},
                 }
                 prop_dictionary[theme_id][relevant_distance] = props
 
@@ -1990,7 +1992,7 @@ class Aligner:
                     "result_diff_min": result_diff_min,
                     "result_relevant_intersection": relevant_intersection,
                     "result_relevant_diff": relevant_diff,
-                    "remark": remark,
+                    "properties":{REMARK_FIELD_NAME: remark},
                 }
             )
         # Process array
@@ -2018,7 +2020,7 @@ class Aligner:
                 remark = "Circle detected: -->resulting geometry = original geometry"
                 self.logger.feedback_debug(remark)
                 return _unary_union_result_dict(
-                    {"result": geom_thematic, "remark": remark}
+                    {"result": geom_thematic, "properties":{REMARK_FIELD_NAME: remark}}
                 )
 
             # Correction for unchanged geometries
@@ -2032,7 +2034,7 @@ class Aligner:
                 remark = "Unchanged geometry: -->resulting geometry = original geometry"
                 self.logger.feedback_debug(remark)
                 return _unary_union_result_dict(
-                    {"result": geom_thematic, "remark": remark}
+                    {"result": geom_thematic, "properties":{REMARK_FIELD_NAME: remark}}
                 )
 
         # Corrections for areas that differ more than the relevant distance
@@ -2174,7 +2176,7 @@ class Aligner:
                 "result_diff_min": geom_result_diff_min,
                 "result_relevant_intersection": relevant_intersection,
                 "result_relevant_diff": relevant_diff,
-                "remark": remark,
+                "properties":{REMARK_FIELD_NAME: remark},
             }
         )
 
