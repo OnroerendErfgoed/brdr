@@ -4,6 +4,7 @@ import os.path
 import numpy as np
 import requests
 from geojson import Feature, FeatureCollection, dump
+from matplotlib import pyplot as plt
 from shapely import (
     GeometryCollection,
     make_valid,
@@ -23,7 +24,7 @@ from brdr.constants import (
     PERIMETER_ATTRIBUTE,
     SHAPE_INDEX_ATTRIBUTE,
     AREA_ATTRIBUTE,
-    DIFF_INDICATION,
+    DIFF_INDEX, STABILITY, ZERO_STREAK, DIFF_PERC_INDEX,
 )
 from brdr.enums import DiffMetric
 from brdr.geometry_utils import (
@@ -71,20 +72,28 @@ def get_dict_geojsons_from_series_dict(
             properties[id_field] = theme_id
             properties[NR_CALCULATION_FIELD_NAME] = nr_calculations
             properties[RELEVANT_DISTANCE_FIELD_NAME] = relative_distance
-            # if PREDICTION_SCORE not in properties:
-            #     properties[PREDICTION_SCORE] = -1
+            properties[STABILITY] = None
+            if STABILITY in process_result:
+                properties[STABILITY] = process_result[STABILITY]
             properties[REMARK_FIELD_NAME] = ""
             if "remark" in process_result:
                 properties[REMARK_FIELD_NAME] = process_result["remark"]
+            result = process_result["result"]
             result_diff = None
             if "result_diff" in process_result:
                 result_diff = process_result["result_diff"]
             if result_diff is None:
                 result_diff = GeometryCollection()
-            properties[DIFF_INDICATION] = 0
-            properties[DIFF_INDICATION] = result_diff.area
+            #TODO: reuse diff_metrics?
+            properties[DIFF_INDEX] = -1
+            properties[DIFF_PERC_INDEX] = -1
+            properties[DIFF_INDEX] = result_diff.area
+            if result.area != 0:
+                properties[DIFF_PERC_INDEX] = result_diff.area*100/result.area
             if result_diff.area == 0:
-                properties[DIFF_INDICATION] = result_diff.length
+                properties[DIFF_INDEX] = result_diff.length
+                if result.length != 0:
+                    properties[DIFF_PERC_INDEX] = result_diff.length*100/result.length
             for results_type, geom in process_result.items():
                 if not isinstance(geom, BaseGeometry):
                     continue
@@ -229,14 +238,13 @@ def polygonize_reference_data(dict_ref):
     return dict_ref
 
 
-def get_breakpoints_zerostreak(x, y, extra_score=10):
+def determine_stability(x, y):
     """
-    Determine the extremes and zero_streaks of a graph based on the derivative.
+    Determine the stability and indicators ('zero_streaks') based on the derivative of the difference measurement (y) of a xy-plot
 
     Args:
-        x (numpy.ndarray): The x values of the graph.
-        y (numpy.ndarray): The y values of the graph.
-        extra_score (number)-default = 10: adding extra value to streaks at end of streak-predictions
+        x (numpy.ndarray): The x values of the plot: relevant distances
+        y (numpy.ndarray): The y values of the plot: diffence measurement
 
     Returns:
         tuple: A tuple containing:
@@ -244,19 +252,17 @@ def get_breakpoints_zerostreak(x, y, extra_score=10):
             - list: List of zero_streaks.
     """
     derivative = _numerical_derivative(x, y)
-    # plt.plot(x, y, label="y")
-    # plt.plot( x, derivative, label="derivative")
-    # plt.legend()
-    # plt.show()
-    extremes = []
-    zero_streaks = []
     max_zero_streak_score = x[-1] - x[0]
     start_streak = None
     streak = 0
     write_zero_streak = False
-    last_extreme = 0
+    dict_stability=dict()
     for i in range(1, len(x)):
+        dict_stability[x[i - 1]]= dict()
+        dict_stability[x[i - 1]][STABILITY] = False
+        dict_stability[x[i - 1]][ZERO_STREAK] = None
         if round(derivative[i], 2) == 0:  # noqa
+            dict_stability[x[i - 1]][STABILITY] = True
             streak = streak + 1
             if start_streak is None:
                 start_streak = x[i - 1]
@@ -271,45 +277,19 @@ def get_breakpoints_zerostreak(x, y, extra_score=10):
             )
             center_streak = start_streak + (end_streak - start_streak) / 2
 
-            zero_streaks.append(
-                (
+            dict_stability[start_streak][ZERO_STREAK]=(
                     start_streak,
                     end_streak,
                     center_streak,
                     score_streak,
-                    last_extreme,
                 )
-            )
+
             streak = 0
             start_streak = None
             write_zero_streak = False
             logging.debug("end_streak")
-        if (
-            i < len(x) - 1
-            and round(derivative[i], 2) > 0  # noqa
-            and derivative[i - 1] <= derivative[i]
-            and derivative[i] >= derivative[i + 1]
-        ):
-            last_extreme = derivative[i]
-            extremes.append((x[i], derivative[i], "maximum"))
-        if (
-            i < len(x) - 1
-            and round(derivative[i], 2) < 0  # noqa
-            and derivative[i - 1] >= derivative[i]
-            and derivative[i] <= derivative[i + 1]
-        ):
-            last_extreme = derivative[i]
-            extremes.append((x[i], derivative[i], "minimum"))
 
-    # adding some extra prediction_score to the last streak when this is ended by the max dist
-    if len(zero_streaks) > 0 and zero_streaks[-1][1] == x[-1]:
-        list_last_tuple = list(zero_streaks[-1])
-        list_last_tuple[3] = list_last_tuple[3] + extra_score
-        if list_last_tuple[3] > 99:
-            list_last_tuple[3] = 99
-        zero_streaks[-1] = tuple(list_last_tuple)
-
-    return extremes, zero_streaks
+    return dict_stability
 
 
 def _numerical_derivative(x, y):

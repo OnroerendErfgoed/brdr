@@ -43,7 +43,7 @@ from brdr.constants import (
     SNAP_STRATEGY,
     SNAP_MAX_SEGMENT_LENGTH,
     BUFFER_MULTIPLICATION_FACTOR,
-    DIFF_METRIC,
+    DIFF_METRIC, STABILITY, ZERO_STREAK,
 )
 from brdr.constants import (
     LAST_VERSION_DATE,
@@ -91,13 +91,13 @@ from brdr.loader import Loader
 from brdr.logger import Logger
 from brdr.topo import dissolve_topo, generate_topo
 from brdr.typings import ProcessResult
+from brdr.utils import determine_stability
 from brdr.utils import (
     diffs_from_dict_processresults,
     multi_to_singles,
     is_brdr_formula,
 )
 from brdr.utils import geojson_from_dict
-from brdr.utils import get_breakpoints_zerostreak
 from brdr.utils import get_dict_geojsons_from_series_dict
 from brdr.utils import merge_process_results
 from brdr.utils import write_geojson
@@ -721,6 +721,16 @@ class Aligner:
                 raise ValueError(message)
             self.logger.feedback_debug("process geometry")
 
+            #For calculations with RD=0 the original input is returned
+            if relevant_distance==0:
+                self.logger.feedback_debug("Calculation for RD = 0")
+                return _unary_union_result_dict(
+                    {
+                        "result": input_geometry,
+                        "remark": "relevant distance 0 --> original geometry returned",
+                    }
+                )
+
             # CALCULATE INNER and OUTER INPUT GEOMETRY for performance optimisation on big geometries
             # combine all parts of the input geometry to one polygon
             input_geometry_inner, input_geometry_outer = _calculate_inner_outer(
@@ -1100,19 +1110,27 @@ class Aligner:
                 )
                 continue
             diff_values = list(diffs.values())
-            breakpoints, zero_streaks = get_breakpoints_zerostreak(
+            dict_stability = determine_stability(
                 relevant_distances, diff_values
             )
             self.logger.feedback_debug(str(theme_id))
-            if len(zero_streaks) == 0:
-                self.logger.feedback_debug(
-                    "No zero-streaks found for: " + str(theme_id)
-                )
-            for zs in zero_streaks:
-                dict_predictions[theme_id][zs[0]] = dict_processresults[theme_id][zs[0]]
-                dict_predictions[theme_id][zs[0]][PREDICTION_SCORE] = zs[3]
 
-        # Check if the predicted reldists are unique (and remove duplicated predictions
+            for rd in dict_stability.keys():
+                dict_processresults[theme_id][rd][STABILITY] = dict_stability[rd][STABILITY]
+                if dict_stability[rd][ZERO_STREAK] is not None:
+                    dict_predictions[theme_id][rd] = dict_processresults[theme_id][rd]
+                    dict_predictions[theme_id][rd][PREDICTION_SCORE] = dict_stability[rd][ZERO_STREAK][3]
+
+        #TODO; add logic to augment prediction score
+        # adding some extra prediction_score to the last streak when this is ended by the max dist
+        # if len(zero_streaks) > 0 and zero_streaks[-1][1] == x[-1]:
+        #     list_last_tuple = list(zero_streaks[-1])
+        #     list_last_tuple[3] = list_last_tuple[3] + extra_score
+        #     if list_last_tuple[3] > 99:
+        #         list_last_tuple[3] = 99
+        #     zero_streaks[-1] = tuple(list_last_tuple)
+
+        # Check if the predicted geometries are unique (and remove duplicated predictions)
         dict_predictions_unique = defaultdict(dict)
         for theme_id, dist_results in dict_predictions.items():
             dict_predictions_unique[theme_id] = {}

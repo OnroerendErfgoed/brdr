@@ -168,3 +168,7 @@
 - Added OSMLoader [#212]
 - Added logic to align by lines (process by graph/network) - experimental
 - Bugfix: Problem calculating graph_by_multilinestring [#228]
+
+# 0.13.1
+
+- Added stability indicator to the processed series
