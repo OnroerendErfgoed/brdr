@@ -92,7 +92,7 @@ from brdr.loader import Loader
 from brdr.logger import Logger
 from brdr.topo import dissolve_topo, generate_topo
 from brdr.typings import ProcessResult
-from brdr.utils import determine_stability, diffs_from_dict_processresult, diff_from_processresult
+from brdr.utils import determine_stability, diffs_from_dict_processresult, diff_from_processresult, coverage_ratio
 from brdr.utils import geojson_from_dict
 from brdr.utils import get_dict_geojsons_from_series_dict
 from brdr.utils import merge_process_results
@@ -1084,25 +1084,31 @@ class Aligner:
             od_strategy = OpenDomainStrategy.SNAP_ALL_SIDE
         if threshold_overlap_percentage is None:
             threshold_overlap_percentage = 50
-        relevant_distances = list(relevant_distances)
-        relevant_distances.append(round(0, RELEVANT_DISTANCE_DECIMALS))
-        relevant_distances = list(set(relevant_distances))
-        relevant_distances = sorted(relevant_distances)
+        rd_prediction = list(relevant_distances)
+        max_relevant_distance = max(rd_prediction)
+        rd_prediction.append(round(0, RELEVANT_DISTANCE_DECIMALS))
+        rd_prediction.append(round(max_relevant_distance + 0.1, RELEVANT_DISTANCE_DECIMALS))
+        rd_prediction.append(round(max_relevant_distance + 1, RELEVANT_DISTANCE_DECIMALS))
+        rd_prediction = list(set(rd_prediction))
+        rd_prediction = sorted(rd_prediction)
         dict_processresults = self.process(
             dict_thematic=dict_thematic,
-            relevant_distances=relevant_distances,
+            relevant_distances=rd_prediction,
             od_strategy=od_strategy,
             threshold_overlap_percentage=threshold_overlap_percentage,
         )
         if diff_metric is None:
             diff_metric = self.diff_metric
 
-        diffs_dict = self.get_diff_metrics(
-            dict_processresults, dict_thematic, diff_metric=diff_metric
-        )
+        # diffs_dict = self.get_diff_metrics(
+        #     dict_processresults, dict_thematic, diff_metric=diff_metric
+        # )
+        diffs_dict={}
 
-        for theme_id, diffs in diffs_dict.items():
-            if len(diffs) != len(relevant_distances):
+        for theme_id, dict_processresult in dict_processresults.items():
+            diffs = diffs_from_dict_processresult(dict_processresult, dict_thematic[theme_id],self._get_reference_union(), diff_metric=diff_metric)
+            diffs_dict[theme_id]=diffs
+            if len(diffs) != len(rd_prediction):
                 self.logger.feedback_warning(
                     f"Number of computed diffs for thematic element {theme_id} does "
                     f"not match the number of relevant distances."
@@ -1110,25 +1116,33 @@ class Aligner:
                 continue
             diff_values = list(diffs.values())
             dict_stability = determine_stability(
-                relevant_distances, diff_values
+                rd_prediction, diff_values
             )
-
-            for rd in dict_stability.keys():
+            cvg_ratio = coverage_ratio(rd_prediction)
+            for rd in rd_prediction:
+                if rd not in relevant_distances:
+                    del (dict_processresults[theme_id][rd])
+                    continue
                 dict_processresults[theme_id][rd]["properties"][STABILITY] = dict_stability[rd][STABILITY]
                 if dict_stability[rd][ZERO_STREAK] is not None:
                     dict_predictions[theme_id][rd] = dict_processresults[theme_id][rd]
-                    dict_predictions[theme_id][rd]["properties"][PREDICTION_SCORE] = dict_stability[rd][ZERO_STREAK][3]
+                    if cvg_ratio>0.6:
+                        dict_predictions[theme_id][rd]["properties"][PREDICTION_SCORE] = dict_stability[rd][ZERO_STREAK][3]
+        self.dict_predictions = dict_predictions
 
-        #TODO; add logic to augment prediction score
-        # adding some extra prediction_score to the last streak when this is ended by the max dist
-        # if len(zero_streaks) > 0 and zero_streaks[-1][1] == x[-1]:
-        #     list_last_tuple = list(zero_streaks[-1])
-        #     list_last_tuple[3] = list_last_tuple[3] + extra_score
-        #     if list_last_tuple[3] > 99:
-        #         list_last_tuple[3] = 99
-        #     zero_streaks[-1] = tuple(list_last_tuple)
+        self.dict_predictions  =  self._make_predictions_unique(dict_predictions)
 
-        # Check if the predicted geometries are unique (and remove duplicated predictions)
+        return (
+            dict_processresults,
+            self.dict_predictions,
+            diffs_dict,
+        )
+
+    def _make_predictions_unique(self, dict_predictions):
+        """
+                # Check if the predicted geometries are unique (and remove duplicated predictions)
+        """
+
         dict_predictions_unique = defaultdict(dict)
         for theme_id, dist_results in dict_predictions.items():
             dict_predictions_unique[theme_id] = {}
@@ -1136,15 +1150,15 @@ class Aligner:
             for rel_dist, processresult in dist_results.items():
                 predicted_geom = processresult["result"]
                 if not _equal_geom_in_array(
-                    predicted_geom,
-                    predicted_geoms_for_theme_id,
-                    self.correction_distance,
-                    self.mitre_limit,
+                        predicted_geom,
+                        predicted_geoms_for_theme_id,
+                        self.correction_distance,
+                        self.mitre_limit,
                 ) or predicted_geom.geom_type in (
-                    "Point",
-                    "MultiPoint",
-                    "LineString",
-                    "MultiLineString",
+                        "Point",
+                        "MultiPoint",
+                        "LineString",
+                        "MultiLineString",
                 ):
                     dict_predictions_unique[theme_id][rel_dist] = processresult
                     predicted_geoms_for_theme_id.append(processresult["result"])
@@ -1156,14 +1170,7 @@ class Aligner:
                 dict_predictions_unique[theme_id][dist]["properties"][PREDICTION_COUNT] = len(
                     predicted_geoms_for_theme_id
                 )
-
-        self.dict_predictions = dict_predictions_unique
-
-        return (
-            dict_processresults,
-            self.dict_predictions,
-            diffs_dict,
-        )
+        return dict_predictions_unique
 
     def evaluate(
         self,
@@ -1883,7 +1890,6 @@ class Aligner:
         :param outer: when outer is True, the outer boundary is used, inner is not used
         :return:
         """
-        # TODO: remove outer, as it is not used?
         buffer_distance = relevant_distance / 2
         geom_thematic_buffered = make_valid(
             buffer_pos(

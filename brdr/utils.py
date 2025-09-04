@@ -209,6 +209,23 @@ def polygonize_reference_data(dict_ref):
     return dict_ref
 
 
+def coverage_ratio(values):
+    if len(values) == 0:
+        return 0.0
+
+    min_val = min(values)
+    max_val = max(values)
+    bin_size =round((max_val-min_val)/10.0,2)
+    bins = np.arange(min_val, max_val + bin_size, bin_size)
+
+    # Tel hoeveel bins minstens één waarde bevatten
+    bin_counts, _ = np.histogram(values, bins)
+    filled_bins = np.count_nonzero(bin_counts)
+
+    total_bins = len(bins) - 1  # histogram geeft n-1 bins
+    return filled_bins / total_bins
+
+
 def determine_stability(x, y):
     """
     Determine the stability and indicators ('zero_streaks') based on the derivative of the difference measurement (y) of a xy-plot

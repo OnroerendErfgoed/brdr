@@ -37,6 +37,24 @@ class TestAligner(unittest.TestCase):
         )
         self.assertEqual(len(dict_predictions), len(thematic_dict))
 
+    def test_predictor_single_value(self):
+        # Load thematic data & reference data
+        thematic_dict = {"theme_id": from_wkt("POLYGON ((0 0, 0 9, 5 10, 10 0, 0 0))")}
+        # ADD A REFERENCE POLYGON TO REFERENCE DICTIONARY
+        reference_dict = {"ref_id": from_wkt("POLYGON ((0 1, 0 10,8 10,10 1,0 1))")}
+        # LOAD THEMATIC DICTIONARY
+        self.sample_aligner.load_thematic_data(DictLoader(thematic_dict))
+        # LOAD REFERENCE DICTIONARY
+        self.sample_aligner.load_reference_data(DictLoader(reference_dict))
+        series = [3]
+        # predict which relevant distances are interesting to propose as resulting
+        # geometry
+
+        dict_series, dict_predictions, dict_diffs = self.sample_aligner.predictor(
+            relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
+        )
+        self.assertEqual(len(dict_predictions), len(thematic_dict))
+
     def test_predictor_double_prediction(self):
         """
         Test if a double prediction is filtered out of the prediction results. (from 5 predictions to 4 predictions)
