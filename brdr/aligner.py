@@ -1091,6 +1091,7 @@ class Aligner:
         rd_prediction.append(round(max_relevant_distance + 1, RELEVANT_DISTANCE_DECIMALS))
         rd_prediction = list(set(rd_prediction))
         rd_prediction = sorted(rd_prediction)
+        cvg_ratio = coverage_ratio(rd_prediction) #indication of the rd values can be used to make a brdr_prediction_score
         dict_processresults = self.process(
             dict_thematic=dict_thematic,
             relevant_distances=rd_prediction,
@@ -1099,12 +1100,7 @@ class Aligner:
         )
         if diff_metric is None:
             diff_metric = self.diff_metric
-
-        # diffs_dict = self.get_diff_metrics(
-        #     dict_processresults, dict_thematic, diff_metric=diff_metric
-        # )
         diffs_dict={}
-
         for theme_id, dict_processresult in dict_processresults.items():
             diffs = diffs_from_dict_processresult(dict_processresult, dict_thematic[theme_id],self._get_reference_union(), diff_metric=diff_metric)
             diffs_dict[theme_id]=diffs
@@ -1118,7 +1114,6 @@ class Aligner:
             dict_stability = determine_stability(
                 rd_prediction, diff_values
             )
-            cvg_ratio = coverage_ratio(rd_prediction)
             for rd in rd_prediction:
                 if rd not in relevant_distances:
                     del (dict_processresults[theme_id][rd])
