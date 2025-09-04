@@ -92,9 +92,8 @@ from brdr.loader import Loader
 from brdr.logger import Logger
 from brdr.topo import dissolve_topo, generate_topo
 from brdr.typings import ProcessResult
-from brdr.utils import determine_stability
+from brdr.utils import determine_stability, diffs_from_dict_processresult
 from brdr.utils import (
-    diffs_from_dict_processresults,
     multi_to_singles,
     is_brdr_formula,
 )
@@ -754,7 +753,7 @@ class Aligner:
                     all_polygons = False
 
             if all_polygons:
-                return self._process_geometry_by_brdr(
+                return self._process_geometry_by_dieussaert(
                     input_geometry,
                     input_geometry_outer,
                     input_geometry_inner,
@@ -767,7 +766,7 @@ class Aligner:
             snap_strategy=self.partial_snap_strategy,
         )
 
-    def _process_geometry_by_brdr(
+    def _process_geometry_by_dieussaert(
         self,
         input_geometry,
         input_geometry_outer,
@@ -1113,7 +1112,6 @@ class Aligner:
             dict_stability = determine_stability(
                 relevant_distances, diff_values
             )
-            self.logger.feedback_debug(str(theme_id))
 
             for rd in dict_stability.keys():
                 dict_processresults[theme_id][rd]["properties"][STABILITY] = dict_stability[rd][STABILITY]
@@ -1503,12 +1501,16 @@ class Aligner:
             dict_processresults = self.dict_processresults
         if dict_thematic is None:
             dict_thematic = self.dict_thematic
-        return diffs_from_dict_processresults(
-            dict_processresults=dict_processresults,
-            dict_thematic=dict_thematic,
-            reference_union=self._get_reference_union(),
-            diff_metric=diff_metric,
-        )
+        diffs = {}
+        for key in dict_thematic:
+            diffs[key]= diffs_from_dict_processresult(
+                dict_processresult=dict_processresults[key],
+                geom_thematic=dict_thematic[key],
+                reference_union=self._get_reference_union(),
+                diff_metric=diff_metric,
+                )
+
+        return diffs
 
     ##########EXPORTERS########################
     ###########################################
@@ -2567,7 +2569,7 @@ def _equal_geom_in_array(geom, geom_array, correction_distance, mitre_limit):
 
 def _calculate_inner_outer(input_geometry, relevant_distance):
     """
-    calculate the inner and outer of a polygon for performance gain when using brdr_algorithm
+    calculate the inner and outer of a polygon for performance gain when using dieussaert_algorithm
     :param input_geometry:
     :param relevant_distance:
     :return:

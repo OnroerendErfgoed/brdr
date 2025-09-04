@@ -283,95 +283,90 @@ def _numerical_derivative(x, y):
 
     return derivative
 
-
-def diffs_from_dict_processresults(
-    dict_processresults: dict[any, dict[float, ProcessResult]],
-    dict_thematic: dict[any, BaseGeometry],
+def diffs_from_dict_processresult(
+    dict_processresult: dict[float, ProcessResult],
+    geom_thematic: BaseGeometry,
     reference_union: BaseGeometry,
     diff_metric: DiffMetric = DiffMetric.CHANGES_AREA,
 ):
     """
-    Calculates a dictionary containing difference metrics for thematic elements based on a distance series.
+    Calculates a dictionary containing difference metrics for thematic geometry based on a distance series.
 
     Parameters:
-    dict_series (dict): A dictionary where keys are thematic IDs and values are dictionaries mapping relevant distances to ProcessResult objects.
-    dict_thematic (dict): A dictionary where keys are thematic IDs and values are BaseGeometry objects representing the original geometries.
-    reference_union:
+    dict_processresult (dict): A dictionary where keys are thematic IDs and values are dictionaries mapping relevant distances to ProcessResult objects.
+    geom_thematic (BaseGeometry): A dictionary where keys are thematic IDs and values are BaseGeometry objects representing the original geometries.
+    reference_union (BaseGeometry): unioned reference geometries
     diff_metric (DiffMetric, optional): The metric to use for calculating differences. Default is DiffMetric.CHANGES_AREA.
 
     Returns:
-    dict: A dictionary where keys are thematic IDs and values are dictionaries mapping relevant distances to calculated difference metrics.
+    dict: A dictionary where keys are relevant distances to calculated difference metrics.
     """
 
     diffs = {}
-    # all the relevant distances used to calculate the series
-    for thematic_id, results_dict in dict_processresults.items():
-        diffs[thematic_id] = {}
-        if dict_thematic[thematic_id].geom_type in (
-            "LineString",
-            "MultiLineString",
-        ):
-            diff_metric = DiffMetric.CHANGES_LENGTH
-            # diff_metric = DiffMetric.REFERENCE_USAGE
-            # diff_metric = DiffMetric.TOTAL_DISTANCE
-        elif dict_thematic[thematic_id].geom_type in (
-            "Point",
-            "MultiPoint",
-        ):
-            diff_metric = DiffMetric.TOTAL_DISTANCE
-            diff_metric = DiffMetric.REFERENCE_USAGE
-            diff_metric = DiffMetric.TOTAL_DISTANCE
-        for rel_dist in results_dict:
-            result = results_dict.get(rel_dist, {}).get("result")
-            result_diff = results_dict.get(rel_dist, {}).get("result_diff")
+    if geom_thematic.geom_type in (
+        "LineString",
+        "MultiLineString",
+    ):
+        diff_metric = DiffMetric.CHANGES_LENGTH
+        # diff_metric = DiffMetric.REFERENCE_USAGE
+        # diff_metric = DiffMetric.TOTAL_DISTANCE
+    elif geom_thematic.geom_type in (
+        "Point",
+        "MultiPoint",
+    ):
+        diff_metric = DiffMetric.TOTAL_DISTANCE
+        diff_metric = DiffMetric.REFERENCE_USAGE
+        diff_metric = DiffMetric.TOTAL_DISTANCE
+    for rel_dist in dict_processresult:
+        result = dict_processresult.get(rel_dist, {}).get("result")
+        result_diff = dict_processresult.get(rel_dist, {}).get("result_diff")
 
+        diff = 0
+        original = geom_thematic
+        if (
+            result_diff is None
+            or result_diff.is_empty
+            or result is None
+            or result.is_empty
+        ):
             diff = 0
-            original = dict_thematic[thematic_id]
+        elif diff_metric == DiffMetric.TOTAL_AREA:
+            diff = result.area - original.area
+        elif diff_metric == DiffMetric.TOTAL_PERCENTAGE:
+            diff = result.area - original.area
+            diff = diff * 100 / result.area
+        elif diff_metric == DiffMetric.CHANGES_AREA:
+            diff = result_diff.area
+        elif diff_metric == DiffMetric.CHANGES_PERCENTAGE:
+            diff = result_diff.area
+            diff = diff * 100 / result.area
+        elif diff_metric == DiffMetric.TOTAL_LENGTH:
+            diff = result.length - original.length
+        elif diff_metric == DiffMetric.CHANGES_LENGTH:
+            diff = result_diff.length
+        elif diff_metric == DiffMetric.REFERENCE_USAGE:
+            if not reference_union is None and not reference_union.is_empty:
+                reference_union_buffer = buffer_pos(reference_union, 0.01)
+                result_buffer = buffer_pos(result, 0.01)
+                reference_usage_geom = safe_intersection(
+                    result_buffer, reference_union_buffer
+                )
+            else:
+                reference_usage_geom = None
             if (
-                result_diff is None
-                or result_diff.is_empty
-                or result is None
-                or result.is_empty
+                reference_usage_geom is not None
+                and not reference_usage_geom.is_empty
             ):
+                diff = reference_usage_geom.area
+            else:
                 diff = 0
-            elif diff_metric == DiffMetric.TOTAL_AREA:
-                diff = result.area - original.area
-            elif diff_metric == DiffMetric.TOTAL_PERCENTAGE:
-                diff = result.area - original.area
-                diff = diff * 100 / result.area
-            elif diff_metric == DiffMetric.CHANGES_AREA:
-                diff = result_diff.area
-            elif diff_metric == DiffMetric.CHANGES_PERCENTAGE:
-                diff = result_diff.area
-                diff = diff * 100 / result.area
-            elif diff_metric == DiffMetric.TOTAL_LENGTH:
-                diff = result.length - original.length
-            elif diff_metric == DiffMetric.CHANGES_LENGTH:
-                diff = result_diff.length
-            elif diff_metric == DiffMetric.REFERENCE_USAGE:
-                if not reference_union is None and not reference_union.is_empty:
-                    reference_union_buffer = buffer_pos(reference_union, 0.01)
-                    result_buffer = buffer_pos(result, 0.01)
-                    reference_usage_geom = safe_intersection(
-                        result_buffer, reference_union_buffer
-                    )
-                else:
-                    reference_usage_geom = None
-                if (
-                    reference_usage_geom is not None
-                    and not reference_usage_geom.is_empty
-                ):
-                    diff = reference_usage_geom.area
-                else:
-                    diff = 0
-            elif diff_metric == DiffMetric.TOTAL_DISTANCE:
-                diff = total_vertex_distance(original, result, bidirectional=False)
+        elif diff_metric == DiffMetric.TOTAL_DISTANCE:
+            diff = total_vertex_distance(original, result, bidirectional=False)
 
-            # round, so the detected changes are within 10cm, 10cm² or 0.1%
-            diff = round(diff, 1)
-            diffs[thematic_id][rel_dist] = diff
+        # round, so the detected changes are within 10cm, 10cm² or 0.1%
+        diff = round(diff, 1)
+        diffs[rel_dist] = diff
     return diffs
-
 
 def get_collection(ref_url, limit):
     """

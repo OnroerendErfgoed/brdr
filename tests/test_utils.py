@@ -7,8 +7,7 @@ from shapely.geometry import Polygon
 from brdr.constants import MULTI_SINGLE_ID_SEPARATOR
 from brdr.oe import get_oe_dict_by_ids
 from brdr.typings import ProcessResult
-from brdr.utils import diffs_from_dict_processresults
-from brdr.utils import get_collection
+from brdr.utils import get_collection, diffs_from_dict_processresult
 from brdr.utils import merge_process_results
 from brdr.utils import multi_to_singles
 from brdr.utils import polygonize_reference_data
@@ -124,29 +123,16 @@ class TestUtils(unittest.TestCase):
     def test_diffs_from_dict_series_complete(self):
         """Tests diffs_from_dict_series with complete data."""
         # Mock data
-        dict_thematic = {
-            "theme_id1": Polygon([(0, 0), (10, 0), (10, 10), (0, 10)]),
-            "theme_id2": Polygon([(5, 5), (15, 5), (15, 15), (5, 15)]),
-        }
-        dict_series = {
-            "theme_id1": {
+        geom_thematic =  Polygon([(0, 0), (10, 0), (10, 10), (0, 10)])
+        dict_processresult = {
                 10: {
                     "result": Polygon([(0, 0), (8, 0), (8, 8), (0, 8)]),
                     "result_diff": Polygon([(2, 2), (6, 2), (6, 6), (2, 6)]),
-                }
-            },
-            "theme_id2": {
-                10: {
-                    "result": Polygon([(7, 7), (13, 7), (13, 13), (7, 13)]),
-                    "result_diff": Polygon([(9, 9), (11, 9), (11, 11), (9, 11)]),
-                }
-            },
-        }
-        expected_diffs = {"theme_id1": {10: 16.0}, "theme_id2": {10: 4.0}}
 
-        assert expected_diffs == diffs_from_dict_processresults(
-            dict_series.copy(), dict_thematic.copy(), reference_union=None
-        )
+        }}
+        expected_diffs = {10: 16.0}
+
+        assert expected_diffs == diffs_from_dict_processresult(dict_processresult,geom_thematic, reference_union=None)
 
     def test_get_collection(self):
         base_year = 2023
