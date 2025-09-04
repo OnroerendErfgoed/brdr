@@ -303,6 +303,15 @@ def diffs_from_dict_processresult(
     """
 
     diffs = {}
+
+    for rel_dist in dict_processresult:
+        processresult = dict_processresult.get(rel_dist, {})
+        diff = diff_from_processresult(processresult,geom_thematic,reference_union,diff_metric)
+
+        diffs[rel_dist] = diff
+    return diffs
+
+def diff_from_processresult(processresult,geom_thematic,reference_union,diff_metric):
     if geom_thematic.geom_type in (
         "LineString",
         "MultiLineString",
@@ -317,56 +326,53 @@ def diffs_from_dict_processresult(
         diff_metric = DiffMetric.TOTAL_DISTANCE
         diff_metric = DiffMetric.REFERENCE_USAGE
         diff_metric = DiffMetric.TOTAL_DISTANCE
-    for rel_dist in dict_processresult:
-        result = dict_processresult.get(rel_dist, {}).get("result")
-        result_diff = dict_processresult.get(rel_dist, {}).get("result_diff")
-
-        diff = 0
-        original = geom_thematic
-        if (
+    result = processresult.get("result")
+    result_diff = processresult.get("result_diff")
+    diff = 0
+    original = geom_thematic
+    if (
             result_diff is None
             or result_diff.is_empty
             or result is None
             or result.is_empty
-        ):
-            diff = 0
-        elif diff_metric == DiffMetric.TOTAL_AREA:
-            diff = result.area - original.area
-        elif diff_metric == DiffMetric.TOTAL_PERCENTAGE:
-            diff = result.area - original.area
-            diff = diff * 100 / result.area
-        elif diff_metric == DiffMetric.CHANGES_AREA:
-            diff = result_diff.area
-        elif diff_metric == DiffMetric.CHANGES_PERCENTAGE:
-            diff = result_diff.area
-            diff = diff * 100 / result.area
-        elif diff_metric == DiffMetric.TOTAL_LENGTH:
-            diff = result.length - original.length
-        elif diff_metric == DiffMetric.CHANGES_LENGTH:
-            diff = result_diff.length
-        elif diff_metric == DiffMetric.REFERENCE_USAGE:
-            if not reference_union is None and not reference_union.is_empty:
-                reference_union_buffer = buffer_pos(reference_union, 0.01)
-                result_buffer = buffer_pos(result, 0.01)
-                reference_usage_geom = safe_intersection(
-                    result_buffer, reference_union_buffer
-                )
-            else:
-                reference_usage_geom = None
-            if (
+    ):
+        diff = 0
+    elif diff_metric == DiffMetric.TOTAL_AREA:
+        diff = result.area - original.area
+    elif diff_metric == DiffMetric.TOTAL_PERCENTAGE:
+        diff = result.area - original.area
+        diff = diff * 100 / result.area
+    elif diff_metric == DiffMetric.CHANGES_AREA:
+        diff = result_diff.area
+    elif diff_metric == DiffMetric.CHANGES_PERCENTAGE:
+        diff = result_diff.area
+        diff = diff * 100 / result.area
+    elif diff_metric == DiffMetric.TOTAL_LENGTH:
+        diff = result.length - original.length
+    elif diff_metric == DiffMetric.CHANGES_LENGTH:
+        diff = result_diff.length
+    elif diff_metric == DiffMetric.REFERENCE_USAGE:
+        if not reference_union is None and not reference_union.is_empty:
+            reference_union_buffer = buffer_pos(reference_union, 0.01)
+            result_buffer = buffer_pos(result, 0.01)
+            reference_usage_geom = safe_intersection(
+                result_buffer, reference_union_buffer
+            )
+        else:
+            reference_usage_geom = None
+        if (
                 reference_usage_geom is not None
                 and not reference_usage_geom.is_empty
-            ):
-                diff = reference_usage_geom.area
-            else:
-                diff = 0
-        elif diff_metric == DiffMetric.TOTAL_DISTANCE:
-            diff = total_vertex_distance(original, result, bidirectional=False)
+        ):
+            diff = reference_usage_geom.area
+        else:
+            diff = 0
+    elif diff_metric == DiffMetric.TOTAL_DISTANCE:
+        diff = total_vertex_distance(original, result, bidirectional=False)
 
-        # round, so the detected changes are within 10cm, 10cm² or 0.1%
-        diff = round(diff, 1)
-        diffs[rel_dist] = diff
-    return diffs
+    # round, so the detected changes are within 10cm, 10cm² or 0.1%
+    diff = round(diff, 1)
+    return diff
 
 def get_collection(ref_url, limit):
     """

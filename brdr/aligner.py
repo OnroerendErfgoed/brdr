@@ -92,14 +92,14 @@ from brdr.loader import Loader
 from brdr.logger import Logger
 from brdr.topo import dissolve_topo, generate_topo
 from brdr.typings import ProcessResult
-from brdr.utils import determine_stability, diffs_from_dict_processresult
+from brdr.utils import determine_stability, diffs_from_dict_processresult, diff_from_processresult
+from brdr.utils import geojson_from_dict
+from brdr.utils import get_dict_geojsons_from_series_dict
+from brdr.utils import merge_process_results
 from brdr.utils import (
     multi_to_singles,
     is_brdr_formula,
 )
-from brdr.utils import geojson_from_dict
-from brdr.utils import get_dict_geojsons_from_series_dict
-from brdr.utils import merge_process_results
 from brdr.utils import write_geojson
 
 
@@ -1548,29 +1548,19 @@ class Aligner:
             for relevant_distance, process_result in results_dict.items():
                 properties = process_result["properties"]
 
+                #Adding extra porperties
                 properties[NR_CALCULATION_FIELD_NAME] = nr_calculations
                 properties[RELEVANT_DISTANCE_FIELD_NAME] = relevant_distance
-
-                result = process_result["result"]
-                result_diff = None
-                if "result_diff" in process_result:
-                    result_diff = process_result["result_diff"]
-                if result_diff is None:
-                    result_diff = GeometryCollection()
-                #TODO: reuse diff_metrics?
-                properties[DIFF_INDEX] = -1
-                properties[DIFF_PERC_INDEX] = -1
-                properties[DIFF_INDEX] = result_diff.area
-                if result.area != 0:
-                    properties[DIFF_PERC_INDEX] = result_diff.area*100/result.area
-                if result_diff.area == 0:
-                    properties[DIFF_INDEX] = result_diff.length
-                    if result.length != 0:
-                        properties[DIFF_PERC_INDEX] = result_diff.length*100/result.length
+                properties[DIFF_INDEX] = diff_from_processresult(process_result,self.dict_thematic[theme_id],None,DIFF_METRIC.CHANGES_AREA)
+                properties[DIFF_PERC_INDEX] = diff_from_processresult(process_result,self.dict_thematic[theme_id],None,DIFF_METRIC.CHANGES_PERCENTAGE)
                 prop_dictionary[theme_id][relevant_distance] = properties
+
+                #Adding original attributes
                 if attributes and theme_id in self.dict_thematic_properties.keys():
                     for attr, value in self.dict_thematic_properties[theme_id].items():
                         prop_dictionary[theme_id][relevant_distance][attr] = value
+
+                #Adding formula
                 if (
                     formula
                 ):  # and not (theme_id in prop_dictionary and relevant_distance in prop_dictionary[theme_id] and NEW_FORMULA_FIELD_NAME in prop_dictionary[theme_id][relevant_distance]):
