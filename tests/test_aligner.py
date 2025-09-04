@@ -7,7 +7,7 @@ from shapely.geometry import Polygon
 from shapely.geometry import shape
 
 from brdr.aligner import Aligner
-from brdr.constants import AREA_ATTRIBUTE
+from brdr.constants import AREA_ATTRIBUTE, REMARK_FIELD_NAME
 from brdr.enums import GRBType, AlignerResultType
 from brdr.enums import OpenDomainStrategy
 from brdr.geometry_utils import (
@@ -438,10 +438,7 @@ class TestAligner(unittest.TestCase):
         )
         rd = 2
         self.sample_aligner.process(relevant_distances=[rd])
-        assert (
-            self.sample_aligner.dict_processresults["theme_id_1"][rd]["remark"]
-            == " | Difference in amount of geometries"
-        )
+        assert self.sample_aligner.dict_processresults["theme_id_1"] [rd] ["properties"][REMARK_FIELD_NAME] == " | Difference in amount of geometries"
 
     def test_fully_aligned_geojson_output(self):
         aligned_shape = from_wkt(
