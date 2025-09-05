@@ -25,7 +25,7 @@ if __name__ == "__main__":
         ids_to_evaluate=None,
         base_formula_field=None,
         full_strategy=FullStrategy.PREFER_FULL,
-        relevant_distances=np.arange(0, 310, 10, dtype=int) / 100
+        relevant_distances=np.arange(0, 310, 10, dtype=int) / 100,
     )
 
     # SHOW the EVALUATED results

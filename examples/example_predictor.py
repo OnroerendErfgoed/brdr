@@ -16,11 +16,7 @@ if __name__ == "__main__":
     # Initiate an Aligner
     aligner = Aligner(max_workers=-1)
     # Load thematic data & reference data
-    loader = GeoJsonFileLoader(
-        "input/predictor_one.geojson", "theme_id"
-    )
-
-
+    loader = GeoJsonFileLoader("input/predictor_one.geojson", "theme_id")
 
     aligner.load_thematic_data(loader)
     # Load reference data
@@ -45,7 +41,7 @@ if __name__ == "__main__":
     else:
         print(fcs["result"])
         for key in dict_predictions:
-            plot_dict_diffs( {key: diffs[key]})
+            plot_dict_diffs({key: diffs[key]})
             show_map(
                 {key: dict_predictions[key]},
                 {key: aligner.dict_thematic[key]},

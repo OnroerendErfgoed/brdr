@@ -171,6 +171,6 @@
 
 # 0.14.0
 
-- Added stability indicator (brdr_stability True/False) to the predictor-output
+- Added stability indicator (brdr_stability True/False) to the predictor-output [#231]
 - Refactoring: added a properties-dict to ProcessResults
 - Bugfix in evaluate()-function

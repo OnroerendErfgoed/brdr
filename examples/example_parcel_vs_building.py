@@ -39,11 +39,16 @@ if __name__ == "__main__":
     x_dict_series = aligner_x.process(
         relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
     )
-    x_resulting_areas = aligner_x.get_diff_metrics(dict_processresults=x_dict_series,dict_thematic=aligner_x.dict_thematic,)
+    x_resulting_areas = aligner_x.get_diff_metrics(
+        dict_processresults=x_dict_series,
+        dict_thematic=aligner_x.dict_thematic,
+    )
     y_dict_series = aligner_y.process(
         relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
     )
-    y_resulting_areas = aligner_y.get_diff_metrics(dict_processresults=y_dict_series,dict_thematic=aligner_y.dict_thematic)
+    y_resulting_areas = aligner_y.get_diff_metrics(
+        dict_processresults=y_dict_series, dict_thematic=aligner_y.dict_thematic
+    )
     # plot_diffs(series,x_resulting_areas)
     # plot_diffs(series,y_resulting_areas)
 

@@ -1,7 +1,8 @@
 # Demo osmx usage
 # https://medium.com/@callumjamesscoby/routing-shortest-path-analysis-in-python-and-qgis-39da55da5099
 import osmnx as ox
-#-->ImportError: scipy must be installed as an optional dependency to search a projected graph.
+
+# -->ImportError: scipy must be installed as an optional dependency to search a projected graph.
 
 # Choose tags (fe cycleway)
 tags = {"highway": "cycleway"}

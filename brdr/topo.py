@@ -70,7 +70,7 @@ def dissolve_topo(
                 "result_diff_min": result_diff_min,
                 "result_relevant_intersection": GeometryCollection(),
                 "result_relevant_diff": GeometryCollection(),
-                "properties": { REMARK_FIELD_NAME: ""}
+                "properties": {REMARK_FIELD_NAME: ""},
             }
     dict_series = dict_series_topo
 

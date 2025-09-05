@@ -20,7 +20,9 @@ from brdr.constants import (
     PERIMETER_ATTRIBUTE,
     SHAPE_INDEX_ATTRIBUTE,
     AREA_ATTRIBUTE,
-    STABILITY, ZERO_STREAK, )
+    STABILITY,
+    ZERO_STREAK,
+)
 from brdr.enums import DiffMetric
 from brdr.geometry_utils import (
     get_partitions,
@@ -209,11 +211,11 @@ def polygonize_reference_data(dict_ref):
     return dict_ref
 
 
-def coverage_ratio(values,min_val=0,bin_count=10):
-    max_val = max (values)
-    if len(values)== 0 or max_val<= 0:
+def coverage_ratio(values, min_val=0, bin_count=10):
+    max_val = max(values)
+    if len(values) == 0 or max_val <= 0:
         return 0.0
-    bin_size =round((max_val-min_val)/bin_count,2)
+    bin_size = round((max_val - min_val) / bin_count, 2)
     bins = np.arange(min_val, max_val + bin_size, bin_size)
 
     # Tel hoeveel bins minstens één waarde bevatten
@@ -242,9 +244,9 @@ def determine_stability(x, y):
     start_streak = None
     streak = 0
     write_zero_streak = False
-    dict_stability=dict()
+    dict_stability = dict()
     for i in range(1, len(x)):
-        dict_stability[x[i - 1]]= dict()
+        dict_stability[x[i - 1]] = dict()
         dict_stability[x[i - 1]][STABILITY] = False
         dict_stability[x[i - 1]][ZERO_STREAK] = None
         if round(derivative[i], 2) == 0:  # noqa
@@ -263,12 +265,12 @@ def determine_stability(x, y):
             )
             center_streak = start_streak + (end_streak - start_streak) / 2
 
-            dict_stability[start_streak][ZERO_STREAK]=(
-                    start_streak,
-                    end_streak,
-                    center_streak,
-                    score_streak,
-                )
+            dict_stability[start_streak][ZERO_STREAK] = (
+                start_streak,
+                end_streak,
+                center_streak,
+                score_streak,
+            )
 
             streak = 0
             start_streak = None
@@ -298,6 +300,7 @@ def _numerical_derivative(x, y):
 
     return derivative
 
+
 def diffs_from_dict_processresult(
     dict_processresult: dict[float, ProcessResult],
     geom_thematic: BaseGeometry,
@@ -321,12 +324,15 @@ def diffs_from_dict_processresult(
 
     for rel_dist in dict_processresult:
         processresult = dict_processresult.get(rel_dist, {})
-        diff = diff_from_processresult(processresult,geom_thematic,reference_union,diff_metric)
+        diff = diff_from_processresult(
+            processresult, geom_thematic, reference_union, diff_metric
+        )
 
         diffs[rel_dist] = diff
     return diffs
 
-def diff_from_processresult(processresult,geom_thematic,reference_union,diff_metric):
+
+def diff_from_processresult(processresult, geom_thematic, reference_union, diff_metric):
     if geom_thematic.geom_type in (
         "LineString",
         "MultiLineString",
@@ -345,12 +351,7 @@ def diff_from_processresult(processresult,geom_thematic,reference_union,diff_met
     result_diff = processresult.get("result_diff")
     diff = 0
     original = geom_thematic
-    if (
-            result_diff is None
-            or result_diff.is_empty
-            or result is None
-            or result.is_empty
-    ):
+    if result_diff is None or result_diff.is_empty or result is None or result.is_empty:
         diff = 0
     elif diff_metric == DiffMetric.TOTAL_AREA:
         diff = result.area - original.area
@@ -375,10 +376,7 @@ def diff_from_processresult(processresult,geom_thematic,reference_union,diff_met
             )
         else:
             reference_usage_geom = None
-        if (
-                reference_usage_geom is not None
-                and not reference_usage_geom.is_empty
-        ):
+        if reference_usage_geom is not None and not reference_usage_geom.is_empty:
             diff = reference_usage_geom.area
         else:
             diff = 0
@@ -388,6 +386,7 @@ def diff_from_processresult(processresult,geom_thematic,reference_union,diff_met
     # round, so the detected changes are within 10cm, 10cm² or 0.1%
     diff = round(diff, 1)
     return diff
+
 
 def get_collection(ref_url, limit):
     """

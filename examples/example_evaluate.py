@@ -80,7 +80,7 @@ if __name__ == "__main__":
     dict_evaluated = actual_aligner.evaluate(
         ids_to_evaluate=affected,
         base_formula_field=name_formula,
-        relevant_distances=np.arange(0, 310, 10, dtype=int) / 100
+        relevant_distances=np.arange(0, 310, 10, dtype=int) / 100,
     )
 
     # SHOW the EVALUATED results
