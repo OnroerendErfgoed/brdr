@@ -25,7 +25,7 @@ if __name__ == "__main__":
     show_map(dict_results, aligner.dict_thematic, aligner.dict_reference)
     print_brdr_formula(dict_results, aligner)
 
-    dict_predictions_evaluated, prop_dictionary = aligner.evaluate()
+    dict_predictions_evaluated = aligner.evaluate()
 
     # SHOW results of the predictions
     fcs = aligner.get_results_as_geojson(

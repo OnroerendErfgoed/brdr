@@ -93,6 +93,7 @@ write_geojson(
 
 counter_equality = 0
 counter_equality_by_alignment = 0
+counter_prediction_unique = 0
 counter_difference = 0
 counter_no_change = 0
 # TODO:  counter_difference collects al the 'TO_CHECK's' but these are multiple  proposals, so clean up the stats
@@ -106,6 +107,8 @@ for feature in fcs["result"]["features"]:
             counter_equality = counter_equality + 1
         elif ev.startswith("equal") and rd > 0:
             counter_equality_by_alignment = counter_equality_by_alignment + 1
+        elif ev.startswith("prediction_unique"):
+            counter_prediction_unique = counter_prediction_unique + 1
         elif ev.startswith("no_change"):
             counter_no_change = counter_no_change + 1
         else:
@@ -118,6 +121,8 @@ print(
     + str(counter_equality)
     + "//Equality by alignment: "
     + str(counter_equality_by_alignment)
+    + "//Prediction (unique): "
+    + str(counter_prediction_unique)
     + "//No change: "
     + str(counter_no_change)
     + "//Difference: "

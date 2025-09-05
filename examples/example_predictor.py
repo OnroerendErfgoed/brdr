@@ -2,9 +2,8 @@ import numpy as np
 
 from brdr.aligner import Aligner
 from brdr.enums import GRBType, AlignerResultType, OpenDomainStrategy
-from brdr.geometry_utils import geom_from_wkt
 from brdr.grb import GRBActualLoader
-from brdr.loader import GeoJsonFileLoader, DictLoader
+from brdr.loader import GeoJsonFileLoader
 from examples import show_map, plot_dict_diffs
 
 # Press the green button in the gutter to run the script.
