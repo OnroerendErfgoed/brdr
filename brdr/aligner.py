@@ -1563,7 +1563,8 @@ class Aligner:
             for relevant_distance, process_result in results_dict.items():
                 properties = process_result["properties"]
 
-                #Adding extra porperties
+                #Adding extra properties
+                properties[ID_THEME_FIELD_NAME] = theme_id
                 properties[NR_CALCULATION_FIELD_NAME] = nr_calculations
                 properties[RELEVANT_DISTANCE_FIELD_NAME] = relevant_distance
                 properties[DIFF_INDEX] = diff_from_processresult(process_result,self.dict_thematic[theme_id],None,DIFF_METRIC.CHANGES_AREA)
