@@ -123,16 +123,18 @@ class TestUtils(unittest.TestCase):
     def test_diffs_from_dict_series_complete(self):
         """Tests diffs_from_dict_series with complete data."""
         # Mock data
-        geom_thematic =  Polygon([(0, 0), (10, 0), (10, 10), (0, 10)])
+        geom_thematic = Polygon([(0, 0), (10, 0), (10, 10), (0, 10)])
         dict_processresult = {
-                10: {
-                    "result": Polygon([(0, 0), (8, 0), (8, 8), (0, 8)]),
-                    "result_diff": Polygon([(2, 2), (6, 2), (6, 6), (2, 6)]),
-
-        }}
+            10: {
+                "result": Polygon([(0, 0), (8, 0), (8, 8), (0, 8)]),
+                "result_diff": Polygon([(2, 2), (6, 2), (6, 6), (2, 6)]),
+            }
+        }
         expected_diffs = {10: 16.0}
 
-        assert expected_diffs == diffs_from_dict_processresult(dict_processresult,geom_thematic, reference_union=None)
+        assert expected_diffs == diffs_from_dict_processresult(
+            dict_processresult, geom_thematic, reference_union=None
+        )
 
     def test_get_collection(self):
         base_year = 2023

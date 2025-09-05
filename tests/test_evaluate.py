@@ -128,7 +128,7 @@ class TestEvaluate(unittest.TestCase):
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         )
 
-        dict_evaluated= aligner.evaluate(
+        dict_evaluated = aligner.evaluate(
             relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
             full_strategy=FullStrategy.PREFER_FULL,
         )
@@ -226,9 +226,9 @@ class TestEvaluate(unittest.TestCase):
         )
         assert len(dict_evaluated["theme_id_1"]) == 1
         assert (
-            dict_evaluated["theme_id_1"][
-                list(dict_evaluated["theme_id_1"].keys())[0]
-            ]["properties"][PREDICTION_COUNT]
+            dict_evaluated["theme_id_1"][list(dict_evaluated["theme_id_1"].keys())[0]][
+                "properties"
+            ][PREDICTION_COUNT]
             > 1
         )
 

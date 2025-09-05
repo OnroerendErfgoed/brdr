@@ -143,7 +143,7 @@ def plot_dict_diffs(
     ylabel="difference",
     title="Relevant distance vs difference",
 ):
-    for key,diffs in dict_diffs.items():
+    for key, diffs in dict_diffs.items():
         x_values = list(diffs.keys())
         y_values = list(diffs.values())
         plt.plot(x_values, y_values, label=str(key))

@@ -43,7 +43,13 @@ from brdr.constants import (
     SNAP_STRATEGY,
     SNAP_MAX_SEGMENT_LENGTH,
     BUFFER_MULTIPLICATION_FACTOR,
-    DIFF_METRIC, STABILITY, ZERO_STREAK, REMARK_FIELD_NAME, DIFF_PERC_INDEX, DIFF_INDEX, RELEVANT_DISTANCE_FIELD_NAME,
+    DIFF_METRIC,
+    STABILITY,
+    ZERO_STREAK,
+    REMARK_FIELD_NAME,
+    DIFF_PERC_INDEX,
+    DIFF_INDEX,
+    RELEVANT_DISTANCE_FIELD_NAME,
     NR_CALCULATION_FIELD_NAME,
 )
 from brdr.constants import (
@@ -92,7 +98,12 @@ from brdr.loader import Loader
 from brdr.logger import Logger
 from brdr.topo import dissolve_topo, generate_topo
 from brdr.typings import ProcessResult
-from brdr.utils import determine_stability, diffs_from_dict_processresult, diff_from_processresult, coverage_ratio
+from brdr.utils import (
+    determine_stability,
+    diffs_from_dict_processresult,
+    diff_from_processresult,
+    coverage_ratio,
+)
 from brdr.utils import geojson_from_dict
 from brdr.utils import get_dict_geojsons_from_series_dict
 from brdr.utils import merge_process_results
@@ -251,7 +262,6 @@ class Aligner:
         self.dict_predictions: dict[any, dict[float, ProcessResult]] = {}
         # dictionary with the 'evaluated predicted' results, grouped by theme_id and relevant_distance
         self.dict_evaluated_predictions: dict[any, dict[float, ProcessResult]] = {}
-
 
         # Coordinate reference system
         # thematic geometries and reference geometries are assumed to be in the same CRS
@@ -720,13 +730,15 @@ class Aligner:
                 raise ValueError(message)
             self.logger.feedback_debug("process geometry")
 
-            #For calculations with RD=0 the original input is returned
-            if relevant_distance==0:
+            # For calculations with RD=0 the original input is returned
+            if relevant_distance == 0:
                 self.logger.feedback_debug("Calculation for RD = 0")
                 return _unary_union_result_dict(
                     {
                         "result": input_geometry,
-                        "properties": {REMARK_FIELD_NAME: "relevant distance 0 --> original geometry returned"},
+                        "properties": {
+                            REMARK_FIELD_NAME: "relevant distance 0 --> original geometry returned"
+                        },
                     }
                 )
 
@@ -984,7 +996,9 @@ class Aligner:
                 if original_geometry_length != resulting_geometry_length:
                     msg = "Difference in amount of geometries"
                     self.logger.feedback_debug(msg)
-                    process_result["properties"][REMARK_FIELD_NAME] = process_result["properties"][REMARK_FIELD_NAME] + " | " + msg
+                    process_result["properties"][REMARK_FIELD_NAME] = (
+                        process_result["properties"][REMARK_FIELD_NAME] + " | " + msg
+                    )
 
         self.logger.feedback_info(
             "End of processing series: " + str(self.relevant_distances)
@@ -1086,16 +1100,22 @@ class Aligner:
             threshold_overlap_percentage = 50
         rd_prediction = list(relevant_distances)
         max_relevant_distance = max(rd_prediction)
-        cvg_ratio = coverage_ratio(values=relevant_distances,min_val=0,bin_count=10)
+        cvg_ratio = coverage_ratio(values=relevant_distances, min_val=0, bin_count=10)
         cvg_ratio_threshold = 0.75
-        #cvg_ratio: indication of the rd values can be used to make a brdr_prediction_score. When there is enough coverage of predictions to determine a prediction_score we also add 0 and a long-range value(+1).
-        #Otherwise we only add a short-range value (+0.1) to check for stability
-        if cvg_ratio>cvg_ratio_threshold:
+        # cvg_ratio: indication of the rd values can be used to make a brdr_prediction_score. When there is enough coverage of predictions to determine a prediction_score we also add 0 and a long-range value(+1).
+        # Otherwise we only add a short-range value (+0.1) to check for stability
+        if cvg_ratio > cvg_ratio_threshold:
             rd_prediction.append(round(0, RELEVANT_DISTANCE_DECIMALS))
-            rd_prediction.append(round(max_relevant_distance + 0.1, RELEVANT_DISTANCE_DECIMALS))
-            rd_prediction.append(round(max_relevant_distance + 1, RELEVANT_DISTANCE_DECIMALS))
+            rd_prediction.append(
+                round(max_relevant_distance + 0.1, RELEVANT_DISTANCE_DECIMALS)
+            )
+            rd_prediction.append(
+                round(max_relevant_distance + 1, RELEVANT_DISTANCE_DECIMALS)
+            )
         else:
-            rd_prediction.append(round(max_relevant_distance + 0.1, RELEVANT_DISTANCE_DECIMALS))
+            rd_prediction.append(
+                round(max_relevant_distance + 0.1, RELEVANT_DISTANCE_DECIMALS)
+            )
         rd_prediction = list(set(rd_prediction))
         rd_prediction = sorted(rd_prediction)
 
@@ -1107,10 +1127,15 @@ class Aligner:
         )
         if diff_metric is None:
             diff_metric = self.diff_metric
-        diffs_dict={}
+        diffs_dict = {}
         for theme_id, dict_processresult in dict_processresults.items():
-            diffs = diffs_from_dict_processresult(dict_processresult, dict_thematic[theme_id],self._get_reference_union(), diff_metric=diff_metric)
-            diffs_dict[theme_id]=diffs
+            diffs = diffs_from_dict_processresult(
+                dict_processresult,
+                dict_thematic[theme_id],
+                self._get_reference_union(),
+                diff_metric=diff_metric,
+            )
+            diffs_dict[theme_id] = diffs
             if len(diffs) != len(rd_prediction):
                 self.logger.feedback_warning(
                     f"Number of computed diffs for thematic element {theme_id} does "
@@ -1118,21 +1143,23 @@ class Aligner:
                 )
                 continue
             diff_values = list(diffs.values())
-            dict_stability = determine_stability(
-                rd_prediction, diff_values
-            )
+            dict_stability = determine_stability(rd_prediction, diff_values)
             for rd in rd_prediction:
                 if rd not in relevant_distances:
-                    del (dict_processresults[theme_id][rd])
+                    del dict_processresults[theme_id][rd]
                     continue
-                dict_processresults[theme_id][rd]["properties"][STABILITY] = dict_stability[rd][STABILITY]
+                dict_processresults[theme_id][rd]["properties"][STABILITY] = (
+                    dict_stability[rd][STABILITY]
+                )
                 if dict_stability[rd][ZERO_STREAK] is not None:
                     dict_predictions[theme_id][rd] = dict_processresults[theme_id][rd]
-                    if cvg_ratio>cvg_ratio_threshold:
-                        dict_predictions[theme_id][rd]["properties"][PREDICTION_SCORE] = dict_stability[rd][ZERO_STREAK][3]
+                    if cvg_ratio > cvg_ratio_threshold:
+                        dict_predictions[theme_id][rd]["properties"][
+                            PREDICTION_SCORE
+                        ] = dict_stability[rd][ZERO_STREAK][3]
         self.dict_predictions = dict_predictions
 
-        self.dict_predictions  =  self._make_predictions_unique(dict_predictions)
+        self.dict_predictions = self._make_predictions_unique(dict_predictions)
 
         return (
             dict_processresults,
@@ -1142,7 +1169,7 @@ class Aligner:
 
     def _make_predictions_unique(self, dict_predictions):
         """
-                # Check if the predicted geometries are unique (and remove duplicated predictions)
+        # Check if the predicted geometries are unique (and remove duplicated predictions)
         """
 
         dict_predictions_unique = defaultdict(dict)
@@ -1152,15 +1179,15 @@ class Aligner:
             for rel_dist, processresult in dist_results.items():
                 predicted_geom = processresult["result"]
                 if not _equal_geom_in_array(
-                        predicted_geom,
-                        predicted_geoms_for_theme_id,
-                        self.correction_distance,
-                        self.mitre_limit,
+                    predicted_geom,
+                    predicted_geoms_for_theme_id,
+                    self.correction_distance,
+                    self.mitre_limit,
                 ) or predicted_geom.geom_type in (
-                        "Point",
-                        "MultiPoint",
-                        "LineString",
-                        "MultiLineString",
+                    "Point",
+                    "MultiPoint",
+                    "LineString",
+                    "MultiLineString",
                 ):
                     dict_predictions_unique[theme_id][rel_dist] = processresult
                     predicted_geoms_for_theme_id.append(processresult["result"])
@@ -1169,9 +1196,9 @@ class Aligner:
                         f"Duplicate prediction found for key {theme_id} at distance {rel_dist}: Prediction excluded"
                     )
             for dist in dict_predictions_unique[theme_id].keys():
-                dict_predictions_unique[theme_id][dist]["properties"][PREDICTION_COUNT] = len(
-                    predicted_geoms_for_theme_id
-                )
+                dict_predictions_unique[theme_id][dist]["properties"][
+                    PREDICTION_COUNT
+                ] = len(predicted_geoms_for_theme_id)
         return dict_predictions_unique
 
     def evaluate(
@@ -1207,8 +1234,8 @@ class Aligner:
             else:
                 dict_unaffected[id_theme] = geom
 
-        #Features are split up in 2 dicts: affected and unaffected (no_change)
-        #The affected features will be split up:
+        # Features are split up in 2 dicts: affected and unaffected (no_change)
+        # The affected features will be split up:
         #   *No prediction available
         #   *Predictions available
 
@@ -1247,7 +1274,7 @@ class Aligner:
             scores = []
             distances = []
             predictions = []
-            formula_match=False
+            formula_match = False
             for dist in sorted(dict_predictions_results.keys()):
                 props = self._evaluate(
                     id_theme=theme_id,
@@ -1258,7 +1285,7 @@ class Aligner:
 
                 full = props[FULL_ACTUAL_FIELD_NAME]
                 if full_strategy == FullStrategy.ONLY_FULL and not full:
-                    #this prediction is ignored
+                    # this prediction is ignored
                     continue
                 if (
                     props[EVALUATION_FIELD_NAME] == Evaluation.TO_CHECK_NO_PREDICTION
@@ -1271,7 +1298,7 @@ class Aligner:
                 ):
                     props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_PREDICTION_MULTI
                 elif props[EVALUATION_FIELD_NAME] != Evaluation.TO_CHECK_NO_PREDICTION:
-                    #this prediction has a equality based on formula so the rest is not checked anymore
+                    # this prediction has a equality based on formula so the rest is not checked anymore
                     formula_match = True
                     props[PREDICTION_SCORE] = 100
                     scores = []
@@ -1308,7 +1335,7 @@ class Aligner:
             if not formula_match:
                 # if there is only one prediction left,  evaluation is set to PREDICTION_UNIQUE_FULL
                 if len_best_ix == 1 and not formula_match:
-                    props=predictions[0]["properties"]
+                    props = predictions[0]["properties"]
                     if (
                         FULL_ACTUAL_FIELD_NAME in props
                         and props[FULL_ACTUAL_FIELD_NAME]
@@ -1334,7 +1361,7 @@ class Aligner:
                     props[REMARK_FIELD_NAME] = "multiple predictions, original returned"
                     dict_predictions_evaluated[theme_id][relevant_distance] = {
                         "result": dict_affected[theme_id],
-                        "properties":props,
+                        "properties": props,
                     }
                     continue
 
@@ -1359,7 +1386,7 @@ class Aligner:
                 props[REMARK_FIELD_NAME] = "no prediction, original returned"
                 dict_predictions_evaluated[theme_id][relevant_distance] = {
                     "result": dict_affected[theme_id],
-                    "properties":props,
+                    "properties": props,
                 }
 
         # UNAFFECTED
@@ -1373,8 +1400,13 @@ class Aligner:
             )
             props[EVALUATION_FIELD_NAME] = Evaluation.NO_CHANGE
             props[PREDICTION_SCORE] = -1
-            props[REMARK_FIELD_NAME] = "Unaffected (no change) --> original geometry returned"
-            dict_predictions_evaluated[theme_id][relevant_distance] = {"result": geom,   "properties":props,}
+            props[REMARK_FIELD_NAME] = (
+                "Unaffected (no change) --> original geometry returned"
+            )
+            dict_predictions_evaluated[theme_id][relevant_distance] = {
+                "result": geom,
+                "properties": props,
+            }
         self.dict_evaluated_predictions = dict_predictions_evaluated
 
         return dict_predictions_evaluated
@@ -1523,12 +1555,12 @@ class Aligner:
             dict_thematic = self.dict_thematic
         diffs = {}
         for key in dict_thematic:
-            diffs[key]= diffs_from_dict_processresult(
+            diffs[key] = diffs_from_dict_processresult(
                 dict_processresult=dict_processresults[key],
                 geom_thematic=dict_thematic[key],
                 reference_union=self._get_reference_union(),
                 diff_metric=diff_metric,
-                )
+            )
 
         return diffs
 
@@ -1568,20 +1600,30 @@ class Aligner:
             for relevant_distance, process_result in results_dict.items():
                 properties = process_result["properties"]
 
-                #Adding extra properties
+                # Adding extra properties
                 properties[ID_THEME_FIELD_NAME] = theme_id
                 properties[NR_CALCULATION_FIELD_NAME] = nr_calculations
                 properties[RELEVANT_DISTANCE_FIELD_NAME] = relevant_distance
-                properties[DIFF_INDEX] = diff_from_processresult(process_result,self.dict_thematic[theme_id],None,DIFF_METRIC.CHANGES_AREA)
-                properties[DIFF_PERC_INDEX] = diff_from_processresult(process_result,self.dict_thematic[theme_id],None,DIFF_METRIC.CHANGES_PERCENTAGE)
+                properties[DIFF_INDEX] = diff_from_processresult(
+                    process_result,
+                    self.dict_thematic[theme_id],
+                    None,
+                    DIFF_METRIC.CHANGES_AREA,
+                )
+                properties[DIFF_PERC_INDEX] = diff_from_processresult(
+                    process_result,
+                    self.dict_thematic[theme_id],
+                    None,
+                    DIFF_METRIC.CHANGES_PERCENTAGE,
+                )
                 prop_dictionary[theme_id][relevant_distance] = properties
 
-                #Adding original attributes
+                # Adding original attributes
                 if attributes and theme_id in self.dict_thematic_properties.keys():
                     for attr, value in self.dict_thematic_properties[theme_id].items():
                         prop_dictionary[theme_id][relevant_distance][attr] = value
 
-                #Adding formula
+                # Adding formula
                 if (
                     formula
                 ):  # and not (theme_id in prop_dictionary and relevant_distance in prop_dictionary[theme_id] and NEW_FORMULA_FIELD_NAME in prop_dictionary[theme_id][relevant_distance]):
@@ -2010,7 +2052,7 @@ class Aligner:
                     "result_diff_min": result_diff_min,
                     "result_relevant_intersection": relevant_intersection,
                     "result_relevant_diff": relevant_diff,
-                    "properties":{REMARK_FIELD_NAME: remark},
+                    "properties": {REMARK_FIELD_NAME: remark},
                 }
             )
         # Process array
@@ -2038,7 +2080,7 @@ class Aligner:
                 remark = "Circle detected: -->resulting geometry = original geometry"
                 self.logger.feedback_debug(remark)
                 return _unary_union_result_dict(
-                    {"result": geom_thematic, "properties":{REMARK_FIELD_NAME: remark}}
+                    {"result": geom_thematic, "properties": {REMARK_FIELD_NAME: remark}}
                 )
 
             # Correction for unchanged geometries
@@ -2052,7 +2094,7 @@ class Aligner:
                 remark = "Unchanged geometry: -->resulting geometry = original geometry"
                 self.logger.feedback_debug(remark)
                 return _unary_union_result_dict(
-                    {"result": geom_thematic, "properties":{REMARK_FIELD_NAME: remark}}
+                    {"result": geom_thematic, "properties": {REMARK_FIELD_NAME: remark}}
                 )
 
         # Corrections for areas that differ more than the relevant distance
@@ -2194,7 +2236,7 @@ class Aligner:
                 "result_diff_min": geom_result_diff_min,
                 "result_relevant_intersection": relevant_intersection,
                 "result_relevant_diff": relevant_diff,
-                "properties":{REMARK_FIELD_NAME: remark},
+                "properties": {REMARK_FIELD_NAME: remark},
             }
         )
 
