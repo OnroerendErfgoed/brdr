@@ -1196,6 +1196,7 @@ class Aligner:
         full_strategy: enum, decided which predictions are kept or prefered based on full-ness of the prediction
         multi_to_best_prediction (default True): Only usable in combination with max_predictions=1. If True (and max_predictions=1), the prediction with highest score will be taken.If False, the original geometry is returned.
         """
+
         if ids_to_evaluate is None:
             ids_to_evaluate = list(self.dict_thematic.keys())
         dict_affected = {}
@@ -1205,6 +1206,12 @@ class Aligner:
                 dict_affected[id_theme] = geom
             else:
                 dict_unaffected[id_theme] = geom
+
+        #Features are split up in 2 dicts: affected and unaffected (no_change)
+        #The affected features will be split up:
+        #   *No prediction available
+        #   *Predictions available
+
         # AFFECTED
         dict_series, dict_affected_predictions, diffs = self.predictor(
             dict_thematic=dict_affected,
@@ -1228,7 +1235,7 @@ class Aligner:
                 props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
                 props[PREDICTION_COUNT] = 0
                 props[PREDICTION_SCORE] = -1
-                props[REMARK_FIELD_NAME] = "no prediction, original returned"
+                props[REMARK_FIELD_NAME] = "no predictions available, original returned"
                 dict_predictions_evaluated[theme_id][relevant_distance] = {
                     "result": dict_affected[theme_id],
                     "properties": props,
@@ -1240,8 +1247,6 @@ class Aligner:
             scores = []
             distances = []
             predictions = []
-            # Moet dit niet naar de predictor verhuizen?
-            prediction_properties = []
             equality_found = False
 
             for dist in sorted(dict_predictions_results.keys()):
@@ -1292,7 +1297,6 @@ class Aligner:
                 scores.append(props[PREDICTION_SCORE])
                 distances.append(dist)
                 predictions.append(dict_affected_predictions[theme_id][dist])
-                prediction_properties.append(props)
 
             # get max amount of best-scoring predictions
             best_ix = sorted(range(len(scores)), reverse=True, key=lambda i: scores[i])
@@ -1300,15 +1304,16 @@ class Aligner:
 
             # if there is only one prediction left,  evaluation is set to PREDICTION_UNIQUE_FULL
             if len_best_ix == 1:
+                props=predictions[0]["properties"]
                 if (
-                    FULL_ACTUAL_FIELD_NAME in prediction_properties[0]
-                    and prediction_properties[0][FULL_ACTUAL_FIELD_NAME]
+                    FULL_ACTUAL_FIELD_NAME in props
+                    and props[FULL_ACTUAL_FIELD_NAME]
                 ):
-                    prediction_properties[0][
+                    predictions[0]["properties"][
                         EVALUATION_FIELD_NAME
                     ] = Evaluation.PREDICTION_UNIQUE_FULL
                 else:
-                    prediction_properties[0][
+                    predictions[0]["properties"][
                         EVALUATION_FIELD_NAME
                     ] = Evaluation.PREDICTION_UNIQUE
 
@@ -1334,7 +1339,6 @@ class Aligner:
                 for ix in best_ix:
                     distance = distances[ix]
                     prediction = predictions[ix]
-                    props = prediction_properties[ix]
                     dict_predictions_evaluated[theme_id][distance] = prediction
             else:
                 # #when no evaluated predictions, the original is returned
@@ -1364,8 +1368,10 @@ class Aligner:
             )
             props[EVALUATION_FIELD_NAME] = Evaluation.NO_CHANGE
             props[PREDICTION_SCORE] = -1
+            props[REMARK_FIELD_NAME] = "Unaffected (no change) --> original geometry returned"
             dict_predictions_evaluated[theme_id][relevant_distance] = {"result": geom,   "properties":props,}
         self.dict_evaluated_predictions = dict_predictions_evaluated
+
         return dict_predictions_evaluated
 
     def get_brdr_formula(self, geometry: BaseGeometry, with_geom=False):

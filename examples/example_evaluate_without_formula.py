@@ -1,7 +1,7 @@
 import numpy as np
 
 from brdr.aligner import Aligner
-from brdr.constants import EVALUATION_FIELD_NAME
+from brdr.constants import EVALUATION_FIELD_NAME, PREDICTION_SCORE
 from brdr.enums import GRBType, AlignerResultType, FullStrategy
 from brdr.grb import GRBActualLoader
 from brdr.loader import GeoJsonFileLoader
@@ -13,7 +13,7 @@ if __name__ == "__main__":
     """
 
     # Start an aligner to align thematic objects on the actual parcels
-    actual_aligner = Aligner(relevant_distances=np.arange(0, 310, 10, dtype=int) / 100)
+    actual_aligner = Aligner()
     loader = GeoJsonFileLoader("input/themelayer.geojson", "theme_identifier")
     actual_aligner.load_thematic_data(loader)
     # Load reference data; the actual parcels
@@ -25,6 +25,7 @@ if __name__ == "__main__":
         ids_to_evaluate=None,
         base_formula_field=None,
         full_strategy=FullStrategy.PREFER_FULL,
+        relevant_distances=np.arange(0, 310, 10, dtype=int) / 100
     )
 
     # SHOW the EVALUATED results
@@ -40,4 +41,6 @@ if __name__ == "__main__":
             feature["properties"][actual_aligner.name_thematic_id]
             + ": "
             + feature["properties"][EVALUATION_FIELD_NAME]
+            + " - "
+            + str(feature["properties"][PREDICTION_SCORE])
         )
