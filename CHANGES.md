@@ -168,3 +168,9 @@
 - Added OSMLoader [#212]
 - Added logic to align by lines (process by graph/network) - experimental
 - Bugfix: Problem calculating graph_by_multilinestring [#228]
+
+# 0.14.0
+
+- Added stability indicator (brdr_stability True/False) to the predictor-output [#231]
+- Refactoring: added a properties-dict to ProcessResults
+- Bugfix in evaluate()-function

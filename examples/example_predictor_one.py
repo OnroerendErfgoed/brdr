@@ -1,5 +1,3 @@
-import numpy as np
-
 from brdr.aligner import Aligner
 from brdr.enums import GRBType, AlignerResultType, OpenDomainStrategy
 from brdr.grb import GRBActualLoader
@@ -24,7 +22,7 @@ if __name__ == "__main__":
     aligner.load_reference_data(loader)
 
     # PREDICT the 'stable' relevant distances, for a series of relevant distances
-    series = np.arange(0, 310, 10, dtype=int) / 100
+    series = [3]
     # predict which relevant distances are interesting to propose as resulting geometry
     dict_series, dict_predictions, diffs = aligner.predictor(
         relevant_distances=series,
@@ -32,18 +30,33 @@ if __name__ == "__main__":
         threshold_overlap_percentage=50,
     )
 
-    # SHOW results of the predictions
-    fcs = aligner.get_results_as_geojson(
-        resulttype=AlignerResultType.PREDICTIONS, formula=False
+    # # SHOW results of the predictions
+    # fcs_predictions = aligner.get_results_as_geojson(
+    #     resulttype=AlignerResultType.PREDICTIONS, formula=False
+    # )
+    # if fcs_predictions is None or "result" not in fcs_predictions:
+    #     print("empty predictions")
+    # else:
+    #     print(fcs_predictions["result"])
+    #     for key in dict_predictions:
+    #         plot_series(aligner.relevant_distances, {key: diffs[key]})
+    #         show_map(
+    #             {key: dict_predictions[key]},
+    #             {key: aligner.dict_thematic[key]},
+    #             aligner.dict_reference,
+    #         )
+
+    fcs_all = aligner.get_results_as_geojson(
+        resulttype=AlignerResultType.PROCESSRESULTS, formula=False
     )
-    if fcs is None or "result" not in fcs:
-        print("empty predictions")
+    if fcs_all is None or "result" not in fcs_all:
+        print("no calculations")
     else:
-        print(fcs["result"])
-        for key in dict_predictions:
+        print(fcs_all["result"])
+        for key in dict_series:
             plot_dict_diffs({key: diffs[key]})
             show_map(
-                {key: dict_predictions[key]},
+                {key: dict_series[key]},
                 {key: aligner.dict_thematic[key]},
                 aligner.dict_reference,
             )

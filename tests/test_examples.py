@@ -8,7 +8,6 @@ from brdr.grb import GRBActualLoader
 from brdr.loader import DictLoader
 from brdr.loader import GeoJsonLoader
 from brdr.oe import get_oe_dict_by_ids, OnroerendErfgoedLoader
-from brdr.utils import get_breakpoints_zerostreak
 
 
 class TestExamples(unittest.TestCase):
@@ -197,16 +196,16 @@ class TestExamples(unittest.TestCase):
         for key in resulting_areas:
             if len(resulting_areas[key]) == len(series):
                 lst_diffs = list(resulting_areas[key].values())
-                extremes, zero_streak = get_breakpoints_zerostreak(series, lst_diffs)
-                print(str(key))
-                for extremum in extremes:
-                    print(f"{extremum[0]:.2f}, {extremum[1]:.2f} ({extremum[2]})")
-                for st in zero_streak:
-                    print(
-                        f"{st[0]:.2f} - {st[1]:.2f} -{st[2]:.2f} - {st[3]:.2f}"
-                        f" - startextreme {st[4]:.2f} "
-                    )
-                    aligner.process(relevant_distance=st[0], od_strategy=4)
+                # extremes, zero_streak = determine_stability(series, lst_diffs)
+                # print(str(key))
+                # for extremum in extremes:
+                #     print(f"{extremum[0]:.2f}, {extremum[1]:.2f} ({extremum[2]})")
+                # for st in zero_streak:
+                #     print(
+                #         f"{st[0]:.2f} - {st[1]:.2f} -{st[2]:.2f} - {st[3]:.2f}"
+                #         f" - startextreme {st[4]:.2f} "
+                #     )
+                #     aligner.process(relevant_distance=st[0], od_strategy=4)
 
     def test_example_predictor(self):
         aligner = Aligner()

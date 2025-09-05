@@ -25,7 +25,7 @@ if __name__ == "__main__":
         GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=actual_aligner)
     )
     # Use the EVALUATE-function
-    dict_evaluated, prop_dictionary = actual_aligner.evaluate(
+    dict_evaluated = actual_aligner.evaluate(
         ids_to_evaluate=None,
         base_formula_field=None,
         full_strategy=FullStrategy.PREFER_FULL,

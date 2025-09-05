@@ -171,3 +171,7 @@ cython_debug/
 /.idea
 /.python-version
 /tests/cache/
+
+/dev/
+/dev
+dev/brdr_for_qgis

@@ -4,6 +4,7 @@ import json
 import topojson
 from shapely import GeometryCollection, make_valid, LineString
 
+from brdr.constants import REMARK_FIELD_NAME
 from brdr.geometry_utils import (
     safe_unary_union,
     safe_difference,
@@ -69,6 +70,7 @@ def dissolve_topo(
                 "result_diff_min": result_diff_min,
                 "result_relevant_intersection": GeometryCollection(),
                 "result_relevant_diff": GeometryCollection(),
+                "properties": {REMARK_FIELD_NAME: ""},
             }
     dict_series = dict_series_topo
 

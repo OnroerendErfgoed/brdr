@@ -90,10 +90,10 @@ Besides the generic functionalities, a range of Flanders-specific functionalitie
   alignment of geodata
 * ...
 
-### QGIS-script
+### QGIS-plugin
 
 An implementation of `brdr` for QGIS can be found at [GitHub-brdrQ](https://github.com/OnroerendErfgoed/brdrQ/).
-This QGIS- script provides a User Interface to align thematic data to a reference layer, showing the results in the QGIS
+This QGIS-plugin provides a User Interface to align thematic data to a reference layer, showing the results in the QGIS
 Table of Contents.
 
 ## Installation

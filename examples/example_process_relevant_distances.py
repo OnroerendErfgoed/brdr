@@ -2,8 +2,7 @@ from brdr.aligner import Aligner
 from brdr.enums import OpenDomainStrategy, GRBType
 from brdr.grb import GRBActualLoader
 from brdr.loader import GeoJsonLoader
-from brdr.utils import diffs_from_dict_processresults
-from examples import plot_series
+from examples import plot_dict_diffs
 from examples import show_map
 
 if __name__ == "__main__":
@@ -60,9 +59,8 @@ if __name__ == "__main__":
     )
     # SHOW results: map and plotted changes
     show_map(dict_results, aligner.dict_thematic, aligner.dict_reference)
-    resulting_areas = diffs_from_dict_processresults(
+    resulting_areas = aligner.get_diff_metrics(
         dict_processresults=dict_results,
         dict_thematic=aligner.dict_thematic,
-        reference_union=aligner._get_reference_union(),
     )
-    plot_series(relevant_distances, resulting_areas)
+    plot_dict_diffs(resulting_areas)

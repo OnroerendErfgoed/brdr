@@ -31,7 +31,7 @@ if __name__ == "__main__":
     base_aligner.load_reference_data(
         GRBFiscalParcelLoader(year=base_year, aligner=base_aligner)
     )
-    relevant_distance = 2
+    relevant_distance = 5
     # Align the thematic object on the parcelborders of 2022, to simulate a base-situation
     base_process_result = base_aligner.process(relevant_distance=relevant_distance)
 
@@ -65,7 +65,7 @@ if __name__ == "__main__":
     print("Affected_IDs: " + str(affected))
 
     # Start an aligner to align thematic objects on the actual parcels
-    actual_aligner = Aligner(relevant_distances=np.arange(0, 210, 10, dtype=int) / 100)
+    actual_aligner = Aligner()
     # Load the thematic objects (aligned on 2022) and also give the brdr_formula from 2022 as property
     actual_aligner.load_thematic_data(
         DictLoader(
@@ -77,8 +77,10 @@ if __name__ == "__main__":
         GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=actual_aligner)
     )
     # Use the EVALUATE-function
-    dict_evaluated, prop_dictionary = actual_aligner.evaluate(
-        ids_to_evaluate=affected, base_formula_field=name_formula
+    dict_evaluated = actual_aligner.evaluate(
+        ids_to_evaluate=affected,
+        base_formula_field=name_formula,
+        relevant_distances=np.arange(0, 310, 10, dtype=int) / 100,
     )
 
     # SHOW the EVALUATED results

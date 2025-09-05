@@ -5,6 +5,7 @@ from shapely import from_wkt
 from shapely.geometry import Polygon
 
 from brdr.aligner import Aligner
+from brdr.constants import PREDICTION_COUNT
 from brdr.enums import GRBType
 from brdr.grb import (
     GRBActualLoader,
@@ -28,6 +29,24 @@ class TestAligner(unittest.TestCase):
         # LOAD REFERENCE DICTIONARY
         self.sample_aligner.load_reference_data(DictLoader(reference_dict))
         series = np.arange(0, 310, 10, dtype=int) / 100
+        # predict which relevant distances are interesting to propose as resulting
+        # geometry
+
+        dict_series, dict_predictions, dict_diffs = self.sample_aligner.predictor(
+            relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
+        )
+        self.assertEqual(len(dict_predictions), len(thematic_dict))
+
+    def test_predictor_single_value(self):
+        # Load thematic data & reference data
+        thematic_dict = {"theme_id": from_wkt("POLYGON ((0 0, 0 9, 5 10, 10 0, 0 0))")}
+        # ADD A REFERENCE POLYGON TO REFERENCE DICTIONARY
+        reference_dict = {"ref_id": from_wkt("POLYGON ((0 1, 0 10,8 10,10 1,0 1))")}
+        # LOAD THEMATIC DICTIONARY
+        self.sample_aligner.load_thematic_data(DictLoader(thematic_dict))
+        # LOAD REFERENCE DICTIONARY
+        self.sample_aligner.load_reference_data(DictLoader(reference_dict))
+        series = [3]
         # predict which relevant distances are interesting to propose as resulting
         # geometry
 
@@ -101,7 +120,7 @@ class TestAligner(unittest.TestCase):
             relevant_distances=series,
         )
         self.assertEqual(len(dict_predictions), len(thematic_dict))
-        assert dict_predictions["theme_id"][0.0]["brdr_prediction_count"] >= 1
+        assert dict_predictions["theme_id"][0.0]["properties"][PREDICTION_COUNT] >= 1
 
     def test_predictor_line(self):
         # Load thematic data & reference data
@@ -124,7 +143,7 @@ class TestAligner(unittest.TestCase):
             relevant_distances=series,
         )
         self.assertEqual(len(dict_predictions), len(thematic_dict))
-        assert dict_predictions["theme_id"][0.0]["brdr_prediction_count"] >= 1
+        assert dict_predictions["theme_id"][0.0]["properties"][PREDICTION_COUNT] >= 1
 
     def test_predictor_poly_to_point(self):
         # Load thematic data & reference data
@@ -155,4 +174,4 @@ class TestAligner(unittest.TestCase):
             relevant_distances=series,
         )
         self.assertEqual(len(dict_predictions), len(thematic_dict))
-        assert dict_predictions["theme_id"][0.0]["brdr_prediction_count"] >= 1
+        assert dict_predictions["theme_id"][0.0]["properties"][PREDICTION_COUNT] >= 1

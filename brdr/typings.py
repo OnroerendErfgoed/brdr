@@ -1,5 +1,5 @@
 # define a typeddict thematic_data with keys name: str and geom: geometry
-from typing import Dict
+from typing import Dict, Any
 from typing import List
 from typing import TypedDict
 
@@ -37,4 +37,4 @@ class ProcessResult(TypedDict, total=False):
     result_diff_min: BaseGeometry
     result_relevant_intersection: BaseGeometry
     result_relevant_diff: BaseGeometry
-    remark: str
+    properties: Dict[str, Any]
