@@ -2,7 +2,7 @@ from brdr.aligner import Aligner
 from brdr.enums import GRBType, AlignerResultType, OpenDomainStrategy
 from brdr.grb import GRBActualLoader
 from brdr.loader import GeoJsonFileLoader
-from examples import show_map, plot_series
+from examples import show_map, plot_dict_diffs
 
 # Press the green button in the gutter to run the script.
 if __name__ == "__main__":
@@ -25,7 +25,7 @@ if __name__ == "__main__":
     aligner.load_reference_data(loader)
 
     # PREDICT the 'stable' relevant distances, for a series of relevant distances
-    series = [2.9,3,3.1]
+    series = [3]
     # predict which relevant distances are interesting to propose as resulting geometry
     dict_series, dict_predictions, diffs = aligner.predictor(
         relevant_distances=series,
@@ -57,7 +57,7 @@ if __name__ == "__main__":
     else:
         print(fcs_all["result"])
         for key in dict_series:
-            plot_series(aligner.relevant_distances, {key: diffs[key]})
+            plot_dict_diffs( {key: diffs[key]})
             show_map(
                 {key: dict_series[key]},
                 {key: aligner.dict_thematic[key]},

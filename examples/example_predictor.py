@@ -5,7 +5,7 @@ from brdr.enums import GRBType, AlignerResultType, OpenDomainStrategy
 from brdr.geometry_utils import geom_from_wkt
 from brdr.grb import GRBActualLoader
 from brdr.loader import GeoJsonFileLoader, DictLoader
-from examples import show_map, plot_series
+from examples import show_map, plot_dict_diffs
 
 # Press the green button in the gutter to run the script.
 if __name__ == "__main__":
@@ -46,7 +46,7 @@ if __name__ == "__main__":
     else:
         print(fcs["result"])
         for key in dict_predictions:
-            plot_series(series, {key: diffs[key]})
+            plot_dict_diffs( {key: diffs[key]})
             show_map(
                 {key: dict_predictions[key]},
                 {key: aligner.dict_thematic[key]},

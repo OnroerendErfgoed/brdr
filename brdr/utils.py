@@ -209,13 +209,11 @@ def polygonize_reference_data(dict_ref):
     return dict_ref
 
 
-def coverage_ratio(values):
-    if len(values) == 0:
+def coverage_ratio(values,min_val=0,bin_count=10):
+    max_val = max (values)
+    if len(values)== 0 or max_val<= 0:
         return 0.0
-
-    min_val = min(values)
-    max_val = max(values)
-    bin_size =round((max_val-min_val)/10.0,2)
+    bin_size =round((max_val-min_val)/bin_count,2)
     bins = np.arange(min_val, max_val + bin_size, bin_size)
 
     # Tel hoeveel bins minstens één waarde bevatten

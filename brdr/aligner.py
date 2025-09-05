@@ -1086,12 +1086,19 @@ class Aligner:
             threshold_overlap_percentage = 50
         rd_prediction = list(relevant_distances)
         max_relevant_distance = max(rd_prediction)
-        rd_prediction.append(round(0, RELEVANT_DISTANCE_DECIMALS))
-        rd_prediction.append(round(max_relevant_distance + 0.1, RELEVANT_DISTANCE_DECIMALS))
-        rd_prediction.append(round(max_relevant_distance + 1, RELEVANT_DISTANCE_DECIMALS))
+        cvg_ratio = coverage_ratio(values=relevant_distances,min_val=0,bin_count=10)
+        cvg_ratio_threshold = 0.75
+        #cvg_ratio: indication of the rd values can be used to make a brdr_prediction_score. When there is enough coverage of predictions to determine a prediction_score we also add 0 and a long-range value(+1).
+        #Otherwise we only add a short-range value (+0.1) to check for stability
+        if cvg_ratio>cvg_ratio_threshold:
+            rd_prediction.append(round(0, RELEVANT_DISTANCE_DECIMALS))
+            rd_prediction.append(round(max_relevant_distance + 0.1, RELEVANT_DISTANCE_DECIMALS))
+            rd_prediction.append(round(max_relevant_distance + 1, RELEVANT_DISTANCE_DECIMALS))
+        else:
+            rd_prediction.append(round(max_relevant_distance + 0.1, RELEVANT_DISTANCE_DECIMALS))
         rd_prediction = list(set(rd_prediction))
         rd_prediction = sorted(rd_prediction)
-        cvg_ratio = coverage_ratio(rd_prediction) #indication of the rd values can be used to make a brdr_prediction_score
+
         dict_processresults = self.process(
             dict_thematic=dict_thematic,
             relevant_distances=rd_prediction,
@@ -1121,7 +1128,7 @@ class Aligner:
                 dict_processresults[theme_id][rd]["properties"][STABILITY] = dict_stability[rd][STABILITY]
                 if dict_stability[rd][ZERO_STREAK] is not None:
                     dict_predictions[theme_id][rd] = dict_processresults[theme_id][rd]
-                    if cvg_ratio>0.6:
+                    if cvg_ratio>cvg_ratio_threshold:
                         dict_predictions[theme_id][rd]["properties"][PREDICTION_SCORE] = dict_stability[rd][ZERO_STREAK][3]
         self.dict_predictions = dict_predictions
 

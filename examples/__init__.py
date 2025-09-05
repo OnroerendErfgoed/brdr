@@ -137,17 +137,16 @@ def print_brdr_formula(dict_results, aligner):
     return
 
 
-def plot_series(
-    series,
-    dictionary,
+def plot_dict_diffs(
+    dict_diffs,
     xlabel="relevant distance",
     ylabel="difference",
     title="Relevant distance vs difference",
 ):
-    for key in dictionary:
-        if len(dictionary[key]) == len(series):
-            lst_diffs = list(dictionary[key].values())
-            plt.plot(series, lst_diffs, label=str(key))
+    for key,diffs in dict_diffs.items():
+        x_values = list(diffs.keys())
+        y_values = list(diffs.values())
+        plt.plot(x_values, y_values, label=str(key))
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.title(title)

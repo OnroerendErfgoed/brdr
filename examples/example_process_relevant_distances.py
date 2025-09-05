@@ -2,7 +2,7 @@ from brdr.aligner import Aligner
 from brdr.enums import OpenDomainStrategy, GRBType
 from brdr.grb import GRBActualLoader
 from brdr.loader import GeoJsonLoader
-from examples import plot_series
+from examples import plot_dict_diffs
 from examples import show_map
 
 if __name__ == "__main__":
@@ -63,4 +63,4 @@ if __name__ == "__main__":
         dict_processresults=dict_results,
         dict_thematic=aligner.dict_thematic,
     )
-    plot_series(relevant_distances, resulting_areas)
+    plot_dict_diffs(resulting_areas)

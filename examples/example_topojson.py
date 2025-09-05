@@ -4,7 +4,7 @@ from brdr.aligner import Aligner
 from brdr.enums import GRBType, OpenDomainStrategy, AlignerResultType
 from brdr.grb import GRBActualLoader
 from brdr.loader import GeoJsonFileLoader
-from examples import plot_series, show_map
+from examples import plot_dict_diffs, show_map
 
 aligner = Aligner(crs="EPSG:31370", preserve_topology=True)
 loader = GeoJsonFileLoader(
@@ -38,7 +38,7 @@ if fcs is None or "result" not in fcs:
 else:
     print(fcs["result"])
     for key in dict_predictions:
-        plot_series(series, {key: diffs[key]})
+        plot_dict_diffs({key: diffs[key]})
         show_map(
             {key: dict_predictions[key]},
             {key: aligner.dict_thematic[key]},

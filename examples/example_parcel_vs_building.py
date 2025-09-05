@@ -4,7 +4,7 @@ from brdr.aligner import Aligner
 from brdr.enums import GRBType
 from brdr.grb import GRBActualLoader
 from brdr.loader import GeoJsonFileLoader
-from examples import plot_series
+from examples import plot_dict_diffs
 
 if __name__ == "__main__":
     """
@@ -54,4 +54,4 @@ if __name__ == "__main__":
             "x" + str(key): x_resulting_areas[key],
             "y" + str(key): y_resulting_areas[key],
         }
-        plot_series(series, dict_diff)
+        plot_dict_diffs(dict_diff)
