@@ -1247,11 +1247,8 @@ class Aligner:
             scores = []
             distances = []
             predictions = []
-            equality_found = False
-
+            formula_match=False
             for dist in sorted(dict_predictions_results.keys()):
-                if equality_found:
-                    continue
                 props = self._evaluate(
                     id_theme=theme_id,
                     geom_predicted=dict_predictions_results[dist]["result"],
@@ -1261,7 +1258,7 @@ class Aligner:
 
                 full = props[FULL_ACTUAL_FIELD_NAME]
                 if full_strategy == FullStrategy.ONLY_FULL and not full:
-                    dict_affected_predictions[theme_id][dist]["properties"] = props
+                    #this prediction is ignored
                     continue
                 if (
                     props[EVALUATION_FIELD_NAME] == Evaluation.TO_CHECK_NO_PREDICTION
@@ -1274,11 +1271,16 @@ class Aligner:
                 ):
                     props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_PREDICTION_MULTI
                 elif props[EVALUATION_FIELD_NAME] != Evaluation.TO_CHECK_NO_PREDICTION:
-                    dict_predictions_evaluated[theme_id][dist] = (
-                        dict_affected_predictions[theme_id][dist]
-                    )
-                    equality_found = True
+                    #this prediction has a equality based on formula so the rest is not checked anymore
+                    formula_match = True
+                    props[PREDICTION_SCORE] = 100
+                    scores = []
+                    distances = []
+                    predictions = []
+                    scores.append(props[PREDICTION_SCORE])
+                    distances.append(dist)
                     dict_affected_predictions[theme_id][dist]["properties"] = props
+                    predictions.append(dict_affected_predictions[theme_id][dist])
                     continue
                 if full:
                     if full_strategy != FullStrategy.NO_FULL:
@@ -1293,45 +1295,48 @@ class Aligner:
                         props[EVALUATION_FIELD_NAME] = (
                             Evaluation.TO_CHECK_PREDICTION_MULTI_FULL
                         )
-                dict_affected_predictions[theme_id][dist]["properties"] = props
+
                 scores.append(props[PREDICTION_SCORE])
                 distances.append(dist)
+                dict_affected_predictions[theme_id][dist]["properties"] = props
                 predictions.append(dict_affected_predictions[theme_id][dist])
 
             # get max amount of best-scoring predictions
             best_ix = sorted(range(len(scores)), reverse=True, key=lambda i: scores[i])
             len_best_ix = len(best_ix)
 
-            # if there is only one prediction left,  evaluation is set to PREDICTION_UNIQUE_FULL
-            if len_best_ix == 1:
-                props=predictions[0]["properties"]
-                if (
-                    FULL_ACTUAL_FIELD_NAME in props
-                    and props[FULL_ACTUAL_FIELD_NAME]
-                ):
-                    predictions[0]["properties"][
-                        EVALUATION_FIELD_NAME
-                    ] = Evaluation.PREDICTION_UNIQUE_FULL
-                else:
-                    predictions[0]["properties"][
-                        EVALUATION_FIELD_NAME
-                    ] = Evaluation.PREDICTION_UNIQUE
+            if not formula_match:
+                # if there is only one prediction left,  evaluation is set to PREDICTION_UNIQUE_FULL
+                if len_best_ix == 1 and not formula_match:
+                    props=predictions[0]["properties"]
+                    if (
+                        FULL_ACTUAL_FIELD_NAME in props
+                        and props[FULL_ACTUAL_FIELD_NAME]
+                    ):
+                        predictions[0]["properties"][
+                            EVALUATION_FIELD_NAME
+                        ] = Evaluation.PREDICTION_UNIQUE_FULL
+                    else:
+                        predictions[0]["properties"][
+                            EVALUATION_FIELD_NAME
+                        ] = Evaluation.PREDICTION_UNIQUE
 
-            # if there are multiple predictions, but we want only one and we ask for the original
-            if (
-                len_best_ix > 1
-                and max_predictions == 1
-                and not multi_to_best_prediction
-            ):
-                relevant_distance = round(0, RELEVANT_DISTANCE_DECIMALS)
-                props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_ORIGINAL
-                props[PREDICTION_SCORE] = -1
-                props[REMARK_FIELD_NAME] = "multiple predictions, original returned"
-                dict_predictions_evaluated[theme_id][relevant_distance] = {
-                    "result": dict_affected[theme_id],
-                    "properties":props,
-                }
-                continue
+                # if there are multiple predictions, but we want only one and we ask for the original
+                if (
+                    len_best_ix > 1
+                    and max_predictions == 1
+                    and not multi_to_best_prediction
+                    and not formula_match
+                ):
+                    relevant_distance = round(0, RELEVANT_DISTANCE_DECIMALS)
+                    props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_ORIGINAL
+                    props[PREDICTION_SCORE] = -1
+                    props[REMARK_FIELD_NAME] = "multiple predictions, original returned"
+                    dict_predictions_evaluated[theme_id][relevant_distance] = {
+                        "result": dict_affected[theme_id],
+                        "properties":props,
+                    }
+                    continue
 
             if max_predictions > 0 and len_best_ix > max_predictions:
                 best_ix = best_ix[:max_predictions]
@@ -2251,7 +2256,7 @@ class Aligner:
             od_alike = True
         properties[OD_ALIKE_FIELD_NAME] = od_alike
 
-        equal_reference_features = True
+        equal_reference_features = False
         if (
             base_formula["reference_features"].keys()
             == actual_formula["reference_features"].keys()
