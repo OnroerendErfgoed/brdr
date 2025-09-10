@@ -116,7 +116,7 @@ from brdr.utils import write_geojson
 
 ###################
 
-
+#TODO what about the Aligner-parameters; AlignerConfig-class?
 class Aligner:
     """
     This class is used to compare and align the thematic data with the reference data.
@@ -323,6 +323,7 @@ class Aligner:
         snap_strategy,
         snap_max_segment_length,
     ) -> ProcessResult:
+        #REMARK -  this processing_method is not used in current code
         snapped = []
 
         # Open Domain
@@ -359,6 +360,82 @@ class Aligner:
             GeometryCollection(),
             relevant_distance,
         )
+        return result_dict
+
+    def _process_geometry_by_dieussaert(
+        self,
+        input_geometry,
+        input_geometry_outer,
+        input_geometry_inner,
+        ref_intersections_geoms,
+        relevant_distance,
+    ):
+        buffer_distance = relevant_distance / 2
+
+        # array with all relevant parts of a thematic geometry; initial empty Polygon
+        (
+            preresult,
+            relevant_intersection_array,
+            relevant_diff_array,
+        ) = self._calculate_intersection_between_geometry_and_od(
+            input_geometry_outer, input_geometry_inner, relevant_distance
+        )
+
+        for geom_reference in ref_intersections_geoms:
+            geom_intersection = safe_intersection(input_geometry_outer, geom_reference)
+            if geom_intersection.is_empty or geom_intersection is None:
+                continue
+            self.logger.feedback_debug("calculate intersection")
+            (
+                geom,
+                relevant_intersection,
+                relevant_diff,
+            ) = _calculate_geom_by_intersection_and_reference(
+                geom_intersection,
+                geom_reference,
+                input_geometry_inner,
+                False,
+                buffer_distance,
+                self.threshold_overlap_percentage,
+                self.threshold_exclusion_percentage,
+                self.threshold_exclusion_area,
+                self.threshold_inclusion_percentage,
+                self.mitre_limit,
+                self.partial_snapping,
+                self.partial_snap_strategy,
+                self.partial_snap_max_segment_length,
+            )
+            self.logger.feedback_debug("intersection calculated")
+
+            preresult = self._add_multi_polygons_from_geom_to_array(geom, preresult)
+            relevant_intersection_array = self._add_multi_polygons_from_geom_to_array(
+                relevant_intersection, relevant_intersection_array
+            )
+            relevant_diff_array = self._add_multi_polygons_from_geom_to_array(
+                relevant_diff, relevant_diff_array
+            )
+
+        # UNION INTERMEDIATE LAYERS
+        relevant_intersection = safe_unary_union(relevant_intersection_array)
+        if relevant_intersection is None or relevant_intersection.is_empty:
+            relevant_intersection = Polygon()
+        relevant_diff = safe_unary_union(relevant_diff_array)
+        if relevant_diff is None or relevant_diff.is_empty:
+            relevant_diff = Polygon()
+
+        # Add inner input geometry to preresult
+        preresult.append(input_geometry_inner)
+        geom_preresult = safe_unary_union(preresult)
+
+        # POSTPROCESSING
+        result_dict = self._postprocess_preresult(
+            geom_preresult,
+            input_geometry,
+            relevant_intersection,
+            relevant_diff,
+            relevant_distance,
+        )
+
         return result_dict
 
     def _process_geometry_by_network(
@@ -778,81 +855,7 @@ class Aligner:
             snap_strategy=self.partial_snap_strategy,
         )
 
-    def _process_geometry_by_dieussaert(
-        self,
-        input_geometry,
-        input_geometry_outer,
-        input_geometry_inner,
-        ref_intersections_geoms,
-        relevant_distance,
-    ):
-        buffer_distance = relevant_distance / 2
 
-        # array with all relevant parts of a thematic geometry; initial empty Polygon
-        (
-            preresult,
-            relevant_intersection_array,
-            relevant_diff_array,
-        ) = self._calculate_intersection_between_geometry_and_od(
-            input_geometry_outer, input_geometry_inner, relevant_distance
-        )
-
-        for geom_reference in ref_intersections_geoms:
-            geom_intersection = safe_intersection(input_geometry_outer, geom_reference)
-            if geom_intersection.is_empty or geom_intersection is None:
-                continue
-            self.logger.feedback_debug("calculate intersection")
-            (
-                geom,
-                relevant_intersection,
-                relevant_diff,
-            ) = _calculate_geom_by_intersection_and_reference(
-                geom_intersection,
-                geom_reference,
-                input_geometry_inner,
-                False,
-                buffer_distance,
-                self.threshold_overlap_percentage,
-                self.threshold_exclusion_percentage,
-                self.threshold_exclusion_area,
-                self.threshold_inclusion_percentage,
-                self.mitre_limit,
-                self.partial_snapping,
-                self.partial_snap_strategy,
-                self.partial_snap_max_segment_length,
-            )
-            self.logger.feedback_debug("intersection calculated")
-
-            preresult = self._add_multi_polygons_from_geom_to_array(geom, preresult)
-            relevant_intersection_array = self._add_multi_polygons_from_geom_to_array(
-                relevant_intersection, relevant_intersection_array
-            )
-            relevant_diff_array = self._add_multi_polygons_from_geom_to_array(
-                relevant_diff, relevant_diff_array
-            )
-
-        # UNION INTERMEDIATE LAYERS
-        relevant_intersection = safe_unary_union(relevant_intersection_array)
-        if relevant_intersection is None or relevant_intersection.is_empty:
-            relevant_intersection = Polygon()
-        relevant_diff = safe_unary_union(relevant_diff_array)
-        if relevant_diff is None or relevant_diff.is_empty:
-            relevant_diff = Polygon()
-
-        # Add inner input geometry to preresult
-        preresult.append(input_geometry_inner)
-        geom_preresult = safe_unary_union(preresult)
-
-        # POSTPROCESSING
-        result_dict = self._postprocess_preresult(
-            geom_preresult,
-            input_geometry,
-            relevant_intersection,
-            relevant_diff,
-            relevant_distance,
-        )
-
-        return result_dict
 
     def process(
         self,
