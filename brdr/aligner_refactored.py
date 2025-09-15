@@ -442,3 +442,4 @@ class Aligner:
         return (f"Aligner(thematic_features={len(self.dict_thematic)}, "
                 f"reference_features={len(self.dict_reference)}, "
                 f"crs={self.CRS})")
+

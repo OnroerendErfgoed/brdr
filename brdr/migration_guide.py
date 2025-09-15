@@ -203,3 +203,4 @@ def print_migration_guide():
 if __name__ == "__main__":
     # Print the migration guide when run as a script
     print_migration_guide()
+

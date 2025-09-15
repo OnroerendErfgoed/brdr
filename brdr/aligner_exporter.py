@@ -5,12 +5,13 @@ import os
 from typing import Dict, Any, Optional
 
 from brdr.aligner_core import AlignerCore
-from brdr.enums import AlignerResultType, AlignerInputType
+from brdr.enums import AlignerResultType, AlignerInputType, DiffMetric
 from brdr.typings import ProcessResult
 from brdr.utils import (
     get_dict_geojsons_from_series_dict,
     write_geojson,
-    geojson_from_dict
+    geojson_from_dict,
+    diffs_from_dict_processresult,
 )
 
 
@@ -251,16 +252,26 @@ class AlignerExporter:
         self,
         dict_processresults: Dict[Any, Dict[float, ProcessResult]] = None,
         dict_thematic: Dict = None,
+        diff_metric: DiffMetric = DiffMetric.CHANGES_AREA,
     ) -> Dict:
         """
         Calculate difference metrics for processing results.
         
+        Calculates a dictionary containing difference metrics for thematic elements 
+        based on a distance series.
+        
+        Based on the get_diff_metrics method from the original aligner.py
+        
         Args:
-            dict_processresults: Processing results to analyze
-            dict_thematic: Original thematic data for comparison
+            dict_processresults: A dictionary where keys are thematic IDs and values are 
+                dictionaries mapping relevant distances to ProcessResult objects
+            dict_thematic: A dictionary where keys are thematic IDs and values are 
+                BaseGeometry objects representing the original geometries
+            diff_metric: The metric to use for calculating differences
             
         Returns:
-            Dictionary containing difference metrics
+            Dictionary where keys are thematic IDs and values are dictionaries mapping 
+            relevant distances to calculated difference metrics
         """
         if dict_processresults is None:
             raise ValueError("No process results provided")
@@ -270,31 +281,29 @@ class AlignerExporter:
         
         self.logger.feedback_info("Calculating difference metrics")
         
-        # TODO: Implement difference metrics calculation
-        # This would analyze the differences between original and processed geometries
-        
-        metrics = {}
-        for theme_id, results in dict_processresults.items():
-            if theme_id not in dict_thematic:
-                continue
+        try:
+            # Get reference union for difference calculations
+            reference_union = self.core.get_reference_union()
             
-            original_geom = dict_thematic[theme_id]
-            theme_metrics = {}
+            # Use the original implementation from aligner.py
+            diffs = {}
+            for key in dict_thematic:
+                if key in dict_processresults:
+                    diffs[key] = diffs_from_dict_processresult(
+                        dict_processresult=dict_processresults[key],
+                        geom_thematic=dict_thematic[key],
+                        reference_union=reference_union,
+                        diff_metric=diff_metric,
+                    )
+                else:
+                    self.logger.feedback_warning(f"No process results found for theme ID: {key}")
+                    diffs[key] = {}
             
-            for distance, result in results.items():
-                if 'result' not in result:
-                    continue
-                
-                processed_geom = result['result']
-                
-                # Calculate basic metrics
-                theme_metrics[distance] = self._calculate_single_metrics(
-                    original_geom, processed_geom
-                )
+            return diffs
             
-            metrics[theme_id] = theme_metrics
-        
-        return metrics
+        except Exception as e:
+            self.logger.feedback_warning(f"Error calculating difference metrics: {e}")
+            return {}
     
     def _prepare_properties_for_export(
         self,
@@ -379,3 +388,4 @@ class AlignerExporter:
             self.logger.feedback_warning(f"Error calculating metrics: {e}")
         
         return metrics
+

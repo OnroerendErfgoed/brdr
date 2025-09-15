@@ -250,3 +250,4 @@ class AlignerCore:
         return (f"AlignerCore(thematic_features={len(self.dict_thematic)}, "
                 f"reference_features={len(self.dict_reference)}, "
                 f"crs={self.config.crs})")
+
