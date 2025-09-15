@@ -117,6 +117,11 @@ class Aligner:
         self.processor = AlignerProcessor(self.core)
         self.exporter = AlignerExporter(self.core)
         
+        # Internal storage for backward compatibility
+        self._last_process_results = None
+        self._last_predictions = None
+        self._last_evaluated_predictions = None
+        
         # Expose logger for backward compatibility
         self.logger = self.core.logger
     
@@ -163,13 +168,18 @@ class Aligner:
         Returns:
             Dictionary with results for each thematic ID and distance
         """
-        return self.processor.process(
+        results = self.processor.process(
             dict_thematic=dict_thematic,
             relevant_distances=relevant_distances,
             relevant_distance=relevant_distance,
             od_strategy=od_strategy,
             threshold_overlap_percentage=threshold_overlap_percentage,
         )
+        
+        # Store results for backward compatibility
+        self._last_process_results = results
+        
+        return results
     
     def process_geometry(
         self,
@@ -216,12 +226,18 @@ class Aligner:
         Returns:
             Tuple of (predictions_dict, evaluated_predictions_dict)
         """
-        return self.processor.predictor(
+        predictions, evaluated_predictions = self.processor.predictor(
             dict_thematic=dict_thematic,
             relevant_distances=relevant_distances,
             od_strategy=od_strategy,
             threshold_overlap_percentage=threshold_overlap_percentage,
         )
+        
+        # Store results for backward compatibility
+        self._last_predictions = predictions
+        self._last_evaluated_predictions = evaluated_predictions
+        
+        return predictions, evaluated_predictions
     
     def evaluate(
         self,
@@ -240,11 +256,16 @@ class Aligner:
         Returns:
             Dictionary with evaluation results
         """
-        return self.processor.evaluate(
+        evaluated_results = self.processor.evaluate(
             ids_to_evaluate=ids_to_evaluate,
             base_formula_field=base_formula_field,
             **kwargs
         )
+        
+        # Store results for backward compatibility
+        self._last_evaluated_predictions = evaluated_results
+        
+        return evaluated_results
     
     def get_brdr_formula(self, geometry: BaseGeometry, with_geom: bool = False) -> Dict:
         """
@@ -290,27 +311,41 @@ class Aligner:
     def save_results(
         self,
         path: str,
-        dict_processresults: Dict[Any, Dict[float, ProcessResult]] = None,
         resulttype: AlignerResultType = AlignerResultType.PROCESSRESULTS,
         formula: bool = True,
-        attributes: bool = True,
     ) -> None:
         """
         Save processing results to files.
         
+        Exports analysis results (as geojson) to path. This method maintains
+        backward compatibility with the original Aligner API by using internal
+        state to determine which results to export.
+        
+        Based on the original save_results method from aligner.py
+        
         Args:
             path: Directory path to save files
-            dict_processresults: Processing results to save
             resulttype: Type of results to save
             formula: Whether to include formula information
-            attributes: Whether to include geometry attributes
         """
+        # Determine which results to use based on resulttype and internal state
+        dict_processresults = None
+        if resulttype == AlignerResultType.PROCESSRESULTS:
+            dict_processresults = self._last_process_results
+        elif resulttype == AlignerResultType.PREDICTIONS:
+            dict_processresults = self._last_predictions
+        elif resulttype == AlignerResultType.EVALUATED_PREDICTIONS:
+            dict_processresults = self._last_evaluated_predictions
+        
+        if dict_processresults is None:
+            raise ValueError(f"No {resulttype.value} results available. Run the appropriate method first (process(), predictor(), or evaluate()).")
+        
         self.exporter.save_results(
             path=path,
             dict_processresults=dict_processresults,
             resulttype=resulttype,
             formula=formula,
-            attributes=attributes,
+            attributes=True,  # Default to True for backward compatibility
         )
     
     def get_input_as_geojson(
@@ -436,6 +471,22 @@ class Aligner:
     def partial_snapping(self, value: bool) -> None:
         """Set partial snapping flag."""
         self.config.partial_snapping = value
+    
+    # Properties for backward compatibility with original Aligner state
+    @property
+    def dict_processresults(self) -> Optional[Dict]:
+        """Access to last process results for backward compatibility."""
+        return self._last_process_results
+    
+    @property
+    def dict_predictions(self) -> Optional[Dict]:
+        """Access to last predictions for backward compatibility."""
+        return self._last_predictions
+    
+    @property
+    def dict_evaluated_predictions(self) -> Optional[Dict]:
+        """Access to last evaluated predictions for backward compatibility."""
+        return self._last_evaluated_predictions
     
     def __repr__(self) -> str:
         """String representation of the Aligner."""
