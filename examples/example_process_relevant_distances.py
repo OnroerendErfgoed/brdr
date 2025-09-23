@@ -2,7 +2,7 @@ from brdr.aligner import Aligner
 from brdr.enums import OpenDomainStrategy, GRBType
 from brdr.grb import GRBActualLoader
 from brdr.loader import GeoJsonLoader
-from examples import plot_dict_diffs
+from examples import plot_dict_diffs, animated_map
 from examples import show_map
 
 if __name__ == "__main__":
@@ -58,7 +58,7 @@ if __name__ == "__main__":
         threshold_overlap_percentage=50,
     )
     # SHOW results: map and plotted changes
-    show_map(dict_results, aligner.dict_thematic, aligner.dict_reference)
+    animated_map(dict_results, aligner.dict_thematic, aligner.dict_reference)
     resulting_areas = aligner.get_diff_metrics(
         dict_processresults=dict_results,
         dict_thematic=aligner.dict_thematic,

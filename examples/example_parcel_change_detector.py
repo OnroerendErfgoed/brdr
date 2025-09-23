@@ -34,7 +34,7 @@ base_year = "2022"
 # reference-polygons of the base-year
 base_correction = 2
 # geometries bigger than this, will be excluded
-excluded_area = 1000
+excluded_area = 10000
 # max_distance_for_actualisation  of relevant distance that is used to check if we can auto-align the geometries
 # to the actual reference-polygons to get an 'equal' formula
 max_distance_for_actualisation = 2
@@ -79,6 +79,7 @@ if len(processresults) == 0:
 featurecollection_base_result = processresults["result"]
 
 # Update Featurecollection to actual version
+starttime = datetime.now()
 print("Actualise base objects")
 fcs = update_to_actual_grb(
     featurecollection_base_result,
@@ -132,4 +133,4 @@ print(
 )
 endtime = datetime.now()
 seconds = (endtime - starttime).total_seconds()
-print("duration: " + str(seconds))
+print("duration of actualisation: " + str(seconds))
