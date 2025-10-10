@@ -490,6 +490,7 @@ def update_to_actual_grb(
 class GRBActualLoader(GeoJsonLoader):
     def __init__(self, grb_type: GRBType, aligner, partition: int = 1000):
         super().__init__()
+        #TODO add a check that CRS of aligner is supported. The GRB-API handles all kind of CRS, but maybe we only accept the logic ones?
         self.aligner = aligner
         self.grb_type = grb_type
         self.part = partition

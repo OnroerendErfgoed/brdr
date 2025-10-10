@@ -26,7 +26,7 @@ class OSMLoader(DictLoader):
         geom_union = buffer_pos(
             self.aligner.get_thematic_union(), OSM_MAX_REFERENCE_BUFFER
         )
-
+        #We transform the OSM data to the CRS of the aligner
         gdf = gpd.GeoDataFrame(geometry=[geom_union], crs=self.aligner.CRS)
         gdf.to_crs(crs="EPSG:4326", inplace=True)
         geom_union_wgs84 = gdf.geometry.iloc[0]

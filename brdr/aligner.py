@@ -270,6 +270,9 @@ class Aligner:
         # (m)'.
         # Default EPSG:31370 (Lambert72), alternative: EPSG:3812 (Lambert2008)
         self.CRS = crs
+        #TODO implement a check that the crs is existing. The crs that is defined on the aligner is the CRS we are working with. So we expect that the loaded thematic data is in this CRS and also the reference data is in this CRS. Or will be downloaded and transformed to this CRS.
+        #At this moment  we expect the units in meter, because all calculation and parameters are based that unit is 'meter'
+
         # this parameter is used to treat multipolygon as single polygons. So polygons
         # with ID splitter are separately evaluated and merged on result.
         self.multi_as_single_modus = multi_as_single_modus
