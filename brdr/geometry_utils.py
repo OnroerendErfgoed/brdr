@@ -959,7 +959,7 @@ def get_bbox(geometry):
     """
     Get the BBOX (string) of a shapely geometry
     """
-    return str(geometry.bounds).strip("()")
+    return str(geometry.bounds).strip("()").replace(" ", "")
 
 
 def geojson_to_multi(geojson):
