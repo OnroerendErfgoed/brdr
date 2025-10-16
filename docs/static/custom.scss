@@ -204,3 +204,7 @@ body {
 .gt_group_heading {
     font-weight: bold !important;
 }
+
+p code:not(.sourceCode), li code:not(.sourceCode), td code:not(.sourceCode) {
+  background-color: rgb(248, 249, 250) !important;
+}
