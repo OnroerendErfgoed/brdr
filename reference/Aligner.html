@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.25">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>aligner</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-7b89279ff1a6dce999919e0e67d4d9ec.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-0b37c64f34216b628666a8dac638b53b.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
+<link rel="stylesheet" href="../reference/_styles-quartodoc.css">
+</head>
+
+<body class="nav-sidebar floating nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a href="../index.html" class="navbar-brand navbar-brand-logo">
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link active" href="../index.html" aria-current="page"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../reference/index.html"> 
+<span class="menu-text">Reference</span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/Aligner.html">Aligner</a></li><li class="breadcrumb-item"><a href="../reference/Aligner.html">Aligner</a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+      <a href="../index.html" class="sidebar-logo-link">
+      </a>
+      </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Function reference</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Aligner</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/Aligner.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">Aligner</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Loaders</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/Loader.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Loader</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/DictLoader.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">DictLoader</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/GeoJsonLoader.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">GeoJsonLoader</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/GeoJsonFileLoader.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">GeoJsonFileLoader</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/GeoJsonUrlLoader.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">GeoJsonUrlLoader</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <span class="sidebar-item-text sidebar-link text-start">
+ <span class="menu-text">GRB</span></span>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#brdr.aligner.Aligner" id="toc-brdr.aligner.Aligner" class="nav-link active" data-scroll-target="#brdr.aligner.Aligner">Aligner</a>
+  <ul class="collapse">
+  <li><a href="#methods" id="toc-methods" class="nav-link" data-scroll-target="#methods">Methods</a>
+  <ul class="collapse">
+  <li><a href="#brdr.aligner.Aligner.evaluate" id="toc-brdr.aligner.Aligner.evaluate" class="nav-link" data-scroll-target="#brdr.aligner.Aligner.evaluate">evaluate</a></li>
+  <li><a href="#brdr.aligner.Aligner.get_brdr_formula" id="toc-brdr.aligner.Aligner.get_brdr_formula" class="nav-link" data-scroll-target="#brdr.aligner.Aligner.get_brdr_formula">get_brdr_formula</a></li>
+  <li><a href="#brdr.aligner.Aligner.get_diff_metrics" id="toc-brdr.aligner.Aligner.get_diff_metrics" class="nav-link" data-scroll-target="#brdr.aligner.Aligner.get_diff_metrics">get_diff_metrics</a></li>
+  <li><a href="#brdr.aligner.Aligner.get_input_as_geojson" id="toc-brdr.aligner.Aligner.get_input_as_geojson" class="nav-link" data-scroll-target="#brdr.aligner.Aligner.get_input_as_geojson">get_input_as_geojson</a></li>
+  <li><a href="#brdr.aligner.Aligner.get_results_as_geojson" id="toc-brdr.aligner.Aligner.get_results_as_geojson" class="nav-link" data-scroll-target="#brdr.aligner.Aligner.get_results_as_geojson">get_results_as_geojson</a></li>
+  <li><a href="#brdr.aligner.Aligner.get_thematic_union" id="toc-brdr.aligner.Aligner.get_thematic_union" class="nav-link" data-scroll-target="#brdr.aligner.Aligner.get_thematic_union">get_thematic_union</a></li>
+  <li><a href="#brdr.aligner.Aligner.load_reference_data" id="toc-brdr.aligner.Aligner.load_reference_data" class="nav-link" data-scroll-target="#brdr.aligner.Aligner.load_reference_data">load_reference_data</a></li>
+  <li><a href="#brdr.aligner.Aligner.load_thematic_data" id="toc-brdr.aligner.Aligner.load_thematic_data" class="nav-link" data-scroll-target="#brdr.aligner.Aligner.load_thematic_data">load_thematic_data</a></li>
+  <li><a href="#brdr.aligner.Aligner.predictor" id="toc-brdr.aligner.Aligner.predictor" class="nav-link" data-scroll-target="#brdr.aligner.Aligner.predictor">predictor</a></li>
+  <li><a href="#brdr.aligner.Aligner.process" id="toc-brdr.aligner.Aligner.process" class="nav-link" data-scroll-target="#brdr.aligner.Aligner.process">process</a></li>
+  <li><a href="#brdr.aligner.Aligner.process_geometry" id="toc-brdr.aligner.Aligner.process_geometry" class="nav-link" data-scroll-target="#brdr.aligner.Aligner.process_geometry">process_geometry</a></li>
+  <li><a href="#brdr.aligner.Aligner.save_results" id="toc-brdr.aligner.Aligner.save_results" class="nav-link" data-scroll-target="#brdr.aligner.Aligner.save_results">save_results</a></li>
+  </ul></li>
+  </ul></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/Aligner.html">Aligner</a></li><li class="breadcrumb-item"><a href="../reference/Aligner.html">Aligner</a></li></ol></nav></header>
+
+
+
+
+<section id="brdr.aligner.Aligner" class="level1">
+<h1>Aligner</h1>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>aligner.Aligner(</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    feedback<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    relevant_distance<span class="op">=</span><span class="dv">1</span>,</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    relevant_distances<span class="op">=</span>[(<span class="bu">round</span>(k, RELEVANT_DISTANCE_DECIMALS)) <span class="cf">for</span> k <span class="kw">in</span> (np.arange(<span class="dv">0</span>, <span class="dv">310</span>, <span class="dv">10</span>, dtype<span class="op">=</span><span class="bu">int</span>) <span class="op">/</span> <span class="dv">100</span>)],</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    threshold_overlap_percentage<span class="op">=</span><span class="dv">50</span>,</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    od_strategy<span class="op">=</span>OpenDomainStrategy.SNAP_ALL_SIDE,</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    crs<span class="op">=</span>DEFAULT_CRS,</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    multi_as_single_modus<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    preserve_topology<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    snap_strategy<span class="op">=</span>SNAP_STRATEGY,</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    snap_max_segment_length<span class="op">=</span>SNAP_MAX_SEGMENT_LENGTH,</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    partial_snapping<span class="op">=</span>PARTIAL_SNAPPING,</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    partial_snap_strategy<span class="op">=</span>PARTIAL_SNAP_STRATEGY,</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    partial_snap_max_segment_length<span class="op">=</span>PARTIAL_SNAP_MAX_SEGMENT_LENGTH,</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    threshold_exclusion_area<span class="op">=</span><span class="dv">0</span>,</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    threshold_exclusion_percentage<span class="op">=</span><span class="dv">0</span>,</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    threshold_inclusion_percentage<span class="op">=</span><span class="dv">100</span>,</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    buffer_multiplication_factor<span class="op">=</span>BUFFER_MULTIPLICATION_FACTOR,</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    threshold_circle_ratio<span class="op">=</span><span class="fl">0.98</span>,</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    correction_distance<span class="op">=</span><span class="fl">0.01</span>,</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    diff_metric<span class="op">=</span>DIFF_METRIC,</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    mitre_limit<span class="op">=</span><span class="dv">10</span>,</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>    area_limit<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>    max_workers<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>This class is used to compare and align the thematic data with the reference data. The reference data can be loaded in different ways, for example by using the GRB data. The thematic data can be loaded by using different Loaders: DictLoader, GeojsonLoader,… The class can be used to compare and aligne the thematic data with the reference data.</p>
+<section id="methods" class="level2">
+<h2 class="anchored" data-anchor-id="methods">Methods</h2>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="#brdr.aligner.Aligner.evaluate">evaluate</a></td>
+<td>Compares and evaluate input-geometries (with formula). Attributes are added to evaluate and decide if new</td>
+</tr>
+<tr class="even">
+<td><a href="#brdr.aligner.Aligner.get_brdr_formula">get_brdr_formula</a></td>
+<td>Calculates formula-related information based on the input geometry.</td>
+</tr>
+<tr class="odd">
+<td><a href="#brdr.aligner.Aligner.get_diff_metrics">get_diff_metrics</a></td>
+<td>Calculates a dictionary containing difference metrics for thematic elements based on a distance series.</td>
+</tr>
+<tr class="even">
+<td><a href="#brdr.aligner.Aligner.get_input_as_geojson">get_input_as_geojson</a></td>
+<td>get a geojson of the input polygons (thematic or reference-polygons)</td>
+</tr>
+<tr class="odd">
+<td><a href="#brdr.aligner.Aligner.get_results_as_geojson">get_results_as_geojson</a></td>
+<td>get a geojson of a dictionary containing the resulting geometries for all</td>
+</tr>
+<tr class="even">
+<td><a href="#brdr.aligner.Aligner.get_thematic_union">get_thematic_union</a></td>
+<td>returns a unary_unioned geometry from all the thematic geometries</td>
+</tr>
+<tr class="odd">
+<td><a href="#brdr.aligner.Aligner.load_reference_data">load_reference_data</a></td>
+<td>Loads the reference features into the aligner, and prepares the reference-data for processing</td>
+</tr>
+<tr class="even">
+<td><a href="#brdr.aligner.Aligner.load_thematic_data">load_thematic_data</a></td>
+<td>Loads the thematic features into the aligner</td>
+</tr>
+<tr class="odd">
+<td><a href="#brdr.aligner.Aligner.predictor">predictor</a></td>
+<td>Predicts the ‘most interesting’ relevant distances for changes in thematic</td>
+</tr>
+<tr class="even">
+<td><a href="#brdr.aligner.Aligner.process">process</a></td>
+<td>Calculates the resulting dictionaries for thematic data based on a series of</td>
+</tr>
+<tr class="odd">
+<td><a href="#brdr.aligner.Aligner.process_geometry">process_geometry</a></td>
+<td>method to align a geometry to the reference layer</td>
+</tr>
+<tr class="even">
+<td><a href="#brdr.aligner.Aligner.save_results">save_results</a></td>
+<td>Exports analysis results (as geojson) to path.</td>
+</tr>
+</tbody>
+</table>
+<section id="brdr.aligner.Aligner.evaluate" class="level3">
+<h3 class="anchored" data-anchor-id="brdr.aligner.Aligner.evaluate">evaluate</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>aligner.Aligner.evaluate(</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    ids_to_evaluate<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    base_formula_field<span class="op">=</span>FORMULA_FIELD_NAME,</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    relevant_distances<span class="op">=</span>[(<span class="bu">round</span>(k, RELEVANT_DISTANCE_DECIMALS)) <span class="cf">for</span> k <span class="kw">in</span> (np.arange(<span class="dv">0</span>, <span class="dv">310</span>, <span class="dv">10</span>, dtype<span class="op">=</span><span class="bu">int</span>) <span class="op">/</span> <span class="dv">100</span>)],</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    full_strategy<span class="op">=</span>FullStrategy.NO_FULL,</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    max_predictions<span class="op">=-</span><span class="dv">1</span>,</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    multi_to_best_prediction<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Compares and evaluate input-geometries (with formula). Attributes are added to evaluate and decide if new proposals can be used ids_to_evaluate: list with all IDs to evaluate. all other IDs will be unchanged. If None (default), all self.dict_thematic will be evaluated. base_formula_field: name of the field where the base_formula is found in the data max_predictions: integer that indicates how many predictions are maximally returned. (-1 indicates all predictions are returned) relevant_distances: relevant distances to evaluate full_strategy: enum, decided which predictions are kept or prefered based on full-ness of the prediction multi_to_best_prediction (default True): Only usable in combination with max_predictions=1. If True (and max_predictions=1), the prediction with highest score will be taken.If False, the original geometry is returned.</p>
+</section>
+<section id="brdr.aligner.Aligner.get_brdr_formula" class="level3">
+<h3 class="anchored" data-anchor-id="brdr.aligner.Aligner.get_brdr_formula">get_brdr_formula</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>aligner.Aligner.get_brdr_formula(geometry, with_geom<span class="op">=</span><span class="va">False</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Calculates formula-related information based on the input geometry.</p>
+<p>Args: geometry (shapely.geometry object): The input geometry. with_geom (bool, optional): Whether to include geometry information in the output. Defaults to False.</p>
+<p>Returns: dict: A dictionary containing formula-related data:</p>
+<pre><code>- "alignment_date": datetime.now().strftime(DATE_FORMAT),
+- "brdr_version": str(__version__),
+- "reference_source": self.dict_reference_source,
+- "full": True if the geometry exists out of all full reference-polygons, else False.
+- "area": Area of the geometry.
+- "reference_features": {
+    array of all the reference features the geometry is composed of:
+        -   'full': True if the intersection is the same as the reference
+            geometry, else False.
+        -   'area': Area of the intersection or reference geometry.
+        -   'percentage': Percentage of intersection area relative to the
+            reference geometry.
+        -   'geometry': GeoJSON representation of the intersection (if
+            with_geom is True).},
+- "reference_od": Discription of the OD-part of the geometry (= not covered by reference-features),</code></pre>
+</section>
+<section id="brdr.aligner.Aligner.get_diff_metrics" class="level3">
+<h3 class="anchored" data-anchor-id="brdr.aligner.Aligner.get_diff_metrics">get_diff_metrics</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>aligner.Aligner.get_diff_metrics(</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    dict_processresults<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    dict_thematic<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    diff_metric<span class="op">=</span>DiffMetric.CHANGES_AREA,</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Calculates a dictionary containing difference metrics for thematic elements based on a distance series.</p>
+<p>Parameters: dict_series (dict): A dictionary where keys are thematic IDs and values are dictionaries mapping relevant distances to ProcessResult objects. dict_thematic (dict): A dictionary where keys are thematic IDs and values are BaseGeometry objects representing the original geometries. diff_metric (DiffMetric, optional): The metric to use for calculating differences. Default is DiffMetric.CHANGES_AREA.</p>
+<p>Returns: dict: A dictionary where keys are thematic IDs and values are dictionaries mapping relevant distances to calculated difference metrics.</p>
+</section>
+<section id="brdr.aligner.Aligner.get_input_as_geojson" class="level3">
+<h3 class="anchored" data-anchor-id="brdr.aligner.Aligner.get_input_as_geojson">get_input_as_geojson</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>aligner.Aligner.get_input_as_geojson(inputtype<span class="op">=</span>AlignerInputType.REFERENCE)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>get a geojson of the input polygons (thematic or reference-polygons)</p>
+</section>
+<section id="brdr.aligner.Aligner.get_results_as_geojson" class="level3">
+<h3 class="anchored" data-anchor-id="brdr.aligner.Aligner.get_results_as_geojson">get_results_as_geojson</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>aligner.Aligner.get_results_as_geojson(</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    resulttype<span class="op">=</span>AlignerResultType.PROCESSRESULTS,</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    formula<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    attributes<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>get a geojson of a dictionary containing the resulting geometries for all ‘serial’ relevant distances. The resulttype can be chosen. formula (boolean, Optional): The descriptive formula is added as an attribute to the result attributes (boolean, Optional): The original attributes/properties are added to the result</p>
+</section>
+<section id="brdr.aligner.Aligner.get_thematic_union" class="level3">
+<h3 class="anchored" data-anchor-id="brdr.aligner.Aligner.get_thematic_union">get_thematic_union</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>aligner.Aligner.get_thematic_union()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>returns a unary_unioned geometry from all the thematic geometries :return:</p>
+</section>
+<section id="brdr.aligner.Aligner.load_reference_data" class="level3">
+<h3 class="anchored" data-anchor-id="brdr.aligner.Aligner.load_reference_data">load_reference_data</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>aligner.Aligner.load_reference_data(loader)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Loads the reference features into the aligner, and prepares the reference-data for processing :param loader: :return:</p>
+</section>
+<section id="brdr.aligner.Aligner.load_thematic_data" class="level3">
+<h3 class="anchored" data-anchor-id="brdr.aligner.Aligner.load_thematic_data">load_thematic_data</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>aligner.Aligner.load_thematic_data(loader)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Loads the thematic features into the aligner :param loader: :return:</p>
+</section>
+<section id="brdr.aligner.Aligner.predictor" class="level3">
+<h3 class="anchored" data-anchor-id="brdr.aligner.Aligner.predictor">predictor</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>aligner.Aligner.predictor(</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>    dict_thematic<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>    relevant_distances<span class="op">=</span>[(<span class="bu">round</span>(k, RELEVANT_DISTANCE_DECIMALS)) <span class="cf">for</span> k <span class="kw">in</span> (np.arange(<span class="dv">0</span>, <span class="dv">310</span>, <span class="dv">10</span>, dtype<span class="op">=</span><span class="bu">int</span>) <span class="op">/</span> <span class="dv">100</span>)],</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    od_strategy<span class="op">=</span>OpenDomainStrategy.SNAP_ALL_SIDE,</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>    threshold_overlap_percentage<span class="op">=</span><span class="dv">50</span>,</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>    diff_metric<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Predicts the ‘most interesting’ relevant distances for changes in thematic elements based on a distance series.</p>
+<p>This function analyzes a set of thematic geometries (<code>self.dict_thematic</code>) to identify potentially interesting distances where changes occur. It performs the following steps:</p>
+<ol type="1">
+<li><strong>Process Distance Series:</strong>
+<ul>
+<li>Calculates a series of results for different distances specified by <code>relevant_distances</code>.</li>
+<li>This calculation might involve functions like <code>self.process_series</code> (implementation details likely depend on your specific code).</li>
+</ul></li>
+<li><strong>Calculate Difference Metrics:</strong>
+<ul>
+<li>Analyzes the results from the distance series to compute difference metrics between thematic elements at each distance (using <code>diffs_from_dict_series</code>).</li>
+</ul></li>
+<li><strong>Identify Breakpoints and Zero-Streaks:</strong>
+<ul>
+<li>For each thematic geometry, it identifies potential “breakpoints” where the difference metric changes sign (from positive to negative or vice versa).</li>
+<li>It also identifies “zero-streaks” which are consecutive distances with a difference metric close to zero (potentially indicating minimal change).</li>
+</ul></li>
+<li><strong>Predict Interesting Distances:</strong>
+<ul>
+<li>The function considers distances corresponding to breakpoints and zero-streaks as potentially interesting for further analysis.</li>
+<li>These distances are stored in a dictionary (<code>dict_predictions</code>) with the thematic element key as the outer key.</li>
+<li>Additionally, the corresponding results from the distance series for those distances are included.</li>
+</ul></li>
+</ol>
+<p>Args: dict_thematic: the dictionary with the thematic geometries to ‘predict’. Default is None, so all thematic geometries inside the aligner will be processed. relevant_distances (np.ndarray, optional): A series of relevant distances (in meters) to process. : A NumPy array of distances to be analyzed. od_strategy (int, optional): The strategy to determine how to handle information outside the reference polygons (Open Domain) (default: SNAP_FULL_AREA_ALL_SIDE) threshold_overlap_percentage (int, optional): Threshold (%) to determine from which overlapping-percentage a reference-polygon has to be included when there aren’t relevant intersections or relevant differences (default 50%). When setting this parameter to ‘-1’ the original border for will be returned for cases where nor relevant intersections and relevant differences are found</p>
+<pre><code>relevant_distances (np.ndarray, optional): A NumPy array of distances to
+  be analyzed. Defaults to np.arange(0.1, 5.05, 0.1).
+od_strategy (OpenDomainStrategy, optional): A strategy for handling
+  open data in the processing (implementation specific). Defaults to
+ OpenDomainStrategy.SNAP_ALL_SIDE.
+threshold_overlap_percentage (int, optional): A percentage threshold for
+  considering full overlap in the processing (implementation specific).
+ Defaults to 50.
+diff_metric (enum, optional): A enum thjat determines the method how differences are measured to determine the 'predictions'</code></pre>
+<p>Returns: dict_series: A dictionary containing the resultset for all relevant distances for each thematic element. dict_predictions: A dictionary containing predicted interesting distances for each thematic element. - Keys: Thematic element identifiers from <code>self.dict_thematic</code>. - Values: Dictionaries with the following structure for each thematic element: - Keys: Distances identified as interesting (breakpoints or zero-streaks). - Values: dicts containing results (likely specific to your implementation) from the distance series for the corresponding distance. diffs_dict: a dictionary with the differences for each relevant distance</p>
+</section>
+<section id="brdr.aligner.Aligner.process" class="level3">
+<h3 class="anchored" data-anchor-id="brdr.aligner.Aligner.process">process</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>aligner.Aligner.process(</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    dict_thematic<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    relevant_distances<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>    relevant_distance<span class="op">=</span><span class="dv">1</span>,</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>    od_strategy<span class="op">=</span>OpenDomainStrategy.SNAP_ALL_SIDE,</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>    threshold_overlap_percentage<span class="op">=</span><span class="dv">50</span>,</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Calculates the resulting dictionaries for thematic data based on a series of relevant distances.</p>
+<p>Args: relevant_distances (Iterable[float]): A series of relevant distances (in meters) to process od_strategy (int, optional): The strategy to determine how to handle information outside the reference polygons (Open Domain) (default: SNAP_FULL_AREA_ALL_SIDE) threshold_overlap_percentage (int, optional): Threshold (%) to determine from which overlapping-percentage a reference-polygon has to be included when there aren’t relevant intersections or relevant differences (default 50%). When setting this parameter to ‘-1’ the original border for will be returned for cases where nor relevant intersections and relevant differences are found</p>
+<p>Returns: dict: A dictionary, for every thematic ID a dictionary with the results for all distances</p>
+<pre><code>    {
+        'theme_id_1': {0: (ProcessResult), 0.1:
+            (ProcessResult), ...},
+        'theme_id_2': {0: (ProcessResult), 0.1:
+            (ProcessResult), ...},
+        ...
+    }</code></pre>
+</section>
+<section id="brdr.aligner.Aligner.process_geometry" class="level3">
+<h3 class="anchored" data-anchor-id="brdr.aligner.Aligner.process_geometry">process_geometry</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>aligner.Aligner.process_geometry(</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>    input_geometry,</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>    relevant_distance<span class="op">=</span><span class="dv">1</span>,</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>    od_strategy<span class="op">=</span>OpenDomainStrategy.SNAP_ALL_SIDE,</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>    threshold_overlap_percentage<span class="op">=</span><span class="dv">50</span>,</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>method to align a geometry to the reference layer</p>
+<p>Args: input_geometry (BaseGeometry): The input geometric object. relevant_distance: The relevant distance (in meters) for processing od_strategy (int, optional): The strategy to determine how to handle information outside the reference polygons (Open Domain) (default: SNAP_FULL_AREA_ALL_SIDE) threshold_overlap_percentage (int, optional): Threshold (%) to determine from which overlapping-percentage a reference-polygon has to be included when there aren’t relevant intersections or relevant differences (default 50%). When setting this parameter to ‘-1’ the original border for will be returned for cases where nor relevant intersections and relevant differences are found</p>
+<p>Returns: ProcessResult : A dict containing the resulting geometries:</p>
+<pre><code>*   result (BaseGeometry): The resulting output geometry
+*   result_diff (BaseGeometry): The resulting difference output geometry
+*   result_diff_plus (BaseGeometry): The resulting positive difference
+    output geometry
+*   result_diff_min (BaseGeometry): The resulting negative difference output
+    geometry
+*   relevant_intersection (BaseGeometry): The relevant_intersection
+*   relevant_difference (BaseGeometry): The relevant_difference
+*   remark (str): remarks collected when processing the geometry</code></pre>
+</section>
+<section id="brdr.aligner.Aligner.save_results" class="level3">
+<h3 class="anchored" data-anchor-id="brdr.aligner.Aligner.save_results">save_results</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>aligner.Aligner.save_results(</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>    path,</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>    resulttype<span class="op">=</span>AlignerResultType.PROCESSRESULTS,</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>    formula<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Exports analysis results (as geojson) to path.</p>
+<p>This function exports 6 GeoJSON files containing the analysis results to the specified <code>path</code>.</p>
+<p>Args: path (str): The path to the directory where the GeoJSON files will be saved. formula (bool, optional): Whether to include formula-related information in the output. Defaults to True.</p>
+<p>Details of exported files: - result.geojson: Contains the original thematic data from <code>self.dict_result</code>. - result_diff.geojson: Contains the difference between the original and predicted data from <code>self.dict_result_diff</code>. - result_diff_plus.geojson: Contains results for areas that are added (increased area). - result_diff_min.geojson: Contains results for areas that are removed (decreased area). - result_relevant_intersection.geojson: Contains the areas with relevant intersection that has to be included in the result. - result_relevant_difference.geojson: Contains the areas with relevant difference that has to be excluded from the result.</p>
+
+
+</section>
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
