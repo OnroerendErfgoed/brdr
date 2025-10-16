@@ -22,14 +22,14 @@ jobs:
           python -m ipykernel install --user
 
       - name: Build quartodoc
-        run: quartodoc build --config docs_src/_quarto.yml
+        run: quartodoc build --config docs/_quarto.yml
 
       - name: Render Quarto site from subfolder
-        run: quarto render docs_src
+        run: quarto render docs
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: docs_src/_site
+          publish_dir: docs/_site
           publish_branch: gh-pages  # branch for documentation deployment for github pages

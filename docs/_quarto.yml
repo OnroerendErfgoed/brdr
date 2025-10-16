@@ -1,5 +1,6 @@
 project:
   type: website
+  resources: figures
 
 website:
   title: "BRDR - Aligning borders"
