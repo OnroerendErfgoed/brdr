@@ -20,7 +20,7 @@ jobs:
         with:
           python-version: 3.12
           cache: pip
-        run: |
+      - run: |
           pip install notebook ipykernel matplotlib brdr quartodoc
           python -m ipykernel install --user
 
