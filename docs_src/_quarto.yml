@@ -2,22 +2,29 @@ project:
   type: website
 
 website:
+  title: "BRDR - Aligning borders"
   navbar:
+    logo: "static/logo.svg"
     left:
       - text: Home
         href: index.qmd
+        icon: house-fill
       - text: Reference
         href: reference/index.qmd
+
+lang: en
 
 metadata-files:
   - reference/_sidebar.yml
 
 format:
   html:
-    theme: cosmo
+    theme:
+      - static/custom.scss
+    code-fold: false
+    embed-resources: false
     toc: true
-    css:
-      - reference/_styles-quartodoc.css
+    toc-location: "right"
 
 quartodoc:
   # the name used to import the package you want to create reference docs for
