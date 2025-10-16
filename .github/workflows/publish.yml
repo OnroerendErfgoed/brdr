@@ -10,13 +10,16 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v
 
       - name: Setup Quarto
         uses: quarto-dev/quarto-actions/setup@v2
 
-
       - name: Install Python and Jupyter
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+          cache: pip
         run: |
           pip install notebook ipykernel matplotlib brdr quartodoc
           python -m ipykernel install --user
@@ -31,5 +34,5 @@ jobs:
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: docs/_site
+          publish_dir: ./docs/_site
           publish_branch: gh-pages  # branch for documentation deployment for github pages
