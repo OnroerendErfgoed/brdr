@@ -18,6 +18,7 @@ lang: en
 metadata-files:
   - reference/_sidebar.yml
 
+highlight-style: github-dark 
 format:
   html:
     theme:
