@@ -18,11 +18,8 @@ jobs:
 
       - name: Install Python and Jupyter
         run: |
-          pip install notebook ipykernel matplotlib quartodoc
+          pip install notebook ipykernel matplotlib brdr quartodoc
           python -m ipykernel install --user
-
-      - name: Install brdr
-        run: pip install .
 
       - name: Build quartodoc
         run: quartodoc build --config docs/_quarto.yml
