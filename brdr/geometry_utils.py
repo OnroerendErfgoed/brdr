@@ -1,22 +1,22 @@
 import logging
 from collections import Counter
-from itertools import combinations, islice
-from math import pi, inf, dist
+from itertools import combinations
+from itertools import islice
+from math import dist
+from math import inf
+from math import pi
 
 import numpy as np
-from shapely import (
-    GEOSException,
-    equals,
-    shortest_line,
-    GeometryCollection,
-    MultiLineString,
-    MultiPolygon,
-    Polygon,
-    MultiPoint,
-)
+from shapely import GEOSException
+from shapely import GeometryCollection
+from shapely import MultiLineString
+from shapely import MultiPoint
+from shapely import MultiPolygon
+from shapely import Polygon
 from shapely import STRtree
 from shapely import buffer
 from shapely import difference
+from shapely import equals
 from shapely import from_wkt
 from shapely import get_exterior_ring
 from shapely import get_interior_ring
@@ -27,6 +27,7 @@ from shapely import is_empty
 from shapely import make_valid
 from shapely import polygons
 from shapely import segmentize
+from shapely import shortest_line
 from shapely import snap
 from shapely import symmetric_difference
 from shapely import to_wkt
@@ -34,7 +35,8 @@ from shapely import unary_union
 from shapely import union
 from shapely.geometry.base import BaseGeometry
 from shapely.lib import line_merge
-from shapely.ops import substring, nearest_points
+from shapely.ops import nearest_points
+from shapely.ops import substring
 from shapely.prepared import prep
 
 from brdr.constants import BUFFER_MULTIPLICATION_FACTOR

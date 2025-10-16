@@ -3,37 +3,39 @@ import os.path
 
 import numpy as np
 import requests
-from geojson import Feature, FeatureCollection, dump
-from shapely import (
-    GeometryCollection,
-    make_valid,
-    node,
-    polygonize,
-)
+from geojson import Feature
+from geojson import FeatureCollection
+from geojson import dump
+from shapely import GeometryCollection
+from shapely import Polygon
+from shapely import make_valid
+from shapely import node
+from shapely import polygonize
 from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
 
-from brdr.constants import (
-    MULTI_SINGLE_ID_SEPARATOR,
-    DEFAULT_CRS,
-    DOWNLOAD_LIMIT,
-    PERIMETER_ATTRIBUTE,
-    SHAPE_INDEX_ATTRIBUTE,
-    AREA_ATTRIBUTE,
-    STABILITY,
-    ZERO_STREAK,
-)
+from brdr.constants import AREA_ATTRIBUTE
+from brdr.constants import DEFAULT_CRS
+from brdr.constants import DOWNLOAD_LIMIT
+from brdr.constants import MULTI_SINGLE_ID_SEPARATOR
+from brdr.constants import PERIMETER_ATTRIBUTE
+from brdr.constants import SHAPE_INDEX_ATTRIBUTE
+from brdr.constants import STABILITY
+from brdr.constants import ZERO_STREAK
 from brdr.enums import DiffMetric
-from brdr.geometry_utils import (
-    get_partitions,
-    get_bbox,
-    get_shape_index,
-    get_geoms_from_geometry,
-    safe_unary_union,
-    buffer_pos,
-    safe_intersection,
-    total_vertex_distance,
-)
+from brdr.geometry_utils import buffer_neg
+from brdr.geometry_utils import buffer_neg_pos
+from brdr.geometry_utils import buffer_pos
+from brdr.geometry_utils import geometric_equality
+from brdr.geometry_utils import get_bbox
+from brdr.geometry_utils import get_geoms_from_geometry
+from brdr.geometry_utils import get_partitions
+from brdr.geometry_utils import get_shape_index
+from brdr.geometry_utils import safe_difference
+from brdr.geometry_utils import safe_intersection
+from brdr.geometry_utils import safe_unary_union
+from brdr.geometry_utils import snap_geometry_to_reference
+from brdr.geometry_utils import total_vertex_distance
 from brdr.typings import ProcessResult
 
 log = logging.getLogger(__name__)
@@ -591,4 +593,237 @@ def is_brdr_formula(brdr_formula):
         "reference_od",
     }:
         return True
+    return False
+
+
+def _unary_union_result_dict(result_dict):
+    # make a unary union for each key value in the result dict
+    for key in ProcessResult.__annotations__:
+        geom = result_dict.get(key, GeometryCollection())  # noqa
+        if isinstance(geom, BaseGeometry) and not geom.is_empty:
+            geom = safe_unary_union(geom)
+        result_dict[key] = geom  # noqa
+    return result_dict
+
+
+def _calculate_geom_by_intersection_and_reference(
+    geom_intersection: BaseGeometry,
+    geom_reference: BaseGeometry,
+    input_geometry_inner: BaseGeometry,
+    is_open_domain,
+    buffer_distance,
+    threshold_overlap_percentage,
+    threshold_exclusion_percentage,
+    threshold_exclusion_area,
+    threshold_inclusion_percentage,
+    mitre_limit,
+    partial_snapping,
+    partial_snap_strategy,
+    partial_snap_max_segment_length,
+):
+    """
+    Calculates the geometry based on intersection and reference geometries.
+
+    Args:
+        geom_intersection (BaseGeometry): The intersection geometry.
+        geom_reference (BaseGeometry): The reference geometry.
+        is_open_domain (bool): A flag indicating whether it's a public domain
+            (area not covered with reference polygon).
+        threshold_exclusion_percentage (int): The threshold exclusion percentage.
+        threshold_exclusion_area (int): The threshold exclusion area.
+        buffer_distance (float): The buffer distance.
+        threshold_overlap_percentage (int): The threshold overlap percentage.
+
+    Returns:
+        tuple: A tuple containing the resulting geometries:
+
+        *   geom: BaseGeometry or None: The resulting geometry or None if conditions
+            are not met.
+        *   geom_relevant_intersection: BaseGeometry or None: The relevant
+            intersection.
+        *   geom_relevant_difference: BaseGeometry or None: The relevant difference.
+
+    Notes:
+        -   If the reference geometry area is 0, the overlap is set to 100%.
+        -   If the overlap is less than relevant_OVERLAP_PERCENTAGE or the
+            intersection area is less than relevant_OVERLAP_AREA, None is returned.
+        -   Otherwise, the relevant intersection and difference geometries are
+            calculated.
+        -   If both relevant intersection and difference are non-empty, the final
+            geometry is obtained by applying safe intersection and buffering.
+        -   If only relevant intersection is non-empty, the result is the reference
+            geometry.
+        -   If only relevant difference is non-empty, the result is None.
+    """
+    od_overlap = 111  # define a specific value for defining overlap of OD
+    if geom_reference.area == 0:
+        overlap = od_overlap  # Open Domain
+
+    else:
+        overlap = geom_intersection.area * 100 / geom_reference.area
+
+    if (
+        overlap < threshold_exclusion_percentage
+        or geom_intersection.area < threshold_exclusion_area
+    ):
+        return Polygon(), Polygon(), Polygon()
+
+    if overlap >= threshold_inclusion_percentage and not overlap == od_overlap:
+        return geom_reference, geom_reference, Polygon()
+
+    geom_difference = safe_difference(geom_reference, geom_intersection)
+    geom_relevant_intersection = buffer_neg(
+        geom_intersection,
+        buffer_distance,
+        mitre_limit=mitre_limit,
+    )
+    geom_intersection_inner = safe_intersection(
+        geom_intersection, input_geometry_inner
+    )  # this part is the intersection-part that always has to be kept, because it is inside the inner_geometry
+
+    geom_relevant_difference = buffer_neg(
+        geom_difference,
+        buffer_distance,
+        mitre_limit=mitre_limit,
+    )
+
+    if (
+        not geom_intersection_inner.is_empty
+        and geom_relevant_intersection.is_empty
+        and not geom_relevant_difference.is_empty
+    ):
+        geom_x = safe_intersection(
+            geom_intersection, buffer_pos(geom_intersection_inner, 2 * buffer_distance)
+        )
+
+        geom_x = snap_geometry_to_reference(
+            geom_x,
+            geom_reference,
+            max_segment_length=partial_snap_max_segment_length,
+            snap_strategy=partial_snap_strategy,
+            tolerance=2 * buffer_distance,
+        )
+
+        geom = geom_x
+    elif (
+        not geom_relevant_intersection.is_empty
+        and not geom_relevant_difference.is_empty
+    ):
+        # relevant intersection and relevant difference
+
+        geom_x = safe_difference(
+            geom_reference,
+            safe_intersection(
+                geom_difference,
+                buffer_neg_pos(
+                    geom_difference,
+                    buffer_distance,
+                    mitre_limit=mitre_limit,
+                ),
+            ),
+        )
+        geom_x = buffer_neg_pos(geom_x, buffer_distance, mitre_limit=mitre_limit)
+
+        geom_intersection_buffered = buffer_pos(geom_intersection, 2 * buffer_distance)
+        geom_difference_2 = safe_difference(geom_reference, geom_intersection_buffered)
+        geom_difference_2_buffered = buffer_pos(geom_difference_2, 2 * buffer_distance)
+
+        geom_x = safe_difference(geom_x, geom_difference_2_buffered)
+
+        geom_x = safe_intersection(geom_x, geom_reference)
+
+        if partial_snapping:
+            geom_x = snap_geometry_to_reference(
+                geom_x,
+                geom_reference,
+                max_segment_length=partial_snap_max_segment_length,
+                snap_strategy=partial_snap_strategy,
+                tolerance=2 * buffer_distance,
+            )
+        geom = safe_unary_union(
+            [geom_x, geom_relevant_intersection, geom_intersection_inner]
+        )
+
+        # when calculating for OD, we create a 'virtual parcel'. When calculating this
+        # virtual parcel, it is buffered to take outer boundaries into account.
+        # This results in a side effect that there are extra non-logical parts included
+        # in the result. The function below tries to exclude these non-logical parts.
+        # see eo_id 206363 with relevant distance=0.2m and SNAP_ALL_SIDE
+        if is_open_domain:
+            geom = _get_relevant_polygons_from_geom(geom, buffer_distance, mitre_limit)
+    elif not geom_relevant_intersection.is_empty and geom_relevant_difference.is_empty:
+        geom = geom_reference
+    elif geom_relevant_intersection.is_empty and not geom_relevant_difference.is_empty:
+        geom = geom_relevant_intersection  # (=empty geometry)
+    else:
+        # No relevant intersection and no relevant difference
+        if is_open_domain:
+            # geom = geom_relevant_intersection  # (=empty geometry)
+            geom = snap_geometry_to_reference(
+                geom_intersection,
+                geom_reference,
+                snap_strategy=partial_snap_strategy,
+                tolerance=2 * buffer_distance,
+                max_segment_length=partial_snap_max_segment_length,
+            )
+        elif not geom_intersection_inner.is_empty:
+            geom_intersection_buffered = buffer_pos(
+                geom_intersection, 2 * buffer_distance
+            )
+            geom_difference_2 = safe_difference(
+                geom_reference, geom_intersection_buffered
+            )
+            geom_difference_2_buffered = buffer_pos(
+                geom_difference_2, 2 * buffer_distance
+            )
+            geom = safe_difference(geom_reference, geom_difference_2_buffered)
+        elif threshold_overlap_percentage < 0:
+            # if we take a value of -1, the original border will be used
+            geom = geom_intersection
+        elif overlap > threshold_overlap_percentage:
+            geom = geom_reference
+        else:
+            geom = geom_relevant_intersection  # (=empty geometry)
+    return geom, geom_relevant_intersection, geom_relevant_difference
+
+
+def _get_relevant_polygons_from_geom(
+    geometry: BaseGeometry, buffer_distance: float, mitre_limit
+):
+    """
+    Get only the relevant parts (polygon) from a geometry.
+    Points, Lines and Polygons smaller than relevant distance are excluded from the
+    result
+    """
+    if not geometry or geometry.is_empty:
+        # If the input geometry is empty or None, do nothing.
+        return geometry
+    else:
+        geometry = safe_unary_union(geometry)
+        # Create a GeometryCollection from the input geometry.
+        geometry_collection = GeometryCollection(geometry)
+        array = []
+        for g in geometry_collection.geoms:
+            # Ensure each sub-geometry is valid.
+            g = make_valid(g)
+            if str(g.geom_type) in ["Polygon", "MultiPolygon"]:
+                relevant_geom = buffer_neg(
+                    g,
+                    buffer_distance,
+                    mitre_limit=mitre_limit,
+                )
+                if relevant_geom is not None and not relevant_geom.is_empty:
+                    array.append(g)
+    return safe_unary_union(array)
+
+
+def _equal_geom_in_array(geom, geom_array, correction_distance, mitre_limit):
+    """
+    Check if a predicted geometry is equal to other predicted geometries in a list.
+    Equality is defined as there is the symmetrical difference is smaller than the CORRECTION DISTANCE
+    Returns True if one of the elements is equal, otherwise False
+    """
+    for g in geom_array:
+        if geometric_equality(geom, g, correction_distance, mitre_limit):
+            return True
     return False
