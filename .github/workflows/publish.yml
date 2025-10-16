@@ -1,0 +1,35 @@
+name: Publish Quarto site to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Quarto
+        uses: quarto-dev/quarto-actions/setup@v2
+
+
+      - name: Install Python and Jupyter
+        run: |
+          pip install notebook ipykernel matplotlib brdr quartodoc
+          python -m ipykernel install --user
+
+      - name: Build quartodoc
+        run: quartodoc build --config docs_src/_quarto.yml
+
+      - name: Render Quarto site from subfolder
+        run: quarto render docs_src
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: docs_src/_site
+          publish_branch: gh-pages  # branch for documentation deployment for github pages
