@@ -12,6 +12,8 @@ website:
         icon: house-fill
       - text: Reference
         href: reference/index.qmd
+      - text: Examples
+        href: examples.qmd
 
 lang: en
 
