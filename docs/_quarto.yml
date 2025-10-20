@@ -1,0 +1,62 @@
+project:
+  type: website
+  resources: figures
+
+website:
+  title: "BRDR - Aligning borders"
+  navbar:
+    logo: "static/logo.svg"
+    left:
+      - text: Home
+        href: index.qmd
+        icon: house-fill
+      - text: Reference
+        href: reference/index.qmd
+      - text: Examples
+        href: examples.qmd
+
+lang: en
+
+metadata-files:
+  - reference/_sidebar.yml
+
+highlight-style: github-dark 
+format:
+  html:
+    theme:
+      - static/custom.scss
+    code-fold: false
+    embed-resources: false
+    toc: true
+    toc-location: "right"
+
+quartodoc:
+  # the name used to import the package you want to create reference docs for
+  package: brdr 
+  sidebar: reference/_sidebar.yml
+  css: reference/_styles-quartodoc.css
+
+  sections:
+    - title: Aligner 
+      package: brdr.aligner
+      desc: Aligner class of the brdr package.
+      contents:
+        # the functions being documented in the package.
+        # you can refer to anything: class methods, modules, etc..
+        - Aligner
+    - title: Loaders
+      package: brdr.loader
+      desc: Loaders to load data
+      contents:
+        - Loader
+        - DictLoader
+        - GeoJsonLoader
+        - GeoJsonFileLoader
+        - GeoJsonUrlLoader
+    - title: GRB
+      package: brdr.grb
+      desc: GRB specific loaders
+        - grb.GRBActualLoader
+        - grb.GRBFiscalParcelLoader
+        - grb.GRBSpecificDateParcelLoader
+          
