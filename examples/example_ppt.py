@@ -1,10 +1,8 @@
-import numpy as np
-
 from brdr.aligner import Aligner
 from brdr.enums import AlignerResultType, GRBType
 from brdr.geometry_utils import geom_from_wkt
-from brdr.grb import GRBActualLoader
-from brdr.loader import DictLoader
+from brdr.loaders.grb import GRBActualLoader
+from brdr.loaders.loader import DictLoader
 
 # CREATE AN ALIGNER
 aligner = Aligner(crs="EPSG:31370")

@@ -10,10 +10,10 @@ from brdr.constants import (
     RELEVANT_DISTANCE_FIELD_NAME,
 )
 from brdr.enums import GRBType, AlignerResultType
-from brdr.grb import GRBActualLoader
-from brdr.grb import GRBFiscalParcelLoader
-from brdr.grb import get_affected_by_grb_change
-from brdr.loader import DictLoader, GeoJsonFileLoader
+from brdr.loaders.grb import GRBActualLoader
+from brdr.loaders.grb import GRBFiscalParcelLoader
+from brdr.loaders.grb import get_affected_by_grb_change
+from brdr.loaders.loader import DictLoader, GeoJsonFileLoader
 
 # Press the green button in the gutter to run the script.
 if __name__ == "__main__":

@@ -7,10 +7,10 @@ from shapely.geometry import Polygon
 from brdr.aligner import Aligner
 from brdr.constants import PREDICTION_COUNT
 from brdr.enums import GRBType
-from brdr.grb import (
+from brdr.loaders.grb import (
     GRBActualLoader,
 )
-from brdr.loader import DictLoader
+from brdr.loaders.loader import DictLoader
 
 
 class TestAligner(unittest.TestCase):

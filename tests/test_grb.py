@@ -7,7 +7,7 @@ from shapely import Polygon, from_wkt
 from brdr.aligner import Aligner
 from brdr.constants import EVALUATION_FIELD_NAME
 from brdr.enums import GRBType, Evaluation
-from brdr.grb import (
+from brdr.loaders.grb import (
     get_last_version_date,
     is_grb_changed,
     get_affected_by_grb_change,
@@ -15,7 +15,7 @@ from brdr.grb import (
     update_to_actual_grb,
     GRBActualLoader,
 )
-from brdr.loader import DictLoader
+from brdr.loaders.loader import DictLoader
 
 
 class TestGrb(unittest.TestCase):

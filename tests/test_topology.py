@@ -4,10 +4,10 @@ from shapely.geometry import Polygon
 
 from brdr.aligner import Aligner
 from brdr.enums import GRBType
-from brdr.grb import (
+from brdr.loaders.grb import (
     GRBActualLoader,
 )
-from brdr.loader import GeoJsonLoader
+from brdr.loaders.loader import GeoJsonLoader
 
 
 class TestTopology(unittest.TestCase):

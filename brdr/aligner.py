@@ -94,7 +94,7 @@ from brdr.geometry_utils import safe_difference
 from brdr.geometry_utils import safe_intersection
 from brdr.geometry_utils import safe_symmetric_difference
 from brdr.geometry_utils import safe_union
-from brdr.loader import Loader
+from brdr.loaders.loader import Loader
 from brdr.logger import Logger
 from brdr.topo import dissolve_topo, generate_topo
 from brdr.typings import ProcessResult

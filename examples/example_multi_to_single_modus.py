@@ -1,7 +1,7 @@
 from brdr.aligner import Aligner
 from brdr.enums import GRBType, OpenDomainStrategy
-from brdr.grb import GRBActualLoader
-from brdr.oe import OnroerendErfgoedLoader, OEType
+from brdr.loaders.grb import GRBActualLoader
+from brdr.loaders.oe import OnroerendErfgoedLoader, OEType
 from examples import print_brdr_formula
 from examples import show_map
 

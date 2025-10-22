@@ -1,9 +1,8 @@
 from brdr.aligner import Aligner
 from brdr.enums import OpenDomainStrategy, GRBType
-from brdr.grb import GRBActualLoader
-from brdr.loader import GeoJsonLoader
+from brdr.loaders.grb import GRBActualLoader
+from brdr.loaders.loader import GeoJsonLoader
 from examples import plot_dict_diffs, animated_map
-from examples import show_map
 
 if __name__ == "__main__":
     # EXAMPLE to process a series of relevant distances

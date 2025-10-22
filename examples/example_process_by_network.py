@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from brdr.grb import GRBActualLoader
+from brdr.loaders.grb import GRBActualLoader
 
 # 2 volledige percelen
 wkt = "POLYGON ((171458.40769685542909428 173434.00596392978332005, 171474.2560220179730095 173411.11393869499443099, 171508.59405987019999884 173435.47340144484769553, 171496.26758474376401864 173457.48496417060960084, 171458.40769685542909428 173434.00596392978332005))"
@@ -22,7 +22,7 @@ wkt = "MULTILINESTRING ((173934.33078331346041523 178823.6009470286371652, 17371
 from brdr.aligner import Aligner
 from brdr.enums import OpenDomainStrategy, GRBType
 from brdr.geometry_utils import geom_from_wkt
-from brdr.loader import DictLoader
+from brdr.loaders.loader import DictLoader
 
 print(datetime.now())
 # CREATE AN ALIGNER

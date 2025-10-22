@@ -9,8 +9,8 @@ from brdr.aligner import Aligner
 from brdr.enums import DiffMetric
 from brdr.enums import GRBType
 from brdr.enums import OpenDomainStrategy
-from brdr.grb import GRBActualLoader
-from brdr.loader import DictLoader
+from brdr.loaders.grb import GRBActualLoader
+from brdr.loaders.loader import DictLoader
 
 
 class TestExamples(unittest.TestCase):

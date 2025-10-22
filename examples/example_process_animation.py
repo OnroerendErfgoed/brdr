@@ -4,8 +4,8 @@ import numpy as np
 
 from brdr.aligner import Aligner
 from brdr.enums import OpenDomainStrategy, GRBType
-from brdr.grb import GRBActualLoader
-from brdr.loader import GeoJsonLoader
+from brdr.loaders.grb import GRBActualLoader
+from brdr.loaders.loader import GeoJsonLoader
 from examples import animated_map
 
 if __name__ == "__main__":

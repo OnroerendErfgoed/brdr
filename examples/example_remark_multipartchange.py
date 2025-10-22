@@ -1,8 +1,8 @@
 from brdr.aligner import Aligner
 from brdr.enums import OpenDomainStrategy, AlignerResultType, GRBType
 from brdr.geometry_utils import geom_from_wkt
-from brdr.grb import GRBActualLoader
-from brdr.loader import DictLoader
+from brdr.loaders.grb import GRBActualLoader
+from brdr.loaders.loader import DictLoader
 
 if __name__ == "__main__":
     """

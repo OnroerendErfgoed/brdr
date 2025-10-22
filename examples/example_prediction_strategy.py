@@ -3,8 +3,8 @@ import numpy as np
 from brdr.aligner import Aligner
 from brdr.constants import EVALUATION_FIELD_NAME
 from brdr.enums import GRBType, FullStrategy, Evaluation
-from brdr.grb import GRBActualLoader
-from brdr.loader import GeoJsonLoader
+from brdr.loaders.grb import GRBActualLoader
+from brdr.loaders.loader import GeoJsonLoader
 
 thematic_json = {
     "type": "FeatureCollection",

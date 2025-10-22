@@ -1,7 +1,7 @@
 import unittest
 
 from brdr.aligner import Aligner
-from brdr.oe import OnroerendErfgoedLoader, OEType
+from brdr.loaders.oe import OnroerendErfgoedLoader, OEType
 
 
 class TestOE(unittest.TestCase):

@@ -1,8 +1,8 @@
 from brdr.aligner import Aligner
 from brdr.enums import OpenDomainStrategy, GRBType
 from brdr.geometry_utils import geom_from_wkt
-from brdr.grb import GRBActualLoader
-from brdr.loader import DictLoader, GeoJsonFileLoader
+from brdr.loaders.grb import GRBActualLoader
+from brdr.loaders.loader import DictLoader, GeoJsonFileLoader
 from examples import print_brdr_formula, show_map
 
 aligner = Aligner(max_workers=None)

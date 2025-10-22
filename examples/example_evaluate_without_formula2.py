@@ -4,8 +4,8 @@ from brdr.aligner import Aligner
 from brdr.constants import EVALUATION_FIELD_NAME
 from brdr.enums import GRBType, AlignerResultType, FullStrategy
 from brdr.geometry_utils import geom_from_wkt
-from brdr.grb import GRBActualLoader
-from brdr.loader import DictLoader
+from brdr.loaders.grb import GRBActualLoader
+from brdr.loaders.loader import DictLoader
 
 # Press the green button in the gutter to run the script.
 if __name__ == "__main__":

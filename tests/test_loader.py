@@ -1,8 +1,8 @@
 from brdr.aligner import Aligner
 from brdr.enums import GRBType
-from brdr.grb import GRBActualLoader
-from brdr.loader import DictLoader, GeoJsonUrlLoader
-from brdr.oe import get_oe_dict_by_ids
+from brdr.loaders.grb import GRBActualLoader
+from brdr.loaders.loader import DictLoader, GeoJsonUrlLoader
+from brdr.loaders.oe import get_oe_dict_by_ids
 
 
 class TestExamples:

@@ -17,10 +17,10 @@ from brdr.geometry_utils import (
     safe_equals,
 )
 from brdr.geometry_utils import buffer_neg_pos
-from brdr.grb import (
+from brdr.loaders.grb import (
     GRBActualLoader,
 )
-from brdr.loader import GeoJsonLoader, DictLoader
+from brdr.loaders.loader import GeoJsonLoader, DictLoader
 from brdr.typings import FeatureCollection, ProcessResult
 
 

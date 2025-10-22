@@ -4,10 +4,10 @@ import numpy as np
 
 from brdr.aligner import Aligner
 from brdr.enums import GRBType
-from brdr.grb import GRBActualLoader
-from brdr.loader import DictLoader
-from brdr.loader import GeoJsonLoader
-from brdr.oe import get_oe_dict_by_ids, OnroerendErfgoedLoader
+from brdr.loaders.grb import GRBActualLoader
+from brdr.loaders.loader import DictLoader
+from brdr.loaders.loader import GeoJsonLoader
+from brdr.loaders.oe import get_oe_dict_by_ids, OnroerendErfgoedLoader
 
 
 class TestExamples(unittest.TestCase):

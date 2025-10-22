@@ -7,10 +7,10 @@ from shapely.geometry import Polygon
 from brdr.aligner import Aligner
 from brdr.constants import EVALUATION_FIELD_NAME, PREDICTION_COUNT
 from brdr.enums import GRBType, Evaluation, FullStrategy, SnapStrategy
-from brdr.grb import (
+from brdr.loaders.grb import (
     GRBActualLoader,
 )
-from brdr.loader import DictLoader, GeoJsonLoader
+from brdr.loaders.loader import DictLoader, GeoJsonLoader
 
 
 class TestEvaluate(unittest.TestCase):

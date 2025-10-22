@@ -3,8 +3,8 @@ import numpy as np
 from brdr.aligner import Aligner
 from brdr.constants import EVALUATION_FIELD_NAME, PREDICTION_SCORE
 from brdr.enums import GRBType, AlignerResultType, FullStrategy
-from brdr.grb import GRBActualLoader
-from brdr.loader import GeoJsonFileLoader
+from brdr.loaders.grb import GRBActualLoader
+from brdr.loaders.loader import GeoJsonFileLoader
 
 # Press the green button in the gutter to run the script.
 if __name__ == "__main__":

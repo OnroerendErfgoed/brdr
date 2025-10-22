@@ -1,7 +1,7 @@
 from brdr.aligner import Aligner
 from brdr.enums import OpenDomainStrategy
 from brdr.geometry_utils import geom_from_wkt
-from brdr.loader import DictLoader
+from brdr.loaders.loader import DictLoader
 
 # CREATE AN ALIGNER
 aligner = Aligner(
