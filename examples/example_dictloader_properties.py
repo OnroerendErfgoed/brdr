@@ -1,7 +1,7 @@
 from brdr.aligner import Aligner
 from brdr.enums import OpenDomainStrategy, AlignerResultType
 from brdr.geometry_utils import geom_from_wkt
-from brdr.loaders.loader import DictLoader
+from brdr.loader import DictLoader
 
 if __name__ == "__main__":
     """

@@ -1,7 +1,4 @@
 from datetime import datetime
-from enum import Enum
-
-import requests
 
 from brdr.constants import (
     DATE_FORMAT,
@@ -15,40 +12,9 @@ from brdr.constants import (
 )
 from brdr.geometry_utils import buffer_pos
 from brdr.loader import GeoJsonLoader
+from brdr.nl.enums import BRKType
 from brdr.utils import get_collection_by_partition
 
-
-class BRKLoader:
-    @classmethod
-    def _fetch_values(cls):
-        _url = (
-            "https://api.pdok.nl/kadaster/brk-kadastrale-kaart/ogc/v1/collections?f=json"
-        )
-        response = requests.get(_url)
-        response.raise_for_status()
-        data = response.json()
-        dict_values = {}
-        for coll in data["collections"]:
-            dict_values[coll["id"]] = coll["title"]
-        return dict_values
-
-    @classmethod
-    def get_enum(cls):
-        try:
-            dict_values = cls._fetch_values()
-        except:
-            dict_values = {
-                "kadastralegrens": "KadastraleGrens",
-                "perceel": "Perceel",
-                "openbareruimtenaam": "OpenbareRuimteNaam",
-                "bebouwing":"Bebouwing",
-                "nummeraanduidingreeks":"Nummeraanduidingreeks"
-
-            }
-        return Enum("BRKType", dict_values)
-
-
-BRKType = BRKLoader.get_enum()
 
 def get_collection_brk(
     geometry,

@@ -1,7 +1,7 @@
 from brdr.aligner import Aligner
 from brdr.geometry_utils import geom_from_wkt
-from brdr.loaders.loader import DictLoader
-from brdr.loaders.osm import OSMLoader
+from brdr.loader import DictLoader
+from brdr.osm.loader import OSMLoader
 
 if __name__ == "__main__":
     """

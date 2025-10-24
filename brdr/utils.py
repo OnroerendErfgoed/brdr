@@ -387,6 +387,7 @@ def diff_from_processresult(processresult, geom_thematic, reference_union, diff_
     diff = round(diff, 1)
     return diff
 
+
 def fetch_all_ogc_features(base_url, initial_params=None, headers=None):
     """
     Haalt alle features op uit een OGC Feature API, ongeacht het pagineringsmechanisme.
@@ -481,12 +482,7 @@ def get_collection(ref_url, limit):
         - Debug logs the URL being used for each request during pagination.
     """
 
-
-
-    features = fetch_all_ogc_features(
-        base_url=ref_url,
-        initial_params={"limit": limit}
-    )
+    features = fetch_all_ogc_features(base_url=ref_url, initial_params={"limit": limit})
     return make_feature_collection(features)
 
     start_index = 0

@@ -10,11 +10,9 @@ from brdr.constants import (
     DATE_FORMAT,
     BRK_MAX_REFERENCE_BUFFER,
     VERSION_DATE,
-    DOWNLOAD_LIMIT,
 )
 from brdr.geometry_utils import buffer_pos, get_bbox
 from brdr.loader import GeoJsonLoader
-from brdr.utils import get_collection_by_partition
 
 
 def gml_response_to_geojson(url):

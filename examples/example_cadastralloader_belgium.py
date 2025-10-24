@@ -1,8 +1,7 @@
 from brdr.aligner import Aligner
-from brdr.loaders.be import BeCadastralParcelLoader
+from brdr.be.be import BeCadastralParcelLoader
 from brdr.geometry_utils import geom_from_wkt
 from brdr.loader import DictLoader
-from brdr.osm import OSMLoader
 
 if __name__ == "__main__":
     """
@@ -14,7 +13,8 @@ if __name__ == "__main__":
     id = "my_countour_id"
     thematic_dict = {
         id: geom_from_wkt(
-            "POLYGON ((672875.34840881277341396 671536.28253797488287091, 672920.61456579703371972 671524.15767449699342251, 672897.17316307302098721 671459.49173594801686704, 672859.7208069966873154 671472.15548224712256342, 672875.34840881277341396 671536.28253797488287091))"   )
+            "POLYGON ((672875.34840881277341396 671536.28253797488287091, 672920.61456579703371972 671524.15767449699342251, 672897.17316307302098721 671459.49173594801686704, 672859.7208069966873154 671472.15548224712256342, 672875.34840881277341396 671536.28253797488287091))"
+        )
     }
 
     loader = DictLoader(data_dict=thematic_dict)

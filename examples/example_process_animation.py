@@ -3,9 +3,10 @@ from datetime import datetime
 import numpy as np
 
 from brdr.aligner import Aligner
-from brdr.enums import OpenDomainStrategy, GRBType
-from brdr.loaders.grb import GRBActualLoader
-from brdr.loaders.loader import GeoJsonLoader
+from brdr.be.grb.enums import GRBType
+from brdr.be.grb.loader import GRBActualLoader
+from brdr.enums import OpenDomainStrategy
+from brdr.loader import GeoJsonLoader
 from examples import animated_map
 
 if __name__ == "__main__":

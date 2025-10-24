@@ -1,9 +1,9 @@
 import numpy as np
 
 from brdr.aligner import Aligner
-from brdr.enums import GRBType
-from brdr.loaders.grb import GRBActualLoader
-from brdr.loaders.loader import GeoJsonFileLoader
+from brdr.be.grb.enums import GRBType
+from brdr.be.grb.loader import GRBActualLoader
+from brdr.loader import GeoJsonFileLoader
 from examples import plot_dict_diffs
 
 if __name__ == "__main__":

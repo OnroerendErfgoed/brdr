@@ -1,7 +1,7 @@
 from brdr.aligner import Aligner
-from brdr.enums import GRBType
-from brdr.loaders.grb import GRBActualLoader
-from brdr.loaders.loader import GeoJsonLoader
+from brdr.be.grb.enums import GRBType
+from brdr.be.grb.loader import GRBActualLoader
+from brdr.loader import GeoJsonLoader
 from examples import show_map, print_brdr_formula
 
 if __name__ == "__main__":

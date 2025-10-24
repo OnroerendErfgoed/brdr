@@ -1,7 +1,9 @@
 from brdr.aligner import Aligner
-from brdr.enums import GRBType, OpenDomainStrategy
-from brdr.loaders.grb import GRBActualLoader
-from brdr.loaders.oe import OnroerendErfgoedLoader, OEType
+from brdr.be.grb.enums import GRBType
+from brdr.be.grb.loader import GRBActualLoader
+from brdr.be.oe.enums import OEType
+from brdr.be.oe.loader import OnroerendErfgoedLoader
+from brdr.enums import OpenDomainStrategy
 from examples import print_brdr_formula
 from examples import show_map
 

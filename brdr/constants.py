@@ -79,8 +79,8 @@ GRB_PARCEL_ID = "CAPAKEY"
 # Property-name of id of GRB-objects
 GRB_GENERIC_ID = "OIDN"
 
-#BRK (Basis Registratie Kaart) Constants
-BRK_CRS="EPSG:28992"
+# BRK (Basis Registratie Kaart) Constants
+BRK_CRS = "EPSG:28992"
 BRK_FEATURE_URL = "https://api.pdok.nl/kadaster/brk-kadastrale-kaart/ogc/v1/collections"
 # Property-name of version_date
 BRK_VERSION_DATE = "begin_geldigheid"

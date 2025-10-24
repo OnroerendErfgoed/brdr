@@ -6,11 +6,11 @@ from shapely import to_geojson
 from shapely.geometry import shape
 
 from brdr.aligner import Aligner
+from brdr.be.grb.enums import GRBType
+from brdr.be.grb.loader import GRBActualLoader
 from brdr.enums import DiffMetric
-from brdr.enums import GRBType
 from brdr.enums import OpenDomainStrategy
-from brdr.loaders.grb import GRBActualLoader
-from brdr.loaders.loader import DictLoader
+from brdr.loader import DictLoader
 
 
 class TestExamples(unittest.TestCase):

@@ -5,7 +5,7 @@ import time
 import numpy as np
 
 from brdr.aligner import Aligner
-from brdr.loaders.loader import GeoJsonFileLoader
+from brdr.loader import GeoJsonFileLoader
 
 # Code to create stats.csv
 

@@ -1,9 +1,9 @@
 from shapely import from_wkt
 
 from brdr.aligner import Aligner
-from brdr.enums import GRBType
-from brdr.loaders.grb import GRBActualLoader
-from brdr.loaders.loader import DictLoader
+from brdr.be.grb.enums import GRBType
+from brdr.be.grb.loader import GRBActualLoader
+from brdr.loader import DictLoader
 
 if __name__ == "__main__":
     aligner = Aligner(max_workers=-1)

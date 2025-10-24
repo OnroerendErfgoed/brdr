@@ -1,8 +1,9 @@
 from brdr.aligner import Aligner
-from brdr.enums import AlignerResultType, GRBType
+from brdr.be.grb.enums import GRBType
+from brdr.be.grb.loader import GRBActualLoader
+from brdr.enums import AlignerResultType
 from brdr.geometry_utils import geom_from_wkt
-from brdr.loaders.grb import GRBActualLoader
-from brdr.loaders.loader import DictLoader
+from brdr.loader import DictLoader
 
 # CREATE AN ALIGNER
 aligner = Aligner(crs="EPSG:31370")

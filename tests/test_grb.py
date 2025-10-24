@@ -5,17 +5,17 @@ import numpy as np
 from shapely import Polygon, from_wkt
 
 from brdr.aligner import Aligner
-from brdr.constants import EVALUATION_FIELD_NAME
-from brdr.enums import GRBType, Evaluation
-from brdr.loaders.grb import (
+from brdr.be.grb.enums import GRBType
+from brdr.be.grb.grb import update_to_actual_grb
+from brdr.be.grb.loader import GRBActualLoader, GRBSpecificDateParcelLoader
+from brdr.be.grb.utils import (
     get_last_version_date,
     is_grb_changed,
     get_affected_by_grb_change,
-    GRBSpecificDateParcelLoader,
-    update_to_actual_grb,
-    GRBActualLoader,
 )
-from brdr.loaders.loader import DictLoader
+from brdr.constants import EVALUATION_FIELD_NAME
+from brdr.enums import Evaluation
+from brdr.loader import DictLoader
 
 
 class TestGrb(unittest.TestCase):

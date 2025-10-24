@@ -3,9 +3,9 @@ import os
 from shapely import from_wkt
 
 from brdr.aligner import Aligner
+from brdr.be.grb.loader import GRBSpecificDateParcelLoader
 from brdr.enums import AlignerInputType
-from brdr.loaders.grb import GRBSpecificDateParcelLoader
-from brdr.loaders.loader import DictLoader
+from brdr.loader import DictLoader
 from brdr.utils import write_geojson
 
 if __name__ == "__main__":

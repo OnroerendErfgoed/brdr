@@ -5,12 +5,11 @@ from shapely import from_wkt
 from shapely.geometry import Polygon
 
 from brdr.aligner import Aligner
+from brdr.be.grb.enums import GRBType
+from brdr.be.grb.loader import GRBActualLoader
 from brdr.constants import EVALUATION_FIELD_NAME, PREDICTION_COUNT
-from brdr.enums import GRBType, Evaluation, FullStrategy, SnapStrategy
-from brdr.loaders.grb import (
-    GRBActualLoader,
-)
-from brdr.loaders.loader import DictLoader, GeoJsonLoader
+from brdr.enums import Evaluation, FullStrategy, SnapStrategy
+from brdr.loader import DictLoader, GeoJsonLoader
 
 
 class TestEvaluate(unittest.TestCase):
