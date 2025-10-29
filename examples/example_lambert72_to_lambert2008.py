@@ -1,12 +1,13 @@
 from pyproj import Transformer
-from shapely.geometry import Polygon
 from shapely.ops import transform
 
 from brdr.aligner import Aligner
-from brdr.enums import GRBType, OpenDomainStrategy
-from brdr.grb import GRBActualLoader
+from brdr.be.grb.enums import GRBType
+from brdr.be.grb.loader import GRBActualLoader
+from brdr.be.oe.enums import OEType
+from brdr.be.oe.loader import OnroerendErfgoedLoader
+from brdr.enums import OpenDomainStrategy
 from brdr.loader import DictLoader
-from brdr.oe import OnroerendErfgoedLoader, OEType
 from examples import show_map
 
 

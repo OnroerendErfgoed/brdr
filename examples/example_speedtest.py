@@ -2,9 +2,10 @@ import statistics
 from datetime import datetime
 
 from brdr.aligner import Aligner
-from brdr.enums import OpenDomainStrategy, GRBType
+from brdr.be.grb.enums import GRBType
+from brdr.be.grb.loader import GRBActualLoader
+from brdr.enums import OpenDomainStrategy
 from brdr.geometry_utils import geom_from_wkt
-from brdr.grb import GRBActualLoader
 from brdr.loader import GeoJsonFileLoader, DictLoader
 
 

@@ -5,11 +5,9 @@ from shapely import from_wkt
 from shapely.geometry import Polygon
 
 from brdr.aligner import Aligner
+from brdr.be.grb.enums import GRBType
+from brdr.be.grb.loader import GRBActualLoader
 from brdr.constants import PREDICTION_COUNT
-from brdr.enums import GRBType
-from brdr.grb import (
-    GRBActualLoader,
-)
 from brdr.loader import DictLoader
 
 

@@ -4,8 +4,8 @@ import shapely
 from shapely import is_empty
 from shapely.geometry import Polygon
 
+from brdr.be.oe.utils import get_oe_dict_by_ids
 from brdr.constants import MULTI_SINGLE_ID_SEPARATOR
-from brdr.oe import get_oe_dict_by_ids
 from brdr.typings import ProcessResult
 from brdr.utils import get_collection, diffs_from_dict_processresult
 from brdr.utils import merge_process_results

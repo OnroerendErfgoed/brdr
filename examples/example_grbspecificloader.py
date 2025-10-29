@@ -3,8 +3,8 @@ import os
 from shapely import from_wkt
 
 from brdr.aligner import Aligner
+from brdr.be.grb.loader import GRBSpecificDateParcelLoader
 from brdr.enums import AlignerInputType
-from brdr.grb import GRBSpecificDateParcelLoader
 from brdr.loader import DictLoader
 from brdr.utils import write_geojson
 

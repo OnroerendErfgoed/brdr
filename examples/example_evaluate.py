@@ -4,15 +4,15 @@ from datetime import date
 import numpy as np
 
 from brdr.aligner import Aligner
+from brdr.be.grb.enums import GRBType
+from brdr.be.grb.loader import GRBActualLoader, GRBFiscalParcelLoader
+from brdr.be.grb.utils import get_affected_by_grb_change
 from brdr.constants import (
     EVALUATION_FIELD_NAME,
     PREDICTION_SCORE,
     RELEVANT_DISTANCE_FIELD_NAME,
 )
-from brdr.enums import GRBType, AlignerResultType
-from brdr.grb import GRBActualLoader
-from brdr.grb import GRBFiscalParcelLoader
-from brdr.grb import get_affected_by_grb_change
+from brdr.enums import AlignerResultType
 from brdr.loader import DictLoader, GeoJsonFileLoader
 
 # Press the green button in the gutter to run the script.

@@ -111,7 +111,7 @@ pip install brdr
 from brdr.aligner import Aligner
 from brdr.enums import OpenbaarDomeinStrategy
 from brdr.geometry_utils import geom_from_wkt
-from brdr.loader import DictLoader
+from brdr.loaders.loader import DictLoader
 
 # CREATE AN ALIGNER
 aligner = Aligner(

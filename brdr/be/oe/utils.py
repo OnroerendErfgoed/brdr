@@ -1,29 +1,14 @@
 import logging
-from datetime import datetime
-from enum import Enum
 
 import requests
 from shapely import box
 from shapely.geometry import shape
 
-from brdr.constants import DOWNLOAD_LIMIT, DEFAULT_CRS, DATE_FORMAT, VERSION_DATE
-from brdr.loader import GeoJsonLoader
+from brdr.be.oe.enums import OEType
+from brdr.constants import DOWNLOAD_LIMIT, DEFAULT_CRS
 from brdr.utils import get_collection_by_partition
 
 log = logging.getLogger(__name__)
-
-
-class OEType(str, Enum):
-    """
-    Different types of Onroerend Eefgoed-objects are available:
-
-    * AO: aanduidingsobjecten
-    * EO: erfgoedobjecten
-    """
-
-    AO = "aanduidingsobjecten"
-    EO = "erfgoedobjecten"
-
 
 def get_oe_dict_by_ids(objectids, oetype=OEType.AO):
     """
@@ -141,43 +126,3 @@ def get_collection_oe_objects(
         ),
         id_property,
     )
-
-
-class OnroerendErfgoedLoader(GeoJsonLoader):
-    def __init__(
-        self,
-        objectids=None,
-        oetype=OEType.AO,
-        bbox=None,
-        limit=DOWNLOAD_LIMIT,
-        partition=1000,
-        crs=DEFAULT_CRS,
-    ):
-        if (objectids is None and bbox is None) or (
-            objectids is not None and bbox is not None
-        ):
-            raise ValueError("Please provide a ID-filter OR a BBOX-filter, not both")
-        super().__init__()
-        self.objectids = objectids
-        self.oetype = oetype
-        self.bbox = bbox
-        self.limit = limit
-        self.part = partition
-        self.crs = crs
-        self.data_dict_source["source"] = "Onroerend Erfgoed"
-
-    def load_data(self):
-        # geom_union = buffer_pos(self.aligner.get_thematic_union(), MAX_REFERENCE_BUFFER)
-        collection, id_property = get_collection_oe_objects(
-            oetype=self.oetype,
-            objectids=self.objectids,
-            bbox=self.bbox,
-            partition=self.part,
-            limit=self.limit,
-            crs=self.crs,
-        )
-        self.id_property = id_property
-        self.input = dict(collection)
-        self.data_dict_source[VERSION_DATE] = datetime.now().strftime(DATE_FORMAT)
-        logging.debug(f"OnroerendErfgoed-objects downloaded")
-        return super().load_data()

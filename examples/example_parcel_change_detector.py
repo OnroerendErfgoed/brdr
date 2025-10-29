@@ -7,9 +7,6 @@ from brdr.constants import (
     RELEVANT_DISTANCE_FIELD_NAME,
     FORMULA_FIELD_NAME,
 )
-from brdr.grb import GRBFiscalParcelLoader
-from brdr.grb import update_to_actual_grb
-from brdr.oe import OnroerendErfgoedLoader
 from brdr.utils import write_geojson
 
 if __name__ == "__main__":

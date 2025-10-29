@@ -20,7 +20,7 @@ lang: en
 metadata-files:
   - reference/_sidebar.yml
 
-highlight-style: github-dark 
+highlight-style: github-dark
 format:
   html:
     theme:
@@ -32,12 +32,12 @@ format:
 
 quartodoc:
   # the name used to import the package you want to create reference docs for
-  package: brdr 
+  package: brdr
   sidebar: reference/_sidebar.yml
   css: reference/_styles-quartodoc.css
 
   sections:
-    - title: Aligner 
+    - title: Aligner
       package: brdr.aligner
       desc: Aligner class of the brdr package.
       contents:

@@ -1,7 +1,8 @@
 from brdr.aligner import Aligner
-from brdr.enums import GRBType, AlignerResultType
-from brdr.grb import GRBActualLoader
-from brdr.oe import OnroerendErfgoedLoader, OEType
+from brdr.be.grb.enums import GRBType
+from brdr.be.grb.loader import GRBActualLoader
+from brdr.be.oe.loader import OnroerendErfgoedLoader, OEType
+from brdr.enums import AlignerResultType
 from examples import print_brdr_formula
 from examples import show_map
 

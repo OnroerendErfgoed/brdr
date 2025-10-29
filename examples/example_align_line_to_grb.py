@@ -1,8 +1,9 @@
 from shapely import from_wkt
 
 from brdr.aligner import Aligner
-from brdr.enums import GRBType, AlignerResultType
-from brdr.grb import GRBActualLoader
+from brdr.be.grb.enums import GRBType
+from brdr.be.grb.loader import GRBActualLoader
+from brdr.enums import AlignerResultType
 from brdr.loader import DictLoader
 
 if __name__ == "__main__":

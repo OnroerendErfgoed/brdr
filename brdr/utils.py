@@ -388,6 +388,79 @@ def diff_from_processresult(processresult, geom_thematic, reference_union, diff_
     return diff
 
 
+def fetch_all_ogc_features(base_url, initial_params=None, headers=None):
+    """
+    Haalt alle features op uit een OGC Feature API, ongeacht het pagineringsmechanisme.
+
+    Ondersteunt:
+    - cursor-based paginering via 'next' links
+    - offset-based paginering via 'startIndex'
+    - geen paginering (alles in één pagina)
+
+    :param base_url: URL van het /items endpoint van de OGC API
+    :param initial_params: Dictionary met initiële queryparameters (bv. bbox, limit)
+    :param headers: Optionele headers (bv. Accept: application/json)
+    :return: Lijst met alle features
+    """
+    if initial_params is None:
+        initial_params = {}
+    if headers is None:
+        headers = {"Accept": "application/json"}
+
+    all_features = []
+    url = base_url
+    params = initial_params.copy()
+    start_index = 0
+    use_start_index = False
+
+    while url:
+        # Voeg startIndex toe als we die gebruiken
+        if use_start_index:
+            params["startIndex"] = start_index
+
+        response = requests.get(url, params=params, headers=headers)
+        response.raise_for_status()
+        data = response.json()
+
+        # Voeg features toe
+        all_features.extend(data.get("features", []))
+
+        # Zoek naar een 'next' link
+        next_link = next(
+            (link["href"] for link in data.get("links", []) if link["rel"] == "next"),
+            None,
+        )
+
+        if next_link:
+            # Cursor-based paginering
+            url = next_link
+            params = None  # Volgende request gebruikt volledige URL
+        elif "numberMatched" in data and "features" in data:
+            # Mogelijk offset-based paginering
+            if not use_start_index:
+                use_start_index = True
+                start_index = initial_params.get("startIndex", 0)
+                params = initial_params.copy()
+            start_index += initial_params.get("limit", 100)
+            if start_index >= data["numberMatched"]:
+                break
+        else:
+            # Geen verdere paginering
+            break
+
+    return all_features
+
+
+def make_feature_collection(features):
+    """
+    Maakt een GeoJSON FeatureCollection van een lijst met features.
+
+    :param features: lijst van GeoJSON features (dicts met 'type': 'Feature')
+    :return: dict met 'type': 'FeatureCollection' en 'features': [...]
+    """
+    return {"type": "FeatureCollection", "features": features}
+
+
 def get_collection(ref_url, limit):
     """
     Fetches a collection of features from a paginated API endpoint.
@@ -408,6 +481,10 @@ def get_collection(ref_url, limit):
     Logs:
         - Debug logs the URL being used for each request during pagination.
     """
+
+    features = fetch_all_ogc_features(base_url=ref_url, initial_params={"limit": limit})
+    return make_feature_collection(features)
+
     start_index = 0
     collection = {}
     while True:
