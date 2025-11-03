@@ -481,7 +481,7 @@ def get_collection(ref_url, limit):
     Logs:
         - Debug logs the URL being used for each request during pagination.
     """
-
+    #TODO: check if all features are correctly fetched with this function
     features = fetch_all_ogc_features(base_url=ref_url, initial_params={"limit": limit})
     return make_feature_collection(features)
 

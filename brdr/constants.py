@@ -63,6 +63,8 @@ LAST_VERSION_DATE = "last_version_date"
 VERSION_DATE = "version_date"
 DATE_FORMAT = "%Y-%m-%d"
 
+
+MAX_REFERENCE_BUFFER = 10
 # GRB_CONSTANTS
 # max buffer (m) around thematic geometry to download reference parcels
 GRB_MAX_REFERENCE_BUFFER = 10

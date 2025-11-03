@@ -1,16 +1,19 @@
 import json
+import xml.etree.ElementTree as ET
 from abc import ABC
 from datetime import datetime
+from urllib.parse import urlparse
 
 import requests as requests
 from shapely import force_2d
 from shapely import make_valid
 from shapely.geometry.base import BaseGeometry
 
-from brdr.constants import DATE_FORMAT
+from brdr.constants import DATE_FORMAT, MAX_REFERENCE_BUFFER, DOWNLOAD_LIMIT
 from brdr.constants import VERSION_DATE
+from brdr.geometry_utils import buffer_pos
 from brdr.typings import FeatureCollection
-from brdr.utils import geojson_to_dicts
+from brdr.utils import geojson_to_dicts, get_collection_by_partition
 
 
 class Loader(ABC):
@@ -27,21 +30,29 @@ class Loader(ABC):
         if self.versiondate_info is not None:
             for key in self.data_dict_properties.keys():
                 try:
-                    date = datetime.strptime(
-                        self.data_dict_properties[key][self.versiondate_info["name"]],
-                        self.versiondate_info["format"],
+                    try:
+                        date = datetime.strptime(
+                            self.data_dict_properties[key][self.versiondate_info["name"]],
+                            self.versiondate_info["format"],
+                        )
+                    except:
+                        # Catch, to try extracting only the date with default -date format if specific format does not work
+
+
+                            date = datetime.strptime(
+                            self.data_dict_properties[key][self.versiondate_info["name"]][
+                                :10
+                            ],
+                            DATE_FORMAT,
+                        )
+
+
+                    self.data_dict_properties[key][VERSION_DATE] = datetime.strftime(
+                        date, DATE_FORMAT
                     )
                 except:
-                    # Catch, to try extracting only the date with default -date format if specific format does not work
-                    date = datetime.strptime(
-                        self.data_dict_properties[key][self.versiondate_info["name"]][
-                            :10
-                        ],
-                        DATE_FORMAT,
-                    )
-                self.data_dict_properties[key][VERSION_DATE] = datetime.strftime(
-                    date, DATE_FORMAT
-                )
+                    #No version date added to features
+                    pass
 
         return self.data_dict, self.data_dict_properties, self.data_dict_source
 
@@ -101,3 +112,119 @@ class GeoJsonUrlLoader(GeoJsonLoader):
     def __init__(self, url, id_property):
         _input = requests.get(url).json()
         super().__init__(_input=_input, id_property=id_property)
+
+
+class OGCFeatureAPIReferenceLoader(GeoJsonLoader):
+    def __init__(self, url,id_property,collection,aligner, partition: int = 1000, limit = DOWNLOAD_LIMIT):
+        super().__init__()
+        self.aligner = aligner
+        self.url = url
+        self.id_property = id_property
+        self.part = partition
+        self.limit = limit
+        self.coll = collection
+        self.data_dict_source["source"] = url
+
+    def load_data(self):
+        if not self.aligner.dict_thematic:
+            raise ValueError("Thematic data not loaded")
+        # Check if collection exists
+        collections_url = self.url.rstrip('/') + "/" + "collections"
+        response = requests.get(collections_url)
+        data = response.json()
+        collections = [
+            collection["id"] for collection in data.get("collections", [])
+        ]
+        if self.coll not in collections:
+            raise ValueError(f"Collection {self.coll} not found inside OGC Feature API {self.url}")
+        collection_url =  collections_url + "/" + self.coll
+
+        # Get all supported CRS for the collection of OGCFeatureAPI
+        response = requests.get(collection_url)
+        data = response.json()
+        supported_crs = set()
+        for crs in data.get("crs", []):
+            path_parts = urlparse(crs).path.split("/")
+            crs_id = path_parts[-1]
+            supported_crs.add(crs_id)
+        if self.aligner.CRS.split(':')[-1] not in supported_crs:
+            raise ValueError (f"OGCFeatureAPIReferenceLoader '{collection_url}' only supports alignment in CRS '{str(supported_crs)}' while CRS '{self.aligner.CRS}' is used.")
+        geom_union = buffer_pos(
+            self.aligner.get_thematic_union(), MAX_REFERENCE_BUFFER
+        )
+        ogcfeature_url  = collection_url + "/items?limit=" + str(self.limit) + "&crs=" + self.aligner.CRS + "&f=json"
+
+        collection = get_collection_by_partition(
+            ogcfeature_url, geometry=geom_union, partition=self.part, limit=self.limit, crs=self.aligner.CRS
+        )
+        self.input = dict(collection)
+        self.data_dict_source[VERSION_DATE] = datetime.now().strftime(DATE_FORMAT)
+        self.aligner.logger.feedback_info(f"Reference data downloaded from OGC Feature API: {collection_url}")
+        return super().load_data()
+
+class WFSReferenceLoader(GeoJsonLoader):
+    def __init__(self, url,id_property,typename,aligner, partition: int = 1000,limit=DOWNLOAD_LIMIT):
+        super().__init__()
+        self.aligner = aligner
+        self.url = url
+        self.id_property = id_property
+        self.part = partition
+        self.typename = typename
+        self.data_dict_source["source"] = url
+        self.limit = limit
+
+    def load_data(self):
+        if not self.aligner.dict_thematic:
+            raise ValueError("Thematic data not loaded")
+
+        # Get all supported CRS for the collection of OGCFeatureAPI
+
+        params = {
+            "service": "WFS",
+            "version": "2.0.0",
+            "request": "GetCapabilities"
+        }
+
+        response = requests.get(self.url,params=params)
+
+        # Ophalen van de XML
+        root = ET.fromstring(response.content)
+        typename_exists=False
+        for feature_type in root.findall(".//{*}FeatureType"):
+            for child in feature_type:
+                if child.tag.endswith("Name") and child.text == self.typename:
+                    typename_exists = True
+                    supported_crs = []
+                    defaultcrs = feature_type.find("{*}DefaultCRS")
+                    supported_crs.append(defaultcrs.text)
+                    for ocrs in feature_type.findall("{*}OtherCRS"):
+                        supported_crs.append(ocrs.text)
+                    break
+        if not typename_exists:
+            raise ValueError(f"Collection {self.typename} not found inside OGC WFS{self.url}")
+        supported_crs = [c.split(':')[-1] for c in supported_crs]
+        if self.aligner.CRS.split(':')[-1] not in supported_crs:
+            raise ValueError(
+                         f"WFS '{self.url}' only supports alignment in CRS '{str(supported_crs)}' while CRS '{self.aligner.CRS}' is used."
+                     )
+        geom_union = buffer_pos(
+            self.aligner.get_thematic_union(), MAX_REFERENCE_BUFFER
+        )
+
+        wfs_url = (self.url + "?SERVICE=WFS&REQUEST=GetFeature&VERSION=2.0.0&"
+            f"TYPENAMES={self.typename}&"
+            f"SRSNAME={self.aligner.CRS}"
+            "&outputFormat=application/json"
+        )
+
+        collection = get_collection_by_partition(
+                wfs_url,
+                geometry=geom_union,
+                partition=self.part,
+                limit=self.limit,
+                crs=self.aligner.CRS,
+            )
+        self.input = dict(collection)
+        self.data_dict_source[VERSION_DATE] = datetime.now().strftime(DATE_FORMAT)
+        self.aligner.logger.feedback_info(f"Reference data downloaded from WFS: {self.url}")
+        return super().load_data()
