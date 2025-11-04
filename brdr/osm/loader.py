@@ -6,10 +6,10 @@ import osmnx as ox
 from brdr.constants import (
     DATE_FORMAT,
     VERSION_DATE,
-    OSM_MAX_REFERENCE_BUFFER,
 )
 from brdr.geometry_utils import buffer_pos
 from brdr.loader import DictLoader
+from brdr.osm.constants import OSM_MAX_REFERENCE_BUFFER
 
 
 class OSMLoader(DictLoader):

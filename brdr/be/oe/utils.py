@@ -102,27 +102,25 @@ def get_collection_oe_objects(
         )
         return {}, None
 
-    theme_url = (
-        "https://www.mercator.vlaanderen.be/raadpleegdienstenmercatorpubliek/wfs?"
-        "SERVICE=WFS&REQUEST=GetFeature&VERSION=2.0.0&"
-        f"TYPENAMES={typename}&"
-        f"SRSNAME={crs}"
-        "&outputFormat=application/json"
-    )
+    theme_url ="https://www.mercator.vlaanderen.be/raadpleegdienstenmercatorpubliek/wfs?"
+    params = {
+        "SERVICE": "WFS",
+        "VERSION": "2.0.0",
+        "REQUEST": "GetFeature",
+        "TYPENAMES": typename,
+        "SRSNAME": crs,
+        "outputFormat": "application/json",
+        "limit": limit,
+    }
     if objectids is not None:
-        filter = (
-            f"&CQL_FILTER={id_property} IN ("
-            + ", ".join(str(o) for o in objectids)
-            + ")"
-        )
-        theme_url = theme_url + filter
+        params["CQL_FILTER"] = f"{id_property} IN ("+ ", ".join(str(o) for o in objectids)+ ")"
     bbox_polygon = None
     if bbox is not None:
         bbox_polygon = box(*tuple(o for o in bbox))
-
+    collection = get_collection_by_partition(
+        url=theme_url,params=params, geometry=bbox_polygon, partition=partition, crs=crs
+    )
     return (
-        get_collection_by_partition(
-            theme_url, geometry=bbox_polygon, partition=partition, limit=limit, crs=crs
-        ),
+        collection,
         id_property,
     )

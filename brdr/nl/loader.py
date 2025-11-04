@@ -2,16 +2,18 @@ from datetime import datetime
 
 from brdr.constants import (
     DATE_FORMAT,
-    BRK_VERSION_DATE,
     VERSION_DATE,
     DOWNLOAD_LIMIT,
+)
+from brdr.geometry_utils import buffer_pos
+from brdr.loader import GeoJsonLoader
+from brdr.nl.constants import (
+    BRK_VERSION_DATE,
     BRK_FEATURE_URL,
     BRK_CRS,
     BRK_GENERIC_ID,
     BRK_MAX_REFERENCE_BUFFER,
 )
-from brdr.geometry_utils import buffer_pos
-from brdr.loader import GeoJsonLoader
 from brdr.nl.enums import BRKType
 from brdr.utils import get_collection_by_partition
 
@@ -27,20 +29,17 @@ def get_collection_brk(
         crs = 'http://www.opengis.net/def/crs/0/28992'
     else:
         raise ValueError (f"CRS expected: {BRK_CRS}, got CRS {crs} instead")
-    url = (
-        BRK_FEATURE_URL
-        + "/"
-        + brk_type.name
-        + "/items?limit="
-        + str(limit)
-        + "&crs="
-        + crs
-        + "&f=json"
-    )
+    url = BRK_FEATURE_URL+ "/"+ brk_type.name + "/items?"
 
     name_reference_id = BRK_GENERIC_ID
+    params = {"limit": limit, "crs": crs, "f": "json"}
+
     collection = get_collection_by_partition(
-        url, geometry=geometry, partition=partition, limit=limit, crs=crs
+        url=url,
+        params=params,
+        geometry=geometry,
+        partition=partition,
+        crs=crs,
     )
     return collection, name_reference_id
 

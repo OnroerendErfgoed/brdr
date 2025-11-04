@@ -2,7 +2,7 @@
 # Limit used when extracting features by URL, using the feature API (f.e. from GRB)
 from brdr.enums import SnapStrategy, DiffMetric
 
-DOWNLOAD_LIMIT = 10000
+DOWNLOAD_LIMIT: int = 10000
 
 # value that is used to calculate the boundary of a thematic geometry wherefor the calculation has to be done. (inner part is added)
 MAX_OUTER_BUFFER = 50
@@ -63,32 +63,6 @@ LAST_VERSION_DATE = "last_version_date"
 VERSION_DATE = "version_date"
 DATE_FORMAT = "%Y-%m-%d"
 
-
 MAX_REFERENCE_BUFFER = 10
-# GRB_CONSTANTS
-# max buffer (m) around thematic geometry to download reference parcels
-GRB_MAX_REFERENCE_BUFFER = 10
+
 BUFFER_MULTIPLICATION_FACTOR = 1.01
-# URL of the OGC feature API of actual GRB to extract collections
-GRB_FEATURE_URL = "https://geo.api.vlaanderen.be/GRB/ogc/features/collections"
-# URL of the OGC feature API of GRB fiscal parcels (situation of 1st of January) to
-# extract collections
-GRB_FISCAL_PARCELS_URL = "https://geo.api.vlaanderen.be/Adpf/ogc/features/collections"
-# Property-name of version_date
-GRB_VERSION_DATE = "VERSDATUM"
-# Property-name of id of GRB-parcels
-GRB_PARCEL_ID = "CAPAKEY"
-# Property-name of id of GRB-objects
-GRB_GENERIC_ID = "OIDN"
-
-# BRK (Basis Registratie Kaart) Constants
-BRK_CRS = "EPSG:28992"
-BRK_FEATURE_URL = "https://api.pdok.nl/kadaster/brk-kadastrale-kaart/ogc/v1/collections"
-# Property-name of version_date
-BRK_VERSION_DATE = "begin_geldigheid"
-BRK_GENERIC_ID = "identificatie_lokaal_id"
-# max buffer (m) around thematic geometry to download reference parcels
-BRK_MAX_REFERENCE_BUFFER = 10
-
-# OSM CONSTANTS
-OSM_MAX_REFERENCE_BUFFER = 10

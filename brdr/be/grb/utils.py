@@ -7,17 +7,16 @@ from shapely import intersects
 from shapely.geometry import shape
 
 from brdr.be.grb.enums import GRBType
-from brdr.constants import (
-    DEFAULT_CRS,
-    DATE_FORMAT,
+from brdr.be.grb.constants import (
+GRB_FEATURE_URL,
+GRB_FISCAL_PARCELS_URL,
+GRB_MAX_REFERENCE_BUFFER,
+GRB_PARCEL_ID,
+GRB_VERSION_DATE,
     GRB_GENERIC_ID,
 )
-from brdr.constants import DOWNLOAD_LIMIT
-from brdr.constants import GRB_FEATURE_URL
-from brdr.constants import GRB_FISCAL_PARCELS_URL
-from brdr.constants import GRB_MAX_REFERENCE_BUFFER
-from brdr.constants import GRB_PARCEL_ID
-from brdr.constants import GRB_VERSION_DATE
+from brdr.constants import (DOWNLOAD_LIMIT, DEFAULT_CRS, DATE_FORMAT)
+
 from brdr.geometry_utils import buffer_pos, safe_intersection, safe_unary_union
 from brdr.geometry_utils import create_donut
 from brdr.geometry_utils import features_by_geometric_operation
@@ -30,7 +29,7 @@ log = logging.getLogger(__name__)
 
 datetime_format_TZ = "%Y-%m-%dT%H:%M:%SZ"
 
-#TODO move the not-loader code to another place?
+# TODO move the not-loader code to another place?
 def is_grb_changed(
     geometry,
     grb_type=GRBType.ADP,
@@ -191,12 +190,13 @@ def get_last_version_date(
     if border_distance > 0:
         geometry = create_donut(geometry, border_distance)
     bbox = get_bbox(geometry)
-    actual_url = (
-        GRB_FEATURE_URL + "/" + grb_type.name + "/items?"
-        "limit=" + str(limit) + "&crs=" + crs + "&bbox-crs=" + crs + "&bbox=" + bbox
-    )
+    actual_url = GRB_FEATURE_URL + "/" + grb_type.name + "/items?"
+    params ={"crs":crs,
+             "bbox-crs": crs,
+             "bbox": bbox,
+             "limit": limit}
     update_dates = []
-    collection = get_collection(actual_url, limit)
+    collection = get_collection(url=actual_url,params=params)
     if "features" not in collection:
         return None
     for c in collection["features"]:
@@ -221,15 +221,10 @@ def get_collection_grb_actual(
     date_start=None,
     date_end=None,
 ):
-    url = (
-        GRB_FEATURE_URL
-        + "/"
-        + grb_type.name
-        + "/items?limit="
-        + str(limit)
-        + "&crs="
-        + crs
-    )
+
+    url = GRB_FEATURE_URL  + "/"  + grb_type.name  + "/items?"
+    params = {"crs":crs,"limit":limit}
+
     if grb_type == GRBType.ADP:
         name_reference_id = GRB_PARCEL_ID
     else:
@@ -249,10 +244,11 @@ def get_collection_grb_actual(
     if not (date_start is None and date_end is None):
         versiondate_filter = versiondate_filter_start + " AND " + versiondate_filter_end
     if versiondate_filter != "":
-        url = url + "&filter=" + versiondate_filter + "&filter-lang=cql-text"
+        params["filter"]= versiondate_filter
+        params["filter-lang"]= "cql-text"
 
     collection = get_collection_by_partition(
-        url, geometry=geometry, partition=partition, limit=limit, crs=crs
+        url=url,params=params, geometry=geometry, partition=partition, crs=crs
     )
     return collection, name_reference_id
 
@@ -264,12 +260,10 @@ def get_collection_grb_fiscal_parcels(
     limit=DOWNLOAD_LIMIT,
     crs=DEFAULT_CRS,
 ):
-    url = (
-        GRB_FISCAL_PARCELS_URL + "/Adpf" + str(year) + "/items?"
-        "limit=" + str(limit) + "&crs=" + crs
-    )
+    url = GRB_FISCAL_PARCELS_URL + "/Adpf" + str(year) + "/items?"
+    params = {"crs":crs,"limit":limit}
     return get_collection_by_partition(
-        url, geometry=geometry, partition=partition, limit=limit, crs=crs
+        url=url,params=params, geometry=geometry, partition=partition, crs=crs
     )
 
 
@@ -339,5 +333,3 @@ def get_collection_grb_parcels_by_date(
     collection_specific_date["features"] = specific_date_features
 
     return collection_specific_date
-
-

@@ -1,4 +1,5 @@
 import logging
+import math
 import os.path
 
 import numpy as np
@@ -34,6 +35,7 @@ from brdr.geometry_utils import (
     safe_intersection,
     total_vertex_distance,
 )
+from brdr.logger import LOGGER
 from brdr.typings import ProcessResult
 
 log = logging.getLogger(__name__)
@@ -388,65 +390,77 @@ def diff_from_processresult(processresult, geom_thematic, reference_union, diff_
     return diff
 
 
-def fetch_all_ogc_features(base_url, initial_params=None, headers=None):
+def fetch_all_ogc_features(base_url, params=None, headers=None, max_pages=math.inf):
     """
-    Haalt alle features op uit een OGC Feature API, ongeacht het pagineringsmechanisme.
+    Fetches all features from an OGC Feature API, regardless of the pagination mechanism.
 
-    Ondersteunt:
-    - cursor-based paginering via 'next' links
-    - offset-based paginering via 'startIndex'
-    - geen paginering (alles in één pagina)
+    Supports:
+    - Cursor-based pagination via 'next' links
+    - Offset-based pagination via 'startIndex'
+    - No pagination (all features in a single page)
 
-    :param base_url: URL van het /items endpoint van de OGC API
-    :param initial_params: Dictionary met initiële queryparameters (bv. bbox, limit)
-    :param headers: Optionele headers (bv. Accept: application/json)
-    :return: Lijst met alle features
+    :param base_url: URL of the /items endpoint of the OGC API
+    :param initial_params: Dictionary with initial query parameters (e.g., bbox, limit)
+    :param headers: Optional headers (e.g., Accept: application/json)
+    :return: A list of all features
     """
-    if initial_params is None:
-        initial_params = {}
+
+    if params is None:
+        params = {}
     if headers is None:
         headers = {"Accept": "application/json"}
 
     all_features = []
     url = base_url
-    params = initial_params.copy()
+    limit = params.get("limit", DOWNLOAD_LIMIT)
     start_index = 0
+    local_params = params.copy()
     use_start_index = False
+    page = 0
 
-    while url:
-        # Voeg startIndex toe als we die gebruiken
+    while url and page<=max_pages:
+        LOGGER.debug("page:" + str(page) + "url: " + str(url))
+        # Add startIndex when using startIndex
         if use_start_index:
-            params["startIndex"] = start_index
+            local_params["startIndex"] = start_index
 
-        response = requests.get(url, params=params, headers=headers)
+        response = requests.get(url, params=local_params, headers=headers)
         response.raise_for_status()
         data = response.json()
 
-        # Voeg features toe
+        # Add features
         all_features.extend(data.get("features", []))
 
-        # Zoek naar een 'next' link
+        # Search next-link
         next_link = next(
             (link["href"] for link in data.get("links", []) if link["rel"] == "next"),
             None,
         )
 
         if next_link:
-            # Cursor-based paginering
+            # Cursor-based pagination
             url = next_link
-            params = None  # Volgende request gebruikt volledige URL
-        elif "numberMatched" in data and "features" in data:
-            # Mogelijk offset-based paginering
+            local_params = None  # next-url has all its parameters included
+        elif "numberMatched" in data and "numberReturned" in data and data["numberMatched"] == data["numberReturned"]:
+            break
+        elif "numberReturned" in data and "features" in data:
+            # limit not used and all features returned
+            if data["numberReturned"] > limit:
+                break
+            # Possibly offset-based pagination
             if not use_start_index:
                 use_start_index = True
-                start_index = initial_params.get("startIndex", 0)
-                params = initial_params.copy()
-            start_index += initial_params.get("limit", 100)
-            if start_index >= data["numberMatched"]:
+                start_index = params.get("startIndex", 0)
+                local_params = params.copy()
+                local_params["count"]=limit
+            start_index += limit
+            if data["numberReturned"]<=limit:
                 break
         else:
-            # Geen verdere paginering
+            # No further pagination
             break
+
+        page += 1
 
     return all_features
 
@@ -461,50 +475,27 @@ def make_feature_collection(features):
     return {"type": "FeatureCollection", "features": features}
 
 
-def get_collection(ref_url, limit):
+def get_collection(url, params=None):
     """
-    Fetches a collection of features from a paginated API endpoint.
+    Fetches a collection of features from a (paginated) API endpoint (OGC Feature API or WFS).
 
     This function retrieves a collection of features from a URL that supports
     pagination using a `startIndex` parameter. It iteratively retrieves features in
     chunks of the specified `limit` until no more features are available.
 
     Args:
-        ref_url (str): The base URL of the API endpoint.
-        limit (int): The maximum number of features to retrieve per request.
+        url (str): The base URL of the API endpoint.
+        params: parameters for the request
 
     Returns:
         dict: A dictionary representing the complete GeoJSON feature collection.
             This might be truncated if the total number of features exceeds the
             limitations of the API or server.
-
-    Logs:
-        - Debug logs the URL being used for each request during pagination.
     """
-    #TODO: check if all features are correctly fetched with this function
-    features = fetch_all_ogc_features(base_url=ref_url, initial_params={"limit": limit})
+    if params is None:
+        params = {}
+    features = fetch_all_ogc_features(base_url=url, params=params)
     return make_feature_collection(features)
-
-    start_index = 0
-    collection = {}
-    while True:
-        url = ref_url + "&startIndex=" + str(start_index)
-        logging.debug("called url: " + url)
-        json = requests.get(url).json()
-        feature_collection = dict(json)
-        if (
-            "features" not in feature_collection
-            or len(feature_collection["features"]) == 0
-        ):
-            break
-        start_index = start_index + limit
-        if collection == {}:
-            collection = feature_collection
-        else:
-            collection["features"].extend(feature_collection["features"])  # noqa
-        if len(feature_collection["features"]) < limit:
-            break
-    return collection
 
 
 def geojson_geometry_to_shapely(geojson_geometry):
@@ -544,7 +535,7 @@ def geojson_to_dicts(collection, id_property):
 
 
 def get_collection_by_partition(
-    url, geometry, partition=1000, limit=DOWNLOAD_LIMIT, crs=DEFAULT_CRS
+    url,params, geometry, partition=1000, crs=DEFAULT_CRS
 ):
     """
     Retrieves a collection of geographic data by partitioning the input geometry.
@@ -561,19 +552,17 @@ def get_collection_by_partition(
     """
     collection = {}
     if geometry is None or geometry.is_empty:
-        collection = get_collection(
-            _add_bbox_to_url(url=url, crs=crs, bbox=None), limit
-        )
+        collection = get_collection(url=url, params=params)
     elif partition < 1:
-        collection = get_collection(
-            _add_bbox_to_url(url=url, crs=crs, bbox=get_bbox(geometry)), limit
-        )
+        params["bbox"] = get_bbox(geometry)
+        params["bbox-crs"] = crs
+        collection = get_collection(url=url, params=params)
     else:
         geoms = get_partitions(geometry, partition)
         for g in geoms:
-            coll = get_collection(
-                _add_bbox_to_url(url=url, crs=crs, bbox=get_bbox(g)), limit
-            )
+            params["bbox"] = get_bbox(g)
+            params["bbox-crs"] = crs
+            coll = get_collection(url=url, params=params)
             if collection == {}:
                 collection = dict(coll)
             elif "features" in collection and "features" in coll:

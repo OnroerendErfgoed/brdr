@@ -145,9 +145,9 @@ class TestUtils(unittest.TestCase):
             "https://geo.api.vlaanderen.be/Adpf/ogc/features/collections/Adpf"
             + str(base_year)
             + "/items?"
-            "limit=" + str(limit) + "&crs=" + crs + "&bbox-crs=EPSG:31370&bbox=" + bbox
         )
-        collection = get_collection(ref_url, limit)
+        params = {"limit":limit,"crs":crs,"bbox-crs":crs,"bbox":bbox}
+        collection = get_collection(url=ref_url,params=params)
         self.assertTrue("features" in collection.keys())
 
     def test_merge_process_results(self):

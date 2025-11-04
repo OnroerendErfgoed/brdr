@@ -152,10 +152,11 @@ class OGCFeatureAPIReferenceLoader(GeoJsonLoader):
         geom_union = buffer_pos(
             self.aligner.get_thematic_union(), MAX_REFERENCE_BUFFER
         )
-        ogcfeature_url  = collection_url + "/items?limit=" + str(self.limit) + "&crs=" + self.aligner.CRS + "&f=json"
+        ogcfeature_url  = collection_url + "/items?"
+        params={"limit":self.limit,"crs":self.aligner.CRS,"f":"json"}
 
         collection = get_collection_by_partition(
-            ogcfeature_url, geometry=geom_union, partition=self.part, limit=self.limit, crs=self.aligner.CRS
+            url=ogcfeature_url,params=params, geometry=geom_union, partition=self.part, crs=self.aligner.CRS
         )
         self.input = dict(collection)
         self.data_dict_source[VERSION_DATE] = datetime.now().strftime(DATE_FORMAT)
@@ -211,19 +212,19 @@ class WFSReferenceLoader(GeoJsonLoader):
             self.aligner.get_thematic_union(), MAX_REFERENCE_BUFFER
         )
 
-        wfs_url = (self.url + "?SERVICE=WFS&REQUEST=GetFeature&VERSION=2.0.0&"
-            f"TYPENAMES={self.typename}&"
-            f"SRSNAME={self.aligner.CRS}"
-            "&outputFormat=application/json"
-        )
+        params = {
+            "SERVICE": "WFS",
+            "REQUEST":"GetFeature",
+            "VERSION": "2.0.0",
+            "TYPENAMES": self.typename,
+            "SRSNAME": self.aligner.CRS,
+            "outputFormat": "application/json",
+            "limit": self.limit,
+        }
 
         collection = get_collection_by_partition(
-                wfs_url,
-                geometry=geom_union,
-                partition=self.part,
-                limit=self.limit,
-                crs=self.aligner.CRS,
-            )
+            url=self.url,params=params, geometry=geom_union, partition=self.part, crs=self.aligner.CRS
+        )
         self.input = dict(collection)
         self.data_dict_source[VERSION_DATE] = datetime.now().strftime(DATE_FORMAT)
         self.aligner.logger.feedback_info(f"Reference data downloaded from WFS: {self.url}")
