@@ -2,7 +2,6 @@ import json
 import xml.etree.ElementTree as ET
 from abc import ABC
 from datetime import datetime
-from urllib.parse import urlparse
 
 import requests as requests
 from shapely import force_2d
@@ -11,7 +10,7 @@ from shapely.geometry.base import BaseGeometry
 
 from brdr.constants import DATE_FORMAT, MAX_REFERENCE_BUFFER, DOWNLOAD_LIMIT
 from brdr.constants import VERSION_DATE
-from brdr.geometry_utils import buffer_pos
+from brdr.geometry_utils import buffer_pos, to_crs, from_crs
 from brdr.typings import FeatureCollection
 from brdr.utils import geojson_to_dicts, get_collection_by_partition
 
@@ -144,16 +143,17 @@ class OGCFeatureAPIReferenceLoader(GeoJsonLoader):
         data = response.json()
         supported_crs = set()
         for crs in data.get("crs", []):
-            path_parts = urlparse(crs).path.split("/")
-            crs_id = path_parts[-1]
-            supported_crs.add(crs_id)
-        if self.aligner.CRS.split(':')[-1] not in supported_crs:
+            try:
+                supported_crs.add(to_crs(crs))
+            except:
+                pass
+        if self.aligner.CRS not in supported_crs:
             raise ValueError (f"OGCFeatureAPIReferenceLoader '{collection_url}' only supports alignment in CRS '{str(supported_crs)}' while CRS '{self.aligner.CRS}' is used.")
         geom_union = buffer_pos(
             self.aligner.get_thematic_union(), MAX_REFERENCE_BUFFER
         )
         ogcfeature_url  = collection_url + "/items?"
-        params={"limit":self.limit,"crs":self.aligner.CRS,"f":"json"}
+        params={"limit":self.limit,"crs":from_crs(self.aligner.CRS),"f":"json"}
 
         collection = get_collection_by_partition(
             url=ogcfeature_url,params=params, geometry=geom_union, partition=self.part, crs=self.aligner.CRS
@@ -197,14 +197,17 @@ class WFSReferenceLoader(GeoJsonLoader):
                     typename_exists = True
                     supported_crs = []
                     defaultcrs = feature_type.find("{*}DefaultCRS")
-                    supported_crs.append(defaultcrs.text)
+                    supported_crs.append(to_crs(defaultcrs.text))
                     for ocrs in feature_type.findall("{*}OtherCRS"):
-                        supported_crs.append(ocrs.text)
+                        try:
+                            supported_crs.append(to_crs(ocrs.text))
+                        except:
+                            pass
                     break
         if not typename_exists:
             raise ValueError(f"Collection {self.typename} not found inside OGC WFS{self.url}")
-        supported_crs = [c.split(':')[-1] for c in supported_crs]
-        if self.aligner.CRS.split(':')[-1] not in supported_crs:
+
+        if self.aligner.CRS not in supported_crs:
             raise ValueError(
                          f"WFS '{self.url}' only supports alignment in CRS '{str(supported_crs)}' while CRS '{self.aligner.CRS}' is used."
                      )
@@ -217,7 +220,7 @@ class WFSReferenceLoader(GeoJsonLoader):
             "REQUEST":"GetFeature",
             "VERSION": "2.0.0",
             "TYPENAMES": self.typename,
-            "SRSNAME": self.aligner.CRS,
+            "SRSNAME": from_crs(self.aligner.CRS,format="epsg"),
             "outputFormat": "application/json",
             "limit": self.limit,
         }

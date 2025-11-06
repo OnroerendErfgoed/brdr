@@ -4,6 +4,7 @@ from datetime import datetime
 from brdr.be.oe.enums import OEType
 from brdr.be.oe.utils import get_collection_oe_objects
 from brdr.constants import DOWNLOAD_LIMIT, DEFAULT_CRS, DATE_FORMAT, VERSION_DATE
+from brdr.geometry_utils import to_crs
 from brdr.loader import GeoJsonLoader
 
 log = logging.getLogger(__name__)
@@ -33,7 +34,7 @@ class OnroerendErfgoedLoader(GeoJsonLoader):
         self.bbox = bbox
         self.limit = limit
         self.part = partition
-        self.crs = crs
+        self.crs = to_crs(crs)
         self.data_dict_source["source"] = "Onroerend Erfgoed"
 
     def load_data(self):

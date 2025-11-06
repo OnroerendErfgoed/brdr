@@ -4,6 +4,7 @@ from itertools import combinations, islice
 from math import pi, inf, dist
 
 import numpy as np
+import pyproj
 from shapely import (
     GEOSException,
     equals,
@@ -2052,3 +2053,56 @@ def extract_points_lines_from_geometry(geometry):
         geometries.append(geometry)
 
     return GeometryCollection(geometries)
+
+
+def to_crs(crs_input):
+    """
+    Converts a CRS input in any common format to a pyproj CRS
+
+    Parameters:
+        crs_input (int | str): A CRS code or name in any format, such as an integer (e.g., 4326),
+                               a string like "EPSG:31370", "urn:ogc:def:crs:EPSG::3857", or "WGS 84".
+
+    Returns:
+        pyproj CRS object
+    """
+    try:
+        crs = pyproj.CRS.from_user_input(crs_input)
+        return crs
+    except Exception as e:
+        raise ValueError(f"Error interpreting CRS: {e}")
+
+def from_crs(crs,format="uri"):
+
+    """
+    Converts a pyproj.CRS object to a specific representation.
+
+    Parameters:
+        crs (pyproj.CRS): A CRS object from pyproj.
+        format (str): The desired output format. Options:
+            - "uri": Returns the full PROJ string representation.
+            - "id": Returns the EPSG integer code if available.
+            - "epsg": Returns the authority string in the format "EPSG:xxxx".
+
+    Returns:
+        str | int | None:
+            - str for "uri" or "epsg"
+            - int for "id"
+            - None if the requested representation is not available.
+
+    Raises:
+        ValueError: If conversion fails.
+    """
+
+    try:
+        if format=="uri":
+            auth = crs.to_authority()
+            #return f"urn:ogc:def:crs:{auth[0]}::{auth[1]}"
+            return f"http://www.opengis.net/def/crs/{auth[0]}/0/{auth[1]}"
+        elif format=="id":
+            return crs.to_epsg()
+        elif format=="epsg":
+            auth =  crs.to_authority()
+            return str(auth[0]) + ":" + str(auth[1])
+    except Exception as e:
+        raise ValueError(f"Error converting CRS: {e}")

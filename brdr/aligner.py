@@ -86,6 +86,7 @@ from brdr.geometry_utils import (
     get_coords_from_geometry,
     find_best_path_in_network,
     prepare_network,
+    to_crs,
 )
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import buffer_pos
@@ -116,7 +117,7 @@ from brdr.utils import write_geojson
 
 ###################
 
-#TODO what about the Aligner-parameters; AlignerConfig-class?
+# TODO what about the Aligner-parameters; AlignerConfig-class?
 class Aligner:
     """
     This class is used to compare and align the thematic data with the reference data.
@@ -269,8 +270,8 @@ class Aligner:
         # When loading data, CRS is expected to be a projected CRS with units in 'meter
         # (m)'.
         # Default EPSG:31370 (Lambert72), alternative: EPSG:3812 (Lambert2008)
-        self.CRS = crs
-        #TODO implement a check that the crs is existing. The crs that is defined on the aligner is the CRS we are working with. So we expect that the loaded thematic data is in this CRS and also the reference data is in this CRS. Or will be downloaded and transformed to this CRS.
+        self.CRS = to_crs(crs)
+        #TODO The crs that is defined on the aligner is the CRS we are working with. So we expect that the loaded thematic data is in this CRS and also the reference data is in this CRS. Or will be downloaded and transformed to this CRS.
         #At this moment  we expect the units in meter, because all calculation and parameters are based that unit is 'meter'
 
         # this parameter is used to treat multipolygon as single polygons. So polygons

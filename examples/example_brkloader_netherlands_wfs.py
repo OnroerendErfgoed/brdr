@@ -1,13 +1,13 @@
 from brdr.aligner import Aligner
 from brdr.geometry_utils import geom_from_wkt
-from brdr.loader import DictLoader
+from brdr.loader import DictLoader, WFSReferenceLoader
 from brdr.nl.constants import BRK_CRS
 from brdr.nl.enums import BRKType
 from brdr.nl.loader import BRKLoader
 
 if __name__ == "__main__":
     """
-    Example to reference data with BRKLoader (Basisregistratie Kadaster - Netherlands)
+    Example to reference data with WFSReferenceLoader (Basisregistratie Kadaster - Netherlands): https://service.pdok.nl/kadaster/kadastralekaart/wfs/v5_0?request=GetCapabilities&service=WFS
     """
     # CREATE AN ALIGNER
     aligner = Aligner(crs=BRK_CRS)
@@ -23,7 +23,7 @@ if __name__ == "__main__":
     aligner.load_thematic_data(loader)
 
     # Use BRKLoader for the reference data
-    loader = BRKLoader(brk_type=BRKType.perceel, partition=1000, aligner=aligner)
+    loader = WFSReferenceLoader(url="https://service.pdok.nl/kadaster/kadastralekaart/wfs/v5_0",id_property="identificatieLokaalID",typename="kadastralekaart:Perceel",aligner=aligner)
     aligner.load_reference_data(loader)
     # EXECUTE THE ALIGNMENT
     relevant_distance = 5

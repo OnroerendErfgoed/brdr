@@ -6,6 +6,7 @@ from shapely.geometry import shape
 
 from brdr.be.oe.enums import OEType
 from brdr.constants import DOWNLOAD_LIMIT, DEFAULT_CRS
+from brdr.geometry_utils import to_crs, from_crs
 from brdr.utils import get_collection_by_partition
 
 log = logging.getLogger(__name__)
@@ -101,14 +102,14 @@ def get_collection_oe_objects(
             "Undefined OE-type: " + str(oetype) + ": Empty collection returned"
         )
         return {}, None
-
+    crs=to_crs(crs)
     theme_url ="https://www.mercator.vlaanderen.be/raadpleegdienstenmercatorpubliek/wfs?"
     params = {
         "SERVICE": "WFS",
         "VERSION": "2.0.0",
         "REQUEST": "GetFeature",
         "TYPENAMES": typename,
-        "SRSNAME": crs,
+        "SRSNAME": from_crs(crs),
         "outputFormat": "application/json",
         "limit": limit,
     }

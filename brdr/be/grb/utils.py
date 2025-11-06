@@ -17,7 +17,13 @@ GRB_VERSION_DATE,
 )
 from brdr.constants import (DOWNLOAD_LIMIT, DEFAULT_CRS, DATE_FORMAT)
 
-from brdr.geometry_utils import buffer_pos, safe_intersection, safe_unary_union
+from brdr.geometry_utils import (
+    buffer_pos,
+    safe_intersection,
+    safe_unary_union,
+    to_crs,
+    from_crs,
+)
 from brdr.geometry_utils import create_donut
 from brdr.geometry_utils import features_by_geometric_operation
 from brdr.geometry_utils import get_bbox
@@ -29,7 +35,6 @@ log = logging.getLogger(__name__)
 
 datetime_format_TZ = "%Y-%m-%dT%H:%M:%SZ"
 
-# TODO move the not-loader code to another place?
 def is_grb_changed(
     geometry,
     grb_type=GRBType.ADP,
@@ -189,10 +194,11 @@ def get_last_version_date(
     """
     if border_distance > 0:
         geometry = create_donut(geometry, border_distance)
+    crs=to_crs(crs)
     bbox = get_bbox(geometry)
     actual_url = GRB_FEATURE_URL + "/" + grb_type.name + "/items?"
-    params ={"crs":crs,
-             "bbox-crs": crs,
+    params ={"crs":from_crs(crs),
+             "bbox-crs": from_crs(crs),
              "bbox": bbox,
              "limit": limit}
     update_dates = []
@@ -221,9 +227,9 @@ def get_collection_grb_actual(
     date_start=None,
     date_end=None,
 ):
-
+    crs=to_crs(crs)
     url = GRB_FEATURE_URL  + "/"  + grb_type.name  + "/items?"
-    params = {"crs":crs,"limit":limit}
+    params = {"crs":from_crs(crs),"limit":limit}
 
     if grb_type == GRBType.ADP:
         name_reference_id = GRB_PARCEL_ID
@@ -260,8 +266,9 @@ def get_collection_grb_fiscal_parcels(
     limit=DOWNLOAD_LIMIT,
     crs=DEFAULT_CRS,
 ):
+    crs=to_crs(crs)
     url = GRB_FISCAL_PARCELS_URL + "/Adpf" + str(year) + "/items?"
-    params = {"crs":crs,"limit":limit}
+    params = {"crs":from_crs(crs),"limit":limit}
     return get_collection_by_partition(
         url=url,params=params, geometry=geometry, partition=partition, crs=crs
     )
@@ -274,6 +281,7 @@ def get_collection_grb_parcels_by_date(
     limit=DOWNLOAD_LIMIT,
     crs=DEFAULT_CRS,
 ):
+    crs=to_crs(crs)
     collection_year_after = get_collection_grb_fiscal_parcels(
         year=str(date.year),
         geometry=geometry,

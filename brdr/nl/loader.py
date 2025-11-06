@@ -5,7 +5,7 @@ from brdr.constants import (
     VERSION_DATE,
     DOWNLOAD_LIMIT,
 )
-from brdr.geometry_utils import buffer_pos
+from brdr.geometry_utils import buffer_pos, to_crs, from_crs
 from brdr.loader import GeoJsonLoader
 from brdr.nl.constants import (
     BRK_VERSION_DATE,
@@ -25,21 +25,18 @@ def get_collection_brk(
     limit=DOWNLOAD_LIMIT,
     crs=BRK_CRS
 ):
-    if crs == BRK_CRS:
-        crs = 'http://www.opengis.net/def/crs/0/28992'
-    else:
-        raise ValueError (f"CRS expected: {BRK_CRS}, got CRS {crs} instead")
+    crs=to_crs(crs)
     url = BRK_FEATURE_URL+ "/"+ brk_type.name + "/items?"
 
     name_reference_id = BRK_GENERIC_ID
-    params = {"limit": limit, "crs": crs, "f": "json"}
+    params = {"limit": limit, "crs": from_crs(crs), "f": "json"}
 
     collection = get_collection_by_partition(
         url=url,
         params=params,
         geometry=geometry,
         partition=partition,
-        crs=crs,
+        crs=from_crs(crs),
     )
     return collection, name_reference_id
 
@@ -56,8 +53,7 @@ class BRKLoader(GeoJsonLoader):
     def load_data(self):
         if not self.aligner.dict_thematic:
             raise ValueError("Thematic data not loaded")
-        #TODO CRS support for other?
-        if self.aligner.CRS!= BRK_CRS:
+        if self.aligner.CRS!= to_crs(BRK_CRS):
             raise ValueError(f"BRKLoader only supports alignment in CRS '{BRK_CRS}' while CRS '{self.aligner.CRS}' is used")
         geom_union = buffer_pos(
             self.aligner.get_thematic_union(), BRK_MAX_REFERENCE_BUFFER

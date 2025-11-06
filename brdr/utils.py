@@ -34,6 +34,8 @@ from brdr.geometry_utils import (
     buffer_pos,
     safe_intersection,
     total_vertex_distance,
+    to_crs,
+    from_crs,
 )
 from brdr.logger import LOGGER
 from brdr.typings import ProcessResult
@@ -80,7 +82,7 @@ def get_dict_geojsons_from_series_dict(
                 )
                 features_list_dict[results_type].append(feature)
 
-    crs_geojson = {"type": "name", "properties": {"name": crs}}
+    crs_geojson = {"type": "name", "properties": {"name": from_crs(crs)}}
     result = {
         result_type: FeatureCollection(features, crs=crs_geojson)
         for result_type, features in features_list_dict.items()
@@ -135,7 +137,7 @@ def geojson_from_dict(dictionary, crs, id_field, prop_dict=None, geom_attributes
         properties = dict(prop_dict or {}).get(key, {})
         properties[id_field] = key
         features.append(_feature_from_geom(geom, key, properties, geom_attributes))
-    crs_geojson = {"type": "name", "properties": {"name": crs}}
+    crs_geojson = {"type": "name", "properties": {"name": from_crs(crs)}}
     geojson = FeatureCollection(features, crs=crs_geojson)
     return geojson
 
@@ -550,43 +552,25 @@ def get_collection_by_partition(
     Returns:
     dict: A collection of geographic data, potentially partitioned by the input geometry.
     """
+    crs=to_crs(crs)
     collection = {}
     if geometry is None or geometry.is_empty:
         collection = get_collection(url=url, params=params)
     elif partition < 1:
         params["bbox"] = get_bbox(geometry)
-        params["bbox-crs"] = crs
+        params["bbox-crs"] = from_crs(crs)
         collection = get_collection(url=url, params=params)
     else:
         geoms = get_partitions(geometry, partition)
         for g in geoms:
             params["bbox"] = get_bbox(g)
-            params["bbox-crs"] = crs
+            params["bbox-crs"] = from_crs(crs)
             coll = get_collection(url=url, params=params)
             if collection == {}:
                 collection = dict(coll)
             elif "features" in collection and "features" in coll:
                 collection["features"].extend(coll["features"])
     return collection
-
-
-def _add_bbox_to_url(url, crs=DEFAULT_CRS, bbox=None):
-    """
-    Adds a bounding box (bbox) parameter to the URL for geographic data requests.
-
-    Parameters:
-    url (str): The base URL for the data source.
-    crs (str, optional): The coordinate reference system to use. Default is DEFAULT_CRS.
-    bbox (str, optional): The bounding box coordinates to add to the URL. If None, no bbox is added.
-
-    Returns:
-    str: The updated URL with the bbox parameter included, if provided.
-    """
-    # Load the Base reference data
-    if bbox is not None:
-        url = url + "&bbox-crs=" + crs + "&bbox=" + bbox
-    return url
-
 
 def merge_process_results(
     result_dict: dict[any, dict[float, ProcessResult]], dict_multi_as_single: dict
