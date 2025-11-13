@@ -1834,11 +1834,14 @@ def find_best_path_in_network(
     for path in all_paths:
         # i=i+1
         # print(str(i))
-        line = LineString(path)
-        dist = total_vertex_distance(line, geom_to_process)
-        if dist < min_dist:
-            min_dist = dist
-            best_line = line
+        try:
+            line = LineString(path)
+            dist = total_vertex_distance(line, geom_to_process)
+            if dist < min_dist:
+                min_dist = dist
+                best_line = line
+        except:
+            pass
     return best_line
 
 

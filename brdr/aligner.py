@@ -919,7 +919,7 @@ class Aligner:
         if self.preserve_topology:
             # self.max_workers =-1
             # self.logger.feedback_info("max_workers set to -1 when using 'preserve_topology'")
-            dict_thematic_to_process, topo_thematic = generate_topo(
+            dict_thematic_to_process, topo_thematic,dict_thematic_topo_geoms = generate_topo(
                 dict_thematic_to_process
             )
 
@@ -978,7 +978,7 @@ class Aligner:
         if self.preserve_topology:
             dict_series = dissolve_topo(
                 dict_series,
-                self.dict_thematic,
+                dict_thematic_topo_geoms,
                 dict_thematic_to_process,
                 topo_thematic,
                 relevant_distances,
