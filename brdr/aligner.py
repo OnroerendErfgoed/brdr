@@ -71,6 +71,7 @@ from brdr.geometry_utils import to_multi
 from brdr.loader import Loader
 from brdr.logger import Logger
 from brdr.processor import AlignerGeometryProcessor
+from brdr.processor import BaseProcessor
 from brdr.topo import dissolve_topo
 from brdr.topo import generate_topo
 from brdr.typings import ProcessResult
@@ -104,11 +105,7 @@ class Aligner:
         self,
         *,
         feedback=None,
-        relevant_distance=1,
-        relevant_distances=[
-            round(k, RELEVANT_DISTANCE_DECIMALS)
-            for k in np.arange(0, 310, 10, dtype=int) / 100
-        ],
+        processor: BaseProcessor = None,
         threshold_overlap_percentage=50,
         od_strategy=OpenDomainStrategy.SNAP_ALL_SIDE,
         crs=DEFAULT_CRS,
@@ -166,9 +163,7 @@ class Aligner:
 
         """
         self.logger = Logger(feedback)
-        if relevant_distances is None and relevant_distance is not None:
-            relevant_distances = [relevant_distance]
-        self.relevant_distances = relevant_distances
+        self.processor = processor
         self.od_strategy = od_strategy
         self.threshold_overlap_percentage = threshold_overlap_percentage
         # Area in m² for excluding candidate reference-polygons when overlap(m²) is smaller than the
@@ -324,10 +319,9 @@ class Aligner:
         """
         if relevant_distances is None:
             relevant_distances = [relevant_distance]
-        self.relevant_distances = relevant_distances
         self.od_strategy = od_strategy
         self.threshold_overlap_percentage = threshold_overlap_percentage
-        self.logger.feedback_debug("Process series" + str(self.relevant_distances))
+        self.logger.feedback_debug("Process series" + str(relevant_distances))
         dict_series = {}
         dict_series_queue = {}
         futures = []
@@ -354,11 +348,11 @@ class Aligner:
             ) as executor:  # max_workers=5
                 for key, geometry in dict_thematic_to_process.items():
                     self.logger.feedback_info(
-                        f"thematic id {str(key)} processed with relevant distances (m) [{str(self.relevant_distances)}]"
+                        f"thematic id {str(key)} processed with relevant distances (m) [{str(relevant_distances)}]"
                     )
                     dict_series[key] = {}
                     dict_series_queue[key] = {}
-                    for relevant_distance in self.relevant_distances:
+                    for relevant_distance in relevant_distances:
                         try:
                             geometry_processor = AlignerGeometryProcessor(self)
                             future = executor.submit(
@@ -373,7 +367,7 @@ class Aligner:
                         except ValueError as e:
                             self.logger.feedback_warning(
                                 "error for"
-                                + f"thematic id {str(key)} processed with relevant distances (m) [{str(self.relevant_distances)}]"
+                                + f"thematic id {str(key)} processed with relevant distances (m) [{str(relevant_distances)}]"
                             )
                             dict_series_queue[key][relevant_distance] = None
                             self.logger.feedback_warning(str(e))
@@ -385,12 +379,13 @@ class Aligner:
         else:
             for key, geometry in dict_thematic_to_process.items():
                 self.logger.feedback_info(
-                    f"thematic id {str(key)} processed with relevant distances (m) [{str(self.relevant_distances)}]"
+                    f"thematic id {str(key)} processed with relevant distances (m) [{str(relevant_distances)}]"
                 )
                 dict_series[key] = {}
-                for relevant_distance in self.relevant_distances:
+                for relevant_distance in relevant_distances:
                     try:
-                        processed_result = self.process_geometry(
+                        geometry_processor = AlignerGeometryProcessor(self)
+                        processed_result = geometry_processor.process(
                             geometry,
                             relevant_distance,
                             od_strategy,
@@ -434,7 +429,7 @@ class Aligner:
                     )
 
         self.logger.feedback_info(
-            "End of processing series: " + str(self.relevant_distances)
+            "End of processing series: " + str(relevant_distances)
         )
         self.dict_processresults = dict_series
 

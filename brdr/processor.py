@@ -594,7 +594,7 @@ class NetworkGeometryProcessor(BaseProcessor):
 
     def _get_processed_network_path(
         self,
-        geom_to_process,
+        input_geometry,
         reference_intersection,
         reference_coords_intersection,
         thematic_difference,
@@ -602,7 +602,7 @@ class NetworkGeometryProcessor(BaseProcessor):
         relevant_distance,
     ):
         thematic_points = self._get_thematic_points(
-            geom_to_process, reference_intersection
+            input_geometry, reference_intersection
         )
         segments = []
         segments.extend(list(reference_intersection.geoms))
@@ -656,7 +656,7 @@ class NetworkGeometryProcessor(BaseProcessor):
 
         network = prepare_network(segments)
         geom_processed = find_best_path_in_network(
-            geom_to_process, network, snap_strategy, relevant_distance
+            input_geometry, network, snap_strategy, relevant_distance
         )
         # if geom_processed is None:
         #     # add original so a connected path will be found
@@ -760,7 +760,7 @@ class AlignerGeometryProcessor(BaseProcessor):
                     all_polygons = False
 
             if all_polygons:
-                processor = DieussaertGeometryProcessor(self)
+                processor = DieussaertGeometryProcessor(self.aligner)
                 return processor.process(
                     input_geometry,
                     input_geometry_outer,
@@ -768,7 +768,7 @@ class AlignerGeometryProcessor(BaseProcessor):
                     ref_intersections_geoms,
                     relevant_distance,
                 )
-        processor = NetworkGeometryProcessor(self)
+        processor = NetworkGeometryProcessor(self.aligner)
         return processor.process(
             input_geometry,
             relevant_distance,
