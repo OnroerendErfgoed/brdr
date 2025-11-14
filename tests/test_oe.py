@@ -1,7 +1,8 @@
 import unittest
 
 from brdr.aligner import Aligner
-from brdr.oe import OnroerendErfgoedLoader, OEType
+from brdr.be.oe.enums import OEType
+from brdr.be.oe.loader import OnroerendErfgoedLoader
 
 
 class TestOE(unittest.TestCase):

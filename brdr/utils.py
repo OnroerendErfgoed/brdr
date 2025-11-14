@@ -1,4 +1,5 @@
 import logging
+import math
 import os.path
 
 import numpy as np
@@ -80,7 +81,7 @@ def get_dict_geojsons_from_series_dict(
                 )
                 features_list_dict[results_type].append(feature)
 
-    crs_geojson = {"type": "name", "properties": {"name": crs}}
+    crs_geojson = {"type": "name", "properties": {"name": from_crs(crs)}}
     result = {
         result_type: FeatureCollection(features, crs=crs_geojson)
         for result_type, features in features_list_dict.items()
@@ -135,7 +136,7 @@ def geojson_from_dict(dictionary, crs, id_field, prop_dict=None, geom_attributes
         properties = dict(prop_dict or {}).get(key, {})
         properties[id_field] = key
         features.append(_feature_from_geom(geom, key, properties, geom_attributes))
-    crs_geojson = {"type": "name", "properties": {"name": crs}}
+    crs_geojson = {"type": "name", "properties": {"name": from_crs(crs)}}
     geojson = FeatureCollection(features, crs=crs_geojson)
     return geojson
 
@@ -390,46 +391,112 @@ def diff_from_processresult(processresult, geom_thematic, reference_union, diff_
     return diff
 
 
-def get_collection(ref_url, limit):
+def fetch_all_ogc_features(base_url, params=None, headers=None, max_pages=math.inf):
     """
-    Fetches a collection of features from a paginated API endpoint.
+    Fetches all features from an OGC Feature API, regardless of the pagination mechanism.
+
+    Supports:
+    - Cursor-based pagination via 'next' links
+    - Offset-based pagination via 'startIndex'
+    - No pagination (all features in a single page)
+
+    :param base_url: URL of the /items endpoint of the OGC API
+    :param initial_params: Dictionary with initial query parameters (e.g., bbox, limit)
+    :param headers: Optional headers (e.g., Accept: application/json)
+    :return: A list of all features
+    """
+
+    if params is None:
+        params = {}
+    if headers is None:
+        headers = {"Accept": "application/json"}
+
+    all_features = []
+    url = base_url
+    limit = params.get("limit", DOWNLOAD_LIMIT)
+    start_index = 0
+    local_params = params.copy()
+    use_start_index = False
+    page = 0
+
+    while url and page<=max_pages:
+        LOGGER.debug("page:" + str(page) + "url: " + str(url))
+        # Add startIndex when using startIndex
+        if use_start_index:
+            local_params["startIndex"] = start_index
+
+        response = requests.get(url, params=local_params, headers=headers)
+        response.raise_for_status()
+        data = response.json()
+
+        # Add features
+        all_features.extend(data.get("features", []))
+
+        # Search next-link
+        next_link = next(
+            (link["href"] for link in data.get("links", []) if link["rel"] == "next"),
+            None,
+        )
+
+        if next_link:
+            # Cursor-based pagination
+            url = next_link
+            local_params = None  # next-url has all its parameters included
+        elif "numberMatched" in data and "numberReturned" in data and data["numberMatched"] == data["numberReturned"]:
+            break
+        elif "numberReturned" in data and "features" in data:
+            # limit not used and all features returned
+            if data["numberReturned"] > limit:
+                break
+            # Possibly offset-based pagination
+            if not use_start_index:
+                use_start_index = True
+                start_index = params.get("startIndex", 0)
+                local_params = params.copy()
+                local_params["count"]=limit
+            start_index += limit
+            if data["numberReturned"]<=limit:
+                break
+        else:
+            # No further pagination
+            break
+
+        page += 1
+
+    return all_features
+
+
+def make_feature_collection(features):
+    """
+    Maakt een GeoJSON FeatureCollection van een lijst met features.
+
+    :param features: lijst van GeoJSON features (dicts met 'type': 'Feature')
+    :return: dict met 'type': 'FeatureCollection' en 'features': [...]
+    """
+    return {"type": "FeatureCollection", "features": features}
+
+
+def get_collection(url, params=None):
+    """
+    Fetches a collection of features from a (paginated) API endpoint (OGC Feature API or WFS).
 
     This function retrieves a collection of features from a URL that supports
     pagination using a `startIndex` parameter. It iteratively retrieves features in
     chunks of the specified `limit` until no more features are available.
 
     Args:
-        ref_url (str): The base URL of the API endpoint.
-        limit (int): The maximum number of features to retrieve per request.
+        url (str): The base URL of the API endpoint.
+        params: parameters for the request
 
     Returns:
         dict: A dictionary representing the complete GeoJSON feature collection.
             This might be truncated if the total number of features exceeds the
             limitations of the API or server.
-
-    Logs:
-        - Debug logs the URL being used for each request during pagination.
     """
-    start_index = 0
-    collection = {}
-    while True:
-        url = ref_url + "&startIndex=" + str(start_index)
-        logging.debug("called url: " + url)
-        json = requests.get(url).json()
-        feature_collection = dict(json)
-        if (
-            "features" not in feature_collection
-            or len(feature_collection["features"]) == 0
-        ):
-            break
-        start_index = start_index + limit
-        if collection == {}:
-            collection = feature_collection
-        else:
-            collection["features"].extend(feature_collection["features"])  # noqa
-        if len(feature_collection["features"]) < limit:
-            break
-    return collection
+    if params is None:
+        params = {}
+    features = fetch_all_ogc_features(base_url=url, params=params)
+    return make_feature_collection(features)
 
 
 def geojson_geometry_to_shapely(geojson_geometry):
@@ -469,7 +536,7 @@ def geojson_to_dicts(collection, id_property):
 
 
 def get_collection_by_partition(
-    url, geometry, partition=1000, limit=DOWNLOAD_LIMIT, crs=DEFAULT_CRS
+    url,params, geometry, partition=1000, crs=DEFAULT_CRS
 ):
     """
     Retrieves a collection of geographic data by partitioning the input geometry.
@@ -484,45 +551,25 @@ def get_collection_by_partition(
     Returns:
     dict: A collection of geographic data, potentially partitioned by the input geometry.
     """
+    crs=to_crs(crs)
     collection = {}
     if geometry is None or geometry.is_empty:
-        collection = get_collection(
-            _add_bbox_to_url(url=url, crs=crs, bbox=None), limit
-        )
+        collection = get_collection(url=url, params=params)
     elif partition < 1:
-        collection = get_collection(
-            _add_bbox_to_url(url=url, crs=crs, bbox=get_bbox(geometry)), limit
-        )
+        params["bbox"] = get_bbox(geometry)
+        params["bbox-crs"] = from_crs(crs)
+        collection = get_collection(url=url, params=params)
     else:
         geoms = get_partitions(geometry, partition)
         for g in geoms:
-            coll = get_collection(
-                _add_bbox_to_url(url=url, crs=crs, bbox=get_bbox(g)), limit
-            )
+            params["bbox"] = get_bbox(g)
+            params["bbox-crs"] = from_crs(crs)
+            coll = get_collection(url=url, params=params)
             if collection == {}:
                 collection = dict(coll)
             elif "features" in collection and "features" in coll:
                 collection["features"].extend(coll["features"])
     return collection
-
-
-def _add_bbox_to_url(url, crs=DEFAULT_CRS, bbox=None):
-    """
-    Adds a bounding box (bbox) parameter to the URL for geographic data requests.
-
-    Parameters:
-    url (str): The base URL for the data source.
-    crs (str, optional): The coordinate reference system to use. Default is DEFAULT_CRS.
-    bbox (str, optional): The bounding box coordinates to add to the URL. If None, no bbox is added.
-
-    Returns:
-    str: The updated URL with the bbox parameter included, if provided.
-    """
-    # Load the Base reference data
-    if bbox is not None:
-        url = url + "&bbox-crs=" + crs + "&bbox=" + bbox
-    return url
-
 
 def merge_process_results(
     result_dict: dict[any, dict[float, ProcessResult]], dict_multi_as_single: dict

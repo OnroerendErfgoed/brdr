@@ -67,6 +67,7 @@ from brdr.geometry_utils import safe_symmetric_difference
 from brdr.geometry_utils import safe_unary_union
 from brdr.geometry_utils import safe_union
 from brdr.geometry_utils import snap_geometry_to_reference
+from brdr.geometry_utils import to_crs
 from brdr.geometry_utils import to_multi
 from brdr.loader import Loader
 from brdr.logger import Logger
@@ -89,7 +90,6 @@ from brdr.utils import write_geojson
 
 
 ###################
-
 
 # TODO what about the Aligner-parameters; AlignerConfig-class?
 class Aligner:
@@ -238,7 +238,10 @@ class Aligner:
         # When loading data, CRS is expected to be a projected CRS with units in 'meter
         # (m)'.
         # Default EPSG:31370 (Lambert72), alternative: EPSG:3812 (Lambert2008)
-        self.CRS = crs
+        self.CRS = to_crs(crs)
+        #TODO The crs that is defined on the aligner is the CRS we are working with. So we expect that the loaded thematic data is in this CRS and also the reference data is in this CRS. Or will be downloaded and transformed to this CRS.
+        #At this moment  we expect the units in meter, because all calculation and parameters are based that unit is 'meter'
+
         # this parameter is used to treat multipolygon as single polygons. So polygons
         # with ID splitter are separately evaluated and merged on result.
         self.multi_as_single_modus = multi_as_single_modus
@@ -338,7 +341,7 @@ class Aligner:
         if self.preserve_topology:
             # self.max_workers =-1
             # self.logger.feedback_info("max_workers set to -1 when using 'preserve_topology'")
-            dict_thematic_to_process, topo_thematic = generate_topo(
+            dict_thematic_to_process, topo_thematic,dict_thematic_topo_geoms = generate_topo(
                 dict_thematic_to_process
             )
 
@@ -399,7 +402,7 @@ class Aligner:
         if self.preserve_topology:
             dict_series = dissolve_topo(
                 dict_series,
-                self.dict_thematic,
+                dict_thematic_topo_geoms,
                 dict_thematic_to_process,
                 topo_thematic,
                 relevant_distances,

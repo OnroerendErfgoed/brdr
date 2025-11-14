@@ -1,29 +1,15 @@
 import logging
-from datetime import datetime
-from enum import Enum
 
 import requests
 from shapely import box
 from shapely.geometry import shape
 
-from brdr.constants import DOWNLOAD_LIMIT, DEFAULT_CRS, DATE_FORMAT, VERSION_DATE
-from brdr.loader import GeoJsonLoader
+from brdr.be.oe.enums import OEType
+from brdr.constants import DOWNLOAD_LIMIT, DEFAULT_CRS
+from brdr.geometry_utils import to_crs, from_crs
 from brdr.utils import get_collection_by_partition
 
 log = logging.getLogger(__name__)
-
-
-class OEType(str, Enum):
-    """
-    Different types of Onroerend Eefgoed-objects are available:
-
-    * AO: aanduidingsobjecten
-    * EO: erfgoedobjecten
-    """
-
-    AO = "aanduidingsobjecten"
-    EO = "erfgoedobjecten"
-
 
 def get_oe_dict_by_ids(objectids, oetype=OEType.AO):
     """
@@ -116,68 +102,26 @@ def get_collection_oe_objects(
             "Undefined OE-type: " + str(oetype) + ": Empty collection returned"
         )
         return {}, None
-
-    theme_url = (
-        "https://www.mercator.vlaanderen.be/raadpleegdienstenmercatorpubliek/wfs?"
-        "SERVICE=WFS&REQUEST=GetFeature&VERSION=2.0.0&"
-        f"TYPENAMES={typename}&"
-        f"SRSNAME={crs}"
-        "&outputFormat=application/json"
-    )
+    crs=to_crs(crs)
+    theme_url ="https://www.mercator.vlaanderen.be/raadpleegdienstenmercatorpubliek/wfs?"
+    params = {
+        "SERVICE": "WFS",
+        "VERSION": "2.0.0",
+        "REQUEST": "GetFeature",
+        "TYPENAMES": typename,
+        "SRSNAME": from_crs(crs),
+        "outputFormat": "application/json",
+        "limit": limit,
+    }
     if objectids is not None:
-        filter = (
-            f"&CQL_FILTER={id_property} IN ("
-            + ", ".join(str(o) for o in objectids)
-            + ")"
-        )
-        theme_url = theme_url + filter
+        params["CQL_FILTER"] = f"{id_property} IN ("+ ", ".join(str(o) for o in objectids)+ ")"
     bbox_polygon = None
     if bbox is not None:
         bbox_polygon = box(*tuple(o for o in bbox))
-
+    collection = get_collection_by_partition(
+        url=theme_url,params=params, geometry=bbox_polygon, partition=partition, crs=crs
+    )
     return (
-        get_collection_by_partition(
-            theme_url, geometry=bbox_polygon, partition=partition, limit=limit, crs=crs
-        ),
+        collection,
         id_property,
     )
-
-
-class OnroerendErfgoedLoader(GeoJsonLoader):
-    def __init__(
-        self,
-        objectids=None,
-        oetype=OEType.AO,
-        bbox=None,
-        limit=DOWNLOAD_LIMIT,
-        partition=1000,
-        crs=DEFAULT_CRS,
-    ):
-        if (objectids is None and bbox is None) or (
-            objectids is not None and bbox is not None
-        ):
-            raise ValueError("Please provide a ID-filter OR a BBOX-filter, not both")
-        super().__init__()
-        self.objectids = objectids
-        self.oetype = oetype
-        self.bbox = bbox
-        self.limit = limit
-        self.part = partition
-        self.crs = crs
-        self.data_dict_source["source"] = "Onroerend Erfgoed"
-
-    def load_data(self):
-        # geom_union = buffer_pos(self.aligner.get_thematic_union(), MAX_REFERENCE_BUFFER)
-        collection, id_property = get_collection_oe_objects(
-            oetype=self.oetype,
-            objectids=self.objectids,
-            bbox=self.bbox,
-            partition=self.part,
-            limit=self.limit,
-            crs=self.crs,
-        )
-        self.id_property = id_property
-        self.input = dict(collection)
-        self.data_dict_source[VERSION_DATE] = datetime.now().strftime(DATE_FORMAT)
-        logging.debug(f"OnroerendErfgoed-objects downloaded")
-        return super().load_data()

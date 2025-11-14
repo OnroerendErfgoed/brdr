@@ -1,9 +1,10 @@
 import numpy as np
 
 from brdr.aligner import Aligner
+from brdr.be.grb.enums import GRBType
+from brdr.be.grb.loader import GRBActualLoader
 from brdr.constants import EVALUATION_FIELD_NAME, PREDICTION_SCORE
-from brdr.enums import GRBType, AlignerResultType, FullStrategy
-from brdr.grb import GRBActualLoader
+from brdr.enums import AlignerResultType, FullStrategy
 from brdr.loader import GeoJsonFileLoader
 
 # Press the green button in the gutter to run the script.

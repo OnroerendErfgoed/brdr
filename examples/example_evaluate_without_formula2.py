@@ -1,10 +1,11 @@
 import numpy as np
 
 from brdr.aligner import Aligner
+from brdr.be.grb.enums import GRBType
+from brdr.be.grb.loader import GRBActualLoader
 from brdr.constants import EVALUATION_FIELD_NAME
-from brdr.enums import GRBType, AlignerResultType, FullStrategy
+from brdr.enums import AlignerResultType, FullStrategy
 from brdr.geometry_utils import geom_from_wkt
-from brdr.grb import GRBActualLoader
 from brdr.loader import DictLoader
 
 # Press the green button in the gutter to run the script.

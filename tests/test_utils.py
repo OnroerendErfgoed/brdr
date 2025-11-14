@@ -4,8 +4,8 @@ import shapely
 from shapely import is_empty
 from shapely.geometry import Polygon
 
+from brdr.be.oe.utils import get_oe_dict_by_ids
 from brdr.constants import MULTI_SINGLE_ID_SEPARATOR
-from brdr.oe import get_oe_dict_by_ids
 from brdr.typings import ProcessResult
 from brdr.utils import get_collection, diffs_from_dict_processresult
 from brdr.utils import merge_process_results
@@ -145,9 +145,9 @@ class TestUtils(unittest.TestCase):
             "https://geo.api.vlaanderen.be/Adpf/ogc/features/collections/Adpf"
             + str(base_year)
             + "/items?"
-            "limit=" + str(limit) + "&crs=" + crs + "&bbox-crs=EPSG:31370&bbox=" + bbox
         )
-        collection = get_collection(ref_url, limit)
+        params = {"limit":limit,"crs":crs,"bbox-crs":crs,"bbox":bbox}
+        collection = get_collection(url=ref_url,params=params)
         self.assertTrue("features" in collection.keys())
 
     def test_merge_process_results(self):

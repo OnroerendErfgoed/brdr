@@ -6,10 +6,10 @@ import osmnx as ox
 from brdr.constants import (
     DATE_FORMAT,
     VERSION_DATE,
-    OSM_MAX_REFERENCE_BUFFER,
 )
 from brdr.geometry_utils import buffer_pos
 from brdr.loader import DictLoader
+from brdr.osm.constants import OSM_MAX_REFERENCE_BUFFER
 
 
 class OSMLoader(DictLoader):
@@ -26,7 +26,7 @@ class OSMLoader(DictLoader):
         geom_union = buffer_pos(
             self.aligner.get_thematic_union(), OSM_MAX_REFERENCE_BUFFER
         )
-
+        #We transform the OSM data to the CRS of the aligner
         gdf = gpd.GeoDataFrame(geometry=[geom_union], crs=self.aligner.CRS)
         gdf.to_crs(crs="EPSG:4326", inplace=True)
         geom_union_wgs84 = gdf.geometry.iloc[0]

@@ -1,8 +1,9 @@
 import numpy as np
 
 from brdr.aligner import Aligner
-from brdr.enums import GRBType, OpenDomainStrategy, AlignerResultType
-from brdr.grb import GRBActualLoader
+from brdr.be.grb.enums import GRBType
+from brdr.be.grb.loader import GRBActualLoader
+from brdr.enums import OpenDomainStrategy, AlignerResultType
 from brdr.loader import GeoJsonFileLoader
 from examples import plot_dict_diffs, show_map
 

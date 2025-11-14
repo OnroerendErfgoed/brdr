@@ -1,7 +1,7 @@
 from brdr.aligner import Aligner
+from brdr.be.grb.grb import update_to_actual_grb
+from brdr.be.grb.loader import GRBFiscalParcelLoader
 from brdr.constants import EVALUATION_FIELD_NAME, FORMULA_FIELD_NAME
-from brdr.grb import GRBFiscalParcelLoader
-from brdr.grb import update_to_actual_grb
 from brdr.loader import GeoJsonLoader
 
 if __name__ == "__main__":

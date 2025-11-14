@@ -15,7 +15,7 @@ from brdr.utils import geojson_geometry_to_shapely
 
 def dissolve_topo(
     dict_series,
-    dict_thematic,
+    dict_thematic_topo_geoms,
     dict_thematic_to_process,
     topo_thematic,
     relevant_distances,
@@ -23,7 +23,7 @@ def dissolve_topo(
     """
     Dissolves a processed dict_series of LineStrings (Arcs) into a dict_series of the original geometries
     :param dict_series:
-    :param dict_thematic:
+    :param dict_thematic_topo_geoms:
     :param dict_thematic_to_process:
     :param topo_thematic:
     :param relevant_distances:
@@ -31,8 +31,9 @@ def dissolve_topo(
     """
 
     dict_series_topo = dict()
-    for k, v in dict_thematic.items():
+    for k, v in dict_thematic_topo_geoms.items():
         dict_series_topo[k] = {}
+
 
     for relevant_distance in relevant_distances:
         for obj in topo_thematic.output["objects"]["data"]["geometries"]:
@@ -50,7 +51,7 @@ def dissolve_topo(
                     new_arcs.append(new_arc)
                 except:
                     linestring = dict_thematic_to_process[arc_id]
-                    print("old_arc: " + linestring.wkt)
+                    # print("old_arc: " + linestring.wkt)
                     old_arc = [list(coord) for coord in linestring.coords]
                     new_arcs.append(old_arc)
             topo.output["arcs"] = new_arcs
@@ -60,8 +61,8 @@ def dissolve_topo(
             for feature in topo_geojson["features"]:
                 if feature["id"] == key:
                     result = geojson_geometry_to_shapely(feature["geometry"])
-            result_diff_plus = make_valid(safe_difference(result, dict_thematic[key]))
-            result_diff_min = make_valid(safe_difference(dict_thematic[key], result))
+            result_diff_plus = make_valid(safe_difference(result, dict_thematic_topo_geoms[key]))
+            result_diff_min = make_valid(safe_difference(dict_thematic_topo_geoms[key], result))
             result_diff = safe_unary_union([result_diff_plus, result_diff_min])
             dict_series_topo[key][relevant_distance] = {
                 "result": result,
@@ -83,6 +84,7 @@ def generate_topo(dict_thematic_to_process):
     :param dict_thematic_to_process: (key-geometry)
     :return: dict_thematic_to_process: (key-LineString (Arcs)) & Topojson
     """
+    dict_thematic_topo_geoms=copy.deepcopy(dict_thematic_to_process)
     topo_thematic = topojson.Topology(dict_thematic_to_process, prequantize=False)
     print(topo_thematic.to_json())
     arc_id = 0
@@ -92,4 +94,4 @@ def generate_topo(dict_thematic_to_process):
         arc_dict[arc_id] = linestring
         arc_id = arc_id + 1
     dict_thematic_to_process = arc_dict
-    return dict_thematic_to_process, topo_thematic
+    return dict_thematic_to_process, topo_thematic, dict_thematic_topo_geoms

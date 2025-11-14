@@ -1,7 +1,8 @@
 from brdr.aligner import Aligner
-from brdr.enums import GRBType, AlignerResultType
-from brdr.grb import GRBActualLoader
-from brdr.oe import OnroerendErfgoedLoader, OEType
+from brdr.be.grb.enums import GRBType
+from brdr.be.grb.loader import GRBActualLoader
+from brdr.be.oe.loader import OnroerendErfgoedLoader, OEType
+from brdr.enums import AlignerResultType
 from examples import print_brdr_formula
 from examples import show_map
 
@@ -11,7 +12,7 @@ if __name__ == "__main__":
     # Initiate brdr
     aligner = Aligner(max_workers=-1)
     # Load thematic data from Onroerend Erfgoed
-    loader = OnroerendErfgoedLoader(objectids=[5914], oetype=OEType.AO)
+    loader = OnroerendErfgoedLoader(objectids=[5914,121125], oetype=OEType.AO)
     aligner.load_thematic_data(loader)
     # Load reference data: The actual GRB-parcels
     loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)

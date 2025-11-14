@@ -1,0 +1,178 @@
+/*-- scss:defaults --*/
+
+
+// Base document colors
+$body-bg: rgb(245, 245, 245);
+$body-color: rgb(102, 102, 102);
+$link-color: rgb(0, 117, 219);
+$input-bg: rgb(255, 255, 255);
+$headings-color: rgb(148, 78, 161) !default;
+
+//callout colors
+$callout-color-note: rgb(148, 78, 161);
+
+// Fonts
+$font-family-sans-serif: "Flanders Art Sans", Arial, sans-serif;
+$font-family-monospace: SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+$font-size-root: 1rem;
+$h1-font-size: rem-calc(44);
+$h2-font-size: rem-calc(37);
+$h3-font-size: rem-calc(27);
+$h4-font-size: rem-calc(23);
+$h5-font-size: rem-calc(18);
+
+// Code blocks
+
+// toc
+$toc-color: rgb(148, 78, 161);
+$toc-font-size: 0.9em;
+$toc-active-border: rgb(148, 78, 161); 	
+
+//navbar
+$navbar-bg: rgb(148, 78, 161);
+$navbar-fg: rgb(255, 255, 255);
+$navbar-hl: rgb(255,255, 255);
+$navbar-brand-bg: rgb(245, 245, 245);
+$navbar-brand-font-size: 1rem;
+$navbar-padding-x: 0;
+$navbar-padding-y: 0;
+$navbar-brand-padding-y: 0;
+
+//sidebar
+
+
+//links
+$nav-tabs-link-active-color: rgb(148, 78, 161);
+$link-hover-color: darken($link-color, 15%) !default;
+
+//layout
+$content-padding-top: 2rem; 
+$margin-sidebar-padding: 1rem;
+
+/*-- scss:rules --*/
+
+@font-face {
+  font-family: 'Flanders Art Sans';
+  src: url('static/fonts/FlandersArtSans-Regular.eot'), /* IE9 Compat Modes */
+       url('static/fonts/FlandersArtSans-Regular.woff') format('woff'), /* Modern Browsers */
+       url('static/fonts/FlandersArtSans-Regular.ttf')  format('truetype'); /* Safari, Android, iOS */
+  font-style:   normal;
+  font-weight:  400;
+}
+
+#quarto-header {
+      border-bottom: 1px solid #d5d5d5;
+}
+
+.sidebar {
+  background-color: rgb(255,255,255);
+  padding: 1rem;
+  margin-top: 1rem;
+  height: fit-content;
+  
+}
+.navbar-logo {
+      max-height: 60px;
+      min-height: 60px;
+      object-fit: cover;
+      margin-right: 1em;
+      background-color: #FFFFFF;
+      padding-top: 0.2rem;
+      padding-bottom: 0.2rem;
+      padding-right: 2.5rem;
+      clip-path: polygon(0px 0px, 87% 0, 100% 100%, 0 100%);
+    }
+
+.navbar-brand-container {
+     background-color: #FFFFFF;
+}
+
+.navbar-title {
+    color: rgb(148, 78, 161);
+    padding-left: 1em;
+    font-weight: bold;
+}
+
+
+#quarto-header > nav.navbar {
+    padding-left: 0;
+}
+
+#quarto-header > nav.navbar > div.container-fluid {
+    padding-left: 0 !important;
+}
+
+.navbar-brand-container {
+        }   
+  .navbar-brand-logo{
+      order:2;
+      background-color: rgb(148, 78, 161);
+      margin-right: 0px !important;
+  }
+
+.btn:hover {
+  color: var(--bs-btn-hover-color);
+  background-color: var(--bs-btn-hover-bg);
+  border-color: var(--bs-btn-hover-border-color);
+}
+button:not(:disabled), [type="button"]:not(:disabled), [type="reset"]:not(:disabled), [type="submit"]:not(:disabled) {
+  cursor: pointer;
+}
+.btn-default {
+  --bs-btn-color:  rgb(102, 102, 102);
+  --bs-btn-bg: rgb(244, 237, 246);
+  --bs-btn-border-color: #dee2e6;
+  --bs-btn-hover-color: #FFFFFF;
+  --bs-btn-hover-bg: rgb(148, 78, 161);
+  --bs-btn-hover-border-color:  rgb(148, 78, 161);
+  --bs-btn-focus-shadow-rgb: 189, 192, 196;
+  --bs-btn-active-color: #FFFFFF;
+  --bs-btn-active-bg: rgb(148, 78, 161);
+  --bs-btn-active-border-color: rgb(148, 78, 161);
+  --bs-btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
+  --bs-btn-disabled-color: rgb(102, 102, 102);
+  --bs-btn-disabled-bg: #dee2e6;
+  --bs-btn-disabled-border-color: #dee2e6;
+}
+
+.dataTables_info {
+  float: left;
+}
+
+.dt-buttons {
+  float: inline-start;
+}
+
+.quarto-dashboard #quarto-header #quarto-dashboard-header {
+border: 0;
+}
+
+ul.pagination li.active a {
+  color: rgb(148, 78, 161);
+}
+
+ul.pagination li.disabled a{
+  color:  rgb(102, 102, 102);;
+}
+
+.content {
+  background-color: #FFFFFF;
+  padding: 2rem;
+}
+.card {
+  background-color: rgb(255,255,255);
+}
+
+.oe-content-header {
+  padding: 0 1rem 0 1rem;
+  border: 1px solid #d5d5d5;
+  background-color: rgb(255,255,255);
+}
+
+.tab-pane {
+  padding: 1rem;
+}
+
+body {
+  --bs-body-font-size: 14px;
+}

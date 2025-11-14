@@ -7,8 +7,10 @@ from shapely.geometry import Polygon
 from shapely.geometry import shape
 
 from brdr.aligner import Aligner
+from brdr.be.grb.enums import GRBType
+from brdr.be.grb.loader import GRBActualLoader
 from brdr.constants import AREA_ATTRIBUTE, REMARK_FIELD_NAME
-from brdr.enums import GRBType, AlignerResultType
+from brdr.enums import AlignerResultType
 from brdr.enums import OpenDomainStrategy
 from brdr.geometry_utils import (
     _grid_bounds,
@@ -17,9 +19,6 @@ from brdr.geometry_utils import (
     safe_equals,
 )
 from brdr.geometry_utils import buffer_neg_pos
-from brdr.grb import (
-    GRBActualLoader,
-)
 from brdr.loader import GeoJsonLoader, DictLoader
 from brdr.processor import AlignerGeometryProcessor
 from brdr.typings import FeatureCollection, ProcessResult
