@@ -1,4 +1,3 @@
-import heapq
 import json
 import os
 from collections import defaultdict
@@ -8,110 +7,85 @@ from datetime import datetime
 from typing import Iterable
 
 import numpy as np
-from shapely import (
-    GeometryCollection,
-    Point,
-    MultiPolygon,
-    MultiPoint,
-    segmentize,
-    shortest_line,
-    LinearRing,
-)
+from shapely import GeometryCollection
 from shapely import Polygon
 from shapely import STRtree
-from shapely import get_parts
 from shapely import make_valid
 from shapely import remove_repeated_points
 from shapely import to_geojson
-from shapely.errors import GeometryTypeError
 from shapely.geometry.base import BaseGeometry
-from shapely.geometry.linestring import LineString
-from shapely.ops import nearest_points, split
 
 from brdr import __version__
-from brdr.constants import (
-    DEFAULT_CRS,
-    PREDICTION_SCORE,
-    PREDICTION_COUNT,
-    MAX_OUTER_BUFFER,
-    PARTIAL_SNAP_MAX_SEGMENT_LENGTH,
-    PARTIAL_SNAP_STRATEGY,
-    PARTIAL_SNAPPING,
-    RELEVANT_DISTANCE_DECIMALS,
-    ID_THEME_FIELD_NAME,
-    ID_REFERENCE_FIELD_NAME,
-    SNAP_STRATEGY,
-    SNAP_MAX_SEGMENT_LENGTH,
-    BUFFER_MULTIPLICATION_FACTOR,
-    DIFF_METRIC,
-    STABILITY,
-    ZERO_STREAK,
-    REMARK_FIELD_NAME,
-    DIFF_PERC_INDEX,
-    DIFF_INDEX,
-    RELEVANT_DISTANCE_FIELD_NAME,
-    NR_CALCULATION_FIELD_NAME,
-)
-from brdr.constants import (
-    LAST_VERSION_DATE,
-    VERSION_DATE,
-    DATE_FORMAT,
-    FORMULA_FIELD_NAME,
-    EVALUATION_FIELD_NAME,
-    FULL_BASE_FIELD_NAME,
-    FULL_ACTUAL_FIELD_NAME,
-    DIFF_PERCENTAGE_FIELD_NAME,
-    DIFF_AREA_FIELD_NAME,
-    OD_ALIKE_FIELD_NAME,
-    EQUAL_REFERENCE_FEATURES_FIELD_NAME,
-)
-from brdr.enums import (
-    OpenDomainStrategy,
-    Evaluation,
-    AlignerResultType,
-    AlignerInputType,
-    SnapStrategy,
-    FullStrategy,
-    DiffMetric,
-)
-from brdr.geometry_utils import (
-    buffer_neg,
-    safe_unary_union,
-    get_shape_index,
-    geometric_equality,
-    to_multi,
-    snap_geometry_to_reference,
-    extract_points_lines_from_geometry,
-    shortest_connections_between_geometries,
-    get_coords_from_geometry,
-    find_best_path_in_network,
-    prepare_network,
-    to_crs,
-)
+from brdr.constants import BUFFER_MULTIPLICATION_FACTOR
+from brdr.constants import DATE_FORMAT
+from brdr.constants import DEFAULT_CRS
+from brdr.constants import DIFF_AREA_FIELD_NAME
+from brdr.constants import DIFF_INDEX
+from brdr.constants import DIFF_METRIC
+from brdr.constants import DIFF_PERCENTAGE_FIELD_NAME
+from brdr.constants import DIFF_PERC_INDEX
+from brdr.constants import EQUAL_REFERENCE_FEATURES_FIELD_NAME
+from brdr.constants import EVALUATION_FIELD_NAME
+from brdr.constants import FORMULA_FIELD_NAME
+from brdr.constants import FULL_ACTUAL_FIELD_NAME
+from brdr.constants import FULL_BASE_FIELD_NAME
+from brdr.constants import ID_REFERENCE_FIELD_NAME
+from brdr.constants import ID_THEME_FIELD_NAME
+from brdr.constants import LAST_VERSION_DATE
+from brdr.constants import NR_CALCULATION_FIELD_NAME
+from brdr.constants import OD_ALIKE_FIELD_NAME
+from brdr.constants import PARTIAL_SNAPPING
+from brdr.constants import PARTIAL_SNAP_MAX_SEGMENT_LENGTH
+from brdr.constants import PARTIAL_SNAP_STRATEGY
+from brdr.constants import PREDICTION_COUNT
+from brdr.constants import PREDICTION_SCORE
+from brdr.constants import RELEVANT_DISTANCE_DECIMALS
+from brdr.constants import RELEVANT_DISTANCE_FIELD_NAME
+from brdr.constants import REMARK_FIELD_NAME
+from brdr.constants import SNAP_MAX_SEGMENT_LENGTH
+from brdr.constants import SNAP_STRATEGY
+from brdr.constants import STABILITY
+from brdr.constants import VERSION_DATE
+from brdr.constants import ZERO_STREAK
+from brdr.enums import AlignerInputType
+from brdr.enums import AlignerResultType
+from brdr.enums import DiffMetric
+from brdr.enums import Evaluation
+from brdr.enums import FullStrategy
+from brdr.enums import OpenDomainStrategy
+from brdr.enums import SnapStrategy
+from brdr.geometry_utils import buffer_neg
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import buffer_pos
+from brdr.geometry_utils import extract_points_lines_from_geometry
 from brdr.geometry_utils import fill_and_remove_gaps
+from brdr.geometry_utils import geometric_equality
+from brdr.geometry_utils import get_shape_index
 from brdr.geometry_utils import safe_difference
 from brdr.geometry_utils import safe_intersection
 from brdr.geometry_utils import safe_symmetric_difference
+from brdr.geometry_utils import safe_unary_union
 from brdr.geometry_utils import safe_union
+from brdr.geometry_utils import snap_geometry_to_reference
+from brdr.geometry_utils import to_crs
+from brdr.geometry_utils import to_multi
 from brdr.loader import Loader
 from brdr.logger import Logger
-from brdr.topo import dissolve_topo, generate_topo
+from brdr.processor import AlignerGeometryProcessor
+from brdr.processor import BaseProcessor
+from brdr.topo import dissolve_topo
+from brdr.topo import generate_topo
 from brdr.typings import ProcessResult
-from brdr.utils import (
-    determine_stability,
-    diffs_from_dict_processresult,
-    diff_from_processresult,
-    coverage_ratio,
-)
+from brdr.utils import _unary_union_result_dict
+from brdr.utils import coverage_ratio
+from brdr.utils import determine_stability
+from brdr.utils import diff_from_processresult
+from brdr.utils import diffs_from_dict_processresult
 from brdr.utils import geojson_from_dict
 from brdr.utils import get_dict_geojsons_from_series_dict
+from brdr.utils import is_brdr_formula
 from brdr.utils import merge_process_results
-from brdr.utils import (
-    multi_to_singles,
-    is_brdr_formula,
-)
+from brdr.utils import multi_to_singles
 from brdr.utils import write_geojson
 
 
@@ -131,11 +105,7 @@ class Aligner:
         self,
         *,
         feedback=None,
-        relevant_distance=1,
-        relevant_distances=[
-            round(k, RELEVANT_DISTANCE_DECIMALS)
-            for k in np.arange(0, 310, 10, dtype=int) / 100
-        ],
+        processor: BaseProcessor = None,
         threshold_overlap_percentage=50,
         od_strategy=OpenDomainStrategy.SNAP_ALL_SIDE,
         crs=DEFAULT_CRS,
@@ -193,9 +163,7 @@ class Aligner:
 
         """
         self.logger = Logger(feedback)
-        if relevant_distances is None and relevant_distance is not None:
-            relevant_distances = [relevant_distance]
-        self.relevant_distances = relevant_distances
+        self.processor = processor
         self.od_strategy = od_strategy
         self.threshold_overlap_percentage = threshold_overlap_percentage
         # Area in m² for excluding candidate reference-polygons when overlap(m²) is smaller than the
@@ -316,551 +284,6 @@ class Aligner:
         self._prepare_reference_data()
         # TODO reset all aligner variables too? fe dict_processresults etc
 
-    ##########PROCESSORS#######################
-    ###########################################
-
-    def _process_geometry_by_snap(
-        self,
-        input_geometry: BaseGeometry,
-        ref_intersections_geoms,
-        relevant_distance,
-        snap_strategy,
-        snap_max_segment_length,
-    ) -> ProcessResult:
-        #REMARK -  this processing_method is not used in current code
-        snapped = []
-
-        # Open Domain
-        virtual_reference = Polygon()
-        if self.od_strategy != OpenDomainStrategy.EXCLUDE:
-            virtual_reference = self._create_virtual_reference(
-                input_geometry, relevant_distance, False
-            )
-
-        if self.od_strategy == OpenDomainStrategy.EXCLUDE:
-            pass
-        elif self.od_strategy == OpenDomainStrategy.AS_IS:
-            geom_od = safe_intersection(input_geometry, virtual_reference)
-            snapped.append(geom_od)
-        else:
-            ref_intersections_geoms.append(virtual_reference)
-
-        ref_geometrycollection = GeometryCollection(ref_intersections_geoms)
-
-        snapped_geom = snap_geometry_to_reference(
-            input_geometry,
-            ref_geometrycollection,
-            snap_strategy,
-            snap_max_segment_length,
-            relevant_distance,
-        )
-        snapped.append(snapped_geom)
-        # union all
-        geom_preresult = safe_unary_union(snapped)
-        result_dict = self._postprocess_preresult(
-            geom_preresult,
-            input_geometry,
-            GeometryCollection(),
-            GeometryCollection(),
-            relevant_distance,
-        )
-        return result_dict
-
-    def _process_geometry_by_dieussaert(
-        self,
-        input_geometry,
-        input_geometry_outer,
-        input_geometry_inner,
-        ref_intersections_geoms,
-        relevant_distance,
-    ):
-        buffer_distance = relevant_distance / 2
-
-        # array with all relevant parts of a thematic geometry; initial empty Polygon
-        (
-            preresult,
-            relevant_intersection_array,
-            relevant_diff_array,
-        ) = self._calculate_intersection_between_geometry_and_od(
-            input_geometry_outer, input_geometry_inner, relevant_distance
-        )
-
-        for geom_reference in ref_intersections_geoms:
-            geom_intersection = safe_intersection(input_geometry_outer, geom_reference)
-            if geom_intersection.is_empty or geom_intersection is None:
-                continue
-            self.logger.feedback_debug("calculate intersection")
-            (
-                geom,
-                relevant_intersection,
-                relevant_diff,
-            ) = _calculate_geom_by_intersection_and_reference(
-                geom_intersection,
-                geom_reference,
-                input_geometry_inner,
-                False,
-                buffer_distance,
-                self.threshold_overlap_percentage,
-                self.threshold_exclusion_percentage,
-                self.threshold_exclusion_area,
-                self.threshold_inclusion_percentage,
-                self.mitre_limit,
-                self.partial_snapping,
-                self.partial_snap_strategy,
-                self.partial_snap_max_segment_length,
-            )
-            self.logger.feedback_debug("intersection calculated")
-
-            preresult = self._add_multi_polygons_from_geom_to_array(geom, preresult)
-            relevant_intersection_array = self._add_multi_polygons_from_geom_to_array(
-                relevant_intersection, relevant_intersection_array
-            )
-            relevant_diff_array = self._add_multi_polygons_from_geom_to_array(
-                relevant_diff, relevant_diff_array
-            )
-
-        # UNION INTERMEDIATE LAYERS
-        relevant_intersection = safe_unary_union(relevant_intersection_array)
-        if relevant_intersection is None or relevant_intersection.is_empty:
-            relevant_intersection = Polygon()
-        relevant_diff = safe_unary_union(relevant_diff_array)
-        if relevant_diff is None or relevant_diff.is_empty:
-            relevant_diff = Polygon()
-
-        # Add inner input geometry to preresult
-        preresult.append(input_geometry_inner)
-        geom_preresult = safe_unary_union(preresult)
-
-        # POSTPROCESSING
-        result_dict = self._postprocess_preresult(
-            geom_preresult,
-            input_geometry,
-            relevant_intersection,
-            relevant_diff,
-            relevant_distance,
-        )
-
-        return result_dict
-
-    def _process_geometry_by_network(
-        self,
-        input_geometry: BaseGeometry,
-        relevant_distance: float = 1,
-        snap_strategy=SnapStrategy.NO_PREFERENCE,
-    ) -> ProcessResult:
-
-        input_geometry = to_multi(input_geometry)
-        # determine the reference_elements
-        input_geometry_buffered = buffer_pos(
-            input_geometry, relevant_distance * self.buffer_multiplication_factor
-        )
-        # Former method to get all the reference elements in the surrounding area, replaced by optimized method below
-        # ref_intersections = self.reference_items.take(
-        #     self.reference_tree.query(input_geometry_buffered)
-        # ).tolist()
-        # ref_intersections_geoms = [
-        #     self.dict_reference[key] for key in ref_intersections
-        # ]
-        # reference = safe_unary_union(
-        #     extract_points_lines_from_geometry(
-        #         GeometryCollection(ref_intersections_geoms)
-        #     )
-        # )
-        # Optimized method to get all the reference elements in the surrounding area (reference elements only calculated once for the full aligner
-        reference = safe_unary_union(
-            safe_intersection(self._get_reference_elements(), input_geometry_buffered)
-        )
-
-        geom_processed_list = []
-        if isinstance(input_geometry, (MultiPolygon)):
-            geom_processed_list = []
-            for polygon in input_geometry.geoms:
-                exterior = polygon.exterior
-                interiors = polygon.interiors
-                exterior_processed = self._process_by_network(
-                    exterior,
-                    reference,
-                    relevant_distance,
-                    snap_strategy=snap_strategy,
-                    close_output=True,
-                )
-                interiors_processed = []
-                for i in interiors:
-                    i_processed = self._process_by_network(
-                        i,
-                        reference,
-                        relevant_distance,
-                        snap_strategy=snap_strategy,
-                        close_output=True,
-                    )
-                    interiors_processed.append(i_processed)
-                geom_processed = Polygon(exterior_processed, interiors_processed)
-                geom_processed_list.append(geom_processed)
-
-        else:
-            for geom in input_geometry.geoms:
-                geom_processed = self._process_by_network(
-                    geom,
-                    reference,
-                    relevant_distance,
-                    snap_strategy=snap_strategy,
-                    close_output=False,
-                )
-                geom_processed_list.append(geom_processed)
-        geom_processed = safe_unary_union(geom_processed_list)
-
-        return self._postprocess_preresult(
-            geom_processed,
-            input_geometry,
-            GeometryCollection(),
-            GeometryCollection(),
-            relevant_distance,
-        )
-
-    def _process_by_network(
-        self,
-        geom_to_process,
-        reference,
-        relevant_distance,
-        snap_strategy=SnapStrategy.NO_PREFERENCE,
-        close_output=False,
-    ):
-        """
-
-        :param geom_to_process: only single geometries are allowed (No Multi)
-        :param reference:
-        :param relevant_distance:
-        :param snap_strategy:
-        :param close_output:
-        :return:
-        """
-        buffer_distance = relevant_distance / 2
-        geom_to_process_buffered = buffer_pos(geom_to_process, buffer_distance)
-        reference_buffered = buffer_pos(reference, buffer_distance)
-
-        overlap = safe_intersection(geom_to_process_buffered, reference_buffered)
-        if overlap.is_empty:
-            return geom_to_process  # processresult original
-        overlap_buffered = buffer_pos(overlap, buffer_distance)
-
-        reference_intersection = safe_intersection(reference, overlap_buffered)
-        # reference_intersection=set_precision(reference_intersection,precision)
-        reference_intersection = safe_unary_union(reference_intersection)
-        reference_intersection = to_multi(reference_intersection)
-        if reference_intersection.is_empty:
-            return geom_to_process  # processresult original
-        # thematic_intersection = safe_intersection(geom_to_process, overlap_buffered)
-        # thematic_intersection = line_merge(safe_unary_union(thematic_intersection))
-        # thematic_intersection = to_multi(thematic_intersection)
-
-        thematic_difference = safe_difference(geom_to_process, overlap_buffered)
-        # thematic_difference = set_precision(thematic_difference,precision)
-        thematic_difference = safe_unary_union(thematic_difference)
-        thematic_difference = to_multi(thematic_difference)
-
-        # Calculate vertices of the reference_intersection
-        if snap_strategy != SnapStrategy.NO_PREFERENCE:
-            reference_coords = MultiPoint(list(get_coords_from_geometry(reference)))
-            reference_coords_intersection = to_multi(
-                safe_intersection(reference_coords, overlap_buffered)
-            )
-        else:
-            reference_coords_intersection = None
-        # Logic that manages the composition of the lines (connections etc) based on the geom-inputtype
-        # POINT
-        if isinstance(geom_to_process, Point):
-            p1, p2 = nearest_points(geom_to_process, reference_intersection)
-            if (
-                not reference_coords_intersection is None
-                and not reference_coords_intersection.is_empty
-            ):
-                p1_vertices, p2_vertices = nearest_points(
-                    geom_to_process, reference_coords_intersection
-                )
-                if not p2_vertices is None and not p2_vertices.is_empty:
-                    p2 = p2_vertices
-            geom_processed = p2
-        # LINESTRING OR POLYGON
-        else:
-            geom_processed = self._get_processed_network_path(
-                geom_to_process,
-                reference_intersection,
-                reference_coords_intersection,
-                thematic_difference,
-                snap_strategy,
-                relevant_distance,
-            )
-
-            if (
-                close_output
-                and geom_processed is not None
-                and not geom_processed.is_ring
-            ):
-                closed_coords = list(geom_processed.coords) + [geom_processed.coords[0]]
-                geom_processed = LineString(closed_coords)
-        return make_valid(geom_processed)
-
-    def _get_processed_network_path(
-        self,
-        geom_to_process,
-        reference_intersection,
-        reference_coords_intersection,
-        thematic_difference,
-        snap_strategy,
-        relevant_distance,
-    ):
-        thematic_points = self._get_thematic_points(
-            geom_to_process, reference_intersection
-        )
-        segments = []
-        segments.extend(list(reference_intersection.geoms))
-        segments.extend(list(thematic_difference.geoms))
-
-        # add extra segments (connectionlines between theme and reference)
-        extra_segments = []
-        for geom in thematic_difference.geoms:
-            p_start = Point(geom.coords[0])
-            p_end = Point(geom.coords[-1])
-            connection_line_start = self._get_connection_line(
-                thematic_points,
-                thematic_difference,
-                p_start,
-                reference_intersection,
-                reference_coords_intersection,
-                relevant_distance,
-            )
-            connection_line_end = self._get_connection_line(
-                thematic_points,
-                thematic_difference,
-                p_end,
-                reference_intersection,
-                reference_coords_intersection,
-                relevant_distance,
-            )
-            extra_segments.append(connection_line_start)
-            extra_segments.append(connection_line_end)
-        segments.extend(extra_segments)
-
-        # add extra segments (connection lines between reference_intersections)
-        # TODO, when passing OpenDomain, there is not always connection between the reference-parts. How to solve this?
-        extra_segments_ref_intersections = shortest_connections_between_geometries(
-            reference_intersection
-        )
-        # extra_segments_ref_intersections = get_connection_lines_to_nearest(
-        #     reference_intersection
-        # )
-        segments.extend(
-            extra_segments_ref_intersections
-        )  # removed as we first going to filter these lines
-
-        # Filter out lines that are not fully in relevant distance as these are no valid solution-paths
-        # Mostly these lines will already be in the distance as both start en endpoint are in range (but not always fully)
-        # geom_to_process_buffered = buffer_pos(geom_to_process, relevant_distance*1.01)
-        # extra_geomcollection_ref_intersections = safe_intersection(
-        #     GeometryCollection(extra_segments_ref_intersections),
-        #     geom_to_process_buffered,
-        # )
-        # segments.append(extra_geomcollection_ref_intersections)
-
-        network = prepare_network(segments)
-        geom_processed = find_best_path_in_network(
-            geom_to_process, network, snap_strategy, relevant_distance
-        )
-        # if geom_processed is None:
-        #     # add original so a connected path will be found
-        #     segments.append(geom_to_process)
-        #     network = prepare_network(segments)
-        #     geom_processed = find_longest_path_in_network(
-        #         geom_to_process, network, snap_strategy, relevant_distance
-        #     )
-
-        return geom_processed
-
-    def _get_thematic_points(self, geom_to_process, reference_intersection):
-        """
-        returns a MultiPoint geometry with points on the thematic geometry that are used for consistency while creating connection_lines
-        :param geom_to_process:
-        :param reference_intersection:
-        :return: MultiPoint
-        """
-        geom_to_process_line = geom_to_process
-        if isinstance(geom_to_process_line, LinearRing):
-            geom_to_process_line = LineString(geom_to_process_line.coords)
-        geom_to_process_segmentized = segmentize(
-            geom_to_process_line, self.partial_snap_max_segment_length
-        )
-        # Split the line at all intersection points with the MultiLineString
-        splitter = safe_unary_union(reference_intersection)
-        try:
-            geom_to_process_splitted = split(geom_to_process_segmentized, splitter)
-        except GeometryTypeError:
-            geom_to_process_splitted = geom_to_process_segmentized
-        thematic_points = MultiPoint(
-            list(get_coords_from_geometry(geom_to_process_splitted))
-        )
-        return thematic_points
-
-    def _get_connection_line(
-        self,
-        thematic_points,
-        thematic_difference,
-        point,
-        reference_intersection,
-        reference_coords_intersection,
-        relevant_distance,
-    ):
-        # factor = 1.001
-
-        closest_points = heapq.nsmallest(
-            2, thematic_points.geoms, key=lambda p: point.distance(p)
-        )
-        points = [closest_points[0], point, closest_points[-1]]
-        line_theme = LineString(points)
-        dist_1 = closest_points[0].distance(thematic_difference)
-        dist_2 = closest_points[-1].distance(thematic_difference)
-        if dist_1 > dist_2:
-            line_theme_furthest_point = closest_points[0]
-        elif dist_1 < dist_2:
-            line_theme_furthest_point = closest_points[-1]
-        else:
-            line_theme_furthest_point = point
-
-        if (
-            not reference_coords_intersection is None
-            and not reference_coords_intersection.is_empty
-        ):
-            line_ref = shortest_line(
-                line_theme_furthest_point, reference_coords_intersection
-            )
-
-            if line_ref.length > relevant_distance * 1.5:
-                line_ref = shortest_line(
-                    line_theme_furthest_point, reference_intersection
-                )
-        else:
-            line_ref = shortest_line(line_theme_furthest_point, reference_intersection)
-
-        # connection_line = scale(connection_line, factor, factor)
-        # line_theme = scale(line_theme, factor, factor)
-        # line_ref= scale(line_ref, factor, factor)
-        connection_line = safe_unary_union([line_theme, line_ref])
-        # To scale or not to scale, that's the question.
-        # When vertices are used it is possibly not necessary to scale because we use the vertices of the segmentized input_geometry, so no problem with floating point-intersections.
-        # When we do not use vertices it could be necessary (due to floating point error) to make sure lines are intersecting so they are split on these intersecting points
-
-        if (
-            round(connection_line.length, RELEVANT_DISTANCE_DECIMALS)
-            > relevant_distance * self.partial_snap_max_segment_length * 2
-            # * factor
-            # * factor
-            # * 4  # There could be a better way to exclude invalid connection-lines?
-        ):
-            return LineString()
-
-        return connection_line
-
-    def process_geometry(
-        self,
-        input_geometry: BaseGeometry,
-        relevant_distance: float = 1,
-        od_strategy=OpenDomainStrategy.SNAP_ALL_SIDE,
-        threshold_overlap_percentage=50,
-    ) -> ProcessResult:
-        """
-        method to align a geometry to the reference layer
-
-        Args:
-            input_geometry (BaseGeometry): The input geometric object.
-            relevant_distance: The relevant distance (in meters) for processing
-            od_strategy (int, optional): The strategy to determine how to handle
-                information outside the reference polygons (Open Domain)
-                (default: SNAP_FULL_AREA_ALL_SIDE)
-            threshold_overlap_percentage (int, optional): Threshold (%) to determine
-                from which overlapping-percentage a reference-polygon has to be included
-                when there aren't relevant intersections or relevant differences
-                (default 50%).
-                When setting this parameter to '-1' the original border for will be returned for cases where nor relevant intersections and relevant differences are found
-
-
-        Returns:
-            ProcessResult : A dict containing the resulting geometries:
-
-            *   result (BaseGeometry): The resulting output geometry
-            *   result_diff (BaseGeometry): The resulting difference output geometry
-            *   result_diff_plus (BaseGeometry): The resulting positive difference
-                output geometry
-            *   result_diff_min (BaseGeometry): The resulting negative difference output
-                geometry
-            *   relevant_intersection (BaseGeometry): The relevant_intersection
-            *   relevant_difference (BaseGeometry): The relevant_difference
-            *   remark (str): remarks collected when processing the geometry
-        """
-        # Processing based on thematic geom_type and reference_geom_type
-
-        self.od_strategy = od_strategy
-        self.threshold_overlap_percentage = threshold_overlap_percentage
-
-        if isinstance(input_geometry, GeometryCollection):
-            raise ValueError(
-                "GeometryCollection as input is not supported. Please use the individual geometries from the GeometryCollection as input."
-            )
-        elif isinstance(input_geometry, (Polygon, MultiPolygon)):
-            # Processing thematic polygons
-            if self.area_limit and input_geometry.area > self.area_limit:
-                message = f"The input polygon is too large to process: input area {str(input_geometry.area)} m², limit area: {str(self.area_limit)} m²."
-                raise ValueError(message)
-            self.logger.feedback_debug("process geometry")
-
-            # For calculations with RD=0 the original input is returned
-            if relevant_distance == 0:
-                self.logger.feedback_debug("Calculation for RD = 0")
-                return _unary_union_result_dict(
-                    {
-                        "result": input_geometry,
-                        "properties": {
-                            REMARK_FIELD_NAME: "relevant distance 0 --> original geometry returned"
-                        },
-                    }
-                )
-
-            # CALCULATE INNER and OUTER INPUT GEOMETRY for performance optimisation on big geometries
-            # combine all parts of the input geometry to one polygon
-            input_geometry_inner, input_geometry_outer = _calculate_inner_outer(
-                input_geometry, relevant_distance
-            )
-            # get a list of all ref_ids that are intersecting the thematic geometry; we take it bigger because we want to check if there are also reference geometries on a relevant distance.
-            input_geometry_outer_buffered = buffer_pos(
-                input_geometry_outer,
-                relevant_distance * self.buffer_multiplication_factor,
-            )
-            ref_intersections = self.reference_items.take(
-                self.reference_tree.query(input_geometry_outer_buffered)
-            ).tolist()
-
-            ref_intersections_geoms = []
-            all_polygons = True
-            for key_ref in ref_intersections:
-                ref_geom = self.dict_reference[key_ref]
-                ref_intersections_geoms.append(ref_geom)
-                if not isinstance(ref_geom, (Polygon, MultiPolygon)):
-                    all_polygons = False
-
-            if all_polygons:
-                return self._process_geometry_by_dieussaert(
-                    input_geometry,
-                    input_geometry_outer,
-                    input_geometry_inner,
-                    ref_intersections_geoms,
-                    relevant_distance=relevant_distance,
-                )
-        return self._process_geometry_by_network(
-            input_geometry,
-            relevant_distance,
-            snap_strategy=self.partial_snap_strategy,
-        )
-
-
-
     def process(
         self,
         dict_thematic=None,
@@ -899,10 +322,9 @@ class Aligner:
         """
         if relevant_distances is None:
             relevant_distances = [relevant_distance]
-        self.relevant_distances = relevant_distances
         self.od_strategy = od_strategy
         self.threshold_overlap_percentage = threshold_overlap_percentage
-        self.logger.feedback_debug("Process series" + str(self.relevant_distances))
+        self.logger.feedback_debug("Process series" + str(relevant_distances))
         dict_series = {}
         dict_series_queue = {}
         futures = []
@@ -929,14 +351,15 @@ class Aligner:
             ) as executor:  # max_workers=5
                 for key, geometry in dict_thematic_to_process.items():
                     self.logger.feedback_info(
-                        f"thematic id {str(key)} processed with relevant distances (m) [{str(self.relevant_distances)}]"
+                        f"thematic id {str(key)} processed with relevant distances (m) [{str(relevant_distances)}]"
                     )
                     dict_series[key] = {}
                     dict_series_queue[key] = {}
-                    for relevant_distance in self.relevant_distances:
+                    for relevant_distance in relevant_distances:
                         try:
+                            geometry_processor = AlignerGeometryProcessor(self)
                             future = executor.submit(
-                                self.process_geometry,
+                                geometry_processor.process,
                                 geometry,
                                 relevant_distance,
                                 od_strategy,
@@ -947,7 +370,7 @@ class Aligner:
                         except ValueError as e:
                             self.logger.feedback_warning(
                                 "error for"
-                                + f"thematic id {str(key)} processed with relevant distances (m) [{str(self.relevant_distances)}]"
+                                + f"thematic id {str(key)} processed with relevant distances (m) [{str(relevant_distances)}]"
                             )
                             dict_series_queue[key][relevant_distance] = None
                             self.logger.feedback_warning(str(e))
@@ -959,12 +382,13 @@ class Aligner:
         else:
             for key, geometry in dict_thematic_to_process.items():
                 self.logger.feedback_info(
-                    f"thematic id {str(key)} processed with relevant distances (m) [{str(self.relevant_distances)}]"
+                    f"thematic id {str(key)} processed with relevant distances (m) [{str(relevant_distances)}]"
                 )
                 dict_series[key] = {}
-                for relevant_distance in self.relevant_distances:
+                for relevant_distance in relevant_distances:
                     try:
-                        processed_result = self.process_geometry(
+                        geometry_processor = AlignerGeometryProcessor(self)
+                        processed_result = geometry_processor.process(
                             geometry,
                             relevant_distance,
                             od_strategy,
@@ -1008,7 +432,7 @@ class Aligner:
                     )
 
         self.logger.feedback_info(
-            "End of processing series: " + str(self.relevant_distances)
+            "End of processing series: " + str(relevant_distances)
         )
         self.dict_processresults = dict_series
 
@@ -2624,32 +2048,3 @@ def _equal_geom_in_array(geom, geom_array, correction_distance, mitre_limit):
         if geometric_equality(geom, g, correction_distance, mitre_limit):
             return True
     return False
-
-
-def _calculate_inner_outer(input_geometry, relevant_distance):
-    """
-    calculate the inner and outer of a polygon for performance gain when using dieussaert_algorithm
-    :param input_geometry:
-    :param relevant_distance:
-    :return:
-    """
-    input_geometry = safe_unary_union(get_parts(input_geometry))
-    input_geometry_inner = buffer_neg(
-        input_geometry, relevant_distance
-    )  # inner part of the input that must be always available
-    input_geometry_double_inner = buffer_neg(
-        input_geometry, 2 * relevant_distance + MAX_OUTER_BUFFER
-    )  # inner part of the input that must be always available
-    # do the calculation only for the outer border of the geometry. The inner part is added afterwards
-    input_geometry_outer = safe_difference(input_geometry, input_geometry_double_inner)
-    return input_geometry_inner, input_geometry_outer
-
-
-def _unary_union_result_dict(result_dict):
-    # make a unary union for each key value in the result dict
-    for key in ProcessResult.__annotations__:
-        geom = result_dict.get(key, GeometryCollection())  # noqa
-        if isinstance(geom, BaseGeometry) and not geom.is_empty:
-            geom = safe_unary_union(geom)
-        result_dict[key] = geom  # noqa
-    return result_dict

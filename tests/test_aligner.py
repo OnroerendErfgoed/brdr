@@ -20,6 +20,7 @@ from brdr.geometry_utils import (
 )
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.loader import GeoJsonLoader, DictLoader
+from brdr.processor import AlignerGeometryProcessor
 from brdr.typings import FeatureCollection, ProcessResult
 
 
@@ -113,7 +114,7 @@ class TestAligner(unittest.TestCase):
         ref_dict = {key_ref: self.sample_geom}
         self.sample_aligner.load_reference_data(DictLoader(ref_dict))
         thematic_geom = self.sample_geom.buffer(0.5)
-        process_result = self.sample_aligner.process_geometry(thematic_geom)
+        process_result = AlignerGeometryProcessor(self.sample_aligner).process(thematic_geom)
         self.assertTrue(
             from_wkt(process_result["result"].wkt).equals(
                 from_wkt(self.sample_geom.wkt)

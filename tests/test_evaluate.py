@@ -456,8 +456,7 @@ class TestEvaluate(unittest.TestCase):
         }
         # 4001 will give a result, 4002 &4009 should also give the original geometry
 
-        aligner = Aligner(relevant_distances=np.arange(0, 310, 10, dtype=int) / 100)
-
+        aligner = Aligner()
         loader = GeoJsonLoader(_input=thematic_json, id_property="fid")
         aligner.load_thematic_data(loader)
         # Load reference data: The actual GRB-parcels
@@ -466,6 +465,7 @@ class TestEvaluate(unittest.TestCase):
 
         # Use the EVALUATE-function
         dict_evaluated = aligner.evaluate(
+            relevant_distances=np.arange(0, 310, 10, dtype=int) / 100,
             max_predictions=1,
             full_strategy=FullStrategy.ONLY_FULL,
             multi_to_best_prediction=True,
