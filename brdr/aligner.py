@@ -8,15 +8,12 @@ from typing import Iterable
 
 import numpy as np
 from shapely import GeometryCollection
-from shapely import Polygon
 from shapely import STRtree
 from shapely import make_valid
-from shapely import remove_repeated_points
 from shapely import to_geojson
 from shapely.geometry.base import BaseGeometry
 
 from brdr import __version__
-from brdr.constants import BUFFER_MULTIPLICATION_FACTOR
 from brdr.constants import DATE_FORMAT
 from brdr.constants import DEFAULT_CRS
 from brdr.constants import DIFF_AREA_FIELD_NAME
@@ -34,16 +31,11 @@ from brdr.constants import ID_THEME_FIELD_NAME
 from brdr.constants import LAST_VERSION_DATE
 from brdr.constants import NR_CALCULATION_FIELD_NAME
 from brdr.constants import OD_ALIKE_FIELD_NAME
-from brdr.constants import PARTIAL_SNAPPING
-from brdr.constants import PARTIAL_SNAP_MAX_SEGMENT_LENGTH
-from brdr.constants import PARTIAL_SNAP_STRATEGY
 from brdr.constants import PREDICTION_COUNT
 from brdr.constants import PREDICTION_SCORE
 from brdr.constants import RELEVANT_DISTANCE_DECIMALS
 from brdr.constants import RELEVANT_DISTANCE_FIELD_NAME
 from brdr.constants import REMARK_FIELD_NAME
-from brdr.constants import SNAP_MAX_SEGMENT_LENGTH
-from brdr.constants import SNAP_STRATEGY
 from brdr.constants import STABILITY
 from brdr.constants import VERSION_DATE
 from brdr.constants import ZERO_STREAK
@@ -53,22 +45,13 @@ from brdr.enums import DiffMetric
 from brdr.enums import Evaluation
 from brdr.enums import FullStrategy
 from brdr.enums import OpenDomainStrategy
-from brdr.enums import SnapStrategy
 from brdr.geometry_utils import buffer_neg
-from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import buffer_pos
 from brdr.geometry_utils import extract_points_lines_from_geometry
-from brdr.geometry_utils import fill_and_remove_gaps
-from brdr.geometry_utils import geometric_equality
-from brdr.geometry_utils import get_shape_index
 from brdr.geometry_utils import safe_difference
 from brdr.geometry_utils import safe_intersection
-from brdr.geometry_utils import safe_symmetric_difference
 from brdr.geometry_utils import safe_unary_union
-from brdr.geometry_utils import safe_union
-from brdr.geometry_utils import snap_geometry_to_reference
 from brdr.geometry_utils import to_crs
-from brdr.geometry_utils import to_multi
 from brdr.loader import Loader
 from brdr.logger import Logger
 from brdr.processor import AlignerGeometryProcessor
@@ -76,11 +59,11 @@ from brdr.processor import BaseProcessor
 from brdr.topo import dissolve_topo
 from brdr.topo import generate_topo
 from brdr.typings import ProcessResult
-from brdr.utils import _unary_union_result_dict
 from brdr.utils import coverage_ratio
 from brdr.utils import determine_stability
 from brdr.utils import diff_from_processresult
 from brdr.utils import diffs_from_dict_processresult
+from brdr.utils import equal_geom_in_array
 from brdr.utils import geojson_from_dict
 from brdr.utils import get_dict_geojsons_from_series_dict
 from brdr.utils import is_brdr_formula
@@ -90,6 +73,7 @@ from brdr.utils import write_geojson
 
 
 ###################
+
 
 # TODO what about the Aligner-parameters; AlignerConfig-class?
 class Aligner:
@@ -105,27 +89,13 @@ class Aligner:
         self,
         *,
         feedback=None,
-        processor: BaseProcessor = None,
-        threshold_overlap_percentage=50,
-        od_strategy=OpenDomainStrategy.SNAP_ALL_SIDE,
+        processor: BaseProcessor,
         crs=DEFAULT_CRS,
         multi_as_single_modus=True,
         preserve_topology=False,
-        snap_strategy=SNAP_STRATEGY,
-        snap_max_segment_length=SNAP_MAX_SEGMENT_LENGTH,
-        partial_snapping=PARTIAL_SNAPPING,
-        partial_snap_strategy=PARTIAL_SNAP_STRATEGY,
-        partial_snap_max_segment_length=PARTIAL_SNAP_MAX_SEGMENT_LENGTH,
-        threshold_exclusion_area=0,
-        threshold_exclusion_percentage=0,
-        threshold_inclusion_percentage=100,
-        buffer_multiplication_factor=BUFFER_MULTIPLICATION_FACTOR,
-        threshold_circle_ratio=0.98,
         correction_distance=0.01,
         diff_metric=DIFF_METRIC,
         mitre_limit=10,
-        area_limit=None,
-        max_workers=None,
     ):
         """
         Initializes the Aligner object
@@ -133,63 +103,21 @@ class Aligner:
         Args:
             feedback (object, optional): Feedback object that can be added to show
                 feedback in QGIS. Defaults to None.
-            relevant_distance (int, optional): The relevant distance (in meters) for
-                processing. Defaults to 1.
-            relevant_distances ([],optional): Relevant distances (in meters) for
-                processing
-            od_strategy (int, optional): The strategy to determine how to handle
-                information outside the reference polygons (Open Domain)
-                (default: SNAP_FULL_AREA_ALL_SIDE)
-            threshold_overlap_percentage (int, optional): Threshold (%) to determine
-                from which overlapping-percentage a reference-polygon has to be included
-                when there aren't relevant intersections or relevant differences
-                (default 50%).
-                When setting this parameter to '-1' the original border for will be returned for cases where nor relevant intersections and relevant differences are found
             crs (str, optional): Coordinate Reference System (CRS) of the data.
                 (default EPSG:31370)
             multi_as_single_modus (boolean, optional): Modus to handle multipolygons (Default=True):
                 True: input-multipolygons will be split-up into single polygons and handled by the algorithm. After executing the algorithm, the results are merged together.
                 False: Multipolygons are directly processed by the algorithm
-            threshold_exclusion_percentage (int, optional): Percentage for excluding candidate reference-polygons when overlap(%) is smaller than the threshold(Default=0)
-            threshold_exclusion_area (int, optional):Area in m² for excluding candidate reference-polygons when overlap(m²) is smaller than the threshold (Default=0)
-            buffer_multiplication_factor (float, optional): Multiplication factor, used to buffer the thematic objects searching for reference borders (buffer= buffer_multiplication_factor*relevant_distance)(Default=1.01)
-            threshold_circle_ratio (float, optional): Threshold-value to exclude circles getting processed (perfect circle = 1) based on POLSBY-POPPER algorithm(Default=0.98)
             correction_distance (float, optional): Distance used in a pos_neg_buffer to remove slivers (technical correction) (Default= 0.01 = 1cm )
             mitre_limit (int, optional):buffer-parameter - The mitre ratio is the ratio of the distance from the corner to the end of the mitred offset corner.
                 When two line segments meet at a sharp angle, a miter join will extend far beyond the original geometry. (and in the extreme case will be infinitely far.) To prevent unreasonable geometry, the mitre limit allows controlling the maximum length of the join corner.
                 Corners with a ratio which exceed the limit will be beveled(Default=10)
-            area_limit (int, optional): Maximum area for processing. (default 100000)
-            max_workers (int, optional): Amount of workers that is used in ThreadPoolExecutor (for parallel execution) when processing objects for multiple relevant distances. (default None). If set to -1, no parallel exececution is used.
 
         """
         self.logger = Logger(feedback)
         self.processor = processor
-        self.od_strategy = od_strategy
-        self.threshold_overlap_percentage = threshold_overlap_percentage
-        # Area in m² for excluding candidate reference-polygons when overlap(m²) is smaller than the
-        # threshold
-        self.threshold_exclusion_area = threshold_exclusion_area
-        # Percentage for excluding candidate reference-polygons when overlap(%) is smaller than the
-        # threshold
-        self.threshold_exclusion_percentage = threshold_exclusion_percentage
-        self.threshold_inclusion_percentage = threshold_inclusion_percentage
-        self.area_limit = area_limit
-        self.max_workers = max_workers
-        # Multiplication-factor used in OD-strategy 2 (SNAP-BOTH SIDED) when calculating
-        # OD-area to take into account
-        self.buffer_multiplication_factor = buffer_multiplication_factor
-        # Threshold-value to exclude circles getting processed (perfect circle = 1) based on
-        # POLSBY-POPPER algorithm
-        self.threshold_circle_ratio = threshold_circle_ratio
-        # Distance used in a pos_neg_buffer to remove slivers (technical correction)
         self.correction_distance = correction_distance
-        # Buffer parameters:
-        # Distance to limit a buffered corner (MITER-join-style parameter)
-        #   Explanation and examples:
-        #   https://shapely.readthedocs.io/en/stable/reference/shapely.buffer.html
-        #   https://postgis.net/docs/ST_Buffer.html
         self.mitre_limit = mitre_limit
-        # quad_segments = 8 (by default in shapely)
 
         # PROCESSING DEFAULTS
         # thematic
@@ -239,18 +167,13 @@ class Aligner:
         # (m)'.
         # Default EPSG:31370 (Lambert72), alternative: EPSG:3812 (Lambert2008)
         self.CRS = to_crs(crs)
-        #TODO The crs that is defined on the aligner is the CRS we are working with. So we expect that the loaded thematic data is in this CRS and also the reference data is in this CRS. Or will be downloaded and transformed to this CRS.
-        #At this moment  we expect the units in meter, because all calculation and parameters are based that unit is 'meter'
+        # TODO The crs that is defined on the aligner is the CRS we are working with. So we expect that the loaded thematic data is in this CRS and also the reference data is in this CRS. Or will be downloaded and transformed to this CRS.
+        # At this moment  we expect the units in meter, because all calculation and parameters are based that unit is 'meter'
 
         # this parameter is used to treat multipolygon as single polygons. So polygons
         # with ID splitter are separately evaluated and merged on result.
         self.multi_as_single_modus = multi_as_single_modus
         self.preserve_topology = preserve_topology
-        self.snap_strategy = snap_strategy
-        self.snap_max_segment_length = snap_max_segment_length
-        self.partial_snapping = partial_snapping
-        self.partial_snap_strategy = partial_snap_strategy
-        self.partial_snap_max_segment_length = partial_snap_max_segment_length
         self.diff_metric = diff_metric
         self.logger.feedback_info("Aligner initialized")
 
@@ -286,17 +209,19 @@ class Aligner:
 
     def process(
         self,
+        *,
         dict_thematic=None,
         relevant_distances: Iterable[float] = None,
-        relevant_distance=1,
         od_strategy=OpenDomainStrategy.SNAP_ALL_SIDE,
         threshold_overlap_percentage=50,
+        max_workers: int = None,
     ) -> dict[any, dict[float, ProcessResult]]:
         """
         Calculates the resulting dictionaries for thematic data based on a series of
             relevant distances.
 
         Args:
+            dict_thematic: the dictionary with the thematic geometries to 'predict'. Default is None, so all thematic geometries inside the aligner will be processed.
             relevant_distances (Iterable[float]): A series of relevant distances
                 (in meters) to process
             od_strategy (int, optional): The strategy to determine how to handle
@@ -307,7 +232,7 @@ class Aligner:
                 when there aren't relevant intersections or relevant differences
                 (default 50%).
                 When setting this parameter to '-1' the original border for will be returned for cases where nor relevant intersections and relevant differences are found
-
+            max_workers (int, optional): Amount of workers that is used in ThreadPoolExecutor (for parallel execution) when processing objects for multiple relevant distances. (default None). If set to -1, no parallel exececution is used.
 
         Returns:
             dict: A dictionary, for every thematic ID a dictionary with the results for all distances
@@ -321,16 +246,15 @@ class Aligner:
                 }
         """
         if relevant_distances is None:
-            relevant_distances = [relevant_distance]
-        self.od_strategy = od_strategy
-        self.threshold_overlap_percentage = threshold_overlap_percentage
+            raise ValueError("provide at least 1 relevant distance")
+
         self.logger.feedback_debug("Process series" + str(relevant_distances))
         dict_series = {}
         dict_series_queue = {}
         futures = []
         dict_thematic_to_process = dict_thematic
         if dict_thematic_to_process is None:
-            dict_thematic_to_process = self.dict_thematic
+            raise ValueError("dict_thematic cannot be None")
         dict_multi_as_single = {}
 
         if self.multi_as_single_modus:
@@ -341,14 +265,12 @@ class Aligner:
         if self.preserve_topology:
             # self.max_workers =-1
             # self.logger.feedback_info("max_workers set to -1 when using 'preserve_topology'")
-            dict_thematic_to_process, topo_thematic,dict_thematic_topo_geoms = generate_topo(
-                dict_thematic_to_process
+            dict_thematic_to_process, topo_thematic, dict_thematic_topo_geoms = (
+                generate_topo(dict_thematic_to_process)
             )
 
-        if self.max_workers != -1:
-            with ThreadPoolExecutor(
-                max_workers=self.max_workers
-            ) as executor:  # max_workers=5
+        if max_workers != -1:
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
                 for key, geometry in dict_thematic_to_process.items():
                     self.logger.feedback_info(
                         f"thematic id {str(key)} processed with relevant distances (m) [{str(relevant_distances)}]"
@@ -357,7 +279,7 @@ class Aligner:
                     dict_series_queue[key] = {}
                     for relevant_distance in relevant_distances:
                         try:
-                            geometry_processor = AlignerGeometryProcessor(self)
+                            geometry_processor = AlignerGeometryProcessor()
                             future = executor.submit(
                                 geometry_processor.process,
                                 geometry,
@@ -609,7 +531,7 @@ class Aligner:
             predicted_geoms_for_theme_id = []
             for rel_dist, processresult in dist_results.items():
                 predicted_geom = processresult["result"]
-                if not _equal_geom_in_array(
+                if not equal_geom_in_array(
                     predicted_geom,
                     predicted_geoms_for_theme_id,
                     self.correction_distance,
@@ -1172,234 +1094,7 @@ class Aligner:
         self.reference_union = None
         return
 
-    def _calculate_intersection_between_geometry_and_od(
-        self, input_geometry, input_geometry_inner, relevant_distance
-    ):
-        """
-        Calculates the intersecting parts between a thematic geometry and the Open Domain( domain, not coverd by reference-polygons)
-        :param input_geometry:
-        :param relevant_distance:
-        :return:
-        """
-        # Calculate the intersection between thematic and Open Domain
-        # buffer_distance = relevant_distance / 2
-        relevant_intersection_array = []
-        relevant_difference_array = []
-        geom_thematic_od = Polygon()
-
-        if self.od_strategy == OpenDomainStrategy.AS_IS:
-            # All parts that are not covered by the reference layer are added to the
-            #         resulting geometry AS IS
-            self.logger.feedback_debug("OD-strategy AS IS")
-            # all OD-parts wil be added AS IS
-            geom_thematic_od = safe_difference(
-                input_geometry, self._get_reference_union()
-            )
-
-        elif (
-            self.od_strategy == OpenDomainStrategy.SNAP_INNER_SIDE
-            or self.od_strategy == OpenDomainStrategy.EXCLUDE
-        ):
-            # integrates the entire inner area of the input geometry,
-            # so Open Domain of the inner area is included in the result
-            self.logger.feedback_debug("OD-strategy OD_SNAP_INNER_SIDE or EXCLUDE")
-            geom_thematic_od = self._od_full_area(input_geometry, relevant_distance)
-
-        elif self.od_strategy == OpenDomainStrategy.SNAP_ALL_SIDE:
-            #  Inner & Outer-reference-boundaries are used.
-            # integrates the entire inner area of the input geometry,
-            self.logger.feedback_debug("OD-strategy OD-SNAP_ALL_SIDE")
-            (
-                geom_thematic_od,
-                relevant_difference_array,
-                relevant_intersection_array,
-            ) = self._od_snap_all_side(
-                input_geometry, input_geometry_inner, relevant_distance, outer=False
-            )
-            # This part calculates the full area
-            geom_theme_od_min_clipped_plus_buffered_clipped = self._od_full_area(
-                input_geometry, relevant_distance
-            )
-            # UNION of both elements
-            geom_thematic_od = safe_union(
-                geom_theme_od_min_clipped_plus_buffered_clipped, geom_thematic_od
-            )
-        elif self.od_strategy == OpenDomainStrategy.SNAP_PREFER_VERTICES:
-            self.logger.feedback_debug("OD-strategy SNAP_PREFER_VERTICES")
-            geom_thematic_od = self._od_snap(
-                geometry=input_geometry,
-                relevant_distance=relevant_distance,
-                snap_strategy=SnapStrategy.PREFER_VERTICES,
-            )
-
-        elif self.od_strategy == OpenDomainStrategy.SNAP_NO_PREFERENCE:
-            self.logger.feedback_debug("OD-strategy SNAP_NO_PREFERENCE")
-            geom_thematic_od = self._od_snap(
-                geometry=input_geometry,
-                relevant_distance=relevant_distance,
-                snap_strategy=SnapStrategy.NO_PREFERENCE,
-            )
-
-        elif self.od_strategy == OpenDomainStrategy.SNAP_ONLY_VERTICES:
-            self.logger.feedback_debug("OD-strategy SNAP_ONLY_VERTICES")
-            geom_thematic_od = self._od_snap(
-                geometry=input_geometry,
-                relevant_distance=relevant_distance,
-                snap_strategy=SnapStrategy.ONLY_VERTICES,
-            )
-
-        # ADD THEMATIC_OD
-        preresult = self._add_multi_polygons_from_geom_to_array(geom_thematic_od, [])
-        return (
-            preresult,
-            relevant_intersection_array,
-            relevant_difference_array,
-        )
-
-    def _od_snap(self, geometry, relevant_distance, snap_strategy):
-        # all OD-parts wil be added AS IS
-        geom_thematic_od = safe_difference(geometry, self._get_reference_union())
-        if geom_thematic_od is None or geom_thematic_od.is_empty:
-            return geom_thematic_od
-        geom_thematic_od = to_multi(geom_thematic_od, geomtype="Polygon")
-        out = []
-        for p in geom_thematic_od.geoms:
-            reference = safe_intersection(
-                self._get_reference_union(),
-                make_valid(
-                    buffer_pos(
-                        p,
-                        self.buffer_multiplication_factor * relevant_distance,
-                        mitre_limit=self.mitre_limit,
-                    )
-                ),
-            )
-            p_snapped = snap_geometry_to_reference(
-                p,
-                reference,
-                max_segment_length=self.partial_snap_max_segment_length,
-                snap_strategy=snap_strategy,
-                tolerance=relevant_distance,
-            )
-            out.append(p_snapped)
-        return safe_unary_union(out)
-
-    def _od_full_area(self, geometry, relevant_distance):
-        buffer_distance = relevant_distance / 2
-        geom_theme_od = safe_difference(geometry, self._get_reference_union())
-        geom_theme_min_buffered = buffer_neg(
-            buffer_pos(
-                buffer_neg(
-                    geometry,
-                    relevant_distance,
-                    mitre_limit=self.mitre_limit,
-                ),
-                buffer_distance,
-                mitre_limit=self.mitre_limit,
-            ),
-            buffer_distance,
-            mitre_limit=self.mitre_limit,
-        )
-        geom_theme_od_clipped_min_buffered = safe_intersection(
-            geom_theme_min_buffered, geom_theme_od
-        )
-        geom_theme_od_min_clipped_plus_buffered = buffer_pos(
-            geom_theme_od_clipped_min_buffered,
-            relevant_distance,
-            mitre_limit=self.mitre_limit,
-        )
-        geom_theme_od_min_clipped_plus_buffered_clipped = safe_intersection(
-            geom_theme_od_min_clipped_plus_buffered, geom_theme_od
-        )
-        geom_thematic_od = geom_theme_od_min_clipped_plus_buffered_clipped
-        return geom_thematic_od
-
-    def _od_snap_all_side(
-        self, geometry, input_geometry_inner, relevant_distance, outer=False
-    ):
-        """
-
-        :param geometry:
-        :param input_geometry_inner:
-        :param relevant_distance:
-        :param outer: when outer is True, the outer boundary is used, inner is not used
-        :return:
-        """
-        buffer_distance = relevant_distance / 2
-        relevant_difference_array = []
-        relevant_intersection_array = []
-        geom_reference = self._create_virtual_reference(
-            geometry, relevant_distance, outer
-        )
-
-        geom_thematic = geometry
-        if geom_reference.is_empty or geom_reference is None:
-            geom_thematic_od = geom_reference
-        else:
-            geom_intersection = safe_intersection(geom_reference, geom_thematic)
-            # geom_intersection = safe_unary_union([geom_intersection])
-
-            # calculate the geometry for the 'virtual' OD parcel
-            (
-                geom_thematic_od,
-                geom_relevant_intersection,
-                geom_relevant_diff,
-            ) = _calculate_geom_by_intersection_and_reference(
-                geom_intersection,
-                geom_reference,
-                input_geometry_inner,
-                True,
-                buffer_distance,
-                self.threshold_overlap_percentage,
-                self.threshold_exclusion_percentage,
-                self.threshold_exclusion_area,
-                self.threshold_inclusion_percentage,
-                self.mitre_limit,
-                self.partial_snapping,
-                self.partial_snap_strategy,
-                self.partial_snap_max_segment_length,
-            )
-
-            relevant_intersection_array = self._add_multi_polygons_from_geom_to_array(
-                geom_relevant_intersection, []
-            )
-            relevant_difference_array = self._add_multi_polygons_from_geom_to_array(
-                geom_relevant_diff, []
-            )
-            # geom_thematic_od = safe_unary_union(geom_thematic_od_array)
-        return geom_thematic_od, relevant_difference_array, relevant_intersection_array
-
-    def _create_virtual_reference(self, geometry, relevant_distance, outer=False):
-        """
-        Functions that creates a 'virtual reference polygon' for areas that are not covered by reference-polygons.
-        :param geometry:
-        :param relevant_distance:
-        :param outer: when outer is True, the outer boundary is used, inner is not used
-        :return:
-        """
-        buffer_distance = relevant_distance / 2
-        geom_thematic_buffered = make_valid(
-            buffer_pos(
-                geometry,
-                (self.buffer_multiplication_factor * relevant_distance)
-                + self.correction_distance,
-                mitre_limit=self.mitre_limit,
-            )
-        )
-        clip_ref_thematic_buffered = safe_intersection(
-            self._get_reference_union(), geom_thematic_buffered
-        )
-        virtual_reference = safe_difference(
-            geom_thematic_buffered, clip_ref_thematic_buffered
-        )  # Both OD-parts are SNAPPED added
-        if outer:  # when outer is True, the outer boundary is used, inner is not used
-            geom_1 = safe_difference(geometry, virtual_reference)
-            geom_2 = buffer_neg_pos(geom_1, buffer_distance)
-            geom_3 = safe_intersection(geom_2, geometry)
-            virtual_reference = safe_unary_union([geom_3, virtual_reference])
-        return virtual_reference
-
-    def _get_reference_union(self):
+    def _get_reference_union(self) -> BaseGeometry:
         """
         returns a unary_unioned geometry from all the reference geometries
         :return:
@@ -1418,258 +1113,6 @@ class Aligner:
                 GeometryCollection(list(self.dict_reference.values()))
             )
         return self.reference_elements
-
-    def _postprocess_preresult(
-        self,
-        geom_preresult,
-        geom_thematic,
-        relevant_intersection,
-        relevant_diff,
-        relevant_distance,
-    ) -> ProcessResult:
-        """
-        Postprocess the preresulting geometry with the following actions to create the final result
-        *Corrections for areas that differ more than the relevant distance
-        *slivers
-        *Inner holes (donuts) /multipolygons
-        *validity
-        *Circles (Polsby-Popper)
-        *Null/Empty-values
-
-        Args:
-            geom_preresult (BaseGeometry): The preresulting geometry to postprocess
-            geom_thematic (BaseGeometry): The input geometry
-
-        Returns:
-            ProcessResult: A dictionary containing the resulting output geometries:
-
-            *   result (BaseGeometry): The resulting output geometry
-            *   result_diff (BaseGeometry): The resulting difference output geometry
-            *   result_diff_plus (BaseGeometry): The resulting positive difference
-                output geometry
-            *   result_diff_min (BaseGeometry): The resulting negative difference output
-                geometry
-            *   remark (str): Remark when processing the geometry
-        """
-        remark = ""
-        geom_thematic = make_valid(geom_thematic)
-        if geom_preresult is None or geom_preresult.is_empty:
-            # geom_preresult = geom_thematic
-            geom_preresult = GeometryCollection()
-            remark = "Empty geometry calculated: -->resulting geometry = empty geometry"
-        if to_multi(geom_preresult).geom_type != to_multi(geom_thematic).geom_type:
-            # geom_preresult = geom_thematic
-            geom_preresult = GeometryCollection()
-            remark = "Calculated geometry of different geomtype: -->resulting geometry = empty geometry"
-        if geom_preresult.geom_type in [
-            "Point",
-            "MultiPoint",
-            "LineString",
-            "MultiLineString",
-            "GeometryCollection",
-        ]:
-            result_diff_plus = safe_difference(
-                geom_preresult, buffer_pos(geom_thematic, self.correction_distance)
-            )
-            result_diff_min = safe_difference(
-                geom_thematic, buffer_pos(geom_preresult, self.correction_distance)
-            )
-            result_diff = safe_unary_union([result_diff_plus, result_diff_min])
-            return _unary_union_result_dict(
-                {
-                    "result": geom_preresult,
-                    "result_diff": result_diff,
-                    "result_diff_plus": result_diff_plus,
-                    "result_diff_min": result_diff_min,
-                    "result_relevant_intersection": relevant_intersection,
-                    "result_relevant_diff": relevant_diff,
-                    "properties": {REMARK_FIELD_NAME: remark},
-                }
-            )
-        # Process array
-
-        buffer_distance = relevant_distance / 2
-        result = []
-        geom_thematic_for_add_delete = geom_thematic
-
-        if self.od_strategy == OpenDomainStrategy.EXCLUDE:
-            geom_thematic_for_add_delete = safe_intersection(
-                geom_thematic_for_add_delete, self._get_reference_union()
-            )
-            geom_preresult = safe_intersection(
-                geom_preresult, self._get_reference_union()
-            )
-
-        if not (geom_thematic is None or geom_thematic.is_empty):
-            # Correction for circles
-            # calculate ratio to see if it is a circle, and keep the original geometry
-            #  if a circle: (Polsby-Popper score)
-            if (
-                get_shape_index(geom_thematic.area, geom_thematic.length)
-                > self.threshold_circle_ratio
-            ):
-                remark = "Circle detected: -->resulting geometry = original geometry"
-                self.logger.feedback_debug(remark)
-                return _unary_union_result_dict(
-                    {"result": geom_thematic, "properties": {REMARK_FIELD_NAME: remark}}
-                )
-
-            # Correction for unchanged geometries
-            # if safe_symmetric_difference(geom_preresult, geom_thematic).is_empty:
-            if geometric_equality(
-                geom_preresult,
-                geom_thematic,
-                correction_distance=self.correction_distance,
-                mitre_limit=self.mitre_limit,
-            ):
-                remark = "Unchanged geometry: -->resulting geometry = original geometry"
-                self.logger.feedback_debug(remark)
-                return _unary_union_result_dict(
-                    {"result": geom_thematic, "properties": {REMARK_FIELD_NAME: remark}}
-                )
-
-        # Corrections for areas that differ more than the relevant distance
-        geom_thematic_dissolved = buffer_pos(
-            buffer_neg(
-                buffer_pos(
-                    geom_preresult,
-                    self.correction_distance,
-                    mitre_limit=self.mitre_limit,
-                ),
-                2 * self.correction_distance,
-                mitre_limit=self.mitre_limit,
-            ),
-            self.correction_distance,
-            mitre_limit=self.mitre_limit,
-        )
-        # geom_symdiff = self._safe_symmetric_difference(geom_thematic,
-        # geom_thematic_dissolved)
-        geom_diff_add = safe_difference(
-            geom_thematic_for_add_delete, geom_thematic_dissolved
-        )
-        geom_diff_delete = safe_difference(
-            geom_thematic_dissolved, geom_thematic_for_add_delete
-        )
-        geom_diff_removed = safe_difference(
-            geom_thematic_dissolved,
-            safe_intersection(
-                geom_diff_delete,
-                buffer_neg_pos(
-                    geom_diff_delete,
-                    buffer_distance,
-                    mitre_limit=self.mitre_limit,
-                ),
-            ),
-        )
-        geom_diff_removed_added = safe_union(
-            geom_diff_removed,
-            safe_intersection(
-                geom_diff_add,
-                buffer_neg_pos(
-                    geom_diff_add,
-                    buffer_distance,
-                    mitre_limit=self.mitre_limit,
-                ),
-            ),
-        )
-        geom_thematic_preresult = buffer_pos(
-            buffer_neg(
-                buffer_pos(
-                    geom_diff_removed_added,
-                    self.correction_distance,
-                    mitre_limit=self.mitre_limit,
-                ),
-                2 * self.correction_distance,
-                mitre_limit=self.mitre_limit,
-            ),
-            self.correction_distance,
-            mitre_limit=self.mitre_limit,
-        )
-        # Correction for Inner holes(donuts) / multipolygons
-        # fill and remove gaps
-        # TODO improvement: when relevant_distance very big (fe 100m) it could happen that parts of multipolygon-results will be removed unintentionally because part smaller than negative buffer
-        geom_thematic_cleaned_holes = fill_and_remove_gaps(
-            geom_thematic_preresult, buffer_distance
-        )
-        geom_thematic_result = buffer_pos(
-            buffer_neg(
-                buffer_pos(
-                    geom_thematic_cleaned_holes,
-                    self.correction_distance,
-                    mitre_limit=self.mitre_limit,
-                ),
-                2 * self.correction_distance,
-                mitre_limit=self.mitre_limit,
-            ),
-            self.correction_distance,
-            mitre_limit=self.mitre_limit,
-        )
-        geom_thematic_result = make_valid(remove_repeated_points(geom_thematic_result))
-
-        # Correction for empty preresults
-        if geom_thematic_result.is_empty or geom_thematic_result is None:
-            remark = "Calculated empty result: -->original geometry returned"
-            self.logger.feedback_warning(remark)
-
-            geom_thematic_result = geom_thematic
-            # geom_thematic_result = Polygon() #If we return an empty geometry, the feature disappears, so we return the original geometry
-
-        # group all initial multipolygons into a new resulting dictionary
-        result.append(geom_thematic_result)
-
-        # create all resulting geometries
-        geom_thematic_result = safe_unary_union(result)
-
-        # negative and positive buffer is added to the difference-calculations, to
-        # remove 'very small' differences (smaller than the correction distance)
-        geom_result_diff = buffer_pos(
-            buffer_neg(
-                safe_symmetric_difference(
-                    geom_thematic_result,
-                    geom_thematic,
-                ),
-                self.correction_distance,
-                mitre_limit=self.mitre_limit,
-            ),
-            self.correction_distance,
-            mitre_limit=self.mitre_limit,
-        )
-        geom_result_diff_plus = buffer_pos(
-            buffer_neg(
-                safe_difference(
-                    geom_thematic_result,
-                    geom_thematic,
-                ),
-                self.correction_distance,
-                mitre_limit=self.mitre_limit,
-            ),
-            self.correction_distance,
-            mitre_limit=self.mitre_limit,
-        )
-        geom_result_diff_min = buffer_pos(
-            buffer_neg(
-                safe_difference(
-                    geom_thematic,
-                    geom_thematic_result,
-                ),
-                self.correction_distance,
-                mitre_limit=self.mitre_limit,
-            ),
-            self.correction_distance,
-            mitre_limit=self.mitre_limit,
-        )
-
-        return _unary_union_result_dict(
-            {
-                "result": geom_thematic_result,
-                "result_diff": geom_result_diff,
-                "result_diff_plus": geom_result_diff_plus,
-                "result_diff_min": geom_result_diff_min,
-                "result_relevant_intersection": relevant_intersection,
-                "result_relevant_diff": relevant_diff,
-                "properties": {REMARK_FIELD_NAME: remark},
-            }
-        )
 
     def _evaluate(
         self, id_theme, geom_predicted, base_formula_field=FORMULA_FIELD_NAME
@@ -1797,254 +1240,3 @@ class Aligner:
         else:
             properties[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
         return properties
-
-    @staticmethod
-    def _add_multi_polygons_from_geom_to_array(geom: BaseGeometry, array):
-        """
-        Append valid polygons and multipolygons extracted from a given geometry to an
-        existing array.
-
-        Args:
-            geom (BaseGeometry): The input geometry to process.
-            array (list): An existing list to store valid polygons and multipolygons.
-
-        Returns:
-            list: A list containing valid polygons and multipolygons extracted from the
-                input geometry.
-        """
-        if geom.is_empty or geom is None:
-            # If the input geometry is empty or None, do nothing.
-            pass
-        else:
-            # Create a GeometryCollection from the input geometry.
-            geometry_collection = GeometryCollection(geom)  # noqa
-            for g in geometry_collection.geoms:
-                # Ensure each sub-geometry is valid.
-                g = make_valid(g)
-                if str(g.geom_type) in ["Polygon", "MultiPolygon"]:
-                    # Append valid polygons and multipolygons to the array.
-                    array.append(g)
-        return array
-
-
-def _calculate_geom_by_intersection_and_reference(
-    geom_intersection: BaseGeometry,
-    geom_reference: BaseGeometry,
-    input_geometry_inner: BaseGeometry,
-    is_open_domain,
-    buffer_distance,
-    threshold_overlap_percentage,
-    threshold_exclusion_percentage,
-    threshold_exclusion_area,
-    threshold_inclusion_percentage,
-    mitre_limit,
-    partial_snapping,
-    partial_snap_strategy,
-    partial_snap_max_segment_length,
-):
-    """
-    Calculates the geometry based on intersection and reference geometries.
-
-    Args:
-        geom_intersection (BaseGeometry): The intersection geometry.
-        geom_reference (BaseGeometry): The reference geometry.
-        is_open_domain (bool): A flag indicating whether it's a public domain
-            (area not covered with reference polygon).
-        threshold_exclusion_percentage (int): The threshold exclusion percentage.
-        threshold_exclusion_area (int): The threshold exclusion area.
-        buffer_distance (float): The buffer distance.
-        threshold_overlap_percentage (int): The threshold overlap percentage.
-
-    Returns:
-        tuple: A tuple containing the resulting geometries:
-
-        *   geom: BaseGeometry or None: The resulting geometry or None if conditions
-            are not met.
-        *   geom_relevant_intersection: BaseGeometry or None: The relevant
-            intersection.
-        *   geom_relevant_difference: BaseGeometry or None: The relevant difference.
-
-    Notes:
-        -   If the reference geometry area is 0, the overlap is set to 100%.
-        -   If the overlap is less than relevant_OVERLAP_PERCENTAGE or the
-            intersection area is less than relevant_OVERLAP_AREA, None is returned.
-        -   Otherwise, the relevant intersection and difference geometries are
-            calculated.
-        -   If both relevant intersection and difference are non-empty, the final
-            geometry is obtained by applying safe intersection and buffering.
-        -   If only relevant intersection is non-empty, the result is the reference
-            geometry.
-        -   If only relevant difference is non-empty, the result is None.
-    """
-    od_overlap = 111  # define a specific value for defining overlap of OD
-    if geom_reference.area == 0:
-        overlap = od_overlap  # Open Domain
-
-    else:
-        overlap = geom_intersection.area * 100 / geom_reference.area
-
-    if (
-        overlap < threshold_exclusion_percentage
-        or geom_intersection.area < threshold_exclusion_area
-    ):
-        return Polygon(), Polygon(), Polygon()
-
-    if overlap >= threshold_inclusion_percentage and not overlap == od_overlap:
-        return geom_reference, geom_reference, Polygon()
-
-    geom_difference = safe_difference(geom_reference, geom_intersection)
-    geom_relevant_intersection = buffer_neg(
-        geom_intersection,
-        buffer_distance,
-        mitre_limit=mitre_limit,
-    )
-    geom_intersection_inner = safe_intersection(
-        geom_intersection, input_geometry_inner
-    )  # this part is the intersection-part that always has to be kept, because it is inside the inner_geometry
-
-    geom_relevant_difference = buffer_neg(
-        geom_difference,
-        buffer_distance,
-        mitre_limit=mitre_limit,
-    )
-
-    if (
-        not geom_intersection_inner.is_empty
-        and geom_relevant_intersection.is_empty
-        and not geom_relevant_difference.is_empty
-    ):
-        geom_x = safe_intersection(
-            geom_intersection, buffer_pos(geom_intersection_inner, 2 * buffer_distance)
-        )
-
-        geom_x = snap_geometry_to_reference(
-            geom_x,
-            geom_reference,
-            max_segment_length=partial_snap_max_segment_length,
-            snap_strategy=partial_snap_strategy,
-            tolerance=2 * buffer_distance,
-        )
-
-        geom = geom_x
-    elif (
-        not geom_relevant_intersection.is_empty
-        and not geom_relevant_difference.is_empty
-    ):
-        # relevant intersection and relevant difference
-
-        geom_x = safe_difference(
-            geom_reference,
-            safe_intersection(
-                geom_difference,
-                buffer_neg_pos(
-                    geom_difference,
-                    buffer_distance,
-                    mitre_limit=mitre_limit,
-                ),
-            ),
-        )
-        geom_x = buffer_neg_pos(geom_x, buffer_distance, mitre_limit=mitre_limit)
-
-        geom_intersection_buffered = buffer_pos(geom_intersection, 2 * buffer_distance)
-        geom_difference_2 = safe_difference(geom_reference, geom_intersection_buffered)
-        geom_difference_2_buffered = buffer_pos(geom_difference_2, 2 * buffer_distance)
-
-        geom_x = safe_difference(geom_x, geom_difference_2_buffered)
-
-        geom_x = safe_intersection(geom_x, geom_reference)
-
-        if partial_snapping:
-            geom_x = snap_geometry_to_reference(
-                geom_x,
-                geom_reference,
-                max_segment_length=partial_snap_max_segment_length,
-                snap_strategy=partial_snap_strategy,
-                tolerance=2 * buffer_distance,
-            )
-        geom = safe_unary_union(
-            [geom_x, geom_relevant_intersection, geom_intersection_inner]
-        )
-
-        # when calculating for OD, we create a 'virtual parcel'. When calculating this
-        # virtual parcel, it is buffered to take outer boundaries into account.
-        # This results in a side effect that there are extra non-logical parts included
-        # in the result. The function below tries to exclude these non-logical parts.
-        # see eo_id 206363 with relevant distance=0.2m and SNAP_ALL_SIDE
-        if is_open_domain:
-            geom = _get_relevant_polygons_from_geom(geom, buffer_distance, mitre_limit)
-    elif not geom_relevant_intersection.is_empty and geom_relevant_difference.is_empty:
-        geom = geom_reference
-    elif geom_relevant_intersection.is_empty and not geom_relevant_difference.is_empty:
-        geom = geom_relevant_intersection  # (=empty geometry)
-    else:
-        # No relevant intersection and no relevant difference
-        if is_open_domain:
-            # geom = geom_relevant_intersection  # (=empty geometry)
-            geom = snap_geometry_to_reference(
-                geom_intersection,
-                geom_reference,
-                snap_strategy=partial_snap_strategy,
-                tolerance=2 * buffer_distance,
-                max_segment_length=partial_snap_max_segment_length,
-            )
-        elif not geom_intersection_inner.is_empty:
-            geom_intersection_buffered = buffer_pos(
-                geom_intersection, 2 * buffer_distance
-            )
-            geom_difference_2 = safe_difference(
-                geom_reference, geom_intersection_buffered
-            )
-            geom_difference_2_buffered = buffer_pos(
-                geom_difference_2, 2 * buffer_distance
-            )
-            geom = safe_difference(geom_reference, geom_difference_2_buffered)
-        elif threshold_overlap_percentage < 0:
-            # if we take a value of -1, the original border will be used
-            geom = geom_intersection
-        elif overlap > threshold_overlap_percentage:
-            geom = geom_reference
-        else:
-            geom = geom_relevant_intersection  # (=empty geometry)
-    return geom, geom_relevant_intersection, geom_relevant_difference
-
-
-def _get_relevant_polygons_from_geom(
-    geometry: BaseGeometry, buffer_distance: float, mitre_limit
-):
-    """
-    Get only the relevant parts (polygon) from a geometry.
-    Points, Lines and Polygons smaller than relevant distance are excluded from the
-    result
-    """
-    if not geometry or geometry.is_empty:
-        # If the input geometry is empty or None, do nothing.
-        return geometry
-    else:
-        geometry = safe_unary_union(geometry)
-        # Create a GeometryCollection from the input geometry.
-        geometry_collection = GeometryCollection(geometry)
-        array = []
-        for g in geometry_collection.geoms:
-            # Ensure each sub-geometry is valid.
-            g = make_valid(g)
-            if str(g.geom_type) in ["Polygon", "MultiPolygon"]:
-                relevant_geom = buffer_neg(
-                    g,
-                    buffer_distance,
-                    mitre_limit=mitre_limit,
-                )
-                if relevant_geom is not None and not relevant_geom.is_empty:
-                    array.append(g)
-    return safe_unary_union(array)
-
-
-def _equal_geom_in_array(geom, geom_array, correction_distance, mitre_limit):
-    """
-    Check if a predicted geometry is equal to other predicted geometries in a list.
-    Equality is defined as there is the symmetrical difference is smaller than the CORRECTION DISTANCE
-    Returns True if one of the elements is equal, otherwise False
-    """
-    for g in geom_array:
-        if geometric_equality(geom, g, correction_distance, mitre_limit):
-            return True
-    return False
