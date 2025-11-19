@@ -27,6 +27,7 @@ from brdr.enums import DiffMetric
 from brdr.geometry_utils import buffer_neg
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import buffer_pos
+from brdr.geometry_utils import from_crs
 from brdr.geometry_utils import geometric_equality
 from brdr.geometry_utils import get_bbox
 from brdr.geometry_utils import get_geoms_from_geometry
@@ -36,7 +37,9 @@ from brdr.geometry_utils import safe_difference
 from brdr.geometry_utils import safe_intersection
 from brdr.geometry_utils import safe_unary_union
 from brdr.geometry_utils import snap_geometry_to_reference
+from brdr.geometry_utils import to_crs
 from brdr.geometry_utils import total_vertex_distance
+from brdr.logger import LOGGER
 from brdr.typings import ProcessResult
 
 log = logging.getLogger(__name__)
