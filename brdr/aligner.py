@@ -14,6 +14,7 @@ from shapely import to_geojson
 from shapely.geometry.base import BaseGeometry
 
 from brdr import __version__
+from brdr.configs import ProcessorConfig
 from brdr.constants import DATE_FORMAT
 from brdr.constants import DEFAULT_CRS
 from brdr.constants import DIFF_AREA_FIELD_NAME
@@ -115,7 +116,7 @@ class Aligner:
 
         """
         self.logger = Logger(feedback)
-        self.processor = processor
+        self.processor = processor if processor else AlignerGeometryProcessor(feedback, ProcessorConfig())
         self.correction_distance = correction_distance
         self.mitre_limit = mitre_limit
 

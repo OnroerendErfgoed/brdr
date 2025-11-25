@@ -54,7 +54,26 @@ class BaseProcessor(ABC):
         self.config = config
 
     @abstractmethod
-    def process(self, *args, **kwargs) -> ProcessResult:
+    def process(
+        self,
+        *,
+        correction_distance,
+        dict_reference,
+        input_geometry: BaseGeometry,
+        input_geometry_inner,
+        input_geometry_outer,
+        mitre_limit,
+        od_strategy=OpenDomainStrategy.SNAP_ALL_SIDE,
+        ref_intersections_geoms,
+        reference_elements,
+        reference_items,
+        reference_tree,
+        reference_union,
+        relevant_distance: int = 1,
+        snap_max_segment_length,
+        snap_strategy: SnapStrategy = SnapStrategy.NO_PREFERENCE,
+        threshold_overlap_percentage=50,
+    ) -> ProcessResult:
         pass
 
     def _postprocess_preresult(
@@ -449,6 +468,7 @@ class SnapGeometryProcessor(BaseProcessor):
         relevant_distance,
         snap_max_segment_length,
         snap_strategy,
+        **kwargs,
     ) -> ProcessResult:
         snapped = []
         virtual_reference = Polygon()
@@ -495,6 +515,7 @@ class SnapGeometryProcessor(BaseProcessor):
 class DieussaertGeometryProcessor(BaseProcessor):
     def process(
         self,
+        *,
         input_geometry,
         input_geometry_outer,
         input_geometry_inner,
@@ -503,6 +524,7 @@ class DieussaertGeometryProcessor(BaseProcessor):
         mitre_limit,
         reference_union,
         correction_distance,
+        **kwargs,
     ) -> ProcessResult:
         buffer_distance = relevant_distance / 2
         (
@@ -979,6 +1001,7 @@ class DieussaertGeometryProcessor(BaseProcessor):
 
 
 class NetworkGeometryProcessor(BaseProcessor):
+
     def process(
         self,
         *,
@@ -989,6 +1012,7 @@ class NetworkGeometryProcessor(BaseProcessor):
         correction_distance,
         relevant_distance=1,
         snap_strategy: SnapStrategy = SnapStrategy.NO_PREFERENCE,
+        **kwargs,
     ) -> ProcessResult:
         input_geometry = to_multi(input_geometry)
         input_geometry_buffered = buffer_pos(
@@ -1084,11 +1108,11 @@ class NetworkGeometryProcessor(BaseProcessor):
             geom_processed = p2
         else:
             geom_processed = self._get_processed_network_path(
-                input_geometry = geom_to_process,
-                reference_intersection = reference_intersection,
-                reference_coords_intersection = reference_coords_intersection,
-                thematic_difference = thematic_difference,
-                relevant_distance = relevant_distance,
+                input_geometry=geom_to_process,
+                reference_intersection=reference_intersection,
+                reference_coords_intersection=reference_coords_intersection,
+                thematic_difference=thematic_difference,
+                relevant_distance=relevant_distance,
             )
             if (
                 close_output
@@ -1202,6 +1226,7 @@ class NetworkGeometryProcessor(BaseProcessor):
 class AlignerGeometryProcessor(BaseProcessor):
     def process(
         self,
+        *,
         mitre_limit,
         reference_union,
         reference_elements,
@@ -1213,6 +1238,7 @@ class AlignerGeometryProcessor(BaseProcessor):
         relevant_distance: int = 1,
         od_strategy=OpenDomainStrategy.SNAP_ALL_SIDE,
         threshold_overlap_percentage=50,
+        **kwargs,
     ) -> ProcessResult:
         """
         method to align a geometry to the reference layer
@@ -1298,14 +1324,14 @@ class AlignerGeometryProcessor(BaseProcessor):
                     self.logger.feedback, self.config
                 )
                 return processor.process(
-                    input_geometry,
-                    input_geometry_outer,
-                    input_geometry_inner,
-                    ref_intersections_geoms,
-                    relevant_distance,
-                    mitre_limit,
-                    reference_union,
-                    correction_distance,
+                    input_geometry=input_geometry,
+                    input_geometry_outer=input_geometry_outer,
+                    input_geometry_inner=input_geometry_inner,
+                    ref_intersections_geoms=ref_intersections_geoms,
+                    relevant_distance=relevant_distance,
+                    mitre_limit=mitre_limit,
+                    reference_union=reference_union,
+                    correction_distance=correction_distance,
                 )
         processor = NetworkGeometryProcessor(self.logger.feedback, self.config)
         return processor.process(
