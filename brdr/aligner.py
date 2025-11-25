@@ -45,7 +45,6 @@ from brdr.enums import AlignerResultType
 from brdr.enums import DiffMetric
 from brdr.enums import Evaluation
 from brdr.enums import FullStrategy
-from brdr.enums import OpenDomainStrategy
 from brdr.geometry_utils import buffer_neg
 from brdr.geometry_utils import buffer_pos
 from brdr.geometry_utils import extract_points_lines_from_geometry
@@ -125,11 +124,11 @@ class Aligner:
         # name of the identifier-field of the thematic data (id has to be unique)
         self.name_thematic_id = ID_THEME_FIELD_NAME
         # dictionary to store all thematic geometries to handle
-        self.dict_thematic: dict[any, BaseGeometry] = {}
+        self.dict_thematic: dict[str|int, BaseGeometry] = {}
         # dictionary to store properties of the reference-features (optional)
-        self.dict_thematic_properties: dict[any, dict] = {}
+        self.dict_thematic_properties: dict[str|int, dict] = {}
         # Dict to store source-information of the thematic dictionary
-        self.dict_thematic_source: dict[any, str] = {}
+        self.dict_thematic_source: dict[str|int, str] = {}
         # dictionary to store all unioned thematic geometries
         self.thematic_union = None
 
@@ -139,11 +138,11 @@ class Aligner:
         # CAPAKEY for GRB-parcels)
         self.name_reference_id = ID_REFERENCE_FIELD_NAME
         # dictionary to store all reference geometries
-        self.dict_reference: dict[any, BaseGeometry] = {}
+        self.dict_reference: dict[str|int, BaseGeometry] = {}
         # dictionary to store properties of the reference-features (optional)
-        self.dict_reference_properties: dict[any, dict] = {}
+        self.dict_reference_properties: dict[str|int, dict] = {}
         # Dict to store source-information of the reference dictionary
-        self.dict_reference_source: dict[any, str] = {}
+        self.dict_reference_source: dict[str|int, str] = {}
         # to save a unioned geometry of all reference polygons; needed for calculation
         # in most OD-strategies
         self.reference_union = None
@@ -155,11 +154,11 @@ class Aligner:
         # results
 
         # output-dictionaries (all results of process()), grouped by theme_id and relevant_distance
-        self.dict_processresults: dict[any, dict[float, ProcessResult]] = {}
+        self.dict_processresults: dict[str|int, dict[float, ProcessResult]] = {}
         # dictionary with the 'predicted' results, grouped by theme_id and relevant_distance
-        self.dict_predictions: dict[any, dict[float, ProcessResult]] = {}
+        self.dict_predictions: dict[str|int, dict[float, ProcessResult]] = {}
         # dictionary with the 'evaluated predicted' results, grouped by theme_id and relevant_distance
-        self.dict_evaluated_predictions: dict[any, dict[float, ProcessResult]] = {}
+        self.dict_evaluated_predictions: dict[str|int, dict[float, ProcessResult]] = {}
 
         # Coordinate reference system
         # thematic geometries and reference geometries are assumed to be in the same CRS
@@ -213,10 +212,8 @@ class Aligner:
         *,
         dict_thematic=None,
         relevant_distances: Iterable[float] = None,
-        od_strategy=OpenDomainStrategy.SNAP_ALL_SIDE,
-        threshold_overlap_percentage=50,
         max_workers: int = None,
-    ) -> dict[any, dict[float, ProcessResult]]:
+    ) -> dict[str|int, dict[float, ProcessResult]]:
         """
         Calculates the resulting dictionaries for thematic data based on a series of
             relevant distances.
@@ -225,14 +222,6 @@ class Aligner:
             dict_thematic: the dictionary with the thematic geometries to 'predict'. Default is None, so all thematic geometries inside the aligner will be processed.
             relevant_distances (Iterable[float]): A series of relevant distances
                 (in meters) to process
-            od_strategy (int, optional): The strategy to determine how to handle
-                information outside the reference polygons (Open Domain)
-                (default: SNAP_FULL_AREA_ALL_SIDE)
-            threshold_overlap_percentage (int, optional): Threshold (%) to determine
-                from which overlapping-percentage a reference-polygon has to be included
-                when there aren't relevant intersections or relevant differences
-                (default 50%).
-                When setting this parameter to '-1' the original border for will be returned for cases where nor relevant intersections and relevant differences are found
             max_workers (int, optional): Amount of workers that is used in ThreadPoolExecutor (for parallel execution) when processing objects for multiple relevant distances. (default None). If set to -1, no parallel exececution is used.
 
         Returns:
@@ -257,6 +246,8 @@ class Aligner:
         if dict_thematic_to_process is None:
             raise ValueError("dict_thematic cannot be None")
         dict_multi_as_single = {}
+        topo_thematic = None
+        dict_thematic_topo_geoms = None
 
         if self.multi_as_single_modus:
             dict_thematic_to_process, dict_multi_as_single = multi_to_singles(
@@ -280,13 +271,19 @@ class Aligner:
                     dict_series_queue[key] = {}
                     for relevant_distance in relevant_distances:
                         try:
-                            geometry_processor = AlignerGeometryProcessor()
                             future = executor.submit(
-                                geometry_processor.process,
-                                geometry,
-                                relevant_distance,
-                                od_strategy,
-                                threshold_overlap_percentage,
+                                self.processor.process,
+
+                                correction_distance = self.correction_distance,
+                                dict_reference = self.dict_reference,
+                                mitre_limit = self.mitre_limit,
+                                reference_elements = self.reference_elements,
+                                reference_items = self.reference_items,
+                                reference_tree = self.reference_tree,
+                                reference_union = self.reference_union,
+                                input_geometry = geometry,
+                                relevant_distance = relevant_distance,
+
                             )
                             futures.append(future)
                             dict_series_queue[key][relevant_distance] = future
@@ -310,18 +307,23 @@ class Aligner:
                 dict_series[key] = {}
                 for relevant_distance in relevant_distances:
                     try:
-                        geometry_processor = AlignerGeometryProcessor(self)
-                        processed_result = geometry_processor.process(
-                            geometry,
-                            relevant_distance,
-                            od_strategy,
-                            threshold_overlap_percentage,
+                        processed_result = self.processor.process(
+                            correction_distance=self.correction_distance,
+                            dict_reference=self.dict_reference,
+                            mitre_limit=self.mitre_limit,
+                            reference_elements=self.reference_elements,
+                            reference_items=self.reference_items,
+                            reference_tree=self.reference_tree,
+                            reference_union=self.reference_union,
+                            input_geometry=geometry,
+                            relevant_distance=relevant_distance,
                         )
                     except ValueError as e:
                         self.logger.feedback_warning(str(e))
                         processed_result = None
 
                     dict_series[key][relevant_distance] = processed_result
+
         if self.preserve_topology:
             dict_series = dissolve_topo(
                 dict_series,
@@ -338,13 +340,13 @@ class Aligner:
         for theme_id, dict_dist_results in dict_series.items():
             original_geometry = self.dict_thematic[theme_id]
             try:
-                original_geometry_length = len(original_geometry.geoms)
+                original_geometry_length = len(original_geometry.geoms) # noqa
             except:
                 original_geometry_length = 1
             for relevant_distance, process_result in dict_dist_results.items():
                 resulting_geom = process_result["result"]
                 try:
-                    resulting_geometry_length = len(resulting_geom.geoms)
+                    resulting_geometry_length = len(resulting_geom.geoms) # noqa
                 except:
                     resulting_geometry_length = 1
                 if original_geometry_length != resulting_geometry_length:
@@ -364,12 +366,7 @@ class Aligner:
     def predictor(
         self,
         dict_thematic=None,
-        relevant_distances=[
-            round(k, RELEVANT_DISTANCE_DECIMALS)
-            for k in np.arange(0, 310, 10, dtype=int) / 100
-        ],
-        od_strategy=OpenDomainStrategy.SNAP_ALL_SIDE,
-        threshold_overlap_percentage=50,
+        relevant_distances=None,
         diff_metric=None,
     ):
         """
@@ -411,23 +408,8 @@ class Aligner:
             relevant_distances (np.ndarray, optional): A series of relevant distances
                 (in meters) to process. : A NumPy array of distances to
               be analyzed.
-            od_strategy (int, optional): The strategy to determine how to handle
-                information outside the reference polygons (Open Domain)
-                (default: SNAP_FULL_AREA_ALL_SIDE)
-            threshold_overlap_percentage (int, optional): Threshold (%) to determine
-                from which overlapping-percentage a reference-polygon has to be included
-                when there aren't relevant intersections or relevant differences
-                (default 50%).
-                When setting this parameter to '-1' the original border for will be returned for cases where nor relevant intersections and relevant differences are found
-
             relevant_distances (np.ndarray, optional): A NumPy array of distances to
               be analyzed. Defaults to np.arange(0.1, 5.05, 0.1).
-            od_strategy (OpenDomainStrategy, optional): A strategy for handling
-              open data in the processing (implementation specific). Defaults to
-             OpenDomainStrategy.SNAP_ALL_SIDE.
-            threshold_overlap_percentage (int, optional): A percentage threshold for
-              considering full overlap in the processing (implementation specific).
-             Defaults to 50.
             diff_metric (enum, optional): A enum thjat determines the method how differences are measured to determine the 'predictions'
 
         Returns:
@@ -447,11 +429,12 @@ class Aligner:
 
         if dict_thematic is None:
             dict_thematic = self.dict_thematic
+        if relevant_distances is None:
+            relevant_distances = [
+                round(k, RELEVANT_DISTANCE_DECIMALS)
+                for k in np.arange(0, 310, 10, dtype=int) / 100
+            ]
         dict_predictions = defaultdict(dict)
-        if od_strategy is None:
-            od_strategy = OpenDomainStrategy.SNAP_ALL_SIDE
-        if threshold_overlap_percentage is None:
-            threshold_overlap_percentage = 50
         rd_prediction = list(relevant_distances)
         max_relevant_distance = max(rd_prediction)
         cvg_ratio = coverage_ratio(values=relevant_distances, min_val=0, bin_count=10)
@@ -476,8 +459,6 @@ class Aligner:
         dict_processresults = self.process(
             dict_thematic=dict_thematic,
             relevant_distances=rd_prediction,
-            od_strategy=od_strategy,
-            threshold_overlap_percentage=threshold_overlap_percentage,
         )
         if diff_metric is None:
             diff_metric = self.diff_metric
@@ -572,7 +553,7 @@ class Aligner:
         proposals can be used
         ids_to_evaluate: list with all IDs to evaluate. all other IDs will be unchanged. If None (default), all self.dict_thematic will be evaluated.
         base_formula_field: name of the field where the base_formula is found in the data
-        max_predictions: integer that indicates how many predictions are maximally returned. (-1 indicates all predictions are returned)
+        max_predictions: integer that indicates how mstr|int predictions are maximally returned. (-1 indicates all predictions are returned)
         relevant_distances: relevant distances to evaluate
         full_strategy: enum, decided which predictions are kept or prefered based on full-ness of the prediction
         multi_to_best_prediction (default True): Only usable in combination with max_predictions=1. If True (and max_predictions=1), the prediction with highest score will be taken.If False, the original geometry is returned.
@@ -597,8 +578,6 @@ class Aligner:
         dict_series, dict_affected_predictions, diffs = self.predictor(
             dict_thematic=dict_affected,
             relevant_distances=relevant_distances,
-            od_strategy=self.od_strategy,
-            threshold_overlap_percentage=self.threshold_overlap_percentage,
             diff_metric=self.diff_metric,
         )
         dict_predictions_evaluated = {}

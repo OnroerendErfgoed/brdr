@@ -60,20 +60,30 @@ class BaseProcessor(ABC):
         correction_distance,
         dict_reference,
         input_geometry: BaseGeometry,
-        input_geometry_inner,
-        input_geometry_outer,
         mitre_limit,
-        od_strategy=OpenDomainStrategy.SNAP_ALL_SIDE,
-        ref_intersections_geoms,
         reference_elements,
         reference_items,
         reference_tree,
         reference_union,
-        relevant_distance: int = 1,
-        snap_max_segment_length,
-        snap_strategy: SnapStrategy = SnapStrategy.NO_PREFERENCE,
-        threshold_overlap_percentage=50,
+        relevant_distance,
     ) -> ProcessResult:
+        """
+        method to align a geometry to the reference layer
+
+        Returns:
+            ProcessResult : A dict containing the resulting geometries:
+
+            *   result (BaseGeometry): The resulting output geometry
+            *   result_diff (BaseGeometry): The resulting difference output geometry
+            *   result_diff_plus (BaseGeometry): The resulting positive difference
+                output geometry
+            *   result_diff_min (BaseGeometry): The resulting negative difference output
+                geometry
+            *   relevant_intersection (BaseGeometry): The relevant_intersection
+            *   relevant_difference (BaseGeometry): The relevant_difference
+            *   remark (str): remarks collected when processing the geometry
+        """
+        # Processing based on thematic geom_type and reference_geom_type
         pass
 
     def _postprocess_preresult(
@@ -455,6 +465,27 @@ class BaseProcessor(ABC):
                     array.append(g)
         return array
 
+    @staticmethod
+    def _calculate_inner_outer(input_geometry, relevant_distance):
+        """
+        calculate the inner and outer of a polygon for performance gain when using dieussaert_algorithm
+        :param input_geometry:
+        :param relevant_distance:
+        :return:
+        """
+        input_geometry = safe_unary_union(get_parts(input_geometry))
+        input_geometry_inner = buffer_neg(
+            input_geometry, relevant_distance
+        )  # inner part of the input that must be always available
+        input_geometry_double_inner = buffer_neg(
+            input_geometry, 2 * relevant_distance + MAX_OUTER_BUFFER
+        )  # inner part of the input that must be always available
+        # do the calculation only for the outer border of the geometry. The inner part is added afterward
+        input_geometry_outer = safe_difference(
+            input_geometry, input_geometry_double_inner
+        )
+        return input_geometry_inner, input_geometry_outer
+
 
 class SnapGeometryProcessor(BaseProcessor):
     def process(
@@ -466,7 +497,6 @@ class SnapGeometryProcessor(BaseProcessor):
         ref_intersections_geoms,
         reference_union,
         relevant_distance,
-        snap_max_segment_length,
         snap_strategy,
         **kwargs,
     ) -> ProcessResult:
@@ -494,7 +524,7 @@ class SnapGeometryProcessor(BaseProcessor):
             input_geometry,
             ref_geometrycollection,
             snap_strategy,
-            snap_max_segment_length,
+            self.config.snap_max_segment_length,
             relevant_distance,
         )
         snapped.append(snapped_geom)
@@ -513,19 +543,42 @@ class SnapGeometryProcessor(BaseProcessor):
 
 
 class DieussaertGeometryProcessor(BaseProcessor):
+
     def process(
         self,
         *,
         input_geometry,
-        input_geometry_outer,
-        input_geometry_inner,
-        ref_intersections_geoms,
         relevant_distance,
         mitre_limit,
         reference_union,
         correction_distance,
+        dict_reference,
+        reference_items,
+        reference_tree,
         **kwargs,
     ) -> ProcessResult:
+
+        # CALCULATE INNER and OUTER INPUT GEOMETRY for performance optimisation on big geometries
+        # combine all parts of the input geometry to one polygon
+        input_geometry_inner, input_geometry_outer = self._calculate_inner_outer(
+            input_geometry, relevant_distance
+        )
+        # get a list of all ref_ids that are intersecting the thematic geometry; we take it bigger because we want to check if there are also reference geometries on a relevant distance.
+        input_geometry_outer_buffered = buffer_pos(
+            input_geometry_outer,
+            relevant_distance * self.config.buffer_multiplication_factor,
+        )
+        ref_intersections = reference_items.take(
+            reference_tree.query(input_geometry_outer_buffered)
+        ).tolist()
+
+        ref_intersections_geoms = []
+        for key_ref in ref_intersections:
+            ref_geom = dict_reference[key_ref]
+            ref_intersections_geoms.append(ref_geom)
+            if not isinstance(ref_geom, (Polygon, MultiPolygon)):
+                raise ValueError("Dieussaert algorithm can only be used when all reference geometries are polygons or multipolygons.")
+
         buffer_distance = relevant_distance / 2
         (
             preresult,
@@ -539,6 +592,7 @@ class DieussaertGeometryProcessor(BaseProcessor):
             mitre_limit,
             correction_distance,
         )
+
         for geom_reference in ref_intersections_geoms:
             geom_intersection = safe_intersection(input_geometry_outer, geom_reference)
             if geom_intersection.is_empty or geom_intersection is None:
@@ -549,12 +603,12 @@ class DieussaertGeometryProcessor(BaseProcessor):
                 relevant_intersection,
                 relevant_diff,
             ) = self._calculate_geom_by_intersection_and_reference(
-                geom_intersection,
-                geom_reference,
-                input_geometry_inner,
-                False,
-                buffer_distance,
-                mitre_limit,
+                geom_intersection=geom_intersection,
+                geom_reference=geom_reference,
+                input_geometry_inner=input_geometry_inner,
+                is_open_domain=False,
+                buffer_distance=buffer_distance,
+                mitre_limit=mitre_limit,
             )
             self.logger.feedback_debug("intersection calculated")
             preresult = self._add_multi_polygons_from_geom_to_array(geom, preresult)
@@ -688,12 +742,12 @@ class DieussaertGeometryProcessor(BaseProcessor):
                 geom_relevant_intersection,
                 geom_relevant_diff,
             ) = self._calculate_geom_by_intersection_and_reference(
-                geom_intersection,
-                geom_reference,
-                input_geometry_inner,
-                True,
-                buffer_distance,
-                mitre_limit,
+                geom_intersection=geom_intersection,
+                geom_reference=geom_reference,
+                input_geometry_inner=input_geometry_inner,
+                is_open_domain=True,
+                buffer_distance=buffer_distance,
+                mitre_limit=mitre_limit,
             )
 
             relevant_intersection_array = self._add_multi_polygons_from_geom_to_array(
@@ -812,6 +866,7 @@ class DieussaertGeometryProcessor(BaseProcessor):
 
     def _calculate_geom_by_intersection_and_reference(
         self,
+        *,
         geom_intersection: BaseGeometry,
         geom_reference: BaseGeometry,
         input_geometry_inner: BaseGeometry,
@@ -1010,8 +1065,7 @@ class NetworkGeometryProcessor(BaseProcessor):
         reference_union,
         mitre_limit,
         correction_distance,
-        relevant_distance=1,
-        snap_strategy: SnapStrategy = SnapStrategy.NO_PREFERENCE,
+        relevant_distance: float = 1.0,
         **kwargs,
     ) -> ProcessResult:
         input_geometry = to_multi(input_geometry)
@@ -1227,52 +1281,17 @@ class AlignerGeometryProcessor(BaseProcessor):
     def process(
         self,
         *,
-        mitre_limit,
-        reference_union,
-        reference_elements,
         correction_distance,
-        reference_items,
-        reference_tree,
         dict_reference,
         input_geometry: BaseGeometry,
-        relevant_distance: int = 1,
-        od_strategy=OpenDomainStrategy.SNAP_ALL_SIDE,
-        threshold_overlap_percentage=50,
+        mitre_limit,
+        reference_elements,
+        reference_items,
+        reference_tree,
+        reference_union,
+        relevant_distance: float = 1.0,
         **kwargs,
     ) -> ProcessResult:
-        """
-        method to align a geometry to the reference layer
-
-        Args:
-            input_geometry (BaseGeometry): The input geometric object.
-            relevant_distance: The relevant distance (in meters) for processing
-            od_strategy (int, optional): The strategy to determine how to handle
-                information outside the reference polygons (Open Domain)
-                (default: SNAP_FULL_AREA_ALL_SIDE)
-            threshold_overlap_percentage (int, optional): Threshold (%) to determine
-                from which overlapping-percentage a reference-polygon has to be included
-                when there aren't relevant intersections or relevant differences
-                (default 50%).
-                When setting this parameter to '-1' the original border for will be returned for cases where nor relevant intersections and relevant differences are found
-
-
-        Returns:
-            ProcessResult : A dict containing the resulting geometries:
-
-            *   result (BaseGeometry): The resulting output geometry
-            *   result_diff (BaseGeometry): The resulting difference output geometry
-            *   result_diff_plus (BaseGeometry): The resulting positive difference
-                output geometry
-            *   result_diff_min (BaseGeometry): The resulting negative difference output
-                geometry
-            *   relevant_intersection (BaseGeometry): The relevant_intersection
-            *   relevant_difference (BaseGeometry): The relevant_difference
-            *   remark (str): remarks collected when processing the geometry
-        """
-        # Processing based on thematic geom_type and reference_geom_type
-
-        self.config.od_strategy = od_strategy
-        self.config.threshold_overlap_percentage = threshold_overlap_percentage
 
         if isinstance(input_geometry, GeometryCollection):
             raise ValueError(
@@ -1297,41 +1316,23 @@ class AlignerGeometryProcessor(BaseProcessor):
                     }
                 )
 
-            # CALCULATE INNER and OUTER INPUT GEOMETRY for performance optimisation on big geometries
-            # combine all parts of the input geometry to one polygon
-            input_geometry_inner, input_geometry_outer = self._calculate_inner_outer(
-                input_geometry, relevant_distance
-            )
-            # get a list of all ref_ids that are intersecting the thematic geometry; we take it bigger because we want to check if there are also reference geometries on a relevant distance.
-            input_geometry_outer_buffered = buffer_pos(
-                input_geometry_outer,
-                relevant_distance * self.config.buffer_multiplication_factor,
-            )
-            ref_intersections = reference_items.take(
-                reference_tree.query(input_geometry_outer_buffered)
-            ).tolist()
-
-            ref_intersections_geoms = []
-            all_polygons = True
-            for key_ref in ref_intersections:
-                ref_geom = dict_reference[key_ref]
-                ref_intersections_geoms.append(ref_geom)
-                if not isinstance(ref_geom, (Polygon, MultiPolygon)):
-                    all_polygons = False
-
-            if all_polygons:
+            try:
                 processor = DieussaertGeometryProcessor(
                     self.logger.feedback, self.config
                 )
                 return processor.process(
                     input_geometry=input_geometry,
-                    input_geometry_outer=input_geometry_outer,
-                    input_geometry_inner=input_geometry_inner,
-                    ref_intersections_geoms=ref_intersections_geoms,
                     relevant_distance=relevant_distance,
                     mitre_limit=mitre_limit,
                     reference_union=reference_union,
                     correction_distance=correction_distance,
+                    dict_reference=dict_reference,
+                    reference_items=reference_items,
+                    reference_tree=reference_tree,
+                )
+            except ValueError as e:
+                self.logger.feedback_debug(
+                    f"Dieussaert processing failed with error: {str(e)}. Trying Network-based processing."
                 )
         processor = NetworkGeometryProcessor(self.logger.feedback, self.config)
         return processor.process(
@@ -1339,28 +1340,6 @@ class AlignerGeometryProcessor(BaseProcessor):
             reference_elements=reference_elements,
             reference_union=reference_union,
             relevant_distance=relevant_distance,
-            snap_strategy=self.config.partial_snap_strategy,
             mitre_limit=mitre_limit,
             correction_distance=correction_distance,
         )
-
-    @staticmethod
-    def _calculate_inner_outer(input_geometry, relevant_distance):
-        """
-        calculate the inner and outer of a polygon for performance gain when using dieussaert_algorithm
-        :param input_geometry:
-        :param relevant_distance:
-        :return:
-        """
-        input_geometry = safe_unary_union(get_parts(input_geometry))
-        input_geometry_inner = buffer_neg(
-            input_geometry, relevant_distance
-        )  # inner part of the input that must be always available
-        input_geometry_double_inner = buffer_neg(
-            input_geometry, 2 * relevant_distance + MAX_OUTER_BUFFER
-        )  # inner part of the input that must be always available
-        # do the calculation only for the outer border of the geometry. The inner part is added afterward
-        input_geometry_outer = safe_difference(
-            input_geometry, input_geometry_double_inner
-        )
-        return input_geometry_inner, input_geometry_outer

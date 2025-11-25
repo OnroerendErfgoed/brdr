@@ -7,6 +7,7 @@ import requests
 from geojson import Feature
 from geojson import FeatureCollection
 from geojson import dump
+from pyproj import CRS
 from shapely import GeometryCollection
 from shapely import make_valid
 from shapely import node
@@ -14,7 +15,6 @@ from shapely import polygonize
 from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
 
-from brdr.configs import AlignerConfig
 from brdr.constants import AREA_ATTRIBUTE
 from brdr.constants import DEFAULT_CRS
 from brdr.constants import DOWNLOAD_LIMIT
@@ -43,10 +43,10 @@ log = logging.getLogger(__name__)
 
 
 def get_dict_geojsons_from_series_dict(
-    series_dict: dict[any, dict[float, ProcessResult]],
-    crs: str,
+    series_dict: dict[str|int, dict[float, ProcessResult]],
+    crs: CRS,
     id_field: str,
-    series_prop_dict: dict[any, dict[float, any]] = None,
+    series_prop_dict: dict[str|int, dict[float, str|int]] = None,
     geom_attributes=True,
 ):
     """
@@ -91,7 +91,7 @@ def get_dict_geojsons_from_series_dict(
 
 def _feature_from_geom(
     geom: BaseGeometry,
-    feature_id: any,
+    feature_id: str|int,
     properties: dict = None,
     geom_attributes=True,
 ) -> Feature:
@@ -117,7 +117,7 @@ def _feature_from_geom(
     return Feature(geometry=geom, id=feature_id, properties=properties)
 
 
-def geojson_from_dict(dictionary, crs, id_field, prop_dict=None, geom_attributes=True):
+def geojson_from_dict(dictionary, crs: CRS, id_field, prop_dict=None, geom_attributes=True):
     """
     Get a GeoJSON (FeatureCollection) from a dictionary of IDs (keys) and geometries (values).
 
@@ -401,7 +401,6 @@ def fetch_all_ogc_features(base_url, params=None, headers=None, max_pages=math.i
     - No pagination (all features in a single page)
 
     :param base_url: URL of the /items endpoint of the OGC API
-    :param initial_params: Dictionary with initial query parameters (e.g., bbox, limit)
     :param headers: Optional headers (e.g., Accept: application/json)
     :return: A list of all features
     """
@@ -544,7 +543,7 @@ def get_collection_by_partition(
     params,
     geometry,
     partition=1000,
-    crs=AlignerConfig.crs,
+    crs=DEFAULT_CRS,
 ):
     """
     Retrieves a collection of geographic data by partitioning the input geometry.
@@ -581,8 +580,8 @@ def get_collection_by_partition(
 
 
 def merge_process_results(
-    result_dict: dict[any, dict[float, ProcessResult]], dict_multi_as_single: dict
-) -> dict[any, dict[float, ProcessResult]]:
+    result_dict: dict[str|int, dict[float, ProcessResult]], dict_multi_as_single: dict
+) -> dict[str|int, dict[float, ProcessResult]]:
     """
      Merges processresults in a dictionary from multiple themeIDs into a single themeID.
 
@@ -593,7 +592,7 @@ def merge_process_results(
         theme IDs and values are merged geometries and remarks.
 
     """
-    grouped_results: dict[any, dict[float, ProcessResult]] = {}
+    grouped_results: dict[str|int, dict[float, ProcessResult]] = {}
 
     for id_theme, dict_results in result_dict.items():
         if id_theme in dict_multi_as_single.keys():
