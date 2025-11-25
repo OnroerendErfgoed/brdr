@@ -89,7 +89,7 @@ class Aligner:
         self,
         *,
         feedback=None,
-        processor: BaseProcessor,
+        processor: BaseProcessor = None,
         crs=DEFAULT_CRS,
         multi_as_single_modus=True,
         preserve_topology=False,
@@ -115,7 +115,7 @@ class Aligner:
 
         """
         self.logger = Logger(feedback)
-        self.processor = processor if processor else AlignerGeometryProcessor(feedback, ProcessorConfig())
+        self.processor = processor if processor else AlignerGeometryProcessor(ProcessorConfig(), feedback)
         self.correction_distance = correction_distance
         self.mitre_limit = mitre_limit
 
@@ -209,9 +209,9 @@ class Aligner:
 
     def process(
         self,
-        *,
-        dict_thematic=None,
         relevant_distances: Iterable[float] = None,
+        *,
+        dict_thematic_to_process=None,
         max_workers: int = None,
     ) -> dict[str|int, dict[float, ProcessResult]]:
         """
@@ -219,7 +219,7 @@ class Aligner:
             relevant distances.
 
         Args:
-            dict_thematic: the dictionary with the thematic geometries to 'predict'. Default is None, so all thematic geometries inside the aligner will be processed.
+            dict_thematic_to_process: the dictionary with the thematic geometries to 'predict'. Default is None, so all thematic geometries inside the aligner will be processed.
             relevant_distances (Iterable[float]): A series of relevant distances
                 (in meters) to process
             max_workers (int, optional): Amount of workers that is used in ThreadPoolExecutor (for parallel execution) when processing objects for multiple relevant distances. (default None). If set to -1, no parallel exececution is used.
@@ -242,9 +242,8 @@ class Aligner:
         dict_series = {}
         dict_series_queue = {}
         futures = []
-        dict_thematic_to_process = dict_thematic
         if dict_thematic_to_process is None:
-            raise ValueError("dict_thematic cannot be None")
+            dict_thematic_to_process = self.dict_thematic
         dict_multi_as_single = {}
         topo_thematic = None
         dict_thematic_topo_geoms = None
@@ -280,7 +279,7 @@ class Aligner:
                                 reference_elements = self.reference_elements,
                                 reference_items = self.reference_items,
                                 reference_tree = self.reference_tree,
-                                reference_union = self.reference_union,
+                                reference_union = self._get_reference_union(),
                                 input_geometry = geometry,
                                 relevant_distance = relevant_distance,
 
@@ -311,10 +310,10 @@ class Aligner:
                             correction_distance=self.correction_distance,
                             dict_reference=self.dict_reference,
                             mitre_limit=self.mitre_limit,
-                            reference_elements=self.reference_elements,
+                            reference_elements=self._get_reference_elements(),
                             reference_items=self.reference_items,
                             reference_tree=self.reference_tree,
-                            reference_union=self.reference_union,
+                            reference_union=self._get_reference_union(),
                             input_geometry=geometry,
                             relevant_distance=relevant_distance,
                         )
@@ -457,7 +456,7 @@ class Aligner:
         rd_prediction = sorted(rd_prediction)
 
         dict_processresults = self.process(
-            dict_thematic=dict_thematic,
+            dict_thematic_to_process=dict_thematic,
             relevant_distances=rd_prediction,
         )
         if diff_metric is None:

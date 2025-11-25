@@ -49,7 +49,7 @@ from brdr.utils import unary_union_result_dict
 
 
 class BaseProcessor(ABC):
-    def __init__(self, feedback, config: ProcessorConfig):
+    def __init__(self, config: ProcessorConfig, feedback=None):
         self.logger = Logger(feedback)
         self.config = config
 
@@ -1318,7 +1318,7 @@ class AlignerGeometryProcessor(BaseProcessor):
 
             try:
                 processor = DieussaertGeometryProcessor(
-                    self.logger.feedback, self.config
+                    self.config, self.logger.feedback,
                 )
                 return processor.process(
                     input_geometry=input_geometry,
@@ -1334,7 +1334,7 @@ class AlignerGeometryProcessor(BaseProcessor):
                 self.logger.feedback_debug(
                     f"Dieussaert processing failed with error: {str(e)}. Trying Network-based processing."
                 )
-        processor = NetworkGeometryProcessor(self.logger.feedback, self.config)
+        processor = NetworkGeometryProcessor(self.config, self.logger.feedback)
         return processor.process(
             input_geometry=input_geometry,
             reference_elements=reference_elements,
