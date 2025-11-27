@@ -2,6 +2,9 @@ import os
 from datetime import datetime
 
 from brdr.aligner import Aligner
+from brdr.be.grb.grb import update_to_actual_grb
+from brdr.be.grb.loader import GRBFiscalParcelLoader
+from brdr.be.oe.loader import OnroerendErfgoedLoader
 from brdr.constants import (
     EVALUATION_FIELD_NAME,
     RELEVANT_DISTANCE_FIELD_NAME,
@@ -67,7 +70,7 @@ for x in keys_to_exclude:
 # # Align the features to the base-GRB
 print("Process base objects")
 starttime = datetime.now()
-base_process_result = base_aligner.process(relevant_distance=base_correction)
+base_process_result = base_aligner.process(relevant_distances=[base_correction])
 # get resulting aligned features on Adpfxxxx, with formula
 processresults = base_aligner.get_results_as_geojson(formula=True)
 if len(processresults) == 0:
