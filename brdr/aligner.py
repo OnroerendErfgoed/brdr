@@ -96,6 +96,7 @@ class Aligner:
         correction_distance=0.01,
         diff_metric=DIFF_METRIC,
         mitre_limit=10,
+        max_workers=None,
     ):
         """
         Initializes the Aligner object
@@ -115,20 +116,25 @@ class Aligner:
 
         """
         self.logger = Logger(feedback)
-        self.processor = processor if processor else AlignerGeometryProcessor(ProcessorConfig(), feedback)
+        self.processor = (
+            processor
+            if processor
+            else AlignerGeometryProcessor(ProcessorConfig(), feedback)
+        )
         self.correction_distance = correction_distance
         self.mitre_limit = mitre_limit
+        self.max_workers = max_workers
 
         # PROCESSING DEFAULTS
         # thematic
         # name of the identifier-field of the thematic data (id has to be unique)
         self.name_thematic_id = ID_THEME_FIELD_NAME
         # dictionary to store all thematic geometries to handle
-        self.dict_thematic: dict[str|int, BaseGeometry] = {}
+        self.dict_thematic: dict[str | int, BaseGeometry] = {}
         # dictionary to store properties of the reference-features (optional)
-        self.dict_thematic_properties: dict[str|int, dict] = {}
+        self.dict_thematic_properties: dict[str | int, dict] = {}
         # Dict to store source-information of the thematic dictionary
-        self.dict_thematic_source: dict[str|int, str] = {}
+        self.dict_thematic_source: dict[str | int, str] = {}
         # dictionary to store all unioned thematic geometries
         self.thematic_union = None
 
@@ -138,11 +144,11 @@ class Aligner:
         # CAPAKEY for GRB-parcels)
         self.name_reference_id = ID_REFERENCE_FIELD_NAME
         # dictionary to store all reference geometries
-        self.dict_reference: dict[str|int, BaseGeometry] = {}
+        self.dict_reference: dict[str | int, BaseGeometry] = {}
         # dictionary to store properties of the reference-features (optional)
-        self.dict_reference_properties: dict[str|int, dict] = {}
+        self.dict_reference_properties: dict[str | int, dict] = {}
         # Dict to store source-information of the reference dictionary
-        self.dict_reference_source: dict[str|int, str] = {}
+        self.dict_reference_source: dict[str | int, str] = {}
         # to save a unioned geometry of all reference polygons; needed for calculation
         # in most OD-strategies
         self.reference_union = None
@@ -154,11 +160,13 @@ class Aligner:
         # results
 
         # output-dictionaries (all results of process()), grouped by theme_id and relevant_distance
-        self.dict_processresults: dict[str|int, dict[float, ProcessResult]] = {}
+        self.dict_processresults: dict[str | int, dict[float, ProcessResult]] = {}
         # dictionary with the 'predicted' results, grouped by theme_id and relevant_distance
-        self.dict_predictions: dict[str|int, dict[float, ProcessResult]] = {}
+        self.dict_predictions: dict[str | int, dict[float, ProcessResult]] = {}
         # dictionary with the 'evaluated predicted' results, grouped by theme_id and relevant_distance
-        self.dict_evaluated_predictions: dict[str|int, dict[float, ProcessResult]] = {}
+        self.dict_evaluated_predictions: dict[str | int, dict[float, ProcessResult]] = (
+            {}
+        )
 
         # Coordinate reference system
         # thematic geometries and reference geometries are assumed to be in the same CRS
@@ -213,7 +221,7 @@ class Aligner:
         *,
         dict_thematic_to_process=None,
         max_workers: int = None,
-    ) -> dict[str|int, dict[float, ProcessResult]]:
+    ) -> dict[str | int, dict[float, ProcessResult]]:
         """
         Calculates the resulting dictionaries for thematic data based on a series of
             relevant distances.
@@ -237,6 +245,8 @@ class Aligner:
         """
         if relevant_distances is None:
             raise ValueError("provide at least 1 relevant distance")
+        if max_workers is None:
+            max_workers = self.max_workers
 
         self.logger.feedback_debug("Process series" + str(relevant_distances))
         dict_series = {}
@@ -272,17 +282,15 @@ class Aligner:
                         try:
                             future = executor.submit(
                                 self.processor.process,
-
-                                correction_distance = self.correction_distance,
-                                dict_reference = self.dict_reference,
-                                mitre_limit = self.mitre_limit,
-                                reference_elements = self.reference_elements,
-                                reference_items = self.reference_items,
-                                reference_tree = self.reference_tree,
-                                reference_union = self._get_reference_union(),
-                                input_geometry = geometry,
-                                relevant_distance = relevant_distance,
-
+                                correction_distance=self.correction_distance,
+                                dict_reference=self.dict_reference,
+                                mitre_limit=self.mitre_limit,
+                                reference_elements=self._get_reference_elements(),
+                                reference_items=self.reference_items,
+                                reference_tree=self.reference_tree,
+                                reference_union=self._get_reference_union(),
+                                input_geometry=geometry,
+                                relevant_distance=relevant_distance,
                             )
                             futures.append(future)
                             dict_series_queue[key][relevant_distance] = future
@@ -339,13 +347,13 @@ class Aligner:
         for theme_id, dict_dist_results in dict_series.items():
             original_geometry = self.dict_thematic[theme_id]
             try:
-                original_geometry_length = len(original_geometry.geoms) # noqa
+                original_geometry_length = len(original_geometry.geoms)  # noqa
             except:
                 original_geometry_length = 1
             for relevant_distance, process_result in dict_dist_results.items():
                 resulting_geom = process_result["result"]
                 try:
-                    resulting_geometry_length = len(resulting_geom.geoms) # noqa
+                    resulting_geometry_length = len(resulting_geom.geoms)  # noqa
                 except:
                     resulting_geometry_length = 1
                 if original_geometry_length != resulting_geometry_length:

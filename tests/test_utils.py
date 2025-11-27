@@ -1,5 +1,6 @@
 import unittest
 
+import pytest
 import shapely
 from shapely import is_empty
 from shapely.geometry import Polygon
@@ -136,6 +137,8 @@ class TestUtils(unittest.TestCase):
             dict_processresult, geom_thematic, reference_union=None
         )
 
+
+    @pytest.mark.usefixtures("callback_grb_response")
     def test_get_collection(self):
         base_year = 2023
         limit = 100

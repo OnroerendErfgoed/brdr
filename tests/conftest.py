@@ -1,8 +1,13 @@
 import json
 import os
+import re
+from copy import copy
 
 import pytest
 import responses
+
+from tests.testdata.responses import grb_responses
+from tests.testdata.responses import inventaris_responses
 
 here = os.path.dirname(os.path.abspath(__file__))
 
@@ -11,10 +16,6 @@ here = os.path.dirname(os.path.abspath(__file__))
 def requests_mock():
     """Block all requests calls."""
     with responses.RequestsMock() as rsps:
-        rsps.add_passthru("https://www.mercator.vlaanderen.be")
-        rsps.add_passthru("https://geo.api.vlaanderen.be")
-        rsps.add_passthru("https://inventaris.onroerenderfgoed.be")
-        rsps.add_passthru("https://overpass-api.de")
         yield rsps
 
 
@@ -22,3 +23,49 @@ def requests_mock():
 def haspengouw_geojson():
     with open(f"{here}/testdata/haspengouw.geojson", "r") as f:
         return json.loads(f.read())
+
+
+def multi_url_pattern(*urls):
+    pattern = "|".join(f"(^{re.escape(url)})" for url in urls)
+    return re.compile(f"{pattern}")
+
+
+@pytest.fixture
+def callback_grb_response(requests_mock):
+    response = copy(grb_responses.grb_response)
+
+    def callback(request):
+        json_response = json.dumps(response)
+        return 200, {}, json_response
+
+    requests_mock.add_callback(
+        method=requests_mock.GET,
+        url=multi_url_pattern(
+            "https://geo.api.vlaanderen.be",
+        ),
+        callback=callback,
+    )
+    return response
+
+
+@pytest.fixture
+def mock_grb_response2(callback_grb_response):
+    callback_grb_response.update(grb_responses.grb_response2)
+
+
+@pytest.fixture
+def mock_grb_response3(callback_grb_response):
+    callback_grb_response.update(grb_responses.grb_response3)
+
+
+@pytest.fixture
+def mock_inventaris_responses(requests_mock):
+    requests_mock.add(
+        requests_mock.GET,
+        multi_url_pattern(
+            "https://inventaris.onroerenderfgoed.be/aanduidingsobjecten/131635"
+        ),
+        json=inventaris_responses.response_131635,
+        status=200,
+        content_type="application/json",
+    )

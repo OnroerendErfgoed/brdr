@@ -1,5 +1,6 @@
 import unittest
 
+import pytest
 from shapely.geometry import Polygon
 
 from brdr.aligner import Aligner
@@ -14,6 +15,7 @@ class TestTopology(unittest.TestCase):
         self.sample_aligner = Aligner()
         self.sample_geom = Polygon([(0, 0), (0, 10), (10, 10), (10, 0)])
 
+    @pytest.mark.usefixtures("callback_grb_response")
     def test_topology(self):
         """
         Test if parameter preserve_topology is working"""
@@ -136,9 +138,7 @@ class TestTopology(unittest.TestCase):
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         )
         relevant_distance = 2
-        process_result = aligner.process(
-            relevant_distance=relevant_distance,
-        )
+        process_result = aligner.process(relevant_distances=[relevant_distance])
 
         self.assertEqual(len(process_result), 2)
         dict_predictions_evaluated = aligner.evaluate()
