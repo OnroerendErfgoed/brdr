@@ -1,6 +1,5 @@
-import unittest
-
 import numpy as np
+import pytest
 
 from brdr.aligner import Aligner
 from brdr.be.grb.enums import GRBType
@@ -9,10 +8,13 @@ from brdr.be.oe.loader import OnroerendErfgoedLoader
 from brdr.be.oe.utils import get_oe_dict_by_ids
 from brdr.loader import DictLoader
 from brdr.loader import GeoJsonLoader
+from tests.testdata.responses import mercator_responses
 
 
-class TestExamples(unittest.TestCase):
+class TestExamples:
 
+    @pytest.mark.usefixtures("mock_inventaris_responses")
+    @pytest.mark.usefixtures("callback_grb_response")
     def test_example_131635(self):
         # EXAMPLE
         aligner = Aligner()
@@ -22,18 +24,22 @@ class TestExamples(unittest.TestCase):
         loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         aligner.load_reference_data(loader)
         rel_dist = 2
-        aligner.process(relevant_distance=rel_dist, od_strategy=4)
+        aligner.process(relevant_distances=[rel_dist])
 
-    def test_example_combined_borders_adp_gbg(self):
+
+    @pytest.mark.usefixtures("callback_grb_response")
+    def test_example_combined_borders_adp_gbg(self, requests_mock):
+        requests_mock.add(
+            requests_mock.GET,
+            "https://www.mercator.vlaanderen.be/raadpleegdienstenmercatorpubliek/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAMES=ps%3Aps_aandobj&SRSNAME=http%3A%2F%2Fwww.opengis.net%2Fdef%2Fcrs%2FEPSG%2F0%2F31370&outputFormat=application%2Fjson&limit=10000&CQL_FILTER=aanduid_id+IN+%28131635%29",
+            json=mercator_responses.response1,
+            status=200,
+        )
         aligner = Aligner()
         loader = OnroerendErfgoedLoader([131635])
         aligner.load_thematic_data(loader)
-        adp_loader = GRBActualLoader(
-            grb_type=GRBType.ADP, partition=1000, aligner=aligner
-        )
-        gbg_loader = GRBActualLoader(
-            grb_type=GRBType.GBG, partition=1000, aligner=aligner
-        )
+        adp_loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
+        gbg_loader = GRBActualLoader(grb_type=GRBType.GBG, partition=1000, aligner=aligner)
         dict_ref, dict_ref_properties_adp, source_adp = adp_loader.load_data()
         dict_ref2, dict_ref_properties_gbg, source_gbg = gbg_loader.load_data()
         dict_ref.update(dict_ref2)  # combine 2 dictionaries
@@ -41,9 +47,10 @@ class TestExamples(unittest.TestCase):
         aligner.load_reference_data(DictLoader(dict_ref))
 
         rel_dist = 2
-        result_dict = aligner.process(relevant_distance=rel_dist, od_strategy=4)
+        result_dict = aligner.process(relevant_distances=[rel_dist])
         for process_results in result_dict.values():
             aligner.get_brdr_formula(process_results[rel_dist]["result"])
+
 
     def test_example_multipolygon(self):
         aligner0 = Aligner()
@@ -171,9 +178,10 @@ class TestExamples(unittest.TestCase):
 
         _, dict_predictions, _ = aligner.predictor()
 
-        self.assertGreater(len(dict_predictions), 0)
+        assert len(dict_predictions) > 0
         fcs = aligner.get_results_as_geojson(formula=True)
-        self.assertEqual(len(fcs), 6)
+        assert len(fcs) == 6
+
 
     def test_example_wanted_changes(self):
         aligner = Aligner()
@@ -186,13 +194,11 @@ class TestExamples(unittest.TestCase):
 
         # Example how to use the Aligner
         rel_dist = 2
-        aligner.process(relevant_distance=rel_dist, od_strategy=4)
+        aligner.process(relevant_distances=[rel_dist])
 
         # Example how to use a series (for histogram)
         series = np.arange(0, 310, 10, dtype=int) / 100
-        dict_series = aligner.process(
-            relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
-        )
+        dict_series = aligner.process(relevant_distances=series)
         resulting_areas = aligner.get_diff_metrics(dict_series, aligner.dict_thematic)
         for key in resulting_areas:
             if len(resulting_areas[key]) == len(series):
@@ -220,9 +226,7 @@ class TestExamples(unittest.TestCase):
         # predict which relevant distances are interesting to propose as resulting
         # geometry
 
-        _, dict_predictions, _ = aligner.predictor(
-            relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
-        )
+        _, dict_predictions, _ = aligner.predictor(relevant_distances=series)
         for key in dict_predictions.keys():
             assert key in dict_predictions.keys()
             continue

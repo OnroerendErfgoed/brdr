@@ -1,15 +1,22 @@
 import unittest
 
 import numpy as np
+import pytest
 from shapely import from_wkt
 from shapely.geometry import Polygon
 
 from brdr.aligner import Aligner
 from brdr.be.grb.enums import GRBType
 from brdr.be.grb.loader import GRBActualLoader
-from brdr.constants import EVALUATION_FIELD_NAME, PREDICTION_COUNT
-from brdr.enums import Evaluation, FullStrategy, SnapStrategy
-from brdr.loader import DictLoader, GeoJsonLoader
+from brdr.configs import ProcessorConfig
+from brdr.constants import EVALUATION_FIELD_NAME
+from brdr.constants import PREDICTION_COUNT
+from brdr.enums import Evaluation
+from brdr.enums import FullStrategy
+from brdr.enums import SnapStrategy
+from brdr.loader import DictLoader
+from brdr.loader import GeoJsonLoader
+from brdr.processor import AlignerGeometryProcessor
 
 
 class TestEvaluate(unittest.TestCase):
@@ -93,6 +100,8 @@ class TestEvaluate(unittest.TestCase):
     #     geojson = geojson_to_multi(fcs["result"])
     #     # print(geojson)
 
+
+    @pytest.mark.usefixtures("mock_grb_response2")
     def test_evaluate_full_strategy_no_full(self):
         thematic_dict = {
             "theme_id_1": from_wkt(
@@ -137,6 +146,7 @@ class TestEvaluate(unittest.TestCase):
             == Evaluation.TO_CHECK_PREDICTION_FULL
         )
 
+    @pytest.mark.usefixtures("mock_grb_response2")
     def test_evaluate_full_strategy_only_full(self):
         thematic_dict = {
             "theme_id_1": from_wkt(
@@ -159,6 +169,7 @@ class TestEvaluate(unittest.TestCase):
             == Evaluation.PREDICTION_UNIQUE_FULL
         )
 
+    @pytest.mark.usefixtures("mock_grb_response2")
     def test_evaluate_all_predictions(self):
         thematic_dict = {
             "theme_id_1": from_wkt(
@@ -205,6 +216,7 @@ class TestEvaluate(unittest.TestCase):
         #     == Evaluation.TO_CHECK_PREDICTION_MULTI_FULL
         # )
 
+    @pytest.mark.usefixtures("mock_grb_response2")
     def test_evaluate_multi_to_best_prediction_true(self):
         thematic_dict = {
             "theme_id_1": from_wkt(
@@ -231,6 +243,7 @@ class TestEvaluate(unittest.TestCase):
             > 1
         )
 
+    @pytest.mark.usefixtures("mock_grb_response2")
     def test_evaluate_multi_to_best_prediction_false(self):
         thematic_dict = {
             "theme_id_1": from_wkt(
@@ -255,6 +268,7 @@ class TestEvaluate(unittest.TestCase):
             == Evaluation.TO_CHECK_ORIGINAL
         )
 
+    @pytest.mark.usefixtures("mock_grb_response2")
     def test_evaluate_relevant_distances_without_0(self):
         thematic_dict = {
             "theme_id_1": from_wkt(
@@ -279,6 +293,7 @@ class TestEvaluate(unittest.TestCase):
             == Evaluation.TO_CHECK_ORIGINAL
         )
 
+    @pytest.mark.usefixtures("callback_grb_response")
     def test_evaluate_line(self):
         # Load thematic data & reference data
         thematic_dict = {
@@ -350,9 +365,12 @@ class TestEvaluate(unittest.TestCase):
         # ADD A REFERENCE POLYGON TO REFERENCE DICTIONARY
         reference_dict = {"ref_id": geom_reference}
 
-        aligner = Aligner(
-            snap_strategy=SnapStrategy.NO_PREFERENCE, snap_max_segment_length=2
+        config = ProcessorConfig(
+            snap_strategy=SnapStrategy.NO_PREFERENCE,
+            snap_max_segment_length=2
         )
+        processor = AlignerGeometryProcessor(config)
+        aligner = Aligner(processor=processor)
         aligner.load_thematic_data(DictLoader(thematic_dict))
         aligner.load_reference_data(DictLoader(reference_dict))
 
@@ -370,6 +388,7 @@ class TestEvaluate(unittest.TestCase):
         #     == Evaluation.TO_CHECK_PREDICTION_MULTI_FULL
         # )
 
+    @pytest.mark.usefixtures("mock_grb_response3")
     def test_evaluate_best_no_prediction(self):
         thematic_json = {
             "type": "FeatureCollection",

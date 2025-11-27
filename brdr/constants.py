@@ -8,7 +8,7 @@ DOWNLOAD_LIMIT: int = 10000
 MAX_OUTER_BUFFER = 50
 
 # SNAP_CONSTANTS: constants for snapping when 'brdr'-algorithm is not used. So full geometry will be snapped
-SNAP_STRATEGY = (
+SNAP_SRATEGY = (
     SnapStrategy.PREFER_VERTICES
 )  # when alignment is done by 'snap_geometry_to_reference', This strategy will be applied
 SNAP_MAX_SEGMENT_LENGTH = 2  # when alignment is done by 'snap_geometry_to_reference', the input geometry (line, lineair ring,...) will be split up by default in parts of max X meter
