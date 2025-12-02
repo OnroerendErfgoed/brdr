@@ -308,6 +308,7 @@ class TestAligner(unittest.TestCase):
         result_dict = self.sample_aligner.process([1])
         self.assertEqual(len(result_dict), len(thematic_dict))
 
+    @pytest.mark.usefixtures("callback_grb_response")
     def test_process_no_added_area(self):
         aligner = Aligner(crs="EPSG:31370", multi_as_single_modus=True)
         # ADD A THEMATIC POLYGON TO THEMATIC DICTIONARY and LOAD into Aligner

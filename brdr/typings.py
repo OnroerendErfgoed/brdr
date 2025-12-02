@@ -2,6 +2,7 @@
 from typing import Dict, Any
 from typing import List
 from typing import TypedDict
+from typing import Union
 
 from shapely.geometry.base import BaseGeometry
 
@@ -38,3 +39,5 @@ class ProcessResult(TypedDict, total=False):
     result_relevant_intersection: BaseGeometry
     result_relevant_diff: BaseGeometry
     properties: Dict[str, Any]
+
+ThematicId = Union[str, int]

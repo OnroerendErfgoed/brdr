@@ -43,10 +43,10 @@ log = logging.getLogger(__name__)
 
 
 def get_dict_geojsons_from_series_dict(
-    series_dict: dict[str|int, dict[float, ProcessResult]],
+    series_dict: dict[str | int, dict[float, ProcessResult]],
     crs: CRS,
     id_field: str,
-    series_prop_dict: dict[str|int, dict[float, str|int]] = None,
+    series_prop_dict: dict[str | int, dict[float, str | int]] = None,
     geom_attributes=True,
 ):
     """
@@ -91,7 +91,7 @@ def get_dict_geojsons_from_series_dict(
 
 def _feature_from_geom(
     geom: BaseGeometry,
-    feature_id: str|int,
+    feature_id: str | int,
     properties: dict = None,
     geom_attributes=True,
 ) -> Feature:
@@ -117,7 +117,9 @@ def _feature_from_geom(
     return Feature(geometry=geom, id=feature_id, properties=properties)
 
 
-def geojson_from_dict(dictionary, crs: CRS, id_field, prop_dict=None, geom_attributes=True):
+def geojson_from_dict(
+    dictionary, crs: CRS, id_field, prop_dict=None, geom_attributes=True
+):
     """
     Get a GeoJSON (FeatureCollection) from a dictionary of IDs (keys) and geometries (values).
 
@@ -580,8 +582,8 @@ def get_collection_by_partition(
 
 
 def merge_process_results(
-    result_dict: dict[str|int, dict[float, ProcessResult]], dict_multi_as_single: dict
-) -> dict[str|int, dict[float, ProcessResult]]:
+    result_dict: dict[str | int, dict[float, ProcessResult]], dict_multi_as_single: dict
+) -> dict[str | int, dict[float, ProcessResult]]:
     """
      Merges processresults in a dictionary from multiple themeIDs into a single themeID.
 
@@ -592,7 +594,7 @@ def merge_process_results(
         theme IDs and values are merged geometries and remarks.
 
     """
-    grouped_results: dict[str|int, dict[float, ProcessResult]] = {}
+    grouped_results: dict[str | int, dict[float, ProcessResult]] = {}
 
     for id_theme, dict_results in result_dict.items():
         if id_theme in dict_multi_as_single.keys():
