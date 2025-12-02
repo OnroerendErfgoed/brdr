@@ -75,8 +75,6 @@ from brdr.utils import write_geojson
 
 
 ###################
-
-
 class AlignerResult:
     def __init__(
         self,
@@ -91,9 +89,7 @@ class AlignerResult:
 
     def get_results_as_geojson(
         self,
-        dict_thematic,
-        crs=DEFAULT_CRS,
-        id_fielsd=ID_THEME_FIELD_NAME,
+        aligner,
         formula=False,
         attributes=False,
     ):
@@ -120,21 +116,23 @@ class AlignerResult:
                 properties[RELEVANT_DISTANCE_FIELD_NAME] = relevant_distance
                 properties[DIFF_INDEX] = diff_from_processresult(
                     process_result,
-                    dict_thematic[theme_id],
+                    aligner.dict_thematic[theme_id],
                     None,
                     DIFF_METRIC.CHANGES_AREA,
                 )
                 properties[DIFF_PERC_INDEX] = diff_from_processresult(
                     process_result,
-                    dict_thematic[theme_id],
+                    aligner.dict_thematic[theme_id],
                     None,
                     DIFF_METRIC.CHANGES_PERCENTAGE,
                 )
                 prop_dictionary[theme_id][relevant_distance] = properties
 
                 # Adding original attributes
-                if attributes and theme_id in dict_thematic_properties.keys():
-                    for attr, value in dict_thematic_properties[theme_id].items():
+                if attributes and theme_id in aligner.dict_thematic_properties.keys():
+                    for attr, value in aligner.dict_thematic_properties[
+                        theme_id
+                    ].items():
                         prop_dictionary[theme_id][relevant_distance][attr] = value
 
                 # Adding formula
@@ -142,16 +140,52 @@ class AlignerResult:
                     formula
                 ):  # and not (theme_id in prop_dictionary and relevant_distance in prop_dictionary[theme_id] and NEW_FORMULA_FIELD_NAME in prop_dictionary[theme_id][relevant_distance]):
                     result = process_result["result"]
-                    formula = self.get_brdr_formula(result)
+                    formula = aligner.get_brdr_formula(result)
                     prop_dictionary[theme_id][relevant_distance][FORMULA_FIELD_NAME] = (
                         json.dumps(formula)
                     )
         return get_dict_geojsons_from_series_dict(
             self.results,
-            crs=self.CRS,
-            id_field=self.name_thematic_id,
+            crs=aligner.CRS,
+            id_field=aligner.name_thematic_id,
             series_prop_dict=prop_dictionary,
         )
+
+    def save_results(self, aligner, path, formula=True):
+        """
+        Exports analysis results (as geojson) to path.
+
+        This function exports 6 GeoJSON files containing the analysis results to the
+        specified `path`.
+
+        Args:
+        path (str): The path to the directory where the GeoJSON files will be saved.
+        formula (bool, optional): Whether to include formula-related information
+            in the output. Defaults to True.
+
+        Details of exported files:
+        - result.geojson: Contains the original thematic data from `
+          self.dict_result`.
+        - result_diff.geojson: Contains the difference between the original
+          and predicted data from `self.dict_result_diff`.
+        - result_diff_plus.geojson: Contains results for areas that are
+          added (increased area).
+        - result_diff_min.geojson: Contains results for areas that are
+          removed (decreased area).
+        - result_relevant_intersection.geojson: Contains the areas with
+          relevant intersection that has to be included in the result.
+        - result_relevant_difference.geojson: Contains the areas with
+          relevant difference that has to be excluded from the result.
+        """
+
+        fcs = self.get_results_as_geojson(
+            aligner=aligner,
+            formula=formula,
+        )
+        for name, fc in fcs.items():
+            write_geojson(
+                os.path.join(path, self.resulttype.value + "_" + name + ".geojson"), fc
+            )
 
 
 # TODO what about the Aligner-parameters; AlignerConfig-class?
@@ -563,7 +597,10 @@ class Aligner:
                             PREDICTION_SCORE
                         ] = dict_stability[rd][ZERO_STREAK][3]
 
-        prediction_result = AlignerResult(self._make_predictions_unique(dict_predictions), AlignerResultType.PREDICTIONS)
+        prediction_result = AlignerResult(
+            self._make_predictions_unique(dict_predictions),
+            AlignerResultType.PREDICTIONS,
+        )
 
         return (
             proces_result,
@@ -811,7 +848,9 @@ class Aligner:
                 "properties": props,
             }
 
-        return AlignerResult(dict_predictions_evaluated, AlignerResultType.EVALUATED_PREDICTIONS)
+        return AlignerResult(
+            dict_predictions_evaluated, AlignerResultType.EVALUATED_PREDICTIONS
+        )
 
     def get_brdr_formula(self, geometry: BaseGeometry, with_geom=False):
         """
@@ -966,81 +1005,6 @@ class Aligner:
 
         return diffs
 
-    ##########EXPORTERS########################
-    ###########################################
-    def get_results_as_geojson(
-        self,
-        resulttype=AlignerResultType.PROCESSRESULTS,
-        formula=False,
-        attributes=False,
-    ):
-        """
-        get a geojson of a dictionary containing the resulting geometries for all
-            'serial' relevant distances. The resulttype can be chosen.
-        formula (boolean, Optional): The descriptive formula is added as an attribute to the result
-        attributes (boolean, Optional): The original attributes/properties are added to the result
-        """
-
-        if resulttype == AlignerResultType.PROCESSRESULTS:
-            dict_series = self.dict_processresults
-        elif resulttype == AlignerResultType.PREDICTIONS:
-            dict_series = self.dict_predictions
-        elif resulttype == AlignerResultType.EVALUATED_PREDICTIONS:
-            dict_series = self.dict_evaluated_predictions
-        else:
-            raise (ValueError, "AlignerResultType unknown")
-        if dict_series is None or dict_series == {}:
-            self.logger.feedback_warning(
-                "Empty results: No calculated results to export."
-            )
-            return {}
-
-        prop_dictionary = defaultdict(dict)
-
-        for theme_id, results_dict in dict_series.items():
-            nr_calculations = len(results_dict)
-            for relevant_distance, process_result in results_dict.items():
-                properties = process_result["properties"]
-
-                # Adding extra properties
-                properties[ID_THEME_FIELD_NAME] = theme_id
-                properties[NR_CALCULATION_FIELD_NAME] = nr_calculations
-                properties[RELEVANT_DISTANCE_FIELD_NAME] = relevant_distance
-                properties[DIFF_INDEX] = diff_from_processresult(
-                    process_result,
-                    self.dict_thematic[theme_id],
-                    None,
-                    DIFF_METRIC.CHANGES_AREA,
-                )
-                properties[DIFF_PERC_INDEX] = diff_from_processresult(
-                    process_result,
-                    self.dict_thematic[theme_id],
-                    None,
-                    DIFF_METRIC.CHANGES_PERCENTAGE,
-                )
-                prop_dictionary[theme_id][relevant_distance] = properties
-
-                # Adding original attributes
-                if attributes and theme_id in self.dict_thematic_properties.keys():
-                    for attr, value in self.dict_thematic_properties[theme_id].items():
-                        prop_dictionary[theme_id][relevant_distance][attr] = value
-
-                # Adding formula
-                if (
-                    formula
-                ):  # and not (theme_id in prop_dictionary and relevant_distance in prop_dictionary[theme_id] and NEW_FORMULA_FIELD_NAME in prop_dictionary[theme_id][relevant_distance]):
-                    result = process_result["result"]
-                    formula = self.get_brdr_formula(result)
-                    prop_dictionary[theme_id][relevant_distance][FORMULA_FIELD_NAME] = (
-                        json.dumps(formula)
-                    )
-        return get_dict_geojsons_from_series_dict(
-            dict_series,
-            crs=self.CRS,
-            id_field=self.name_thematic_id,
-            series_prop_dict=prop_dictionary,
-        )
-
     def get_input_as_geojson(self, inputtype=AlignerInputType.REFERENCE):
         """
         get a geojson of the input polygons (thematic or reference-polygons)
@@ -1066,44 +1030,6 @@ class Aligner:
             prop_dict=dict_properties,
             geom_attributes=False,
         )
-
-    def save_results(
-        self, path, resulttype=AlignerResultType.PROCESSRESULTS, formula=True
-    ):
-        """
-        Exports analysis results (as geojson) to path.
-
-        This function exports 6 GeoJSON files containing the analysis results to the
-        specified `path`.
-
-        Args:
-        path (str): The path to the directory where the GeoJSON files will be saved.
-        formula (bool, optional): Whether to include formula-related information
-            in the output. Defaults to True.
-
-        Details of exported files:
-        - result.geojson: Contains the original thematic data from `
-          self.dict_result`.
-        - result_diff.geojson: Contains the difference between the original
-          and predicted data from `self.dict_result_diff`.
-        - result_diff_plus.geojson: Contains results for areas that are
-          added (increased area).
-        - result_diff_min.geojson: Contains results for areas that are
-          removed (decreased area).
-        - result_relevant_intersection.geojson: Contains the areas with
-          relevant intersection that has to be included in the result.
-        - result_relevant_difference.geojson: Contains the areas with
-          relevant difference that has to be excluded from the result.
-        """
-
-        fcs = self.get_results_as_geojson(
-            formula=formula,
-            resulttype=resulttype,
-        )
-        for name, fc in fcs.items():
-            write_geojson(
-                os.path.join(path, resulttype.value + "_" + name + ".geojson"), fc
-            )
 
     def get_thematic_union(self):
         """
