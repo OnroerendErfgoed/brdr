@@ -176,3 +176,4 @@ cython_debug/
 /dev
 dev/brdr_for_qgis
 /analysis
+/experimental/
