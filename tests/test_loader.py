@@ -1,12 +1,17 @@
+import pytest
+
 from brdr.aligner import Aligner
 from brdr.be.grb.enums import GRBType
 from brdr.be.grb.loader import GRBActualLoader
 from brdr.be.oe.utils import get_oe_dict_by_ids
-from brdr.loader import DictLoader, GeoJsonUrlLoader
+from brdr.loader import DictLoader
+from brdr.loader import GeoJsonUrlLoader
 
 
 class TestExamples:
 
+    @pytest.mark.usefixtures("callback_grb_response")
+    @pytest.mark.usefixtures("mock_inventaris_responses")
     def test_load_data(self):
         # EXAMPLE
         aligner = Aligner()

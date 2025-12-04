@@ -26,7 +26,6 @@ class TestGrb:
         for item in GRBType:
             print(f"{item.name} = {item.value}")
 
-
     def test_get_last_version_date(self, callback_grb_response):
         geom = Polygon(
             [
@@ -47,7 +46,6 @@ class TestGrb:
 
         out = get_last_version_date(geom)
         assert isinstance(out, date)
-
 
     def test_is_grb_changed(self, callback_grb_response):
         # Check if the result of the _buffer_neg_pos gives an equal geometry
@@ -74,7 +72,6 @@ class TestGrb:
         assert not out
         out = is_grb_changed(geom, grb_type=GRBType.ADP, date_start=date(2021, 7, 16))
         assert out
-
 
     def test_is_grb_changed_outerborder(self, callback_grb_response):
         geom = Polygon(
@@ -107,7 +104,6 @@ class TestGrb:
             date_start=date(2021, 7, 1),
         )
         assert out
-
 
     def test_get_geoms_affected_by_grb_change_outerborder(self, callback_grb_response):
         thematic_dict = {
@@ -192,7 +188,6 @@ class TestGrb:
         )
         assert len(affected) > 0
 
-
     def test_get_geoms_affected_by_grb_change_bulk(self, callback_grb_response):
         thematic_dict = {
             "theme_id_1": from_wkt(
@@ -225,7 +220,6 @@ class TestGrb:
         )
         assert len(affected) > 0
 
-
     def test_grbspecificdateparcelloader(self, callback_grb_response):
         callback_grb_response.update(grb_responses.grb_response5)
         thematic_dict = {
@@ -245,7 +239,6 @@ class TestGrb:
         loader = GRBSpecificDateParcelLoader(date="2023-08-03", aligner=aligner)
         aligner.load_reference_data(loader)
         assert len(aligner.dict_reference.keys()) == 51
-
 
     def test_update_to_actual_grb(self, callback_grb_response):
         # Create a featurecollection (aligned on 2022), to use for the 'update_to_actual_grb'
@@ -301,7 +294,6 @@ class TestGrb:
         for feature in featurecollection["result"]["features"]:
             assert isinstance(feature["properties"][EVALUATION_FIELD_NAME], Evaluation)
 
-
     def test_wegbaan_reference(self, callback_grb_response):
         aligner = Aligner()
         # Load thematic data & reference data
@@ -318,7 +310,5 @@ class TestGrb:
         series = np.arange(0, 1010, 100, dtype=int) / 100
         # predict which relevant distances are interesting to propose as resulting
         # geometry
-        dict_series, dict_predictions, dict_diffs = aligner.predictor(
-            relevant_distances=series,
-        )
-        assert len(dict_series) == len(thematic_dict)
+        prediction_result = aligner.predictor(series)
+        assert len(prediction_result.results) == len(thematic_dict)

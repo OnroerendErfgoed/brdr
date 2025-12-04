@@ -6,11 +6,13 @@ from shapely import from_wkt
 from shapely.geometry import Polygon
 
 from brdr.aligner import Aligner
+from brdr.aligner import AlignerResult
 from brdr.be.grb.enums import GRBType
 from brdr.be.grb.loader import GRBActualLoader
 from brdr.configs import ProcessorConfig
 from brdr.constants import EVALUATION_FIELD_NAME
 from brdr.constants import PREDICTION_COUNT
+from brdr.enums import AlignerResultType
 from brdr.enums import Evaluation
 from brdr.enums import FullStrategy
 from brdr.enums import SnapStrategy
@@ -114,13 +116,13 @@ class TestEvaluate(unittest.TestCase):
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         )
 
-        dict_evaluated = aligner.evaluate(
+        evaluation_result = aligner.evaluate(
             relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
             full_strategy=FullStrategy.NO_FULL,
         )
-        assert len(dict_evaluated["theme_id_1"]) > 1
+        assert len(evaluation_result.results["theme_id_1"]) > 1
         assert (
-            dict_evaluated["theme_id_1"][3.5]["properties"]["brdr_evaluation"]
+            evaluation_result.results["theme_id_1"][3.5]["properties"]["brdr_evaluation"]
             == Evaluation.TO_CHECK_PREDICTION_MULTI_FULL
         )
 
@@ -136,13 +138,13 @@ class TestEvaluate(unittest.TestCase):
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         )
 
-        dict_evaluated = aligner.evaluate(
+        evaluation_result = aligner.evaluate(
             relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
             full_strategy=FullStrategy.PREFER_FULL,
         )
-        assert len(dict_evaluated["theme_id_1"]) > 1
+        assert len(evaluation_result.results["theme_id_1"]) > 1
         assert (
-            dict_evaluated["theme_id_1"][3.5]["properties"][EVALUATION_FIELD_NAME]
+            evaluation_result.results["theme_id_1"][3.5]["properties"][EVALUATION_FIELD_NAME]
             == Evaluation.TO_CHECK_PREDICTION_FULL
         )
 
@@ -159,13 +161,13 @@ class TestEvaluate(unittest.TestCase):
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         )
 
-        dict_evaluated = aligner.evaluate(
+        evaluation_result = aligner.evaluate(
             relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
             full_strategy=FullStrategy.ONLY_FULL,
         )
-        assert len(dict_evaluated["theme_id_1"]) == 1
+        assert len(evaluation_result.results["theme_id_1"]) == 1
         assert (
-            dict_evaluated["theme_id_1"][3.5]["properties"][EVALUATION_FIELD_NAME]
+            evaluation_result.results["theme_id_1"][3.5]["properties"][EVALUATION_FIELD_NAME]
             == Evaluation.PREDICTION_UNIQUE_FULL
         )
 
@@ -186,7 +188,8 @@ class TestEvaluate(unittest.TestCase):
             relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
             full_strategy=FullStrategy.PREFER_FULL,
             max_predictions=-1,
-        )
+        ).get_results(AlignerResultType.EVALUATED_PREDICTIONS)
+
         assert len(dict_evaluated["theme_id_1"]) > 1
         assert (
             dict_evaluated["theme_id_1"][3.5]["properties"][EVALUATION_FIELD_NAME]
@@ -205,12 +208,12 @@ class TestEvaluate(unittest.TestCase):
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         )
 
-        dict_evaluated = aligner.evaluate(
+        evaluation_result = aligner.evaluate(
             relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
             full_strategy=FullStrategy.NO_FULL,
             max_predictions=2,
         )
-        assert len(dict_evaluated["theme_id_1"]) > 1
+        assert len(evaluation_result.results["theme_id_1"]) > 1
         # assert (
         #     prop_dictionary["theme_id_1"][3.5]["properties"][EVALUATION_FIELD_NAME]
         #     == Evaluation.TO_CHECK_PREDICTION_MULTI_FULL
@@ -229,15 +232,15 @@ class TestEvaluate(unittest.TestCase):
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         )
 
-        dict_evaluated = aligner.evaluate(
+        evaluation_result = aligner.evaluate(
             relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
             full_strategy=FullStrategy.NO_FULL,
             max_predictions=1,
             multi_to_best_prediction=True,
         )
-        assert len(dict_evaluated["theme_id_1"]) == 1
+        assert len(evaluation_result.results["theme_id_1"]) == 1
         assert (
-            dict_evaluated["theme_id_1"][list(dict_evaluated["theme_id_1"].keys())[0]][
+            evaluation_result.results["theme_id_1"][list(evaluation_result.results["theme_id_1"].keys())[0]][
                 "properties"
             ][PREDICTION_COUNT]
             > 1
@@ -256,15 +259,15 @@ class TestEvaluate(unittest.TestCase):
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         )
 
-        dict_evaluated = aligner.evaluate(
+        evaluation_result = aligner.evaluate(
             relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
             full_strategy=FullStrategy.NO_FULL,
             max_predictions=1,
             multi_to_best_prediction=False,
         )
-        assert len(dict_evaluated["theme_id_1"]) == 1
+        assert len(evaluation_result.results["theme_id_1"]) == 1
         assert (
-            dict_evaluated["theme_id_1"][0]["properties"][EVALUATION_FIELD_NAME]
+            evaluation_result.results["theme_id_1"][0]["properties"][EVALUATION_FIELD_NAME]
             == Evaluation.TO_CHECK_ORIGINAL
         )
 
@@ -281,15 +284,15 @@ class TestEvaluate(unittest.TestCase):
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         )
 
-        dict_evaluated = aligner.evaluate(
+        evaluation_result = aligner.evaluate(
             relevant_distances=np.arange(10, 410, 10, dtype=int) / 100,
             full_strategy=FullStrategy.NO_FULL,
             max_predictions=1,
             multi_to_best_prediction=False,
         )
-        assert len(dict_evaluated["theme_id_1"]) == 1
+        assert len(evaluation_result.results["theme_id_1"]) == 1
         assert (
-            dict_evaluated["theme_id_1"][0]["properties"][EVALUATION_FIELD_NAME]
+            evaluation_result.results["theme_id_1"][0]["properties"][EVALUATION_FIELD_NAME]
             == Evaluation.TO_CHECK_ORIGINAL
         )
 
@@ -311,15 +314,15 @@ class TestEvaluate(unittest.TestCase):
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         )
 
-        dict_evaluated = aligner.evaluate(
+        evaluation_result = aligner.evaluate(
             relevant_distances=np.arange(0, 1010, 50, dtype=int) / 100,
             full_strategy=FullStrategy.NO_FULL,
             max_predictions=3,
             multi_to_best_prediction=False,
         )
-        assert len(dict_evaluated["theme_id"]) >= 1
+        assert len(evaluation_result.results["theme_id"]) >= 1
         assert (
-            dict_evaluated["theme_id"][0]["properties"][EVALUATION_FIELD_NAME]
+            evaluation_result.results["theme_id"][0]["properties"][EVALUATION_FIELD_NAME]
             == Evaluation.TO_CHECK_PREDICTION_MULTI_FULL
         )
 
@@ -338,15 +341,15 @@ class TestEvaluate(unittest.TestCase):
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         )
 
-        dict_evaluated = aligner.evaluate(
+        evaluation_result = aligner.evaluate(
             relevant_distances=np.arange(0, 1010, 50, dtype=int) / 100,
             full_strategy=FullStrategy.NO_FULL,
             max_predictions=3,
             multi_to_best_prediction=False,
         )
-        assert len(dict_evaluated["theme_id"]) > 0
+        assert len(evaluation_result.results["theme_id"]) > 0
         # assert (
-        #     dict_evaluated["theme_id"][0]["properties"][EVALUATION_FIELD_NAME]
+        #     evaluation_result.results["theme_id"][0]["properties"][EVALUATION_FIELD_NAME]
         #     == Evaluation.TO_CHECK_PREDICTION_MULTI_FULL
         # )
 
@@ -374,7 +377,7 @@ class TestEvaluate(unittest.TestCase):
         aligner.load_thematic_data(DictLoader(thematic_dict))
         aligner.load_reference_data(DictLoader(reference_dict))
 
-        dict_evaluated = aligner.evaluate(
+        evaluation_result = aligner.evaluate(
             relevant_distances=np.arange(0, 510, 50, dtype=int) / 100,
             full_strategy=FullStrategy.NO_FULL,
             max_predictions=3,
@@ -382,9 +385,9 @@ class TestEvaluate(unittest.TestCase):
         )
         assert True
         #     (
-        #         len(dict_evaluated["theme_id"]) == 3))
+        #         len(evaluation_result.results["theme_id"]) == 3))
         # assert (
-        #     dict_evaluated["theme_id"][0]["properties"][EVALUATION_FIELD_NAME]
+        #     evaluation_result.results["theme_id"][0]["properties"][EVALUATION_FIELD_NAME]
         #     == Evaluation.TO_CHECK_PREDICTION_MULTI_FULL
         # )
 
@@ -483,7 +486,7 @@ class TestEvaluate(unittest.TestCase):
         aligner.load_reference_data(loader)
 
         # Use the EVALUATE-function
-        dict_evaluated = aligner.evaluate(
+        evaluation_result = aligner.evaluate(
             relevant_distances=np.arange(0, 310, 10, dtype=int) / 100,
             max_predictions=1,
             full_strategy=FullStrategy.ONLY_FULL,
@@ -491,13 +494,13 @@ class TestEvaluate(unittest.TestCase):
         )
 
         assert (
-            dict_evaluated[1][list(dict_evaluated[1].keys())[0]]["properties"][
+            evaluation_result.results[1][list(evaluation_result.results[1].keys())[0]]["properties"][
                 EVALUATION_FIELD_NAME
             ]
             == Evaluation.PREDICTION_UNIQUE_FULL
         )
         assert (
-            dict_evaluated[2][list(dict_evaluated[2].keys())[0]]["properties"][
+            evaluation_result.results[2][list(evaluation_result.results[2].keys())[0]]["properties"][
                 EVALUATION_FIELD_NAME
             ]
             == Evaluation.TO_CHECK_NO_PREDICTION
