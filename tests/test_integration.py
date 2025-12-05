@@ -61,14 +61,14 @@ class TestExamples(unittest.TestCase):
 
         series = np.arange(0, 61, 1, dtype=float) / 10
 
-        dict_series = aligner.process(relevant_distances=series)
+        process_result = aligner.process(relevant_distances=series)
         dict_diffs = aligner.get_diff_metrics(
-            dict_series, aligner.dict_thematic, DiffMetric.CHANGES_AREA
+            process_result.results, aligner.dict_thematic, DiffMetric.CHANGES_AREA
         )
 
         dict_diffs = dict_diffs["input_id"]
         serial_dict = {}
-        dict_results = dict_series["input_id"]
+        dict_results = process_result.results["input_id"]
         for rel_dist, process_results in dict_results.items():
             serial_dict[rel_dist] = {
                 "result": json.loads(to_geojson(dict_results[rel_dist]["result"])),

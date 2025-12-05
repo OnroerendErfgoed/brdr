@@ -47,11 +47,12 @@ class TestExamples:
         aligner.load_reference_data(DictLoader(dict_ref))
 
         rel_dist = 2
-        result_dict = aligner.process(relevant_distances=[rel_dist])
-        for process_results in result_dict.values():
+        process_result = aligner.process(relevant_distances=[rel_dist])
+        for process_results in process_result.results.values():
             aligner.get_brdr_formula(process_results[rel_dist]["result"])
 
 
+    @pytest.mark.usefixtures("callback_grb_response")
     def test_example_multipolygon(self):
         aligner0 = Aligner()
         testdata = {
@@ -176,13 +177,14 @@ class TestExamples:
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         )
 
-        _, dict_predictions, _ = aligner.predictor()
+        prediction_result = aligner.predictor()
 
-        assert len(dict_predictions) > 0
-        fcs = aligner.get_results_as_geojson(formula=True)
+        assert len(prediction_result.results) > 0
+        fcs = prediction_result.get_results_as_geojson(aligner, formula=True)
         assert len(fcs) == 6
 
-
+    @pytest.mark.usefixtures("callback_grb_response")
+    @pytest.mark.usefixtures("mock_inventaris_responses")
     def test_example_wanted_changes(self):
         aligner = Aligner()
         # Load thematic data & reference data
@@ -194,12 +196,11 @@ class TestExamples:
 
         # Example how to use the Aligner
         rel_dist = 2
-        aligner.process(relevant_distances=[rel_dist])
 
         # Example how to use a series (for histogram)
         series = np.arange(0, 310, 10, dtype=int) / 100
-        dict_series = aligner.process(relevant_distances=series)
-        resulting_areas = aligner.get_diff_metrics(dict_series, aligner.dict_thematic)
+        process_result = aligner.process(relevant_distances=series)
+        resulting_areas = aligner.get_diff_metrics(process_result.results, aligner.dict_thematic)
         for key in resulting_areas:
             if len(resulting_areas[key]) == len(series):
                 lst_diffs = list(resulting_areas[key].values())
@@ -226,7 +227,7 @@ class TestExamples:
         # predict which relevant distances are interesting to propose as resulting
         # geometry
 
-        _, dict_predictions, _ = aligner.predictor(relevant_distances=series)
-        for key in dict_predictions.keys():
-            assert key in dict_predictions.keys()
+        prediction_result = aligner.predictor(series)
+        for key in prediction_result.results.keys():
+            assert key in prediction_result.results.keys()
             continue

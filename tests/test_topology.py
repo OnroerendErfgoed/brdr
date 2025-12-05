@@ -140,6 +140,6 @@ class TestTopology(unittest.TestCase):
         relevant_distance = 2
         process_result = aligner.process(relevant_distances=[relevant_distance])
 
-        self.assertEqual(len(process_result), 2)
+        self.assertEqual(len(process_result.results), 2)
         dict_predictions_evaluated = aligner.evaluate()
         print(dict_predictions_evaluated)

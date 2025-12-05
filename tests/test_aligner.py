@@ -11,19 +11,20 @@ from brdr.aligner import Aligner
 from brdr.be.grb.enums import GRBType
 from brdr.be.grb.loader import GRBActualLoader
 from brdr.configs import ProcessorConfig
-from brdr.constants import AREA_ATTRIBUTE, REMARK_FIELD_NAME
+from brdr.constants import AREA_ATTRIBUTE
+from brdr.constants import REMARK_FIELD_NAME
 from brdr.enums import AlignerResultType
 from brdr.enums import OpenDomainStrategy
-from brdr.geometry_utils import (
-    _grid_bounds,
-    geom_from_wkt,
-    geometric_equality,
-    safe_equals,
-)
+from brdr.geometry_utils import _grid_bounds
 from brdr.geometry_utils import buffer_neg_pos
-from brdr.loader import GeoJsonLoader, DictLoader
+from brdr.geometry_utils import geom_from_wkt
+from brdr.geometry_utils import geometric_equality
+from brdr.geometry_utils import safe_equals
+from brdr.loader import DictLoader
+from brdr.loader import GeoJsonLoader
 from brdr.processor import AlignerGeometryProcessor
-from brdr.typings import FeatureCollection, ProcessResult
+from brdr.typings import FeatureCollection
+from brdr.typings import ProcessResult
 
 
 class TestAligner(unittest.TestCase):
@@ -70,10 +71,10 @@ class TestAligner(unittest.TestCase):
         aligner.load_reference_data(
             DictLoader({"ref_id_1": from_wkt("POLYGON ((0 1, 0 10,8 10,10 1,0 1))")})
         )
-        aligner.process([1])
+        process_result = aligner.process([1])
         path = "./tmp/"
         resulttype = AlignerResultType.PROCESSRESULTS
-        aligner.save_results(path=path, resulttype=resulttype)
+        process_result.save_results(aligner=aligner, path=path)
         filenames = [
             resulttype.value + f"_{k}.geojson" for k in ProcessResult.__annotations__
         ]
@@ -150,7 +151,9 @@ class TestAligner(unittest.TestCase):
         relevant_distance = 3
         dict_processresults = aligner.process([relevant_distance], max_workers=-1)
         self.assertEqual(
-            dict_processresults["theme_id_1"][relevant_distance]["result"].geom_type,
+            dict_processresults.results["theme_id_1"][relevant_distance][
+                "result"
+            ].geom_type,
             "LineString",
         )
 
@@ -275,12 +278,16 @@ class TestAligner(unittest.TestCase):
         self.sample_aligner.load_reference_data(DictLoader(reference_dict))
         relevant_distance = 1
         for od_strategy in OpenDomainStrategy:
-            config=ProcessorConfig(od_strategy=od_strategy, threshold_overlap_percentage=50)
+            config = ProcessorConfig(
+                od_strategy=od_strategy, threshold_overlap_percentage=50
+            )
             self.sample_aligner.processor = AlignerGeometryProcessor(config)
             process_result = self.sample_aligner.process(
                 relevant_distances=[relevant_distance],
             )
-            self.assertEqual(len(process_result["theme_id_1"][relevant_distance]), 7)
+            self.assertEqual(
+                len(process_result.results["theme_id_1"][relevant_distance]), 7
+            )
 
     def test_process_interior_ring(self):
         thematic_dict = {
@@ -306,8 +313,9 @@ class TestAligner(unittest.TestCase):
             )
         )
         result_dict = self.sample_aligner.process([1])
-        self.assertEqual(len(result_dict), len(thematic_dict))
+        self.assertEqual(len(result_dict.results), len(thematic_dict))
 
+    @pytest.mark.usefixtures("callback_grb_response")
     def test_process_no_added_area(self):
         aligner = Aligner(crs="EPSG:31370", multi_as_single_modus=True)
         # ADD A THEMATIC POLYGON TO THEMATIC DICTIONARY and LOAD into Aligner
@@ -327,13 +335,15 @@ class TestAligner(unittest.TestCase):
             threshold_overlap_percentage=50,
         )
         aligner.processor = AlignerGeometryProcessor(config)
-        process_result = aligner.process(
-            relevant_distances=[relevant_distance],
-        )
+        process_result = aligner.process([relevant_distance])
 
-        result = process_result[id][relevant_distance]["result"]
-        result_diff_plus = process_result[id][relevant_distance]["result_diff_plus"]
-        result_diff_min = process_result[id][relevant_distance]["result_diff_min"]
+        result = process_result.results[id][relevant_distance]["result"]
+        result_diff_plus = process_result.results[id][relevant_distance][
+            "result_diff_plus"
+        ]
+        result_diff_min = process_result.results[id][relevant_distance][
+            "result_diff_min"
+        ]
         assert not result.is_empty
         assert result_diff_plus.is_empty
         assert not result_diff_min.is_empty
@@ -348,10 +358,8 @@ class TestAligner(unittest.TestCase):
                 aligner=self.sample_aligner, grb_type=GRBType.ADP, partition=1000
             )
         )
-        result_dict = self.sample_aligner.process(
-            [100]
-        )
-        self.assertEqual(len(result_dict), len(thematic_dict))
+        result_dict = self.sample_aligner.process([100])
+        self.assertEqual(len(result_dict.results), len(thematic_dict))
 
     def test_process_circle(self):
         geometry = Point(0, 0).buffer(3)
@@ -366,7 +374,9 @@ class TestAligner(unittest.TestCase):
         )
         relevant_distance = 1
         results_dict = self.sample_aligner.process([relevant_distance])
-        self.assertEqual(geometry, results_dict["key"][relevant_distance]["result"])
+        self.assertEqual(
+            geometry, results_dict.results["key"][relevant_distance]["result"]
+        )
 
     def test__prepare_thematic_data(self):
         aligner = Aligner()
@@ -429,17 +439,27 @@ class TestAligner(unittest.TestCase):
         relevant_distance = 1
         result = self.sample_aligner.process([relevant_distance])
         assert safe_equals(
-            result["theme_id_1"][relevant_distance].get("result"), aligned_shape
+            result.results["theme_id_1"][relevant_distance].get("result"), aligned_shape
         )
         assert geometric_equality(
-            result["theme_id_1"][relevant_distance].get("result"),
+            result.results["theme_id_1"][relevant_distance].get("result"),
             aligned_shape,
             self.sample_aligner.correction_distance,
             self.sample_aligner.mitre_limit,
         )
-        assert result["theme_id_1"][relevant_distance].get("result_diff").is_empty
-        assert result["theme_id_1"][relevant_distance].get("result_diff_min").is_empty
-        assert result["theme_id_1"][relevant_distance].get("result_diff_plus").is_empty
+        assert (
+            result.results["theme_id_1"][relevant_distance].get("result_diff").is_empty
+        )
+        assert (
+            result.results["theme_id_1"][relevant_distance]
+            .get("result_diff_min")
+            .is_empty
+        )
+        assert (
+            result.results["theme_id_1"][relevant_distance]
+            .get("result_diff_plus")
+            .is_empty
+        )
 
     def test_remark_for_poly_multipoly(self):
         shape = from_wkt(
@@ -452,11 +472,9 @@ class TestAligner(unittest.TestCase):
             )
         )
         rd = 2
-        self.sample_aligner.process([rd])
+        result = self.sample_aligner.process([rd])
         assert (
-            self.sample_aligner.dict_processresults["theme_id_1"][rd]["properties"][
-                REMARK_FIELD_NAME
-            ]
+            result.results["theme_id_1"][rd]["properties"][REMARK_FIELD_NAME]
             == " | Difference in amount of geometries"
         )
 
@@ -483,8 +501,8 @@ class TestAligner(unittest.TestCase):
             DictLoader({"theme_id_1": aligned_shape})
         )
         self.sample_aligner.load_reference_data(DictLoader({"ref_id_1": aligned_shape}))
-        self.sample_aligner.process([1])
-        fcs = self.sample_aligner.get_results_as_geojson(formula=True)
+        process_result = self.sample_aligner.process([1])
+        fcs = process_result.get_results_as_geojson(self.sample_aligner, formula=True)
         assert fcs["result"]["features"][0]["properties"][AREA_ATTRIBUTE] > 0
         assert fcs["result_diff"]["features"][0]["properties"][AREA_ATTRIBUTE] == 0
         assert fcs["result_diff_min"]["features"][0]["properties"][AREA_ATTRIBUTE] == 0

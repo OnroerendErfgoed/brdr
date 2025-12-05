@@ -140,7 +140,7 @@ def update_to_actual_grb(
         / 100
     ]
     # EXECUTE evaluation
-    actual_aligner.evaluate(
+    result = actual_aligner.evaluate(
         ids_to_evaluate=affected,
         base_formula_field=BASE_FORMULA_FIELD_NAME,
         max_predictions=max_predictions,
@@ -149,8 +149,8 @@ def update_to_actual_grb(
         multi_to_best_prediction=multi_to_best_prediction,
     )
 
-    return actual_aligner.get_results_as_geojson(
-        resulttype=AlignerResultType.EVALUATED_PREDICTIONS,
+    return result.get_results_as_geojson(
+        aligner = actual_aligner,
         formula=True,
         attributes=attributes,
     )

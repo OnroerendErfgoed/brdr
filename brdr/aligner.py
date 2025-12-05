@@ -59,6 +59,7 @@ from brdr.processor import BaseProcessor
 from brdr.topo import dissolve_topo
 from brdr.topo import generate_topo
 from brdr.typings import ProcessResult
+from brdr.typings import ThematicId
 from brdr.utils import coverage_ratio
 from brdr.utils import determine_stability
 from brdr.utils import diff_from_processresult
@@ -73,6 +74,145 @@ from brdr.utils import write_geojson
 
 
 ###################
+class AlignerResult:
+    def __init__(
+        self,
+        process_results: dict[ThematicId, dict[float, ProcessResult | None]],
+    ):
+        self.results = process_results
+
+    def get_results(
+        self,
+        result_type:AlignerResultType=AlignerResultType.PROCESSRESULTS,
+    ) -> dict[ThematicId, dict[float, ProcessResult | None]]:
+        if result_type == AlignerResultType.PROCESSRESULTS:
+            return self.results
+        elif result_type == AlignerResultType.PREDICTIONS:
+            # return all theme ids with only the relevant distances
+            # where the ProcessResult has property PREDICTION_SCORE:
+            return {
+                theme_id: {
+                    rd: process_result
+                    for rd, process_result in results_dict.items()
+                    if process_result is not None
+                    and PREDICTION_SCORE in process_result["properties"]
+                }
+                for theme_id, results_dict in self.results.items()
+            }
+        elif result_type == AlignerResultType.EVALUATED_PREDICTIONS:
+            # return all theme ids with only the relevant distances
+            # where the ProcessResult has property EVALUATION_FIELD_NAME:
+            return {
+                theme_id: {
+                    rd: process_result
+                    for rd, process_result in results_dict.items()
+                    if process_result is not None
+                    and EVALUATION_FIELD_NAME in process_result["properties"]
+                }
+                for theme_id, results_dict in self.results.items()
+            }
+        else:
+            raise ValueError("Unknown result type: " + str(result_type))
+
+    def get_results_as_geojson(
+        self,
+        aligner,
+        formula=False,
+        attributes=False,
+    ):
+        """
+        get a geojson of a dictionary containing the resulting geometries for all
+            'serial' relevant distances. The resulttype can be chosen.
+        formula (boolean, Optional): The descriptive formula is added as an attribute to the result
+        attributes (boolean, Optional): The original attributes/properties are added to the result
+        """
+
+        if self.results is None or self.results == {}:
+            raise ValueError("Empty results: No calculated results to export.")
+
+        prop_dictionary = defaultdict(dict)
+
+        for theme_id, results_dict in self.results.items():
+            nr_calculations = len(results_dict)
+            for relevant_distance, process_result in results_dict.items():
+                properties = process_result["properties"]
+
+                # Adding extra properties
+                properties[ID_THEME_FIELD_NAME] = theme_id
+                properties[NR_CALCULATION_FIELD_NAME] = nr_calculations
+                properties[RELEVANT_DISTANCE_FIELD_NAME] = relevant_distance
+                properties[DIFF_INDEX] = diff_from_processresult(
+                    process_result,
+                    aligner.dict_thematic[theme_id],
+                    None,
+                    DIFF_METRIC.CHANGES_AREA,
+                )
+                properties[DIFF_PERC_INDEX] = diff_from_processresult(
+                    process_result,
+                    aligner.dict_thematic[theme_id],
+                    None,
+                    DIFF_METRIC.CHANGES_PERCENTAGE,
+                )
+                prop_dictionary[theme_id][relevant_distance] = properties
+
+                # Adding original attributes
+                if attributes and theme_id in aligner.dict_thematic_properties.keys():
+                    for attr, value in aligner.dict_thematic_properties[
+                        theme_id
+                    ].items():
+                        prop_dictionary[theme_id][relevant_distance][attr] = value
+
+                # Adding formula
+                if (
+                    formula
+                ):  # and not (theme_id in prop_dictionary and relevant_distance in prop_dictionary[theme_id] and NEW_FORMULA_FIELD_NAME in prop_dictionary[theme_id][relevant_distance]):
+                    result = process_result["result"]
+                    formula = aligner.get_brdr_formula(result)
+                    prop_dictionary[theme_id][relevant_distance][FORMULA_FIELD_NAME] = (
+                        json.dumps(formula)
+                    )
+        return get_dict_geojsons_from_series_dict(
+            self.results,
+            crs=aligner.CRS,
+            id_field=aligner.name_thematic_id,
+            series_prop_dict=prop_dictionary,
+        )
+
+    def save_results(self, aligner, path, formula=True, result_type = AlignerResultType.PROCESSRESULTS):
+        """
+        Exports analysis results (as geojson) to path.
+
+        This function exports 6 GeoJSON files containing the analysis results to the
+        specified `path`.
+
+        Args:
+        path (str): The path to the directory where the GeoJSON files will be saved.
+        formula (bool, optional): Whether to include formula-related information
+            in the output. Defaults to True.
+
+        Details of exported files:
+        - result.geojson: Contains the original thematic data from `
+          self.dict_result`.
+        - result_diff.geojson: Contains the difference between the original
+          and predicted data from `self.dict_result_diff`.
+        - result_diff_plus.geojson: Contains results for areas that are
+          added (increased area).
+        - result_diff_min.geojson: Contains results for areas that are
+          removed (decreased area).
+        - result_relevant_intersection.geojson: Contains the areas with
+          relevant intersection that has to be included in the result.
+        - result_relevant_difference.geojson: Contains the areas with
+          relevant difference that has to be excluded from the result.
+        """
+
+        fcs = self.get_results_as_geojson(
+            aligner=aligner,
+            formula=formula,
+        )
+        for name, fc in fcs.items():
+            write_geojson(
+                os.path.join(path, result_type.value + "_" + name + ".geojson"), fc
+            )
 
 
 # TODO what about the Aligner-parameters; AlignerConfig-class?
@@ -130,11 +270,11 @@ class Aligner:
         # name of the identifier-field of the thematic data (id has to be unique)
         self.name_thematic_id = ID_THEME_FIELD_NAME
         # dictionary to store all thematic geometries to handle
-        self.dict_thematic: dict[str | int, BaseGeometry] = {}
+        self.dict_thematic: dict[ThematicId, BaseGeometry] = {}
         # dictionary to store properties of the reference-features (optional)
-        self.dict_thematic_properties: dict[str | int, dict] = {}
+        self.dict_thematic_properties: dict[ThematicId, dict] = {}
         # Dict to store source-information of the thematic dictionary
-        self.dict_thematic_source: dict[str | int, str] = {}
+        self.dict_thematic_source: dict[ThematicId, str] = {}
         # dictionary to store all unioned thematic geometries
         self.thematic_union = None
 
@@ -144,11 +284,11 @@ class Aligner:
         # CAPAKEY for GRB-parcels)
         self.name_reference_id = ID_REFERENCE_FIELD_NAME
         # dictionary to store all reference geometries
-        self.dict_reference: dict[str | int, BaseGeometry] = {}
+        self.dict_reference: dict[ThematicId, BaseGeometry] = {}
         # dictionary to store properties of the reference-features (optional)
-        self.dict_reference_properties: dict[str | int, dict] = {}
+        self.dict_reference_properties: dict[ThematicId, dict] = {}
         # Dict to store source-information of the reference dictionary
-        self.dict_reference_source: dict[str | int, str] = {}
+        self.dict_reference_source: dict[ThematicId, str] = {}
         # to save a unioned geometry of all reference polygons; needed for calculation
         # in most OD-strategies
         self.reference_union = None
@@ -156,17 +296,6 @@ class Aligner:
         # to save a the reference_elements (points and lines) that form the reference borders; needed for networkx-calculation
         # in most OD-strategies
         self.reference_elements = None
-
-        # results
-
-        # output-dictionaries (all results of process()), grouped by theme_id and relevant_distance
-        self.dict_processresults: dict[str | int, dict[float, ProcessResult]] = {}
-        # dictionary with the 'predicted' results, grouped by theme_id and relevant_distance
-        self.dict_predictions: dict[str | int, dict[float, ProcessResult]] = {}
-        # dictionary with the 'evaluated predicted' results, grouped by theme_id and relevant_distance
-        self.dict_evaluated_predictions: dict[str | int, dict[float, ProcessResult]] = (
-            {}
-        )
 
         # Coordinate reference system
         # thematic geometries and reference geometries are assumed to be in the same CRS
@@ -221,7 +350,7 @@ class Aligner:
         *,
         dict_thematic_to_process=None,
         max_workers: int = None,
-    ) -> dict[str | int, dict[float, ProcessResult]]:
+    ) -> AlignerResult:
         """
         Calculates the resulting dictionaries for thematic data based on a series of
             relevant distances.
@@ -245,15 +374,16 @@ class Aligner:
         """
         if relevant_distances is None:
             raise ValueError("provide at least 1 relevant distance")
+        if dict_thematic_to_process is None:
+            dict_thematic_to_process = self.dict_thematic
         if max_workers is None:
             max_workers = self.max_workers
 
         self.logger.feedback_debug("Process series" + str(relevant_distances))
-        dict_series = {}
-        dict_series_queue = {}
-        futures = []
-        if dict_thematic_to_process is None:
-            dict_thematic_to_process = self.dict_thematic
+
+        dict_series: dict[ThematicId, dict[float, ProcessResult | None]] = {}
+        futures = {}
+
         dict_multi_as_single = {}
         topo_thematic = None
         dict_thematic_topo_geoms = None
@@ -270,66 +400,50 @@ class Aligner:
                 generate_topo(dict_thematic_to_process)
             )
 
-        if max_workers != -1:
-            with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                for key, geometry in dict_thematic_to_process.items():
-                    self.logger.feedback_info(
-                        f"thematic id {str(key)} processed with relevant distances (m) [{str(relevant_distances)}]"
-                    )
-                    dict_series[key] = {}
-                    dict_series_queue[key] = {}
-                    for relevant_distance in relevant_distances:
-                        try:
-                            future = executor.submit(
-                                self.processor.process,
-                                correction_distance=self.correction_distance,
-                                dict_reference=self.dict_reference,
-                                mitre_limit=self.mitre_limit,
-                                reference_elements=self._get_reference_elements(),
-                                reference_items=self.reference_items,
-                                reference_tree=self.reference_tree,
-                                reference_union=self._get_reference_union(),
-                                input_geometry=geometry,
-                                relevant_distance=relevant_distance,
-                            )
-                            futures.append(future)
-                            dict_series_queue[key][relevant_distance] = future
-                        except ValueError as e:
-                            self.logger.feedback_warning(
-                                "error for"
-                                + f"thematic id {str(key)} processed with relevant distances (m) [{str(relevant_distances)}]"
-                            )
-                            dict_series_queue[key][relevant_distance] = None
-                            self.logger.feedback_warning(str(e))
-            self.logger.feedback_debug("waiting all started RD calculations")
-            wait(futures)
-            for id_theme, dict_dist in dict_series_queue.items():
-                for relevant_distance, future in dict_dist.items():
-                    dict_series[id_theme][relevant_distance] = future.result()
-        else:
-            for key, geometry in dict_thematic_to_process.items():
-                self.logger.feedback_info(
-                    f"thematic id {str(key)} processed with relevant distances (m) [{str(relevant_distances)}]"
-                )
-                dict_series[key] = {}
-                for relevant_distance in relevant_distances:
-                    try:
-                        processed_result = self.processor.process(
-                            correction_distance=self.correction_distance,
-                            dict_reference=self.dict_reference,
-                            mitre_limit=self.mitre_limit,
-                            reference_elements=self._get_reference_elements(),
-                            reference_items=self.reference_items,
-                            reference_tree=self.reference_tree,
-                            reference_union=self._get_reference_union(),
-                            input_geometry=geometry,
-                            relevant_distance=relevant_distance,
-                        )
-                    except ValueError as e:
-                        self.logger.feedback_warning(str(e))
-                        processed_result = None
+        def process_geom_for_rd(geometry, relevant_distance):
+            return self.processor.process(
+                correction_distance=self.correction_distance,
+                dict_reference=self.dict_reference,
+                mitre_limit=self.mitre_limit,
+                reference_elements=self._get_reference_elements(),
+                reference_items=self.reference_items,
+                reference_tree=self.reference_tree,
+                reference_union=self._get_reference_union(),
+                input_geometry=geometry,
+                relevant_distance=relevant_distance,
+            )
 
-                    dict_series[key][relevant_distance] = processed_result
+        def run_process(executor: ThreadPoolExecutor = None):
+            for thematic_id, geom in dict_thematic_to_process.items():
+                self.logger.feedback_info(
+                    f"thematic id {str(thematic_id)} processed with "
+                    f"relevant distances (m) [{str(relevant_distances)}]"
+                )
+                dict_series[thematic_id] = {}
+                for rd in relevant_distances:
+                    try:
+                        fn = process_geom_for_rd
+                        if executor:
+                            futures[(thematic_id, rd)] = executor.submit(fn, geom, rd)
+                        else:
+                            dict_series[thematic_id][rd] = fn(geom, rd)
+                    except ValueError as e:
+                        self.logger.feedback_warning(
+                            f"error for thematic id {str(thematic_id)} processed with "
+                            f"relevant distances (m) [{str(relevant_distances)}]"
+                        )
+                        dict_series[thematic_id][rd] = None
+                        self.logger.feedback_warning(str(e))
+
+        if max_workers == -1:
+            run_process()
+        else:
+            with ThreadPoolExecutor(max_workers) as executor:
+                run_process(executor)
+                self.logger.feedback_debug("waiting all started RD calculations")
+                wait(list(futures.values()))
+                for (key, rd), future in futures.items():
+                    dict_series[key][rd] = future.result()
 
         if self.preserve_topology:
             dict_series = dissolve_topo(
@@ -366,16 +480,16 @@ class Aligner:
         self.logger.feedback_info(
             "End of processing series: " + str(relevant_distances)
         )
-        self.dict_processresults = dict_series
 
-        return self.dict_processresults
+        return AlignerResult(dict_series)
 
     def predictor(
         self,
-        dict_thematic=None,
         relevant_distances=None,
+        *,
+        dict_thematic=None,
         diff_metric=None,
-    ):
+    ) -> AlignerResult:
         """
         Predicts the 'most interesting' relevant distances for changes in thematic
         elements based on a distance series.
@@ -441,7 +555,6 @@ class Aligner:
                 round(k, RELEVANT_DISTANCE_DECIMALS)
                 for k in np.arange(0, 310, 10, dtype=int) / 100
             ]
-        dict_predictions = defaultdict(dict)
         rd_prediction = list(relevant_distances)
         max_relevant_distance = max(rd_prediction)
         cvg_ratio = coverage_ratio(values=relevant_distances, min_val=0, bin_count=10)
@@ -463,14 +576,14 @@ class Aligner:
         rd_prediction = list(set(rd_prediction))
         rd_prediction = sorted(rd_prediction)
 
-        dict_processresults = self.process(
+        process_result = self.process(
             dict_thematic_to_process=dict_thematic,
             relevant_distances=rd_prediction,
         )
         if diff_metric is None:
             diff_metric = self.diff_metric
         diffs_dict = {}
-        for theme_id, dict_processresult in dict_processresults.items():
+        for theme_id, dict_processresult in process_result.results.items():
             diffs = diffs_from_dict_processresult(
                 dict_processresult,
                 dict_thematic[theme_id],
@@ -488,28 +601,21 @@ class Aligner:
             dict_stability = determine_stability(rd_prediction, diff_values)
             for rd in rd_prediction:
                 if rd not in relevant_distances:
-                    del dict_processresults[theme_id][rd]
+                    del process_result.results[theme_id][rd]
                     continue
-                dict_processresults[theme_id][rd]["properties"][STABILITY] = (
+                process_result.results[theme_id][rd]["properties"][STABILITY] = (
                     dict_stability[rd][STABILITY]
                 )
                 if dict_stability[rd][ZERO_STREAK] is not None:
-                    dict_predictions[theme_id][rd] = dict_processresults[theme_id][rd]
                     if cvg_ratio > cvg_ratio_threshold:
-                        dict_predictions[theme_id][rd]["properties"][
+                        process_result.results[theme_id][rd]["properties"][
                             PREDICTION_SCORE
                         ] = dict_stability[rd][ZERO_STREAK][3]
-        self.dict_predictions = dict_predictions
 
-        self.dict_predictions = self._make_predictions_unique(dict_predictions)
+        self.count_predictions(process_result.results)
+        return process_result
 
-        return (
-            dict_processresults,
-            self.dict_predictions,
-            diffs_dict,
-        )
-
-    def _make_predictions_unique(self, dict_predictions):
+    def count_predictions(self, dict_predictions: dict[ThematicId, dict[float, ProcessResult]]):
         """
         # Check if the predicted geometries are unique (and remove duplicated predictions)
         """
@@ -535,22 +641,17 @@ class Aligner:
                     predicted_geoms_for_theme_id.append(processresult["result"])
                 else:
                     self.logger.feedback_info(
-                        f"Duplicate prediction found for key {theme_id} at distance {rel_dist}: Prediction excluded"
+                        f"Duplicate prediction found for key {theme_id} at distance {rel_dist}"
                     )
-            for dist in dict_predictions_unique[theme_id].keys():
-                dict_predictions_unique[theme_id][dist]["properties"][
-                    PREDICTION_COUNT
-                ] = len(predicted_geoms_for_theme_id)
-        return dict_predictions_unique
+            for dist, processresult in dist_results.items():
+                processresult["properties"][PREDICTION_COUNT] = len(predicted_geoms_for_theme_id)
 
     def evaluate(
         self,
+        relevant_distances = None,
+        *,
         ids_to_evaluate=None,
         base_formula_field=FORMULA_FIELD_NAME,
-        relevant_distances=[
-            round(k, RELEVANT_DISTANCE_DECIMALS)
-            for k in np.arange(0, 310, 10, dtype=int) / 100
-        ],
         full_strategy=FullStrategy.NO_FULL,
         max_predictions=-1,
         multi_to_best_prediction=True,
@@ -568,6 +669,13 @@ class Aligner:
 
         if ids_to_evaluate is None:
             ids_to_evaluate = list(self.dict_thematic.keys())
+        if any(id_to_evaluate not in self.dict_thematic.keys() for id_to_evaluate in ids_to_evaluate):
+            raise ValueError("not all ids_to_evaluate are found in the thematic data")
+        if relevant_distances is None:
+            relevant_distances = [
+                round(k, RELEVANT_DISTANCE_DECIMALS)
+                for k in np.arange(0, 310, 10, dtype=int) / 100
+            ]
         dict_affected = {}
         dict_unaffected = {}
         for id_theme, geom in self.dict_thematic.items():
@@ -582,11 +690,12 @@ class Aligner:
         #   *Predictions available
 
         # AFFECTED
-        dict_series, dict_affected_predictions, diffs = self.predictor(
+        prediction_result = self.predictor(
             dict_thematic=dict_affected,
             relevant_distances=relevant_distances,
             diff_metric=self.diff_metric,
         )
+        dict_affected_predictions = prediction_result.get_results(AlignerResultType.PREDICTIONS)
         dict_predictions_evaluated = {}
 
         for theme_id in dict_affected.keys():
@@ -747,9 +856,8 @@ class Aligner:
                 "result": geom,
                 "properties": props,
             }
-        self.dict_evaluated_predictions = dict_predictions_evaluated
 
-        return dict_predictions_evaluated
+        return AlignerResult(dict_predictions_evaluated)
 
     def get_brdr_formula(self, geometry: BaseGeometry, with_geom=False):
         """
@@ -890,7 +998,7 @@ class Aligner:
         dict: A dictionary where keys are thematic IDs and values are dictionaries mapping relevant distances to calculated difference metrics.
         """
         if dict_processresults is None:
-            dict_processresults = self.dict_processresults
+            raise ValueError("dict_processresults is required")
         if dict_thematic is None:
             dict_thematic = self.dict_thematic
         diffs = {}
@@ -903,81 +1011,6 @@ class Aligner:
             )
 
         return diffs
-
-    ##########EXPORTERS########################
-    ###########################################
-    def get_results_as_geojson(
-        self,
-        resulttype=AlignerResultType.PROCESSRESULTS,
-        formula=False,
-        attributes=False,
-    ):
-        """
-        get a geojson of a dictionary containing the resulting geometries for all
-            'serial' relevant distances. The resulttype can be chosen.
-        formula (boolean, Optional): The descriptive formula is added as an attribute to the result
-        attributes (boolean, Optional): The original attributes/properties are added to the result
-        """
-
-        if resulttype == AlignerResultType.PROCESSRESULTS:
-            dict_series = self.dict_processresults
-        elif resulttype == AlignerResultType.PREDICTIONS:
-            dict_series = self.dict_predictions
-        elif resulttype == AlignerResultType.EVALUATED_PREDICTIONS:
-            dict_series = self.dict_evaluated_predictions
-        else:
-            raise (ValueError, "AlignerResultType unknown")
-        if dict_series is None or dict_series == {}:
-            self.logger.feedback_warning(
-                "Empty results: No calculated results to export."
-            )
-            return {}
-
-        prop_dictionary = defaultdict(dict)
-
-        for theme_id, results_dict in dict_series.items():
-            nr_calculations = len(results_dict)
-            for relevant_distance, process_result in results_dict.items():
-                properties = process_result["properties"]
-
-                # Adding extra properties
-                properties[ID_THEME_FIELD_NAME] = theme_id
-                properties[NR_CALCULATION_FIELD_NAME] = nr_calculations
-                properties[RELEVANT_DISTANCE_FIELD_NAME] = relevant_distance
-                properties[DIFF_INDEX] = diff_from_processresult(
-                    process_result,
-                    self.dict_thematic[theme_id],
-                    None,
-                    DIFF_METRIC.CHANGES_AREA,
-                )
-                properties[DIFF_PERC_INDEX] = diff_from_processresult(
-                    process_result,
-                    self.dict_thematic[theme_id],
-                    None,
-                    DIFF_METRIC.CHANGES_PERCENTAGE,
-                )
-                prop_dictionary[theme_id][relevant_distance] = properties
-
-                # Adding original attributes
-                if attributes and theme_id in self.dict_thematic_properties.keys():
-                    for attr, value in self.dict_thematic_properties[theme_id].items():
-                        prop_dictionary[theme_id][relevant_distance][attr] = value
-
-                # Adding formula
-                if (
-                    formula
-                ):  # and not (theme_id in prop_dictionary and relevant_distance in prop_dictionary[theme_id] and NEW_FORMULA_FIELD_NAME in prop_dictionary[theme_id][relevant_distance]):
-                    result = process_result["result"]
-                    formula = self.get_brdr_formula(result)
-                    prop_dictionary[theme_id][relevant_distance][FORMULA_FIELD_NAME] = (
-                        json.dumps(formula)
-                    )
-        return get_dict_geojsons_from_series_dict(
-            dict_series,
-            crs=self.CRS,
-            id_field=self.name_thematic_id,
-            series_prop_dict=prop_dictionary,
-        )
 
     def get_input_as_geojson(self, inputtype=AlignerInputType.REFERENCE):
         """
@@ -1004,44 +1037,6 @@ class Aligner:
             prop_dict=dict_properties,
             geom_attributes=False,
         )
-
-    def save_results(
-        self, path, resulttype=AlignerResultType.PROCESSRESULTS, formula=True
-    ):
-        """
-        Exports analysis results (as geojson) to path.
-
-        This function exports 6 GeoJSON files containing the analysis results to the
-        specified `path`.
-
-        Args:
-        path (str): The path to the directory where the GeoJSON files will be saved.
-        formula (bool, optional): Whether to include formula-related information
-            in the output. Defaults to True.
-
-        Details of exported files:
-        - result.geojson: Contains the original thematic data from `
-          self.dict_result`.
-        - result_diff.geojson: Contains the difference between the original
-          and predicted data from `self.dict_result_diff`.
-        - result_diff_plus.geojson: Contains results for areas that are
-          added (increased area).
-        - result_diff_min.geojson: Contains results for areas that are
-          removed (decreased area).
-        - result_relevant_intersection.geojson: Contains the areas with
-          relevant intersection that has to be included in the result.
-        - result_relevant_difference.geojson: Contains the areas with
-          relevant difference that has to be excluded from the result.
-        """
-
-        fcs = self.get_results_as_geojson(
-            formula=formula,
-            resulttype=resulttype,
-        )
-        for name, fc in fcs.items():
-            write_geojson(
-                os.path.join(path, resulttype.value + "_" + name + ".geojson"), fc
-            )
 
     def get_thematic_union(self):
         """
