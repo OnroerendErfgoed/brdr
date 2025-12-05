@@ -483,7 +483,7 @@ class Aligner:
 
         return AlignerResult(dict_series)
 
-    def predictor(
+    def predict(
         self,
         relevant_distances=None,
         *,
@@ -612,6 +612,7 @@ class Aligner:
                             PREDICTION_SCORE
                         ] = dict_stability[rd][ZERO_STREAK][3]
 
+        self.diffs_dict=diffs_dict
         self.count_predictions(process_result.results)
         return process_result
 
@@ -690,7 +691,7 @@ class Aligner:
         #   *Predictions available
 
         # AFFECTED
-        prediction_result = self.predictor(
+        prediction_result = self.predict(
             dict_thematic=dict_affected,
             relevant_distances=relevant_distances,
             diff_metric=self.diff_metric,

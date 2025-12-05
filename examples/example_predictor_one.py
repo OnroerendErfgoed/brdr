@@ -25,37 +25,20 @@ if __name__ == "__main__":
     # PREDICT the 'stable' relevant distances, for a series of relevant distances
     series = [3]
     # predict which relevant distances are interesting to propose as resulting geometry
-    dict_series, dict_predictions, diffs = aligner.predictor(
+    alignerresults = aligner.predict(
         relevant_distances=series,
-        od_strategy=OpenDomainStrategy.SNAP_ALL_SIDE,
-        threshold_overlap_percentage=50,
     )
-
-    # # SHOW results of the predictions
-    # fcs_predictions = aligner.get_results_as_geojson(
-    #     resulttype=AlignerResultType.PREDICTIONS, formula=False
-    # )
-    # if fcs_predictions is None or "result" not in fcs_predictions:
-    #     print("empty predictions")
-    # else:
-    #     print(fcs_predictions["result"])
-    #     for key in dict_predictions:
-    #         plot_series(aligner.relevant_distances, {key: diffs[key]})
-    #         show_map(
-    #             {key: dict_predictions[key]},
-    #             {key: aligner.dict_thematic[key]},
-    #             aligner.dict_reference,
-    #         )
-
-    fcs_all = aligner.get_results_as_geojson(
-        resulttype=AlignerResultType.PROCESSRESULTS, formula=False
+    dict_series = alignerresults.get_results(
     )
+    # SHOW results of the predictions
+    fcs_all = alignerresults.get_results_as_geojson(formula=False, aligner=aligner)
+
     if fcs_all is None or "result" not in fcs_all:
         print("no calculations")
     else:
         print(fcs_all["result"])
         for key in dict_series:
-            plot_dict_diffs({key: diffs[key]})
+            plot_dict_diffs({key: aligner.diffs_dict[key]})
             show_map(
                 {key: dict_series[key]},
                 {key: aligner.dict_thematic[key]},

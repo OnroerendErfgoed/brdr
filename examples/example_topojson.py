@@ -25,7 +25,7 @@ aligner.load_reference_data(
 # PREDICT the 'stable' relevant distances, for a series of relevant distances
 series = np.arange(0, 210, 20, dtype=int) / 100
 # predict which relevant distances are interesting to propose as resulting geometry
-dict_series, dict_predictions, diffs = aligner.predictor(
+dict_series, dict_predictions, diffs = aligner.predict(
     relevant_distances=series,
     od_strategy=OpenDomainStrategy.SNAP_ALL_SIDE,
     threshold_overlap_percentage=50,

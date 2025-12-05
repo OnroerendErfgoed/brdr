@@ -19,7 +19,7 @@ reference_loader = GRBActualLoader(grb_type=GRBType.ADP, aligner=aligner)
 aligner.load_reference_data(reference_loader)
 
 # EXECUTE THE PREDICTOR
-aligner.predictor()
+aligner.predict()
 
 #Get GeoJson-object of resulting prediction
 featureclasses = aligner.get_results_as_geojson(resulttype=AlignerResultType.PREDICTIONS)

@@ -177,7 +177,7 @@ class TestExamples:
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         )
 
-        prediction_result = aligner.predictor()
+        prediction_result = aligner.predict()
 
         assert len(prediction_result.results) > 0
         fcs = prediction_result.get_results_as_geojson(aligner, formula=True)
@@ -227,7 +227,7 @@ class TestExamples:
         # predict which relevant distances are interesting to propose as resulting
         # geometry
 
-        prediction_result = aligner.predictor(series)
+        prediction_result = aligner.predict(series)
         for key in prediction_result.results.keys():
             assert key in prediction_result.results.keys()
             continue

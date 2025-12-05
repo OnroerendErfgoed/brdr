@@ -310,5 +310,5 @@ class TestGrb:
         series = np.arange(0, 1010, 100, dtype=int) / 100
         # predict which relevant distances are interesting to propose as resulting
         # geometry
-        prediction_result = aligner.predictor(series)
+        prediction_result = aligner.predict(series)
         assert len(prediction_result.results) == len(thematic_dict)

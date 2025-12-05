@@ -32,7 +32,7 @@ class TestAligner(unittest.TestCase):
         # predict which relevant distances are interesting to propose as resulting
         # geometry
 
-        prediction_result = self.sample_aligner.predictor(series)
+        prediction_result = self.sample_aligner.predict(series)
         self.assertEqual(len(prediction_result.results), len(thematic_dict))
 
     def test_predictor_single_value(self):
@@ -48,7 +48,7 @@ class TestAligner(unittest.TestCase):
         # predict which relevant distances are interesting to propose as resulting
         # geometry
 
-        prediction_result = self.sample_aligner.predictor(series)
+        prediction_result = self.sample_aligner.predict(series)
         self.assertEqual(len(prediction_result.results), len(thematic_dict))
 
     @pytest.mark.usefixtures("callback_grb_response")
@@ -73,7 +73,7 @@ class TestAligner(unittest.TestCase):
 
         series = np.arange(0, 810, 10, dtype=int) / 100
         # predict which relevant distances are interesting to propose as resulting geometry
-        dict_predictions = aligner.predictor(series).get_results(AlignerResultType.PREDICTIONS)
+        dict_predictions = aligner.predict(series).get_results(AlignerResultType.PREDICTIONS)
         assert len(dict_predictions["id1"]) >= 1
 
     @pytest.mark.usefixtures("callback_grb_response")
@@ -94,7 +94,7 @@ class TestAligner(unittest.TestCase):
 
         series = np.arange(0, 110, 10, dtype=int) / 100
         # predict which relevant distances are interesting to propose as resulting geometry
-        dict_predictions = aligner.predictor(series).get_results(
+        dict_predictions = aligner.predict(series).get_results(
             AlignerResultType.PREDICTIONS
         )
         assert len(dict_predictions["id1"]) <= 1
@@ -112,7 +112,7 @@ class TestAligner(unittest.TestCase):
         # predict which relevant distances are interesting to propose as resulting
         # geometry
 
-        prediction_result = self.sample_aligner.predictor(
+        prediction_result = self.sample_aligner.predict(
             series,
         )
         self.assertEqual(len(prediction_result.results), len(thematic_dict))
@@ -138,7 +138,7 @@ class TestAligner(unittest.TestCase):
         series = np.arange(0, 310, 10, dtype=int) / 100
         # predict which relevant distances are interesting to propose as resulting
         # geometry
-        prediction_result = self.sample_aligner.predictor(
+        prediction_result = self.sample_aligner.predict(
             relevant_distances=series,
         )
         self.assertEqual(len(prediction_result.results), len(thematic_dict))
@@ -172,7 +172,7 @@ class TestAligner(unittest.TestCase):
         series = np.arange(0, 310, 20, dtype=int) / 100
         # predict which relevant distances are interesting to propose as resulting
         # geometry
-        prediction_result = self.sample_aligner.predictor(
+        prediction_result = self.sample_aligner.predict(
             relevant_distances=series,
         )
         self.assertEqual(len(prediction_result.results), len(thematic_dict))

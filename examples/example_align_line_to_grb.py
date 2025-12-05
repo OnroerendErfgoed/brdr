@@ -19,5 +19,5 @@ if __name__ == "__main__":
 
     dict_processresults = aligner.process(relevant_distances=[3], max_workers=-1)
     print(dict_processresults["theme_id_1"][3]["result"])
-    aligner.predictor()
+    aligner.predict()
     aligner.save_results("output", AlignerResultType.PREDICTIONS)
