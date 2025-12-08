@@ -34,7 +34,7 @@ base_year = "2022"
 # reference-polygons of the base-year
 base_correction = 2
 # geometries bigger than this, will be excluded
-excluded_area = 10000
+excluded_area = 1000
 # max_distance_for_actualisation  of relevant distance that is used to check if we can auto-align the geometries
 # to the actual reference-polygons to get an 'equal' formula
 max_distance_for_actualisation = 2
@@ -46,16 +46,9 @@ base_aligner = Aligner()
 print("start loading OE-objects")
 # Load the thematic data to evaluate
 loader = OnroerendErfgoedLoader(bbox=bbox, partition=0)
+#loader = OnroerendErfgoedLoader(objectids= [276,120380])
 base_aligner.load_thematic_data(loader)
 
-print(
-    "Number of OE-thematic features loaded into base-aligner: "
-    + str(len(base_aligner.dict_thematic))
-)
-base_aligner.load_reference_data(
-    GRBFiscalParcelLoader(year=base_year, aligner=base_aligner, partition=1000)
-)
-print("Reference-data loaded")
 # Exclude objects bigger than specified area
 keys_to_exclude = []
 nr_features = len(base_aligner.dict_thematic)
@@ -67,12 +60,24 @@ for key in base_aligner.dict_thematic:
 for x in keys_to_exclude:
     del base_aligner.dict_thematic[x]
 
+print(
+    "Number of OE-thematic features loaded into base-aligner: "
+    + str(len(base_aligner.dict_thematic))
+)
+base_aligner.load_reference_data(
+    GRBFiscalParcelLoader(year=base_year, aligner=base_aligner, partition=1000)
+)
+print("Reference-data loaded")
+
+
 # # Align the features to the base-GRB
 print("Process base objects")
 starttime = datetime.now()
 base_process_result = base_aligner.process(relevant_distances=[base_correction])
 # get resulting aligned features on Adpfxxxx, with formula
-processresults = base_aligner.get_results_as_geojson(formula=True)
+
+base_process_result.get_results()
+processresults = base_process_result.get_results_as_geojson(aligner=base_aligner)
 if len(processresults) == 0:
     print("empty processresults")
     exit()

@@ -45,7 +45,7 @@ from brdr.enums import AlignerResultType
 from brdr.enums import DiffMetric
 from brdr.enums import Evaluation
 from brdr.enums import FullStrategy
-from brdr.geometry_utils import buffer_neg
+from brdr.geometry_utils import buffer_neg, geometric_equality
 from brdr.geometry_utils import buffer_pos
 from brdr.geometry_utils import extract_points_lines_from_geometry
 from brdr.geometry_utils import safe_difference
@@ -60,7 +60,11 @@ from brdr.topo import dissolve_topo
 from brdr.topo import generate_topo
 from brdr.typings import ProcessResult
 from brdr.typings import ThematicId
-from brdr.utils import coverage_ratio
+from brdr.utils import (
+    coverage_ratio,
+    create_full_interpolated_dataset,
+    recursive_stepwise_interval_check,
+)
 from brdr.utils import determine_stability
 from brdr.utils import diff_from_processresult
 from brdr.utils import diffs_from_dict_processresult
@@ -547,9 +551,9 @@ class Aligner:
                     corresponding distance.
             diffs_dict: a dictionary with the differences for each relevant distance
         """
-
-        if dict_thematic is None:
+        if dict_thematic is None :#or dict_thematic =={}
             dict_thematic = self.dict_thematic
+
         if relevant_distances is None:
             relevant_distances = [
                 round(k, RELEVANT_DISTANCE_DECIMALS)
@@ -576,10 +580,49 @@ class Aligner:
         rd_prediction = list(set(rd_prediction))
         rd_prediction = sorted(rd_prediction)
 
-        process_result = self.process(
-            dict_thematic_to_process=dict_thematic,
-            relevant_distances=rd_prediction,
-        )
+        dict_series = {}
+        for theme_id,geom in dict_thematic.items():
+
+            def _check_interval_stability(
+                res_start: ProcessResult, res_end: ProcessResult
+            ) -> bool:
+
+                return geometric_equality(
+                res_start["result"],
+                res_end["result"],
+                correction_distance=self.correction_distance,
+                mitre_limit=self.mitre_limit,
+            )
+
+            def _process_result(theme_id,relevant_distances):
+                if theme_id==276:
+                    pass
+                aligner_result = self.process(
+                    dict_thematic_to_process={theme_id:geom},
+                    relevant_distances=relevant_distances,
+                )
+                rd=relevant_distances[0]
+                return aligner_result.results[theme_id][rd]
+
+            def _process_wrapper(x: float):
+                return _process_result(theme_id=theme_id,relevant_distances=[x])
+
+            non_stable_points,cache = recursive_stepwise_interval_check(
+                f_value=_process_wrapper,
+                f_condition=_check_interval_stability,
+                discrete_list=rd_prediction,
+                initial_sample_size=3,
+            )
+            #print(non_stable_points)
+            #TODO: remove remark about rd 0 so it is generic to interpolate
+            interpolated_cache = create_full_interpolated_dataset(
+                rd_prediction, cache
+            )
+            #print(interpolated_cache)
+            # process_result[theme_id]= individual_process_result[theme_id]
+            dict_series[theme_id]=interpolated_cache
+
+        process_result = AlignerResult(dict_series)
         if diff_metric is None:
             diff_metric = self.diff_metric
         diffs_dict = {}
@@ -620,7 +663,7 @@ class Aligner:
         """
         # Check if the predicted geometries are unique (and remove duplicated predictions)
         """
-
+        #TODO moet deze functie niets teruggeven?
         dict_predictions_unique = defaultdict(dict)
         for theme_id, dist_results in dict_predictions.items():
             dict_predictions_unique[theme_id] = {}

@@ -506,4 +506,4 @@ class TestEvaluate(unittest.TestCase):
             == Evaluation.TO_CHECK_NO_PREDICTION
         )
         # TODO; check below as this gives a extra prediction without prop_dictionary parameters
-        # assert prop_dictionary[3][list(prop_dictionary[3].keys())[0]][EVALUATION_FIELD_NAME] == Evaluation.TO_CHECK_NO_PREDICTION
+        #assert prop_dictionary[3][list(prop_dictionary[3].keys())[0]][EVALUATION_FIELD_NAME] == Evaluation.TO_CHECK_NO_PREDICTION

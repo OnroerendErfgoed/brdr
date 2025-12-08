@@ -65,8 +65,9 @@ if __name__ == "__main__":
     base_aligner.load_reference_data(
         GRBFiscalParcelLoader(year=base_year, aligner=base_aligner)
     )
-    base_process_result = base_aligner.process(relevant_distance=2)
-    fcs = base_aligner.get_results_as_geojson(formula=True, attributes=True)
+    base_process_result = base_aligner.process(relevant_distances=[2])
+    base_process_result.get_results()
+    fcs = base_process_result.get_results_as_geojson(aligner=base_aligner)
     featurecollection_base_result = fcs["result"]
     print(featurecollection_base_result)
     # Update Featurecollection to actual version

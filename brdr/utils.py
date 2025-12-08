@@ -1,6 +1,8 @@
+import copy
 import logging
 import math
 import os.path
+from typing import Callable, Any, Dict, List, Tuple
 
 import numpy as np
 import requests
@@ -173,6 +175,7 @@ def multi_to_singles(dict_geoms):
     dict_multi_as_single = {}
     for key, geom in dict_geoms.items():
         if geom is None or geom.is_empty:
+            resulting_dict_geoms[key] = geom
             continue
 
         geometries = list(get_geoms_from_geometry(geom))
@@ -703,3 +706,189 @@ def equal_geom_in_array(geom, geom_array, correction_distance, mitre_limit):
         if geometric_equality(geom, g, correction_distance, mitre_limit):
             return True
     return False
+
+
+def create_full_interpolated_dataset(
+    discrete_list: List[float],  # The complete list of all x-coordinates
+    cached_results: Dict[
+        float, Any
+    ],  # The dictionary with the calculated (cached) values
+) -> Dict[float, Any]:
+    """
+    Populates the complete discrete list by interpolating non-calculated values
+    with the nearest calculated boundary value (Zero-Order Hold).
+
+    Returns: A new dictionary with results for ALL x-coordinates in the list.
+    """
+
+    full_results = {}
+    x_coords = np.array(discrete_list)
+
+    # We start with the value of the first calculated point
+    current_fill_value = None
+
+    # Find the very first calculated point to determine the starting value
+    for x in x_coords:
+        if x in cached_results:
+            # Make a deepcopy of the very first value found.
+            current_fill_value = copy.deepcopy(cached_results[x])
+            break
+
+    if current_fill_value is None:
+        # This shouldn't happen if the list has boundaries, but for safety
+        return full_results
+
+    # 1. Iterate through the entire discrete list and perform the interpolation
+    for x in x_coords:
+        if x in cached_results:
+            # 2. Point is calculated (this is an interval boundary in the stable region).
+            # Replace the fill_value with a DEEPCOPY of the new cached value.
+            current_fill_value = copy.deepcopy(cached_results[x])
+            # Assign a DEEPCOPY of the new fill_value to full_results.
+            full_results[x] = copy.deepcopy(current_fill_value)
+        else:
+            # 3. Point is NOT calculated (lies within a stable region).
+            # We populate it with the value of the last calculated (left boundary) point.
+            # Assign a DEEPCOPY of the fill_value to full_results.
+            full_results[x] = copy.deepcopy(current_fill_value)
+
+    return full_results
+
+
+def recursive_stepwise_interval_check(
+    f_value: Callable[
+        [float], Any
+    ],  # Function that returns the NUMERIC value/Object (V)
+    f_condition: Callable[
+        [Any, Any], bool
+    ],  # Function that performs the BOOLEAN assessment on V_start and V_end
+    discrete_list: List[float],  # The FIXED, discrete list of x-coordinates
+    initial_sample_size: int = None,  # Number of evenly spaced values to initially cache
+) -> Tuple[List[float], Dict[float, Any]]:
+    """
+    Recursively searches a discrete domain (x-coordinates) to find intervals where a
+    stability condition (f_condition) based on calculated values (f_value) is violated.
+
+    It uses a Zero-Order Hold (ZOH) approach for condition checking and a cache-aware
+    stability check to prevent premature recursion stop in unstable regions.
+
+    The check is performed by evaluating the f_condition between interval endpoints
+    and recursively subdividing the interval if the condition is not met.
+
+    Args:
+        f_value: A function that calculates and returns the complex/numerical
+                 result (V) for a given x-coordinate.
+        f_condition: A function that takes V_start and V_end and returns True if
+                     the stability/convergence condition is met, False otherwise.
+        discrete_list: The complete, sorted list of x-coordinates to be evaluated.
+        initial_sample_size: Optional. If set, this number of points are pre-calculated
+                             and cached to potentially speed up the initial checks.
+
+    Returns:
+        A tuple containing:
+        1. A sorted list of x-coordinates that were identified as boundaries of
+           the non-stable (non-matching) regions.
+        2. The complete dictionary cache of all calculated f_value results.
+    """
+
+    x_coords = np.array(discrete_list)
+    cache: Dict[float, Any] = {}
+    non_matching_x = set()
+
+    def _get_f_value(x: float) -> Any:
+        """Helper to retrieve f_value result from cache or calculate it."""
+        if x not in cache:
+            # print(f"  > F_VALUE(x) calculated for x={round(x, 4)}")
+            # We use deepcopy here to ensure the cached object is independent if f_value
+            # returns a mutable object that might be modified later outside this function.
+            # However, typically f_value is expected to return a stable result object.
+            # If the result itself is used as input for further modification *within*
+            # the surrounding logic, deepcopy may be added, but based on the original
+            # context, we assume a stable return value for now.
+            cache[x] = f_value(x)
+        return cache[x]
+
+    # --- Initial Sample (Pre-caching) ---
+    if (
+        initial_sample_size is not None
+        and initial_sample_size > 0
+        and initial_sample_size < len(x_coords)
+    ):
+        step = max(1, len(x_coords) // initial_sample_size)
+        initial_indices = np.arange(0, len(x_coords), step)[:initial_sample_size]
+        for x in x_coords[initial_indices]:
+            _get_f_value(x)
+        # print(f"✅ Initialization: {len(initial_indices)} points cached.")
+    # -----------------------------------
+
+    def _recursive_check(start_index: int, end_index: int):
+        """
+        The core recursive function to check the condition in the interval [start_index, end_index].
+        """
+
+        # 0. Base Case: Interval contains no intermediate values (adjacent points)
+        if end_index - start_index <= 1:
+            x_start, x_end = x_coords[start_index], x_coords[end_index]
+            num_start, num_end = _get_f_value(x_start), _get_f_value(x_end)
+
+            if not f_condition(num_start, num_end):
+                non_matching_x.add(x_start)
+                non_matching_x.add(x_end)
+            return
+
+        x_start, x_end = x_coords[start_index], x_coords[end_index]
+        num_start, num_end = _get_f_value(x_start), _get_f_value(x_end)
+
+        interval_is_satisfied = f_condition(num_start, num_end)
+
+        needs_forced_recursion = False
+
+        if interval_is_satisfied:
+            # **NEW LOGIC:** Check internal stability using already cached points
+
+            # Find all x-values in the cache that fall STRICTLY within this interval
+            internal_cached_x = sorted([x for x in cache.keys() if x_start < x < x_end])
+
+            # Iterate through the sub-intervals [current_x, next_x]
+            current_x_val = x_start
+            current_num_val = num_start
+
+            # Combine the internal cached points with the endpoint to cover all sub-intervals
+            all_check_points = internal_cached_x + [x_end]
+
+            for next_x_val in all_check_points:
+                # We know next_x_val is either in the cache or is x_end (which is already calculated)
+                next_num_val = cache[next_x_val]
+
+                # Evaluate the sub-interval [current_x_val, next_x_val]
+                if not f_condition(current_num_val, next_num_val):
+                    # Internal instability found! Override the lazy stop.
+                    needs_forced_recursion = True
+                    break
+
+                current_x_val = next_x_val
+                current_num_val = next_num_val
+
+        # 3. Decision Point:
+
+        if not interval_is_satisfied or needs_forced_recursion:
+            # Condition NOT satisfied OR Internal cache indicates instability: Continue recursion.
+
+            # Add the extreme values (they are part of the 'non-matching' region)
+            non_matching_x.add(x_start)
+            non_matching_x.add(x_end)
+
+            # Perform recursion on the halves (Stepwise refinement)
+            mid_index = (start_index + end_index) // 2
+
+            _recursive_check(start_index, mid_index)
+            _recursive_check(mid_index, end_index)
+
+        else:
+            # Condition IS satisfied and NO internal problems detected: Stop recursion.
+            return
+
+    # Start the recursion over the full discrete list
+    _recursive_check(0, len(x_coords) - 1)
+
+    return sorted(list(non_matching_x)), cache

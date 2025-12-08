@@ -1,6 +1,9 @@
 import logging
 from datetime import datetime
 
+from brdr.be.grb.constants import GRB_MAX_REFERENCE_BUFFER
+from brdr.be.grb.constants import GRB_PARCEL_ID
+from brdr.be.grb.constants import GRB_VERSION_DATE
 from brdr.be.grb.enums import GRBType
 from brdr.be.grb.utils import (
     get_collection_grb_actual,
@@ -11,9 +14,6 @@ from brdr.constants import (
     DATE_FORMAT,
     VERSION_DATE,
 )
-from brdr.be.grb.constants import GRB_MAX_REFERENCE_BUFFER
-from brdr.be.grb.constants import GRB_PARCEL_ID
-from brdr.be.grb.constants import GRB_VERSION_DATE
 from brdr.geometry_utils import buffer_pos
 from brdr.loader import GeoJsonLoader
 
