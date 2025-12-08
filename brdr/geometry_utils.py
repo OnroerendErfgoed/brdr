@@ -2077,8 +2077,8 @@ def to_crs(crs_input):
     except Exception as e:
         raise ValueError(f"Error interpreting CRS: {e}")
 
-def from_crs(crs,format="uri"):
 
+def from_crs(crs, format="uri"):
     """
     Converts a pyproj.CRS object to a specific representation.
 
@@ -2100,14 +2100,14 @@ def from_crs(crs,format="uri"):
     """
 
     try:
-        if format=="uri":
+        if format == "uri":
             auth = crs.to_authority()
-            #return f"urn:ogc:def:crs:{auth[0]}::{auth[1]}"
+            # return f"urn:ogc:def:crs:{auth[0]}::{auth[1]}"
             return f"http://www.opengis.net/def/crs/{auth[0]}/0/{auth[1]}"
-        elif format=="id":
+        elif format == "id":
             return crs.to_epsg()
-        elif format=="epsg":
-            auth =  crs.to_authority()
+        elif format == "epsg":
+            auth = crs.to_authority()
             return str(auth[0]) + ":" + str(auth[1])
     except Exception as e:
         raise ValueError(f"Error converting CRS: {e}")

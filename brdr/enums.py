@@ -56,9 +56,6 @@ class AlignerInputType(str, Enum):
     REFERENCE = "reference"
 
 
-
-
-
 class DiffMetric(str, Enum):
     """
     Determines which metric is used to determine the difference between the thematic and

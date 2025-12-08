@@ -2,6 +2,7 @@ import copy
 import logging
 import math
 import os.path
+from typing import Callable, Any, Dict, List, Tuple
 
 import numpy as np
 import requests
@@ -15,7 +16,7 @@ from shapely import node
 from shapely import polygonize
 from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
-from typing import Callable, Any, Dict, List, Tuple
+
 from brdr.constants import AREA_ATTRIBUTE
 from brdr.constants import DEFAULT_CRS
 from brdr.constants import DOWNLOAD_LIMIT
@@ -707,12 +708,11 @@ def equal_geom_in_array(geom, geom_array, correction_distance, mitre_limit):
     return False
 
 
-
-
-
 def create_full_interpolated_dataset(
-        discrete_list: List[float],      # The complete list of all x-coordinates
-        cached_results: Dict[float, Any] # The dictionary with the calculated (cached) values
+    discrete_list: List[float],  # The complete list of all x-coordinates
+    cached_results: Dict[
+        float, Any
+    ],  # The dictionary with the calculated (cached) values
 ) -> Dict[float, Any]:
     """
     Populates the complete discrete list by interpolating non-calculated values
@@ -753,6 +753,7 @@ def create_full_interpolated_dataset(
             full_results[x] = copy.deepcopy(current_fill_value)
 
     return full_results
+
 
 def recursive_stepwise_interval_check(
     f_value: Callable[
@@ -797,7 +798,7 @@ def recursive_stepwise_interval_check(
     def _get_f_value(x: float) -> Any:
         """Helper to retrieve f_value result from cache or calculate it."""
         if x not in cache:
-            #print(f"  > F_VALUE(x) calculated for x={round(x, 4)}")
+            # print(f"  > F_VALUE(x) calculated for x={round(x, 4)}")
             # We use deepcopy here to ensure the cached object is independent if f_value
             # returns a mutable object that might be modified later outside this function.
             # However, typically f_value is expected to return a stable result object.
@@ -817,7 +818,7 @@ def recursive_stepwise_interval_check(
         initial_indices = np.arange(0, len(x_coords), step)[:initial_sample_size]
         for x in x_coords[initial_indices]:
             _get_f_value(x)
-        #print(f"✅ Initialization: {len(initial_indices)} points cached.")
+        # print(f"✅ Initialization: {len(initial_indices)} points cached.")
     # -----------------------------------
 
     def _recursive_check(start_index: int, end_index: int):

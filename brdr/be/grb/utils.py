@@ -6,17 +6,16 @@ from datetime import datetime
 from shapely import intersects
 from shapely.geometry import shape
 
-from brdr.be.grb.enums import GRBType
 from brdr.be.grb.constants import (
-GRB_FEATURE_URL,
-GRB_FISCAL_PARCELS_URL,
-GRB_MAX_REFERENCE_BUFFER,
-GRB_PARCEL_ID,
-GRB_VERSION_DATE,
+    GRB_FEATURE_URL,
+    GRB_FISCAL_PARCELS_URL,
+    GRB_MAX_REFERENCE_BUFFER,
+    GRB_PARCEL_ID,
+    GRB_VERSION_DATE,
     GRB_GENERIC_ID,
 )
+from brdr.be.grb.enums import GRBType
 from brdr.constants import (DOWNLOAD_LIMIT, DEFAULT_CRS, DATE_FORMAT)
-
 from brdr.geometry_utils import (
     buffer_pos,
     safe_intersection,

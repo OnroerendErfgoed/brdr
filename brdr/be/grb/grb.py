@@ -14,7 +14,7 @@ from brdr.constants import (
     FORMULA_FIELD_NAME,
     BASE_FORMULA_FIELD_NAME,
 )
-from brdr.enums import AlignerResultType, FullStrategy
+from brdr.enums import FullStrategy
 from brdr.loader import DictLoader
 from brdr.logger import Logger
 
