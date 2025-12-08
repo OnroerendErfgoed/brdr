@@ -620,7 +620,7 @@ class Aligner:
         """
         # Check if the predicted geometries are unique (and remove duplicated predictions)
         """
-
+        #TODO moet deze functie niets teruggeven?
         dict_predictions_unique = defaultdict(dict)
         for theme_id, dist_results in dict_predictions.items():
             dict_predictions_unique[theme_id] = {}
