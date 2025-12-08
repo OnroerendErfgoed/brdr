@@ -15,7 +15,7 @@ from shapely import node
 from shapely import polygonize
 from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
-
+from typing import Callable, Any, Dict, List, Tuple
 from brdr.constants import AREA_ATTRIBUTE
 from brdr.constants import DEFAULT_CRS
 from brdr.constants import DOWNLOAD_LIMIT
@@ -707,101 +707,6 @@ def equal_geom_in_array(geom, geom_array, correction_distance, mitre_limit):
     return False
 
 
-from typing import Callable, Any, Dict, List, Tuple
-
-
-def lazy_discrete_interval_search_interval_check(
-    f_value: Callable[
-        [float], Any
-    ],  # Functie die de NUMERIEKE waarde/Object (V) teruggeeft
-    f_condition: Callable[
-        [Any, Any], bool
-    ],  # Functie die de BOOLEAN beoordeling uitvoert op V_start en V_end
-    discrete_list: List[float],  # De VASTE, discrete lijst van x-waarden
-    initial_sample_size: int = None,  # Aantal gelijkmatige waarden om initieel te cachen
-) -> Tuple[
-    List[float], Dict[float, Any]
-]:  # <-- Aangepast: Retourneert (lijst_x_waarden, cache)
-    """
-    Voert een 'luie' zoektocht uit op een VASTE discrete lijst met intervalbeoordeling.
-
-    Retourneert: Een tuple (lijst_x_waarden_waar_fout, cache_met_alle_resultaten).
-    """
-
-    # 1. Initialisatie en Caching
-    x_coords = np.array(discrete_list)
-    cache: Dict[float, Any] = {}
-
-    def _get_f_value(x: float) -> Any:
-        """Helperfunctie om f_value(x) (numerieke waarde) te cachen."""
-        if x not in cache:
-            # Voer de dure numerieke berekening uit
-            print(f"  > F_VALUE(x) berekend voor x={round(x, 4)}")
-            cache[x] = f_value(x)
-        return cache[x]
-
-    # --- Initiële Steekproef (Pre-caching) ---
-    if (
-        initial_sample_size is not None
-        and initial_sample_size > 0
-        and initial_sample_size < len(x_coords)
-    ):
-        step = max(1, len(x_coords) // initial_sample_size)
-        initial_indices = np.arange(0, len(x_coords), step)[:initial_sample_size]
-        for x in x_coords[initial_indices]:
-            _get_f_value(x)
-        print(
-            f"✅ Initialisatie: {len(initial_indices)} gelijkmatig verdeelde NUMERIEKE waarden gecached."
-        )
-    # -------------------------------------------------------------------
-
-    # 2. Start de Recursieve Controle
-    non_matching_x = set()
-
-    def _recursive_check(start_index: int, end_index: int):
-
-        if start_index >= end_index:
-            return
-
-        x_start = x_coords[start_index]
-        x_end = x_coords[end_index]
-
-        num_start = _get_f_value(x_start)
-        num_end = _get_f_value(x_end)
-
-        interval_is_satisfied = f_condition(num_start, num_end)
-
-        # 3. Luie Evaluatie Trigger
-        if not interval_is_satisfied:
-
-            # Voeg de uiterste waarden toe
-            non_matching_x.add(x_start)
-            non_matching_x.add(x_end)
-
-            # Berekening van ALLE tussenwaarden in dit sub-interval
-            for i in range(start_index + 1, end_index):
-                x_mid = x_coords[i]
-                _get_f_value(x_mid)  # Cache vullen
-                non_matching_x.add(x_mid)
-
-        else:
-            # 4. Recursieve stap: Verfijn het zoekgebied
-
-            if end_index - start_index == 1:
-                return
-
-            mid_index = (start_index + end_index) // 2
-
-            _recursive_check(start_index, mid_index)
-            _recursive_check(mid_index, end_index)
-
-    # Start de recursie
-    _recursive_check(0, len(x_coords) - 1)
-
-    # 5. Retourneer zowel de gefilterde lijst als de cache
-    return sorted(list(non_matching_x)), cache  # <-- Hier retourneren we de cache
-
-
 
 
 
@@ -849,33 +754,60 @@ def create_full_interpolated_dataset(
 
     return full_results
 
-
-
-
-
-
 def recursive_stepwise_interval_check(
     f_value: Callable[
         [float], Any
-    ],  # Functie die de NUMERIEKE waarde/Object (V) teruggeeft
+    ],  # Function that returns the NUMERIC value/Object (V)
     f_condition: Callable[
         [Any, Any], bool
-    ],  # Functie die de BOOLEAN beoordeling uitvoert op V_start en V_end
-    discrete_list: List[float],  # De VASTE, discrete lijst van x-waarden
-    initial_sample_size: int = None,  # Aantal gelijkmatige waarden om initieel te cachen
+    ],  # Function that performs the BOOLEAN assessment on V_start and V_end
+    discrete_list: List[float],  # The FIXED, discrete list of x-coordinates
+    initial_sample_size: int = None,  # Number of evenly spaced values to initially cache
 ) -> Tuple[List[float], Dict[float, Any]]:
+    """
+    Recursively searches a discrete domain (x-coordinates) to find intervals where a
+    stability condition (f_condition) based on calculated values (f_value) is violated.
+
+    It uses a Zero-Order Hold (ZOH) approach for condition checking and a cache-aware
+    stability check to prevent premature recursion stop in unstable regions.
+
+    The check is performed by evaluating the f_condition between interval endpoints
+    and recursively subdividing the interval if the condition is not met.
+
+    Args:
+        f_value: A function that calculates and returns the complex/numerical
+                 result (V) for a given x-coordinate.
+        f_condition: A function that takes V_start and V_end and returns True if
+                     the stability/convergence condition is met, False otherwise.
+        discrete_list: The complete, sorted list of x-coordinates to be evaluated.
+        initial_sample_size: Optional. If set, this number of points are pre-calculated
+                             and cached to potentially speed up the initial checks.
+
+    Returns:
+        A tuple containing:
+        1. A sorted list of x-coordinates that were identified as boundaries of
+           the non-stable (non-matching) regions.
+        2. The complete dictionary cache of all calculated f_value results.
+    """
 
     x_coords = np.array(discrete_list)
     cache: Dict[float, Any] = {}
     non_matching_x = set()
 
     def _get_f_value(x: float) -> Any:
+        """Helper to retrieve f_value result from cache or calculate it."""
         if x not in cache:
-            print(f"  > F_VALUE(x) berekend voor x={round(x, 4)}")
+            #print(f"  > F_VALUE(x) calculated for x={round(x, 4)}")
+            # We use deepcopy here to ensure the cached object is independent if f_value
+            # returns a mutable object that might be modified later outside this function.
+            # However, typically f_value is expected to return a stable result object.
+            # If the result itself is used as input for further modification *within*
+            # the surrounding logic, deepcopy may be added, but based on the original
+            # context, we assume a stable return value for now.
             cache[x] = f_value(x)
         return cache[x]
 
-    # ... [Initialisatie met Steekproef (Pre-caching) blijft hetzelfde] ...
+    # --- Initial Sample (Pre-caching) ---
     if (
         initial_sample_size is not None
         and initial_sample_size > 0
@@ -885,12 +817,15 @@ def recursive_stepwise_interval_check(
         initial_indices = np.arange(0, len(x_coords), step)[:initial_sample_size]
         for x in x_coords[initial_indices]:
             _get_f_value(x)
-        print(f"✅ Initialisatie: {len(initial_indices)} punten gecached.")
-    # -------------------------------------------------------------------
+        #print(f"✅ Initialization: {len(initial_indices)} points cached.")
+    # -----------------------------------
 
     def _recursive_check(start_index: int, end_index: int):
+        """
+        The core recursive function to check the condition in the interval [start_index, end_index].
+        """
 
-        # 0. Basisgeval: Interval bevat geen tussenwaarden (aangrenzende punten)
+        # 0. Base Case: Interval contains no intermediate values (adjacent points)
         if end_index - start_index <= 1:
             x_start, x_end = x_coords[start_index], x_coords[end_index]
             num_start, num_end = _get_f_value(x_start), _get_f_value(x_end)
@@ -908,50 +843,51 @@ def recursive_stepwise_interval_check(
         needs_forced_recursion = False
 
         if interval_is_satisfied:
-            # **NIEUWE LOGICA:** Controleer interne stabiliteit met reeds gecachede punten
+            # **NEW LOGIC:** Check internal stability using already cached points
 
-            # Vind alle x-waarden in de cache die STRICT binnen dit interval vallen
+            # Find all x-values in the cache that fall STRICTLY within this interval
             internal_cached_x = sorted([x for x in cache.keys() if x_start < x < x_end])
 
-            # Doorloop de sub-intervallen [current_x, next_x]
+            # Iterate through the sub-intervals [current_x, next_x]
             current_x_val = x_start
             current_num_val = num_start
 
-            # Combineer de interne gecachede punten met het eindpunt om alle sub-intervallen te dekken
+            # Combine the internal cached points with the endpoint to cover all sub-intervals
             all_check_points = internal_cached_x + [x_end]
 
             for next_x_val in all_check_points:
+                # We know next_x_val is either in the cache or is x_end (which is already calculated)
                 next_num_val = cache[next_x_val]
 
-                # Beoordeel het sub-interval [current_x_val, next_x_val]
+                # Evaluate the sub-interval [current_x_val, next_x_val]
                 if not f_condition(current_num_val, next_num_val):
-                    # Interne instabiliteit gevonden! Override de lazy stop.
+                    # Internal instability found! Override the lazy stop.
                     needs_forced_recursion = True
                     break
 
                 current_x_val = next_x_val
                 current_num_val = next_num_val
 
-        # 3. Beslissingspunt:
+        # 3. Decision Point:
 
         if not interval_is_satisfied or needs_forced_recursion:
-            # Conditie NIET voldaan OF Interne cache wijst op instabiliteit: Ga verder met recursie.
+            # Condition NOT satisfied OR Internal cache indicates instability: Continue recursion.
 
-            # Voeg de uiterste waarden toe (ze maken deel uit van de 'foute' regio)
+            # Add the extreme values (they are part of the 'non-matching' region)
             non_matching_x.add(x_start)
             non_matching_x.add(x_end)
 
-            # Voer de recursie op de helften uit (Stapsgewijze verfijning)
+            # Perform recursion on the halves (Stepwise refinement)
             mid_index = (start_index + end_index) // 2
 
             _recursive_check(start_index, mid_index)
             _recursive_check(mid_index, end_index)
 
         else:
-            # Conditie WEL voldaan en GEEN interne problemen gedetecteerd: Stop de recursie.
+            # Condition IS satisfied and NO internal problems detected: Stop recursion.
             return
 
-    # Start de recursie over de volledige discrete lijst
+    # Start the recursion over the full discrete list
     _recursive_check(0, len(x_coords) - 1)
 
     return sorted(list(non_matching_x)), cache
