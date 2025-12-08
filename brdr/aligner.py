@@ -40,7 +40,7 @@ from brdr.constants import REMARK_FIELD_NAME
 from brdr.constants import STABILITY
 from brdr.constants import VERSION_DATE
 from brdr.constants import ZERO_STREAK
-from brdr.enums import AlignerInputType
+from brdr.enums import AlignerInputType, ProcessRemark
 from brdr.enums import AlignerResultType
 from brdr.enums import DiffMetric
 from brdr.enums import Evaluation
@@ -476,10 +476,10 @@ class Aligner:
                 except:
                     resulting_geometry_length = 1
                 if original_geometry_length != resulting_geometry_length:
-                    msg = "Difference in amount of geometries"
-                    self.logger.feedback_debug(msg)
+                    remark = ProcessRemark.CHANGED_AMOUNT_GEOMETRIES
+                    self.logger.feedback_debug(remark)
                     process_result["properties"][REMARK_FIELD_NAME] = (
-                        process_result["properties"][REMARK_FIELD_NAME] + " | " + msg
+                        process_result["properties"][REMARK_FIELD_NAME] + " | " + remark
                     )
 
         self.logger.feedback_info(
@@ -612,13 +612,9 @@ class Aligner:
                 discrete_list=rd_prediction,
                 initial_sample_size=3,
             )
-            #print(non_stable_points)
-            #TODO: remove remark about rd 0 so it is generic to interpolate
             interpolated_cache = create_full_interpolated_dataset(
                 rd_prediction, cache
             )
-            #print(interpolated_cache)
-            # process_result[theme_id]= individual_process_result[theme_id]
             dict_series[theme_id]=interpolated_cache
 
         process_result = AlignerResult(dict_series)
@@ -754,7 +750,7 @@ class Aligner:
                 props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
                 props[PREDICTION_COUNT] = 0
                 props[PREDICTION_SCORE] = -1
-                props[REMARK_FIELD_NAME] = "no predictions available, original returned"
+                props[REMARK_FIELD_NAME] = ProcessRemark.NO_PREDICTION_ORIGINAL_RETURNED
                 dict_predictions_evaluated[theme_id][relevant_distance] = {
                     "result": dict_affected[theme_id],
                     "properties": props,
@@ -850,7 +846,7 @@ class Aligner:
                     relevant_distance = round(0, RELEVANT_DISTANCE_DECIMALS)
                     props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_ORIGINAL
                     props[PREDICTION_SCORE] = -1
-                    props[REMARK_FIELD_NAME] = "multiple predictions, original returned"
+                    props[REMARK_FIELD_NAME] = ProcessRemark.MULTIPLE_PREDICTIONS_ORIGINAL_RETURNED
                     dict_predictions_evaluated[theme_id][relevant_distance] = {
                         "result": dict_affected[theme_id],
                         "properties": props,
@@ -875,7 +871,7 @@ class Aligner:
                 props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
                 props[PREDICTION_SCORE] = -1
                 props[PREDICTION_COUNT] = 0
-                props[REMARK_FIELD_NAME] = "no prediction, original returned"
+                props[REMARK_FIELD_NAME] = ProcessRemark.NO_PREDICTION_ORIGINAL_RETURNED
                 dict_predictions_evaluated[theme_id][relevant_distance] = {
                     "result": dict_affected[theme_id],
                     "properties": props,
@@ -892,9 +888,7 @@ class Aligner:
             )
             props[EVALUATION_FIELD_NAME] = Evaluation.NO_CHANGE
             props[PREDICTION_SCORE] = -1
-            props[REMARK_FIELD_NAME] = (
-                "Unaffected (no change) --> original geometry returned"
-            )
+            props[REMARK_FIELD_NAME] = ProcessRemark.NOT_AFFECTED_ORIGINAL_RETURNED
             dict_predictions_evaluated[theme_id][relevant_distance] = {
                 "result": geom,
                 "properties": props,

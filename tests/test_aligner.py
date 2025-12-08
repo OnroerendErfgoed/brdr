@@ -13,7 +13,7 @@ from brdr.be.grb.loader import GRBActualLoader
 from brdr.configs import ProcessorConfig
 from brdr.constants import AREA_ATTRIBUTE
 from brdr.constants import REMARK_FIELD_NAME
-from brdr.enums import AlignerResultType
+from brdr.enums import AlignerResultType, ProcessRemark
 from brdr.enums import OpenDomainStrategy
 from brdr.geometry_utils import _grid_bounds
 from brdr.geometry_utils import buffer_neg_pos
@@ -473,10 +473,7 @@ class TestAligner(unittest.TestCase):
         )
         rd = 2
         result = self.sample_aligner.process([rd])
-        assert (
-            result.results["theme_id_1"][rd]["properties"][REMARK_FIELD_NAME]
-            == " | Difference in amount of geometries"
-        )
+        assert result.results["theme_id_1"][rd]["properties"][REMARK_FIELD_NAME] == ProcessRemark.CHANGED_AMOUNT_GEOMETRIES
 
     def test_fully_aligned_geojson_output(self):
         aligned_shape = from_wkt(
