@@ -174,6 +174,7 @@ def multi_to_singles(dict_geoms):
     dict_multi_as_single = {}
     for key, geom in dict_geoms.items():
         if geom is None or geom.is_empty:
+            resulting_dict_geoms[key] = geom
             continue
 
         geometries = list(get_geoms_from_geometry(geom))
