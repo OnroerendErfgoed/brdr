@@ -45,7 +45,7 @@ from brdr.enums import AlignerResultType
 from brdr.enums import DiffMetric
 from brdr.enums import Evaluation
 from brdr.enums import FullStrategy
-from brdr.geometry_utils import buffer_neg
+from brdr.geometry_utils import buffer_neg, geometric_equality
 from brdr.geometry_utils import buffer_pos
 from brdr.geometry_utils import extract_points_lines_from_geometry
 from brdr.geometry_utils import safe_difference
@@ -60,7 +60,12 @@ from brdr.topo import dissolve_topo
 from brdr.topo import generate_topo
 from brdr.typings import ProcessResult
 from brdr.typings import ThematicId
-from brdr.utils import coverage_ratio
+from brdr.utils import (
+    coverage_ratio,
+    lazy_discrete_interval_search_interval_check,
+    create_full_interpolated_dataset,
+    recursive_stepwise_interval_check,
+)
 from brdr.utils import determine_stability
 from brdr.utils import diff_from_processresult
 from brdr.utils import diffs_from_dict_processresult
@@ -484,6 +489,119 @@ class Aligner:
         return AlignerResult(dict_series)
 
     def predict(
+        self,
+        relevant_distances=None,
+        *,
+        dict_thematic=None,
+        diff_metric=None,
+    ) -> AlignerResult:
+        if dict_thematic is None or dict_thematic =={}:
+            dict_thematic = self.dict_thematic
+
+        if relevant_distances is None:
+            relevant_distances = [
+                round(k, RELEVANT_DISTANCE_DECIMALS)
+                for k in np.arange(0, 310, 10, dtype=int) / 100
+            ]
+        rd_prediction = list(relevant_distances)
+        max_relevant_distance = max(rd_prediction)
+        cvg_ratio = coverage_ratio(values=relevant_distances, min_val=0, bin_count=10)
+        cvg_ratio_threshold = 0.75
+        # cvg_ratio: indication of the rd values can be used to make a brdr_prediction_score. When there is enough coverage of predictions to determine a prediction_score we also add 0 and a long-range value(+1).
+        # Otherwise we only add a short-range value (+0.1) to check for stability
+        if cvg_ratio > cvg_ratio_threshold:
+            rd_prediction.append(round(0, RELEVANT_DISTANCE_DECIMALS))
+            rd_prediction.append(
+                round(max_relevant_distance + 0.1, RELEVANT_DISTANCE_DECIMALS)
+            )
+            rd_prediction.append(
+                round(max_relevant_distance + 1, RELEVANT_DISTANCE_DECIMALS)
+            )
+        else:
+            rd_prediction.append(
+                round(max_relevant_distance + 0.1, RELEVANT_DISTANCE_DECIMALS)
+            )
+        rd_prediction = list(set(rd_prediction))
+        rd_prediction = sorted(rd_prediction)
+
+        dict_series = {}
+        for theme_id,geom in self.dict_thematic.items():
+
+            def _check_interval_stability(
+                res_start: ProcessResult, res_end: ProcessResult
+            ) -> bool:
+
+                return geometric_equality(
+                res_start["result"],
+                res_end["result"],
+                correction_distance=self.correction_distance,
+                mitre_limit=self.mitre_limit,
+            )
+
+            def _process_result(theme_id,relevant_distances):
+                aligner_result = self.process(
+                    dict_thematic_to_process={theme_id:geom},
+                    relevant_distances=relevant_distances,
+                )
+                rd=relevant_distances[0]
+                return aligner_result.results[theme_id][rd]
+
+            def _process_wrapper(x: float):
+                return _process_result(theme_id=theme_id,relevant_distances=[x])
+
+            non_stable_points,cache = recursive_stepwise_interval_check(
+                f_value=_process_wrapper,
+                f_condition=_check_interval_stability,
+                discrete_list=rd_prediction,
+                initial_sample_size=3,
+            )
+            print(non_stable_points)
+            #TODO: remove remark about rd 0 so it is generic to interpolate
+            interpolated_cache = create_full_interpolated_dataset(
+                rd_prediction, cache
+            )
+            print(interpolated_cache)
+            # process_result[theme_id]= individual_process_result[theme_id]
+            dict_series[theme_id]=interpolated_cache
+
+        process_result = AlignerResult(dict_series)
+        if diff_metric is None:
+            diff_metric = self.diff_metric
+        diffs_dict = {}
+        for theme_id, dict_processresult in process_result.results.items():
+            diffs = diffs_from_dict_processresult(
+                dict_processresult,
+                dict_thematic[theme_id],
+                self._get_reference_union(),
+                diff_metric=diff_metric,
+            )
+            diffs_dict[theme_id] = diffs
+            if len(diffs) != len(rd_prediction):
+                self.logger.feedback_warning(
+                    f"Number of computed diffs for thematic element {theme_id} does "
+                    f"not match the number of relevant distances."
+                )
+                continue
+            diff_values = list(diffs.values())
+            dict_stability = determine_stability(rd_prediction, diff_values)
+            for rd in rd_prediction:
+                if rd not in relevant_distances:
+                    del process_result.results[theme_id][rd]
+                    continue
+                process_result.results[theme_id][rd]["properties"][STABILITY] = (
+                    dict_stability[rd][STABILITY]
+                )
+                if dict_stability[rd][ZERO_STREAK] is not None:
+                    if cvg_ratio > cvg_ratio_threshold:
+                        process_result.results[theme_id][rd]["properties"][
+                            PREDICTION_SCORE
+                        ] = dict_stability[rd][ZERO_STREAK][3]
+
+        self.diffs_dict=diffs_dict
+        self.count_predictions(process_result.results)
+        return process_result
+
+    def predict2(
         self,
         relevant_distances=None,
         *,

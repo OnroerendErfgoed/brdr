@@ -33,13 +33,14 @@ if __name__ == "__main__":
     )
     relevant_distance = 5
     # Align the thematic object on the parcelborders of 2022, to simulate a base-situation
-    base_process_result = base_aligner.process(relevant_distance=relevant_distance)
+    base_process_result = base_aligner.process(relevant_distances=[relevant_distance])
 
     # Collect the base-situation (base-geometries and the brdr_formula from that moment
     thematic_dict_formula = {}
     thematic_dict_result = {}
-    for key in base_process_result:
-        thematic_dict_result[key] = base_process_result[key][relevant_distance][
+    base_results =base_process_result.results
+    for key in base_results:
+        thematic_dict_result[key] = base_results[key][relevant_distance][
             "result"
         ]
         thematic_dict_formula[key] = {
@@ -82,12 +83,12 @@ if __name__ == "__main__":
         base_formula_field=name_formula,
         relevant_distances=np.arange(0, 310, 10, dtype=int) / 100,
     )
-
+    dict_evaluated.get_results(result_type=AlignerResultType.EVALUATED_PREDICTIONS)
     # SHOW the EVALUATED results
-    fc = actual_aligner.get_results_as_geojson(
-        resulttype=AlignerResultType.EVALUATED_PREDICTIONS,
+    fc =dict_evaluated.get_results_as_geojson(
         formula=True,
         attributes=True,
+        aligner=actual_aligner
     )
     print(fc["result"])
 
