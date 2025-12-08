@@ -123,6 +123,7 @@ class AlignerResult:
         aligner,
         formula=False,
         attributes=False,
+        result_type: AlignerResultType = AlignerResultType.PROCESSRESULTS,
     ):
         """
         get a geojson of a dictionary containing the resulting geometries for all
@@ -133,10 +134,10 @@ class AlignerResult:
 
         if self.results is None or self.results == {}:
             raise ValueError("Empty results: No calculated results to export.")
-
+        results = self.get_results(result_type=result_type)
         prop_dictionary = defaultdict(dict)
 
-        for theme_id, results_dict in self.results.items():
+        for theme_id, results_dict in results.items():
             nr_calculations = len(results_dict)
             for relevant_distance, process_result in results_dict.items():
                 properties = process_result["properties"]
@@ -176,7 +177,7 @@ class AlignerResult:
                         json.dumps(formula)
                     )
         return get_dict_geojsons_from_series_dict(
-            self.results,
+            results,
             crs=aligner.CRS,
             id_field=aligner.name_thematic_id,
             series_prop_dict=prop_dictionary,
@@ -595,8 +596,6 @@ class Aligner:
             )
 
             def _process_result(theme_id,relevant_distances):
-                if theme_id==276:
-                    pass
                 aligner_result = self.process(
                     dict_thematic_to_process={theme_id:geom},
                     relevant_distances=relevant_distances,

@@ -34,7 +34,7 @@ base_year = "2022"
 # reference-polygons of the base-year
 base_correction = 2
 # geometries bigger than this, will be excluded
-excluded_area = 1000
+excluded_area = 500
 # max_distance_for_actualisation  of relevant distance that is used to check if we can auto-align the geometries
 # to the actual reference-polygons to get an 'equal' formula
 max_distance_for_actualisation = 2
@@ -75,9 +75,7 @@ print("Process base objects")
 starttime = datetime.now()
 base_process_result = base_aligner.process(relevant_distances=[base_correction])
 # get resulting aligned features on Adpfxxxx, with formula
-
-base_process_result.get_results()
-processresults = base_process_result.get_results_as_geojson(aligner=base_aligner)
+processresults = base_process_result.get_results_as_geojson(aligner=base_aligner,formula=True)
 if len(processresults) == 0:
     print("empty processresults")
     exit()
