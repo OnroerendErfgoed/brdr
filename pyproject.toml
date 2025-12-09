@@ -31,6 +31,7 @@ dependencies = [
     "shapely~=2.0",
     "topojson>=1.10",
     "networkx>=3.3",
+    "pyproj>=3.7.2",
     "osmnx~=2.0",
     "geopandas>=1.1"
 ]
