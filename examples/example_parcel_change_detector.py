@@ -102,8 +102,8 @@ counter_equality_by_alignment = 0
 counter_prediction_unique = 0
 counter_difference = 0
 counter_no_change = 0
-# TODO:  counter_difference collects al the 'TO_CHECK's' but these are multiple  proposals, so clean up the stats
-# TODO: Move this as general output from the updater?
+
+# #270: Move this as general output from the updater?
 for feature in fcs["result"]["features"]:
     if EVALUATION_FIELD_NAME in feature["properties"].keys():
         ev = feature["properties"][EVALUATION_FIELD_NAME]

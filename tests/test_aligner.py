@@ -195,12 +195,12 @@ class TestAligner(unittest.TestCase):
         loader = DictLoader(reference_dict)
         aligner.load_reference_data(loader)
         relevant_distance = 5
-        dict_processresults = aligner.process([relevant_distance], max_workers=-1)
-        # TODO-check!
-        # self.assertEqual(
-        #     dict_processresults["theme_id_1"][relevant_distance]["result"].geom_type,
-        #     "GeometryCollection",
-        # )
+        aligner_result = aligner.process([relevant_distance], max_workers=-1)
+        process_results= aligner_result.get_results()
+        self.assertEqual(
+            process_results["theme_id_1"][relevant_distance]["result"].geom_type,
+            "Polygon",
+        )
 
     def test_load_reference_data_grb_actual_adp(self):
         thematic_dict = {

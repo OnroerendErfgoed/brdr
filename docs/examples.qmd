@@ -13,7 +13,7 @@ This example shows a basic example of the Aligner
 #| fig-cap: "basic example"
 {{< include ../examples/example_readme.py >}}
 ```
-This example shows a plotted example - (todo)
+This example shows a plotted example
 
 ```{python}
 #| fig-cap: "plotted example"
