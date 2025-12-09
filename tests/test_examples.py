@@ -5,7 +5,7 @@ from brdr.aligner import Aligner
 from brdr.be.grb.enums import GRBType
 from brdr.be.grb.loader import GRBActualLoader
 from brdr.be.oe.loader import OnroerendErfgoedLoader
-from brdr.be.oe.utils import get_oe_dict_by_ids
+
 from brdr.loader import DictLoader
 from brdr.loader import GeoJsonLoader
 from tests.testdata.responses import mercator_responses
@@ -13,18 +13,23 @@ from tests.testdata.responses import mercator_responses
 
 class TestExamples:
 
-    @pytest.mark.usefixtures("mock_inventaris_responses")
     @pytest.mark.usefixtures("callback_grb_response")
-    def test_example_131635(self):
+    def test_example_131635(self,requests_mock):
+        requests_mock.add(
+            requests_mock.GET,
+            "https://www.mercator.vlaanderen.be/raadpleegdienstenmercatorpubliek/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAMES=ps%3Aps_aandobj&SRSNAME=http%3A%2F%2Fwww.opengis.net%2Fdef%2Fcrs%2FEPSG%2F0%2F31370&outputFormat=application%2Fjson&limit=10000&CQL_FILTER=aanduid_id+IN+%28131635%29",
+            json=mercator_responses.response1,
+            status=200,
+        )
         # EXAMPLE
         aligner = Aligner()
-        dict_theme = get_oe_dict_by_ids([131635])
-        loader = DictLoader(dict_theme)
+        loader = OnroerendErfgoedLoader([131635])
         aligner.load_thematic_data(loader)
         loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         aligner.load_reference_data(loader)
         rel_dist = 2
         aligner.process(relevant_distances=[rel_dist])
+        assert True
 
     @pytest.mark.usefixtures("callback_grb_response")
     def test_example_combined_borders_adp_gbg(self, requests_mock):
@@ -185,13 +190,19 @@ class TestExamples:
         fcs = prediction_result.get_results_as_geojson(aligner, formula=True)
         assert len(fcs) == 6
 
+
     @pytest.mark.usefixtures("callback_grb_response")
-    @pytest.mark.usefixtures("mock_inventaris_responses")
-    def test_example_wanted_changes(self):
+    def test_example_wanted_changes(self, requests_mock):
+        requests_mock.add(
+            requests_mock.GET,
+            "https://www.mercator.vlaanderen.be/raadpleegdienstenmercatorpubliek/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAMES=ps%3Aps_aandobj&SRSNAME=http%3A%2F%2Fwww.opengis.net%2Fdef%2Fcrs%2FEPSG%2F0%2F31370&outputFormat=application%2Fjson&limit=10000&CQL_FILTER=aanduid_id+IN+%28131635%29",
+            json=mercator_responses.response1,
+            status=200,
+        )
         aligner = Aligner()
-        # Load thematic data & reference data
-        dict_theme = get_oe_dict_by_ids([131635])
-        aligner.load_thematic_data(DictLoader(dict_theme))
+        loader = OnroerendErfgoedLoader([131635])
+        aligner.load_thematic_data(loader)
+
         aligner.load_reference_data(
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         )
@@ -219,11 +230,18 @@ class TestExamples:
                 #     )
                 #     aligner.process(relevant_distance=st[0], od_strategy=4)
 
-    def test_example_predictor(self):
+
+    @pytest.mark.usefixtures("callback_grb_response")
+    def test_example_predictor(self,requests_mock):
+        requests_mock.add(
+            requests_mock.GET,
+            "https://www.mercator.vlaanderen.be/raadpleegdienstenmercatorpubliek/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAMES=ps%3Aps_aandobj&SRSNAME=http%3A%2F%2Fwww.opengis.net%2Fdef%2Fcrs%2FEPSG%2F0%2F31370&outputFormat=application%2Fjson&limit=10000&CQL_FILTER=aanduid_id+IN+%28131635%29",
+            json=mercator_responses.response1,
+            status=200,
+        )
         aligner = Aligner()
-        # Load thematic data & reference data
-        dict_theme = get_oe_dict_by_ids([131635])
-        aligner.load_thematic_data(DictLoader(dict_theme))
+        loader = OnroerendErfgoedLoader([131635])
+        aligner.load_thematic_data(loader)
         aligner.load_reference_data(
             GRBActualLoader(aligner=aligner, grb_type=GRBType.GBG, partition=1000)
         )

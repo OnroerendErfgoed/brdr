@@ -5,7 +5,7 @@ import shapely
 from shapely import is_empty
 from shapely.geometry import Polygon
 
-from brdr.be.oe.utils import get_oe_dict_by_ids
+
 from brdr.constants import MULTI_SINGLE_ID_SEPARATOR
 from brdr.typings import ProcessResult
 from brdr.utils import get_collection, diffs_from_dict_processresult
@@ -86,40 +86,6 @@ class TestUtils(unittest.TestCase):
         # Assert new keys are used
         for key in result.keys():
             self.assertTrue(key.isdigit())
-
-    def test_get_oe_dict_by_ids(self):
-        aanduid_id = 131635
-        dict_thematic = get_oe_dict_by_ids([aanduid_id])
-        self.assertFalse(is_empty(dict_thematic[str(aanduid_id)]))
-
-    # def test_get_oe_dict_by_ids_erfgoedobject(self):
-    #     eo_id = 206363
-    #     dict_thematic = get_oe_dict_by_ids([eo_id], oetype=OEType.EO)
-    #     self.assertFalse(is_empty(dict_thematic[str(eo_id)]))
-    #
-    # def test_get_oe_dict_by_ids_empty(self):
-    #     dict_thematic = get_oe_dict_by_ids([])
-    #     self.assertEqual(dict_thematic, {})
-    #
-    # def test_get_oe_dict_by_ids_not_existing(self):
-    #     aanduid_id = -1
-    #     dict_thematic = get_oe_dict_by_ids([aanduid_id])
-    #     self.assertEqual(dict_thematic, {})
-
-    # def test_filter_dict_by_key_empty_dict(self):
-    #     data = {}
-    #     result = filter_dict_by_key(data, "key")
-    #     self.assertEqual(result, {})
-    #
-    # def test_filter_dict_by_key_single_match(self):
-    #     data = {"key1": "value1", "key2": "value2"}
-    #     result = filter_dict_by_key(data, "key1")
-    #     self.assertEqual(result, {"key1": "value1"})
-    #
-    # def test_filter_dict_by_key_no_match(self):
-    #     data = {"key1": "value1", "key2": "value2"}
-    #     result = filter_dict_by_key(data, "key3")
-    #     self.assertEqual(result, {})
 
     def test_diffs_from_dict_series_complete(self):
         """Tests diffs_from_dict_series with complete data."""

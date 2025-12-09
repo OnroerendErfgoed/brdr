@@ -12,59 +12,6 @@ from brdr.utils import get_collection_by_partition
 log = logging.getLogger(__name__)
 
 
-def get_oe_dict_by_ids(objectids, oetype=OEType.AO):
-    """
-    Fetches thematic data for a list of objectIDs from the Inventaris Onroerend Erfgoed
-    API.
-
-    This function retrieves information about designated heritage objects
-    (erfgoedobjecten or aanduidingsobjecten) from the Flemish Agency for Heritage (
-    Inventaris Onroerend Erfgoed) based on a list of their IDs.
-
-    Args:
-        objectids (list): A list of objectIDs of 'erfgoedobjecten' or
-            'aanduidingsobjecten'.
-        oetype (string): A string: 'aanduidingsobjecten' (default) or 'erfgoedobjecten'
-
-    Returns:
-        dict: A dictionary where keys are objectIDs (as strings) and values are
-              GeoJSON geometry objects. If an erfgoedobject/aanduidingsobject is not
-              found, a corresponding warning message will be logged, but it won't be\
-              included in the returned dictionary.
-
-    Raises:
-        requests.exceptions.RequestException: If there is an error fetching data from
-            the API.
-    """
-    logging.warning("deprecated method, use OnroerendErfgoedLoader instead")
-    # TODO remove function
-    dict_thematic = {}
-    if oetype == OEType.AO:
-        typename = "aanduidingsobjecten"
-        # id_property = "aanduid_id"
-    elif oetype == OEType.EO:
-        typename = "erfgoedobjecten"
-        # id_property = "erfgoed_id"
-    else:
-        logging.warning(
-            "Undefined OE-type: " + str(oetype) + ": Empty collection returned"
-        )
-        return {}, None
-
-    base_url = "https://inventaris.onroerenderfgoed.be/" + typename + "/"
-    headers = {"Accept": "application/json"}
-    for a in objectids:
-        url = base_url + str(a)
-        response = requests.get(url, headers=headers).json()
-        if "id" in response.keys():
-            key = str(response["id"])
-            geom = shape(response["locatie"]["contour"])
-            dict_thematic[key] = geom
-        else:
-            logging.warning("object id " + str(a) + " not available in " + oetype)
-    return dict_thematic
-
-
 def get_collection_oe_objects(
     oetype=OEType.AO,
     objectids=None,
