@@ -536,7 +536,7 @@ def geojson_to_dicts(collection, id_property):
     for f in collection["features"]:
         key = f["properties"][
             id_property
-        ]  # TODO to check if this has to be converted to string?
+        ]
         geom = shape(f["geometry"])
         data_dict[key] = make_valid(geom)
         data_dict_properties[key] = f["properties"]

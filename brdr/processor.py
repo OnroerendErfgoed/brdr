@@ -255,7 +255,7 @@ class BaseProcessor(ABC):
         )
         # Correction for Inner holes(donuts) / multipolygons
         # fill and remove gaps
-        # TODO improvement: when relevant_distance very big (fe 100m) it could happen that parts of multipolygon-results will be removed unintentionally because part smaller than negative buffer
+        # #269 improvement: when relevant_distance very big (fe 100m) it could happen that parts of multipolygon-results will be removed unintentionally because part smaller than negative buffer
         geom_thematic_cleaned_holes = fill_and_remove_gaps(
             geom_thematic_preresult, buffer_distance
         )
@@ -506,7 +506,6 @@ class SnapGeometryProcessor(BaseProcessor):
                 reference_union,
                 correction_distance,
                 mitre_limit,
-                # TODO missing params
                 False,
             )
         if self.config.od_strategy == OpenDomainStrategy.EXCLUDE:
@@ -1215,7 +1214,7 @@ class NetworkGeometryProcessor(BaseProcessor):
         segments.extend(list(reference_intersection.geoms))
         segments.extend(list(thematic_difference.geoms))
 
-        # add extra segments (connectionlines between theme and reference)
+        # add extra segments (connection lines between theme and reference)
         extra_segments = []
         for geom in thematic_difference.geoms:
             p_start = Point(geom.coords[0])
@@ -1241,7 +1240,7 @@ class NetworkGeometryProcessor(BaseProcessor):
         segments.extend(extra_segments)
 
         # add extra segments (connection lines between reference_intersections)
-        # TODO, when passing OpenDomain, there is not always connection between the reference-parts. How to solve this?
+        # #268 ?when passing OpenDomain, there is not always connection between the reference-parts. How to solve this?
         extra_segments_ref_intersections = shortest_connections_between_geometries(
             reference_intersection
         )
