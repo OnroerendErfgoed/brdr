@@ -58,8 +58,16 @@ if __name__ == "__main__":
         threshold_overlap_percentage=50,
     )
     # SHOW results: map and plotted changes
-    filename="test.gif"
-    animated_map(dict_results, aligner.dict_thematic, aligner.dict_reference,relevant_distances[-1],25,150,filename)
+    filename = "test.gif"
+    animated_map(
+        dict_results,
+        aligner.dict_thematic,
+        aligner.dict_reference,
+        relevant_distances[-1],
+        25,
+        150,
+        filename,
+    )
     resulting_areas = aligner.get_diff_metrics(
         dict_processresults=dict_results,
         dict_thematic=aligner.dict_thematic,
