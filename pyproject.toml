@@ -30,6 +30,7 @@ dependencies = [
     "shapely~=2.0",
     "topojson>=1.10",
     "networkx>=3.3",
+    "pyproj>=3.6.1",
     "osmnx~=2.0",
     "geopandas>=1.1"
 ]
@@ -47,11 +48,11 @@ test = [
 ]
 dev = [
     "brdr[test]",
-    "black==25.1.0",
+    "black>=25.1.0",
     "flake8==7.1.1",
     "geopandas==1.1.0",
-    "hatchling==1.27.0",
-    "matplotlib==3.8.4",
+    "hatchling>=1.28.0",
+    "matplotlib==3.10.7",
     "mypy==1.13.0",
     "pip-tools==7.4.1",
     "types-requests==2.31.0.20240406",

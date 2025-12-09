@@ -1,6 +1,7 @@
 # GRB_CONSTANTS
 # max buffer (m) around thematic geometry to download reference parcels
 GRB_MAX_REFERENCE_BUFFER = 10
+GRB_SUPPORTED_CRS = ["EPSG:31370", "EPSG:3812"]
 
 # URL of the OGC feature API of actual GRB to extract collections
 GRB_FEATURE_URL = "https://geo.api.vlaanderen.be/GRB/ogc/features/collections"

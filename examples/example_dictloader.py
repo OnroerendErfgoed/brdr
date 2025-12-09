@@ -24,11 +24,10 @@ if __name__ == "__main__":
     aligner.load_reference_data(loader)
     # EXECUTE THE ALIGNMENT
     relevant_distance = 5
-    process_result = aligner.process(
-        relevant_distance=relevant_distance,
-        od_strategy=OpenDomainStrategy.SNAP_INNER_SIDE,
-        threshold_overlap_percentage=50,
+    aligner_result = aligner.process(
+        relevant_distances=[relevant_distance]
     )
+    process_result=aligner_result.get_results()
     # PRINT RESULTS IN WKT
     print("result: " + process_result[id][relevant_distance]["result"].wkt)
     print(

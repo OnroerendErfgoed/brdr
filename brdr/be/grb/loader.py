@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime
 
-from brdr.be.grb.constants import GRB_MAX_REFERENCE_BUFFER
+from brdr.be.grb.constants import GRB_MAX_REFERENCE_BUFFER, GRB_SUPPORTED_CRS
 from brdr.be.grb.constants import GRB_PARCEL_ID
 from brdr.be.grb.constants import GRB_VERSION_DATE
 from brdr.be.grb.enums import GRBType
@@ -14,23 +14,32 @@ from brdr.constants import (
     DATE_FORMAT,
     VERSION_DATE,
 )
-from brdr.geometry_utils import buffer_pos
+from brdr.geometry_utils import buffer_pos, to_crs
 from brdr.loader import GeoJsonLoader
 
 log = logging.getLogger(__name__)
 
+
 datetime_format_TZ = "%Y-%m-%dT%H:%M:%SZ"
+
+def check_crs(aligner):
+    if not aligner.CRS in (to_crs(element) for element in GRB_SUPPORTED_CRS):
+        raise ValueError(
+            f"This GRB Loader only supports alignment in CRS '{GRB_SUPPORTED_CRS}' while CRS '{aligner.CRS}' is used"
+        )
 
 
 class GRBActualLoader(GeoJsonLoader):
     def __init__(self, grb_type: GRBType, aligner, partition: int = 1000):
         super().__init__()
-        # TODO add a check that CRS of aligner is supported. The GRB-API handles all kind of CRS, but maybe we only accept the logic ones?
         self.aligner = aligner
+        check_crs(self.aligner)
         self.grb_type = grb_type
         self.part = partition
         self.data_dict_source["source"] = grb_type.value
         self.versiondate_info = {"name": GRB_VERSION_DATE, "format": DATE_FORMAT}
+
+
 
     def load_data(self):
         if not self.aligner.dict_thematic:
@@ -55,6 +64,7 @@ class GRBFiscalParcelLoader(GeoJsonLoader):
     def __init__(self, year: str, aligner, partition=1000):
         super().__init__(_input=None, id_property=GRB_PARCEL_ID)
         self.aligner = aligner
+        check_crs(self.aligner)
         self.year = year
         self.part = partition
         self.data_dict_source["source"] = "Adpf"
@@ -97,6 +107,7 @@ class GRBSpecificDateParcelLoader(GeoJsonLoader):
             )
         super().__init__(_input=None, id_property=GRB_PARCEL_ID)
         self.aligner = aligner
+        check_crs(self.aligner)
         self.date = date
         self.part = partition
         self.data_dict_source["source"] = "Adp"
