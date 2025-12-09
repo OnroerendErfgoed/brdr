@@ -10,10 +10,6 @@ from brdr.loader import GeoJsonLoader
 log = logging.getLogger(__name__)
 
 
-
-
-
-
 class OnroerendErfgoedLoader(GeoJsonLoader):
     def __init__(
         self,

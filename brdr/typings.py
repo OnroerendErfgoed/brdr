@@ -40,4 +40,5 @@ class ProcessResult(TypedDict, total=False):
     result_relevant_diff: BaseGeometry
     properties: Dict[str, Any]
 
+
 ThematicId = Union[str, int]

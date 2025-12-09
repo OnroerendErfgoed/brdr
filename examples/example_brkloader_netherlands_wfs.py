@@ -21,7 +21,12 @@ if __name__ == "__main__":
     aligner.load_thematic_data(loader)
 
     # Use BRKLoader for the reference data
-    loader = WFSReferenceLoader(url="https://service.pdok.nl/kadaster/kadastralekaart/wfs/v5_0",id_property="identificatieLokaalID",typename="kadastralekaart:Perceel",aligner=aligner)
+    loader = WFSReferenceLoader(
+        url="https://service.pdok.nl/kadaster/kadastralekaart/wfs/v5_0",
+        id_property="identificatieLokaalID",
+        typename="kadastralekaart:Perceel",
+        aligner=aligner,
+    )
     aligner.load_reference_data(loader)
     # EXECUTE THE ALIGNMENT
     relevant_distance = 5

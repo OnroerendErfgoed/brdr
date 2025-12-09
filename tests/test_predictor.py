@@ -73,7 +73,9 @@ class TestAligner(unittest.TestCase):
 
         series = np.arange(0, 810, 10, dtype=int) / 100
         # predict which relevant distances are interesting to propose as resulting geometry
-        dict_predictions = aligner.predict(series).get_results(AlignerResultType.PREDICTIONS)
+        dict_predictions = aligner.predict(series).get_results(
+            AlignerResultType.PREDICTIONS
+        )
         assert len(dict_predictions["id1"]) >= 1
 
     @pytest.mark.usefixtures("callback_grb_response")

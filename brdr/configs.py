@@ -46,4 +46,3 @@ class ProcessorConfig:
     partial_snap_strategy: SnapStrategy = SnapStrategy.PREFER_VERTICES
     partial_snap_max_segment_length: int = 2
     area_limit: int = None
-

@@ -23,10 +23,10 @@ def get_collection_brk(
     brk_type=BRKType.perceel,
     partition=1000,
     limit=DOWNLOAD_LIMIT,
-    crs=BRK_CRS
+    crs=BRK_CRS,
 ):
-    crs=to_crs(crs)
-    url = BRK_FEATURE_URL+ "/"+ brk_type.name + "/items?"
+    crs = to_crs(crs)
+    url = BRK_FEATURE_URL + "/" + brk_type.name + "/items?"
 
     name_reference_id = BRK_GENERIC_ID
     params = {"limit": limit, "crs": from_crs(crs), "f": "json"}
@@ -53,8 +53,10 @@ class BRKLoader(GeoJsonLoader):
     def load_data(self):
         if not self.aligner.dict_thematic:
             raise ValueError("Thematic data not loaded")
-        if self.aligner.CRS!= to_crs(BRK_CRS):
-            raise ValueError(f"BRKLoader only supports alignment in CRS '{BRK_CRS}' while CRS '{self.aligner.CRS}' is used")
+        if self.aligner.CRS != to_crs(BRK_CRS):
+            raise ValueError(
+                f"BRKLoader only supports alignment in CRS '{BRK_CRS}' while CRS '{self.aligner.CRS}' is used"
+            )
         geom_union = buffer_pos(
             self.aligner.get_thematic_union(), BRK_MAX_REFERENCE_BUFFER
         )

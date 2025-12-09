@@ -38,11 +38,9 @@ if __name__ == "__main__":
     # Collect the base-situation (base-geometries and the brdr_formula from that moment
     thematic_dict_formula = {}
     thematic_dict_result = {}
-    base_results =base_process_result.results
+    base_results = base_process_result.results
     for key in base_results:
-        thematic_dict_result[key] = base_results[key][relevant_distance][
-            "result"
-        ]
+        thematic_dict_result[key] = base_results[key][relevant_distance]["result"]
         thematic_dict_formula[key] = {
             name_formula: json.dumps(
                 base_aligner.get_brdr_formula(thematic_dict_result[key])
@@ -85,10 +83,8 @@ if __name__ == "__main__":
     )
     dict_evaluated.get_results(result_type=AlignerResultType.EVALUATED_PREDICTIONS)
     # SHOW the EVALUATED results
-    fc =dict_evaluated.get_results_as_geojson(
-        formula=True,
-        attributes=True,
-        aligner=actual_aligner
+    fc = dict_evaluated.get_results_as_geojson(
+        formula=True, attributes=True, aligner=actual_aligner
     )
     print(fc["result"])
 

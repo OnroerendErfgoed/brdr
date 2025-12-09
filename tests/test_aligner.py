@@ -473,7 +473,9 @@ class TestAligner(unittest.TestCase):
         )
         rd = 2
         result = self.sample_aligner.process([rd])
-        assert result.results["theme_id_1"][rd]["properties"][REMARK_FIELD_NAME] == [ProcessRemark.CHANGED_AMOUNT_GEOMETRIES]
+        assert result.results["theme_id_1"][rd]["properties"][REMARK_FIELD_NAME] == [
+            ProcessRemark.CHANGED_AMOUNT_GEOMETRIES
+        ]
 
     def test_fully_aligned_geojson_output(self):
         aligned_shape = from_wkt(

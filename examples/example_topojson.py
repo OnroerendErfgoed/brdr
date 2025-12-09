@@ -25,11 +25,11 @@ aligner.load_reference_data(
 # PREDICT the 'stable' relevant distances, for a series of relevant distances
 series = np.arange(0, 210, 20, dtype=int) / 100
 # predict which relevant distances are interesting to propose as resulting geometry
-predictions= aligner.predict(
+predictions = aligner.predict(
     relevant_distances=series,
 )
 dict_predictions = predictions.get_results(result_type=AlignerResultType.PREDICTIONS)
-diffs=aligner.diffs_dict
+diffs = aligner.diffs_dict
 # SHOW results of the predictions
 fcs = predictions.get_results_as_geojson(aligner=aligner)
 if fcs is None or "result" not in fcs:

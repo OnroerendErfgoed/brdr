@@ -137,7 +137,6 @@ class TestUtils(unittest.TestCase):
             dict_processresult, geom_thematic, reference_union=None
         )
 
-
     @pytest.mark.usefixtures("callback_grb_response")
     def test_get_collection(self):
         base_year = 2023
@@ -149,8 +148,8 @@ class TestUtils(unittest.TestCase):
             + str(base_year)
             + "/items?"
         )
-        params = {"limit":limit,"crs":crs,"bbox-crs":crs,"bbox":bbox}
-        collection = get_collection(url=ref_url,params=params)
+        params = {"limit": limit, "crs": crs, "bbox-crs": crs, "bbox": bbox}
+        collection = get_collection(url=ref_url, params=params)
         self.assertTrue("features" in collection.keys())
 
     def test_merge_process_results(self):

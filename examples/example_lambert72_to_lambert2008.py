@@ -42,27 +42,30 @@ if __name__ == "__main__":
     )
     print("Reference-data loaded")
     #
-    rd=2
-    dict_processresults = aligner72.process(relevant_distance=rd,od_strategy=OpenDomainStrategy.SNAP_ALL_SIDE)
+    rd = 2
+    dict_processresults = aligner72.process(
+        relevant_distance=rd, od_strategy=OpenDomainStrategy.SNAP_ALL_SIDE
+    )
     print("Processed")
-    dict08={}
+    dict08 = {}
     # transform features (72-->2008)
-    for key,processresult in dict_processresults.items():
-        dict08[key] = transform_geom_31370_to_3812(processresult[rd]['result'])
+    for key, processresult in dict_processresults.items():
+        dict08[key] = transform_geom_31370_to_3812(processresult[rd]["result"])
 
     # Align to GRB (2008)
-    aligner08= Aligner(crs="EPSG:3812")
+    aligner08 = Aligner(crs="EPSG:3812")
     loader = DictLoader(dict08)
     # loader = GeoJsonLoader(id_property=id,_input=fcs)
     aligner08.load_thematic_data(loader)
     aligner08.load_reference_data(
         GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner08)
     )
-    rd08=0.5
-    dict_processresults08 = aligner08.process(relevant_distance=rd08,od_strategy=OpenDomainStrategy.SNAP_ALL_SIDE)
-    for key,processresult in dict_processresults08.items():
+    rd08 = 0.5
+    dict_processresults08 = aligner08.process(
+        relevant_distance=rd08, od_strategy=OpenDomainStrategy.SNAP_ALL_SIDE
+    )
+    for key, processresult in dict_processresults08.items():
 
         print(processresult[rd08]["result"].wkt)
-        print(processresult[rd08]['result_diff'].wkt)
-    show_map(dict_processresults08, aligner08.dict_thematic, aligner08.dict_reference
-        )
+        print(processresult[rd08]["result_diff"].wkt)
+    show_map(dict_processresults08, aligner08.dict_thematic, aligner08.dict_reference)

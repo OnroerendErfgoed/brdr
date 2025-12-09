@@ -26,7 +26,6 @@ class TestExamples:
         rel_dist = 2
         aligner.process(relevant_distances=[rel_dist])
 
-
     @pytest.mark.usefixtures("callback_grb_response")
     def test_example_combined_borders_adp_gbg(self, requests_mock):
         requests_mock.add(
@@ -38,8 +37,12 @@ class TestExamples:
         aligner = Aligner()
         loader = OnroerendErfgoedLoader([131635])
         aligner.load_thematic_data(loader)
-        adp_loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
-        gbg_loader = GRBActualLoader(grb_type=GRBType.GBG, partition=1000, aligner=aligner)
+        adp_loader = GRBActualLoader(
+            grb_type=GRBType.ADP, partition=1000, aligner=aligner
+        )
+        gbg_loader = GRBActualLoader(
+            grb_type=GRBType.GBG, partition=1000, aligner=aligner
+        )
         dict_ref, dict_ref_properties_adp, source_adp = adp_loader.load_data()
         dict_ref2, dict_ref_properties_gbg, source_gbg = gbg_loader.load_data()
         dict_ref.update(dict_ref2)  # combine 2 dictionaries
@@ -50,7 +53,6 @@ class TestExamples:
         process_result = aligner.process(relevant_distances=[rel_dist])
         for process_results in process_result.results.values():
             aligner.get_brdr_formula(process_results[rel_dist]["result"])
-
 
     @pytest.mark.usefixtures("callback_grb_response")
     def test_example_multipolygon(self):
@@ -200,7 +202,9 @@ class TestExamples:
         # Example how to use a series (for histogram)
         series = np.arange(0, 310, 10, dtype=int) / 100
         process_result = aligner.process(relevant_distances=series)
-        resulting_areas = aligner.get_diff_metrics(process_result.results, aligner.dict_thematic)
+        resulting_areas = aligner.get_diff_metrics(
+            process_result.results, aligner.dict_thematic
+        )
         for key in resulting_areas:
             if len(resulting_areas[key]) == len(series):
                 lst_diffs = list(resulting_areas[key].values())

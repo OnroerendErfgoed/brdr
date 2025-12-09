@@ -101,7 +101,6 @@ class TestEvaluate(unittest.TestCase):
     #     geojson = geojson_to_multi(fcs["result"])
     #     # print(geojson)
 
-
     @pytest.mark.usefixtures("mock_grb_response2")
     def test_evaluate_full_strategy_no_full(self):
         thematic_dict = {
@@ -121,7 +120,9 @@ class TestEvaluate(unittest.TestCase):
         )
         assert len(evaluation_result.results["theme_id_1"]) > 1
         assert (
-            evaluation_result.results["theme_id_1"][3.5]["properties"]["brdr_evaluation"]
+            evaluation_result.results["theme_id_1"][3.5]["properties"][
+                "brdr_evaluation"
+            ]
             == Evaluation.TO_CHECK_PREDICTION_MULTI_FULL
         )
 
@@ -143,7 +144,9 @@ class TestEvaluate(unittest.TestCase):
         )
         assert len(evaluation_result.results["theme_id_1"]) > 1
         assert (
-            evaluation_result.results["theme_id_1"][3.5]["properties"][EVALUATION_FIELD_NAME]
+            evaluation_result.results["theme_id_1"][3.5]["properties"][
+                EVALUATION_FIELD_NAME
+            ]
             == Evaluation.TO_CHECK_PREDICTION_FULL
         )
 
@@ -166,7 +169,9 @@ class TestEvaluate(unittest.TestCase):
         )
         assert len(evaluation_result.results["theme_id_1"]) == 1
         assert (
-            evaluation_result.results["theme_id_1"][3.5]["properties"][EVALUATION_FIELD_NAME]
+            evaluation_result.results["theme_id_1"][3.5]["properties"][
+                EVALUATION_FIELD_NAME
+            ]
             == Evaluation.PREDICTION_UNIQUE_FULL
         )
 
@@ -239,9 +244,9 @@ class TestEvaluate(unittest.TestCase):
         )
         assert len(evaluation_result.results["theme_id_1"]) == 1
         assert (
-            evaluation_result.results["theme_id_1"][list(evaluation_result.results["theme_id_1"].keys())[0]][
-                "properties"
-            ][PREDICTION_COUNT]
+            evaluation_result.results["theme_id_1"][
+                list(evaluation_result.results["theme_id_1"].keys())[0]
+            ]["properties"][PREDICTION_COUNT]
             > 1
         )
 
@@ -266,7 +271,9 @@ class TestEvaluate(unittest.TestCase):
         )
         assert len(evaluation_result.results["theme_id_1"]) == 1
         assert (
-            evaluation_result.results["theme_id_1"][0]["properties"][EVALUATION_FIELD_NAME]
+            evaluation_result.results["theme_id_1"][0]["properties"][
+                EVALUATION_FIELD_NAME
+            ]
             == Evaluation.TO_CHECK_ORIGINAL
         )
 
@@ -291,7 +298,9 @@ class TestEvaluate(unittest.TestCase):
         )
         assert len(evaluation_result.results["theme_id_1"]) == 1
         assert (
-            evaluation_result.results["theme_id_1"][0]["properties"][EVALUATION_FIELD_NAME]
+            evaluation_result.results["theme_id_1"][0]["properties"][
+                EVALUATION_FIELD_NAME
+            ]
             == Evaluation.TO_CHECK_ORIGINAL
         )
 
@@ -321,7 +330,9 @@ class TestEvaluate(unittest.TestCase):
         )
         assert len(evaluation_result.results["theme_id"]) >= 1
         assert (
-            evaluation_result.results["theme_id"][0]["properties"][EVALUATION_FIELD_NAME]
+            evaluation_result.results["theme_id"][0]["properties"][
+                EVALUATION_FIELD_NAME
+            ]
             == Evaluation.TO_CHECK_PREDICTION_MULTI_FULL
         )
 
@@ -368,8 +379,7 @@ class TestEvaluate(unittest.TestCase):
         reference_dict = {"ref_id": geom_reference}
 
         config = ProcessorConfig(
-            snap_strategy=SnapStrategy.NO_PREFERENCE,
-            snap_max_segment_length=2
+            snap_strategy=SnapStrategy.NO_PREFERENCE, snap_max_segment_length=2
         )
         processor = AlignerGeometryProcessor(config)
         aligner = Aligner(processor=processor)
@@ -493,16 +503,16 @@ class TestEvaluate(unittest.TestCase):
         )
 
         assert (
-            evaluation_result.results[1][list(evaluation_result.results[1].keys())[0]]["properties"][
-                EVALUATION_FIELD_NAME
-            ]
+            evaluation_result.results[1][list(evaluation_result.results[1].keys())[0]][
+                "properties"
+            ][EVALUATION_FIELD_NAME]
             == Evaluation.PREDICTION_UNIQUE_FULL
         )
         assert (
-            evaluation_result.results[2][list(evaluation_result.results[2].keys())[0]]["properties"][
-                EVALUATION_FIELD_NAME
-            ]
+            evaluation_result.results[2][list(evaluation_result.results[2].keys())[0]][
+                "properties"
+            ][EVALUATION_FIELD_NAME]
             == Evaluation.TO_CHECK_NO_PREDICTION
         )
         # TODO; check below as this gives a extra prediction without prop_dictionary parameters
-        #assert prop_dictionary[3][list(prop_dictionary[3].keys())[0]][EVALUATION_FIELD_NAME] == Evaluation.TO_CHECK_NO_PREDICTION
+        # assert prop_dictionary[3][list(prop_dictionary[3].keys())[0]][EVALUATION_FIELD_NAME] == Evaluation.TO_CHECK_NO_PREDICTION

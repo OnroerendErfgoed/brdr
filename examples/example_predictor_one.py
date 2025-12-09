@@ -27,8 +27,7 @@ if __name__ == "__main__":
     alignerresults = aligner.predict(
         relevant_distances=series,
     )
-    dict_series = alignerresults.get_results(
-    )
+    dict_series = alignerresults.get_results()
     # SHOW results of the predictions
     fcs_all = alignerresults.get_results_as_geojson(formula=False, aligner=aligner)
 
