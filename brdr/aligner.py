@@ -392,7 +392,7 @@ class Aligner:
         dict_multi_as_single = {}
         topo_thematic = None
         dict_thematic_topo_geoms = None
-
+        # TODO: what about topology?
         if self.multi_as_single_modus:
             dict_thematic_to_process, dict_multi_as_single = multi_to_singles(
                 dict_thematic_to_process
@@ -478,9 +478,12 @@ class Aligner:
                 if original_geometry_length != resulting_geometry_length:
                     remark = ProcessRemark.CHANGED_AMOUNT_GEOMETRIES
                     self.logger.feedback_debug(remark)
-                    process_result["properties"][REMARK_FIELD_NAME] = (
-                        process_result["properties"][REMARK_FIELD_NAME] + " | " + remark
-                    )
+                    if REMARK_FIELD_NAME in process_result["properties"]:
+                        remarks = process_result["properties"][REMARK_FIELD_NAME]
+                    else:
+                        remarks = []
+                    remarks.append(remark)
+                    process_result["properties"][REMARK_FIELD_NAME] = remarks
 
         self.logger.feedback_info(
             "End of processing series: " + str(relevant_distances)
@@ -658,7 +661,7 @@ class Aligner:
         """
         # Check if the predicted geometries are unique (and remove duplicated predictions)
         """
-        #TODO moet deze functie niets teruggeven?
+        # TODO moet deze functie niets teruggeven?
         dict_predictions_unique = defaultdict(dict)
         for theme_id, dist_results in dict_predictions.items():
             dict_predictions_unique[theme_id] = {}
@@ -750,7 +753,12 @@ class Aligner:
                 props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
                 props[PREDICTION_COUNT] = 0
                 props[PREDICTION_SCORE] = -1
-                props[REMARK_FIELD_NAME] = ProcessRemark.NO_PREDICTION_ORIGINAL_RETURNED
+                if REMARK_FIELD_NAME in props:
+                    remarks = props[REMARK_FIELD_NAME]
+                else:
+                    remarks = []
+                remarks.append(ProcessRemark.NO_PREDICTION_ORIGINAL_RETURNED)
+                props[REMARK_FIELD_NAME] = remarks
                 dict_predictions_evaluated[theme_id][relevant_distance] = {
                     "result": dict_affected[theme_id],
                     "properties": props,
@@ -846,7 +854,12 @@ class Aligner:
                     relevant_distance = round(0, RELEVANT_DISTANCE_DECIMALS)
                     props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_ORIGINAL
                     props[PREDICTION_SCORE] = -1
-                    props[REMARK_FIELD_NAME] = ProcessRemark.MULTIPLE_PREDICTIONS_ORIGINAL_RETURNED
+                    if REMARK_FIELD_NAME in props:
+                        remarks = props[REMARK_FIELD_NAME]
+                    else:
+                        remarks = []
+                    remarks.append(ProcessRemark.MULTIPLE_PREDICTIONS_ORIGINAL_RETURNED)
+                    props[REMARK_FIELD_NAME] = remarks
                     dict_predictions_evaluated[theme_id][relevant_distance] = {
                         "result": dict_affected[theme_id],
                         "properties": props,
@@ -871,7 +884,12 @@ class Aligner:
                 props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
                 props[PREDICTION_SCORE] = -1
                 props[PREDICTION_COUNT] = 0
-                props[REMARK_FIELD_NAME] = ProcessRemark.NO_PREDICTION_ORIGINAL_RETURNED
+                if REMARK_FIELD_NAME in props:
+                    remarks = props[REMARK_FIELD_NAME]
+                else:
+                    remarks = []
+                remarks.append(ProcessRemark.NO_PREDICTION_ORIGINAL_RETURNED)
+                props[REMARK_FIELD_NAME] = remarks
                 dict_predictions_evaluated[theme_id][relevant_distance] = {
                     "result": dict_affected[theme_id],
                     "properties": props,
@@ -888,7 +906,12 @@ class Aligner:
             )
             props[EVALUATION_FIELD_NAME] = Evaluation.NO_CHANGE
             props[PREDICTION_SCORE] = -1
-            props[REMARK_FIELD_NAME] = ProcessRemark.NOT_AFFECTED_ORIGINAL_RETURNED
+            if REMARK_FIELD_NAME in props:
+                remarks = props[REMARK_FIELD_NAME]
+            else:
+                remarks = []
+            remarks.append(ProcessRemark.NOT_AFFECTED_ORIGINAL_RETURNED)
+            props[REMARK_FIELD_NAME] = remarks
             dict_predictions_evaluated[theme_id][relevant_distance] = {
                 "result": geom,
                 "properties": props,

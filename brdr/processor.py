@@ -121,18 +121,14 @@ class BaseProcessor(ABC):
                 geometry
             *   remark (str): Remark when processing the geometry
         """
-        remark = ""
+        remark = []
         geom_thematic = make_valid(geom_thematic)
         if geom_preresult is None or geom_preresult.is_empty:
-            # geom_preresult = geom_thematic
             geom_preresult = GeometryCollection()
-            #remark = "Empty geometry calculated: -->resulting geometry = empty geometry"
-            remark = ProcessRemark.RESULT_EMPTY
+            remark.append(ProcessRemark.RESULT_EMPTY)
         if to_multi(geom_preresult).geom_type != to_multi(geom_thematic).geom_type:
-            # geom_preresult = geom_thematic
             geom_preresult = GeometryCollection()
-            #remark = "Calculated geometry of different geomtype: -->resulting geometry = empty geometry"
-            remark = ProcessRemark.CHANGED_GEOMETRYTYPE
+            remark.append(ProcessRemark.CHANGED_GEOMETRYTYPE)
 
         if geom_preresult.geom_type in [
             "Point",
@@ -181,24 +177,20 @@ class BaseProcessor(ABC):
                 get_shape_index(geom_thematic.area, geom_thematic.length)
                 > self.config.threshold_circle_ratio
             ):
-                #remark = "Circle detected: -->resulting geometry = original geometry"
-                remark = ProcessRemark.INPUT_CIRCLE
-
+                remark.append(ProcessRemark.INPUT_CIRCLE)
                 self.logger.feedback_debug(remark)
                 return unary_union_result_dict(
                     {"result": geom_thematic, "properties": {REMARK_FIELD_NAME: remark}}
                 )
 
             # Correction for unchanged geometries
-            # if safe_symmetric_difference(geom_preresult, geom_thematic).is_empty:
             if geometric_equality(
                 geom_preresult,
                 geom_thematic,
                 correction_distance=correction_distance,
                 mitre_limit=mitre_limit,
             ):
-                #remark = "Unchanged geometry: -->resulting geometry = original geometry"
-                remark = ProcessRemark.RESULT_UNCHANGED
+                remark.append(ProcessRemark.RESULT_UNCHANGED)
                 self.logger.feedback_debug(remark)
                 return unary_union_result_dict(
                     {"result": geom_thematic, "properties": {REMARK_FIELD_NAME: remark}}
@@ -284,11 +276,9 @@ class BaseProcessor(ABC):
 
         # Correction for empty preresults
         if geom_thematic_result.is_empty or geom_thematic_result is None:
-            #remark = "Calculated empty result: -->original geometry returned"
-            remark = ProcessRemark.RESULT_EMPTY
-            self.logger.feedback_warning(remark)
-
             geom_thematic_result = geom_thematic
+            remark.append(ProcessRemark.RESULT_EMPTY_ORIGINAL)
+            self.logger.feedback_warning(remark)
             # geom_thematic_result = Polygon() #If we return an empty geometry, the feature disappears, so we return the original geometry
 
         # group all initial multipolygons into a new resulting dictionary
@@ -1313,13 +1303,13 @@ class AlignerGeometryProcessor(BaseProcessor):
 
             # For calculations with RD=0 the original input is returned
             if relevant_distance == 0:
+                remark= [ProcessRemark.RESULT_UNCHANGED]
                 self.logger.feedback_debug("Calculation for RD = 0")
                 return unary_union_result_dict(
                     {
                         "result": input_geometry,
                         "properties": {
-                            #REMARK_FIELD_NAME: "relevant distance 0 --> original geometry returned"
-                            REMARK_FIELD_NAME: ProcessRemark.RESULT_UNCHANGED
+                            REMARK_FIELD_NAME: remark
                         },
                     }
                 )

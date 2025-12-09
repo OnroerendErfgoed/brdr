@@ -608,7 +608,7 @@ def merge_process_results(
             grouped_results[id_theme_global] = dict_results
         else:
             for rel_dist, process_result in dict_results.items():
-                #TODO about grouping remarks inside the properties: making a list of enums?
+                # TODO about grouping remarks inside the properties: making a list of enums?
                 for key in process_result:
                     value = process_result[key]  # noqa
                     # if isinstance(value, str) and value != "":

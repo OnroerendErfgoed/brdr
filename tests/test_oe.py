@@ -1,5 +1,3 @@
-import unittest
-
 import pytest
 
 from brdr.aligner import Aligner
