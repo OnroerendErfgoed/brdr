@@ -1,4 +1,4 @@
-black==25.1.0
+black==25.12.0
     # via brdr (pyproject.toml)
 build==1.2.1
     # via pip-tools
