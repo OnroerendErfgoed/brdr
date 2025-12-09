@@ -9,7 +9,9 @@ from brdr.loader import DictLoader
 aligner = Aligner(crs="EPSG:31370")
 # Load thematic WKT into Aligner
 thematic_data = {
-    "theme_id_1": geom_from_wkt("POLYGON ((170996.19647056088433601 170611.47279253022861667, 171036.0500100600766018 170583.59100930689601228, 171025.62942813205881976 170566.12672797418781556, 170984.43460815289290622 170595.98966291974647902, 170996.19647056088433601 170611.47279253022861667))")
+    "theme_id_1": geom_from_wkt(
+        "POLYGON ((170996.19647056088433601 170611.47279253022861667, 171036.0500100600766018 170583.59100930689601228, 171025.62942813205881976 170566.12672797418781556, 170984.43460815289290622 170595.98966291974647902, 170996.19647056088433601 170611.47279253022861667))"
+    )
 }
 thematic_loader = DictLoader(thematic_data)
 aligner.load_thematic_data(thematic_loader)
@@ -21,11 +23,13 @@ aligner.load_reference_data(reference_loader)
 # EXECUTE THE PREDICTOR
 aligner.predict()
 
-#Get GeoJson-object of resulting prediction
-featureclasses = aligner.get_results_as_geojson(resulttype=AlignerResultType.PREDICTIONS)
-print (featureclasses['result'])
+# Get GeoJson-object of resulting prediction
+featureclasses = aligner.get_results_as_geojson(
+    resulttype=AlignerResultType.PREDICTIONS
+)
+print(featureclasses["result"])
 # SAVE PREDICTIONS TO file (GeoJSON)
-aligner.save_results(path = 'output/',resulttype=AlignerResultType.PREDICTIONS)
+aligner.save_results(path="output/", resulttype=AlignerResultType.PREDICTIONS)
 
 
 # if fcs is None or "result" not in fcs:

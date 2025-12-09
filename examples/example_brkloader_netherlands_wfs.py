@@ -2,8 +2,6 @@ from brdr.aligner import Aligner
 from brdr.geometry_utils import geom_from_wkt
 from brdr.loader import DictLoader, WFSReferenceLoader
 from brdr.nl.constants import BRK_CRS
-from brdr.nl.enums import BRKType
-from brdr.nl.loader import BRKLoader
 
 if __name__ == "__main__":
     """

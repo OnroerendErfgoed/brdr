@@ -88,17 +88,26 @@ def _make_map(ax, processresult, thematic_dict, reference_dict):
         )
         # zoom map to saved extent
         ax.axis(axis_extent)
-        legend_patch_res = Patch(facecolor='none', edgecolor='green', linewidth=1.0, label='Result')
-        legend_patch_ori = Patch(facecolor='none',edgecolor='blue',  linestyle="dashdot", linewidth=1.0, label='Original')
-        #legend_patch_dif_min = Patch( edgecolor='red', linewidth=1.0, label='Min')
-        #legend_patch_dif_plus = Patch( edgecolor='green', linewidth=1.0, label='Plus')
-        ax.legend(handles=[
-            legend_patch_res,
-            legend_patch_ori,
-            # legend_patch_dif_min,
-            # legend_patch_dif_plus
-        ]
-        #    ,title="Layers"
+        legend_patch_res = Patch(
+            facecolor="none", edgecolor="green", linewidth=1.0, label="Result"
+        )
+        legend_patch_ori = Patch(
+            facecolor="none",
+            edgecolor="blue",
+            linestyle="dashdot",
+            linewidth=1.0,
+            label="Original",
+        )
+        # legend_patch_dif_min = Patch( edgecolor='red', linewidth=1.0, label='Min')
+        # legend_patch_dif_plus = Patch( edgecolor='green', linewidth=1.0, label='Plus')
+        ax.legend(
+            handles=[
+                legend_patch_res,
+                legend_patch_ori,
+                # legend_patch_dif_min,
+                # legend_patch_dif_plus
+            ]
+            #    ,title="Layers"
         )
     except Exception:  # noqa
         logging.error("make_map: Error while making map")
@@ -138,10 +147,15 @@ def show_map(
     # Show figure
     plt.show()
 
+
 def animated_map(
     dict_results: dict[any, dict[float, ProcessResult]],
     dict_thematic,
-    dict_reference,xlim,ylim,interval,filename
+    dict_reference,
+    xlim,
+    ylim,
+    interval,
+    filename,
 ):
     """
     Show results on a map
@@ -158,17 +172,19 @@ def animated_map(
     # Voorbereiding van de figuur
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 4))
     _make_map(
-            ax1,  # noqa
-            dict_results_by_distance[distances[0]],
-            dict_thematic,
-            dict_reference,
-        )
+        ax1,  # noqa
+        dict_results_by_distance[distances[0]],
+        dict_thematic,
+        dict_reference,
+    )
 
     # Rechter subplot: grafiek van oppervlakte over tijd
     x_vals = []
     y_vals = []
     (plot_line,) = ax2.plot([], [], color="blue", label="% area change")
-    marker_line = ax2.axvline(x=0, color="red", linestyle="--", label="Relevant distance")
+    marker_line = ax2.axvline(
+        x=0, color="red", linestyle="--", label="Relevant distance"
+    )
     ax2.set_xlim(0, xlim)
     ax2.set_ylim(0, ylim)  # vaste Y-as schaal
     ax2.set_title("Area difference by relevant distance")
@@ -177,9 +193,9 @@ def animated_map(
     ax2.legend()
 
     # Updatefunctie voor animatie
-    def update(frame,extra_data):
+    def update(frame, extra_data):
         # Bereken nieuwe grootte
-        print (str(frame))
+        print(str(frame))
         ax1 = fig.axes[0]
         ax1.clear()
         _make_map(
@@ -191,7 +207,7 @@ def animated_map(
         key = list(dict_results_by_distance[frame].keys())[0]
         area_result_diff = dict_results_by_distance[frame][key]["result_diff"].area
         area_result = dict_results_by_distance[frame][key]["result"].area
-        area= 100*area_result_diff/area_result
+        area = 100 * area_result_diff / area_result
         # Bereken oppervlakte
         x_vals.append(frame)
         y_vals.append(area)
@@ -204,16 +220,16 @@ def animated_map(
         return plot_line, marker_line
 
     # Maak de animatie
-    extra_data=None
+    extra_data = None
     fps = 1000 / interval
-    ani = FuncAnimation(fig, update, frames=distances, fargs=(extra_data,), interval=interval, blit=True)
+    ani = FuncAnimation(
+        fig, update, frames=distances, fargs=(extra_data,), interval=interval, blit=True
+    )
 
     # Opslaan als animated GIF
     ani.save(filename, writer=PillowWriter(fps=fps))
 
-    print(
-        "✅ GIF succesvol opgeslagen"
-    )
+    print("✅ GIF succesvol opgeslagen")
 
 
 def print_brdr_formula(dict_results, aligner):
@@ -313,24 +329,27 @@ def show_geometry(geometry, ax=None, show=True):
         plt.show()
 
 
-def save_animated_gif(image_files,output_filename,frame_duration_ms):
+def save_animated_gif(image_files, output_filename, frame_duration_ms):
     # Zoek afbeeldingen in de huidige map
 
-
     if not image_files:
-        print("⚠️ Geen afbeeldingsbestanden gevonden in de map. Zorg dat er .png of .jpg bestanden aanwezig zijn.")
+        print(
+            "⚠️ Geen afbeeldingsbestanden gevonden in de map. Zorg dat er .png of .jpg bestanden aanwezig zijn."
+        )
     else:
         frames = [Image.open(img) for img in image_files]
-        #output_filename = "animated.gif"
+        # output_filename = "animated.gif"
         frame_duration_ms = 500  # duur per frame in milliseconden
 
         frames[0].save(
             output_filename,
-            format='GIF',
+            format="GIF",
             save_all=True,
             append_images=frames[1:],
             duration=frame_duration_ms,
-            loop=0
+            loop=0,
         )
 
-    print(f"✅ Animated GIF succesvol opgeslagen als '{output_filename}' met {len(frames)} frames.")
+    print(
+        f"✅ Animated GIF succesvol opgeslagen als '{output_filename}' met {len(frames)} frames."
+    )

@@ -47,7 +47,13 @@ if __name__ == "__main__":
     loader = GeoJsonLoader(_input=thematic_json, id_property="theme_identifier")
     aligner.load_thematic_data(loader)
     # Load reference data: The actual GRB-parcels
-    loader = OGCFeatureAPIReferenceLoader(url="https://geo.api.vlaanderen.be/GRB/ogc/features/",id_property="OIDN", collection= "ADP" , partition=1000, aligner=aligner)
+    loader = OGCFeatureAPIReferenceLoader(
+        url="https://geo.api.vlaanderen.be/GRB/ogc/features/",
+        id_property="OIDN",
+        collection="ADP",
+        partition=1000,
+        aligner=aligner,
+    )
     aligner.load_reference_data(loader)
 
     # Example how to use the Aligner
