@@ -3,7 +3,7 @@ import numpy as np
 from brdr.aligner import Aligner
 from brdr.be.grb.enums import GRBType
 from brdr.be.grb.loader import GRBActualLoader
-from brdr.enums import FullStrategy
+from brdr.enums import FullReferenceStrategy
 from brdr.loader import GeoJsonLoader
 
 thematic_json = {
@@ -100,6 +100,6 @@ aligner.load_reference_data(loader)
 # Use the EVALUATE-function
 dict_predictions_evaluated = aligner.evaluate(
     max_predictions=1,
-    full_strategy=FullStrategy.ONLY_FULL,
+    full_strategy=FullReferenceStrategy.ONLY_FULL,
     multi_to_best_prediction=True,
 )

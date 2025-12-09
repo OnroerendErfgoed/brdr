@@ -44,7 +44,7 @@ from brdr.enums import AlignerInputType, ProcessRemark
 from brdr.enums import AlignerResultType
 from brdr.enums import DiffMetric
 from brdr.enums import Evaluation
-from brdr.enums import FullStrategy
+from brdr.enums import FullReferenceStrategy
 from brdr.geometry_utils import buffer_neg, geometric_equality
 from brdr.geometry_utils import buffer_pos
 from brdr.geometry_utils import extract_points_lines_from_geometry
@@ -698,7 +698,7 @@ class Aligner:
         *,
         ids_to_evaluate=None,
         base_formula_field=FORMULA_FIELD_NAME,
-        full_strategy=FullStrategy.NO_FULL,
+        full_strategy=FullReferenceStrategy.NO_FULL_REFERENCE,
         max_predictions=-1,
         multi_to_best_prediction=True,
     ):
@@ -789,7 +789,7 @@ class Aligner:
                 props.update(dict_affected_predictions[theme_id][dist]["properties"])
 
                 full = props[FULL_ACTUAL_FIELD_NAME]
-                if full_strategy == FullStrategy.ONLY_FULL and not full:
+                if full_strategy == FullReferenceStrategy.ONLY_FULL_REFERENCE and not full:
                     # this prediction is ignored
                     continue
                 if (
@@ -815,7 +815,7 @@ class Aligner:
                     predictions.append(dict_affected_predictions[theme_id][dist])
                     continue
                 if full:
-                    if full_strategy != FullStrategy.NO_FULL:
+                    if full_strategy != FullReferenceStrategy.NO_FULL_REFERENCE:
                         props[EVALUATION_FIELD_NAME] = (
                             Evaluation.TO_CHECK_PREDICTION_FULL
                         )

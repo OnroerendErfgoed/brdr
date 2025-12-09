@@ -14,7 +14,7 @@ from brdr.constants import (
     FORMULA_FIELD_NAME,
     BASE_FORMULA_FIELD_NAME,
 )
-from brdr.enums import FullStrategy
+from brdr.enums import FullReferenceStrategy
 from brdr.loader import DictLoader
 from brdr.logger import Logger
 
@@ -26,7 +26,7 @@ def update_to_actual_grb(
     grb_type=GRBType.ADP,
     max_distance_for_actualisation=2,
     max_predictions=-1,
-    full_strategy=FullStrategy.NO_FULL,
+    full_strategy=FullReferenceStrategy.NO_FULL_REFERENCE,
     multi_to_best_prediction=True,
     feedback=None,
     attributes=True,

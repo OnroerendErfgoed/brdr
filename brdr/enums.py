@@ -140,18 +140,18 @@ class Evaluation(str, Enum):
     NO_CHANGE = "no_change"
 
 
-class FullStrategy(str, Enum):
+class FullReferenceStrategy(str, Enum):
     """
-    Enum for full strategy when evaluating predictions:
+    Enum for Full Reference strategies when evaluating predictions:
 
-    ONLY_FULL = "only_full"
-    PREFER_FULL = "prefer_full"
-    NO_FULL = "no_full"
+    ONLY_FULL_REFERENCE = "only_full_reference"
+    PREFER_FULL_REFERENCE = "prefer_full_reference"
+    NO_FULL_REFERENCE = "no_full_reference"
     """
 
-    ONLY_FULL = "only_full"
-    PREFER_FULL = "prefer_full"
-    NO_FULL = "no_full"
+    ONLY_FULL_REFERENCE = "only_full_reference"
+    PREFER_FULL_REFERENCE = "prefer_full_reference"
+    NO_FULL_REFERENCE = "no_full_reference"
 
 
 class SnapStrategy(str, Enum):
@@ -170,7 +170,7 @@ class SnapStrategy(str, Enum):
 
 class PredictionStrategy(str, Enum):
     """
-    Enum for prediction strategy when using GRB updater
+    Enum for prediction strategy which results to return
 
     ALL = "all"
     BEST = "best"

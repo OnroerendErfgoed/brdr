@@ -13,7 +13,7 @@ from brdr.constants import EVALUATION_FIELD_NAME
 from brdr.constants import PREDICTION_COUNT
 from brdr.enums import AlignerResultType
 from brdr.enums import Evaluation
-from brdr.enums import FullStrategy
+from brdr.enums import FullReferenceStrategy
 from brdr.enums import SnapStrategy
 from brdr.loader import DictLoader
 from brdr.loader import GeoJsonLoader
@@ -116,7 +116,7 @@ class TestEvaluate(unittest.TestCase):
 
         evaluation_result = aligner.evaluate(
             relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
-            full_strategy=FullStrategy.NO_FULL,
+            full_strategy=FullReferenceStrategy.NO_FULL_REFERENCE,
         )
         assert len(evaluation_result.results["theme_id_1"]) > 1
         assert (
@@ -140,7 +140,7 @@ class TestEvaluate(unittest.TestCase):
 
         evaluation_result = aligner.evaluate(
             relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
-            full_strategy=FullStrategy.PREFER_FULL,
+            full_strategy=FullReferenceStrategy.PREFER_FULL_REFERENCE,
         )
         assert len(evaluation_result.results["theme_id_1"]) > 1
         assert (
@@ -165,7 +165,7 @@ class TestEvaluate(unittest.TestCase):
 
         evaluation_result = aligner.evaluate(
             relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
-            full_strategy=FullStrategy.ONLY_FULL,
+            full_strategy=FullReferenceStrategy.ONLY_FULL_REFERENCE,
         )
         assert len(evaluation_result.results["theme_id_1"]) == 1
         assert (
@@ -190,7 +190,7 @@ class TestEvaluate(unittest.TestCase):
 
         dict_evaluated = aligner.evaluate(
             relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
-            full_strategy=FullStrategy.PREFER_FULL,
+            full_strategy=FullReferenceStrategy.PREFER_FULL_REFERENCE,
             max_predictions=-1,
         ).get_results(AlignerResultType.EVALUATED_PREDICTIONS)
 
@@ -214,7 +214,7 @@ class TestEvaluate(unittest.TestCase):
 
         evaluation_result = aligner.evaluate(
             relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
-            full_strategy=FullStrategy.NO_FULL,
+            full_strategy=FullReferenceStrategy.NO_FULL_REFERENCE,
             max_predictions=2,
         )
         assert len(evaluation_result.results["theme_id_1"]) > 1
@@ -238,7 +238,7 @@ class TestEvaluate(unittest.TestCase):
 
         evaluation_result = aligner.evaluate(
             relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
-            full_strategy=FullStrategy.NO_FULL,
+            full_strategy=FullReferenceStrategy.NO_FULL_REFERENCE,
             max_predictions=1,
             multi_to_best_prediction=True,
         )
@@ -265,7 +265,7 @@ class TestEvaluate(unittest.TestCase):
 
         evaluation_result = aligner.evaluate(
             relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
-            full_strategy=FullStrategy.NO_FULL,
+            full_strategy=FullReferenceStrategy.NO_FULL_REFERENCE,
             max_predictions=1,
             multi_to_best_prediction=False,
         )
@@ -292,7 +292,7 @@ class TestEvaluate(unittest.TestCase):
 
         evaluation_result = aligner.evaluate(
             relevant_distances=np.arange(10, 410, 10, dtype=int) / 100,
-            full_strategy=FullStrategy.NO_FULL,
+            full_strategy=FullReferenceStrategy.NO_FULL_REFERENCE,
             max_predictions=1,
             multi_to_best_prediction=False,
         )
@@ -324,7 +324,7 @@ class TestEvaluate(unittest.TestCase):
 
         evaluation_result = aligner.evaluate(
             relevant_distances=np.arange(0, 1010, 50, dtype=int) / 100,
-            full_strategy=FullStrategy.NO_FULL,
+            full_strategy=FullReferenceStrategy.NO_FULL_REFERENCE,
             max_predictions=3,
             multi_to_best_prediction=False,
         )
@@ -353,7 +353,7 @@ class TestEvaluate(unittest.TestCase):
 
         evaluation_result = aligner.evaluate(
             relevant_distances=np.arange(0, 1010, 50, dtype=int) / 100,
-            full_strategy=FullStrategy.NO_FULL,
+            full_strategy=FullReferenceStrategy.NO_FULL_REFERENCE,
             max_predictions=3,
             multi_to_best_prediction=False,
         )
@@ -388,7 +388,7 @@ class TestEvaluate(unittest.TestCase):
 
         evaluation_result = aligner.evaluate(
             relevant_distances=np.arange(0, 510, 50, dtype=int) / 100,
-            full_strategy=FullStrategy.NO_FULL,
+            full_strategy=FullReferenceStrategy.NO_FULL_REFERENCE,
             max_predictions=3,
             multi_to_best_prediction=False,
         )
@@ -498,7 +498,7 @@ class TestEvaluate(unittest.TestCase):
         evaluation_result = aligner.evaluate(
             relevant_distances=np.arange(0, 310, 10, dtype=int) / 100,
             max_predictions=1,
-            full_strategy=FullStrategy.ONLY_FULL,
+            full_strategy=FullReferenceStrategy.ONLY_FULL_REFERENCE,
             multi_to_best_prediction=True,
         )
 

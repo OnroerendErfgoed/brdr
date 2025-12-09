@@ -4,7 +4,7 @@ from brdr.aligner import Aligner
 from brdr.be.grb.enums import GRBType
 from brdr.be.grb.loader import GRBActualLoader
 from brdr.constants import EVALUATION_FIELD_NAME
-from brdr.enums import AlignerResultType, FullStrategy
+from brdr.enums import AlignerResultType, FullReferenceStrategy
 from brdr.geometry_utils import geom_from_wkt
 from brdr.loader import DictLoader
 
@@ -29,7 +29,7 @@ if __name__ == "__main__":
     dict_evaluated = actual_aligner.evaluate(
         ids_to_evaluate=None,
         base_formula_field=None,
-        full_strategy=FullStrategy.PREFER_FULL,
+        full_strategy=FullReferenceStrategy.PREFER_FULL_REFERENCE,
         relevant_distances=relevant_distances,
     )
 
