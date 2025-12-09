@@ -304,14 +304,13 @@ class Aligner:
         self.reference_elements = None
 
         # Coordinate reference system
+        # The crs that is defined on the aligner is the CRS we are working with. So we expect that the loaded thematic data is in this CRS and also the reference data is in this CRS. Or will be downloaded and transformed to this CRS.
         # thematic geometries and reference geometries are assumed to be in the same CRS
         # before loading into the Aligner. No CRS-transformation will be performed.
         # When loading data, CRS is expected to be a projected CRS with units in 'meter
         # (m)'.
-        # Default EPSG:31370 (Lambert72), alternative: EPSG:3812 (Lambert2008)
+        # Default EPSG:31370 (Lambert72), alternative: EPSG:3812 (Lambert2008),...At this moment  we expect the units in meter, because all calculation and parameters are based that unit is 'meter'
         self.CRS = to_crs(crs)
-        # TODO The crs that is defined on the aligner is the CRS we are working with. So we expect that the loaded thematic data is in this CRS and also the reference data is in this CRS. Or will be downloaded and transformed to this CRS.
-        # At this moment  we expect the units in meter, because all calculation and parameters are based that unit is 'meter'
 
         # this parameter is used to treat multipolygon as single polygons. So polygons
         # with ID splitter are separately evaluated and merged on result.
@@ -334,7 +333,6 @@ class Aligner:
         )
 
         self.thematic_union = None
-        # TODO reset all aligner variables too? fe dict_processresults etc
 
     def load_reference_data(self, loader: Loader):
         """
@@ -348,7 +346,6 @@ class Aligner:
             self.dict_reference_source,
         ) = loader.load_data()
         self._prepare_reference_data()
-        # TODO reset all aligner variables too? fe dict_processresults etc
 
     def process(
         self,
@@ -619,11 +616,11 @@ class Aligner:
             interpolated_cache = create_full_interpolated_dataset(rd_prediction, cache)
             dict_series[theme_id] = interpolated_cache
 
-        process_result = AlignerResult(dict_series)
+        aligner_result = AlignerResult(dict_series)
         if diff_metric is None:
             diff_metric = self.diff_metric
         diffs_dict = {}
-        for theme_id, dict_processresult in process_result.results.items():
+        for theme_id, dict_processresult in aligner_result.results.items():
             diffs = diffs_from_dict_processresult(
                 dict_processresult,
                 dict_thematic[theme_id],
@@ -641,20 +638,21 @@ class Aligner:
             dict_stability = determine_stability(rd_prediction, diff_values)
             for rd in rd_prediction:
                 if rd not in relevant_distances:
-                    del process_result.results[theme_id][rd]
+                    del aligner_result.results[theme_id][rd]
                     continue
-                process_result.results[theme_id][rd]["properties"][STABILITY] = (
+                aligner_result.results[theme_id][rd]["properties"][STABILITY] = (
                     dict_stability[rd][STABILITY]
                 )
                 if dict_stability[rd][ZERO_STREAK] is not None:
                     if cvg_ratio > cvg_ratio_threshold:
-                        process_result.results[theme_id][rd]["properties"][
+                        aligner_result.results[theme_id][rd]["properties"][
                             PREDICTION_SCORE
                         ] = dict_stability[rd][ZERO_STREAK][3]
 
         self.diffs_dict = diffs_dict
-        self.count_predictions(process_result.results)
-        return process_result
+        self.count_predictions(aligner_result.get_results(result_type=AlignerResultType.PREDICTIONS))
+        #TODO: check if the brdr_count is inside the aligner_result
+        return aligner_result
 
     def count_predictions(
         self, dict_predictions: dict[ThematicId, dict[float, ProcessResult]]
@@ -1281,12 +1279,15 @@ class Aligner:
             base_formula["full"] and actual_formula["full"] and od_alike
         ):  # formula not the same but geometries are full
             properties[EVALUATION_FIELD_NAME] = Evaluation.EQUALITY_FULL_3
+        # At this moment these are all the check to get a positive EVALUATION. We have to see in future if we add some extra positive EVALUATIONS.
+        # fe.
+        # * on not-full parcels (comparing all parcels?)
+        # * evaluating the outer ring (#102)
+        # * ...
         # elif base_formula["full"] == actual_formula["full"] and od_alike:
         #    properties[EVALUATION_FIELD_NAME] = Evaluation.EQUALITY_NON_FULL
-        # TODO evaluate when not-full-parcels: compare all parcels?
         # elif geom_predicted.area >10000: #evaluate only the outer ring
         # pass
-        # evaluate only the outer ring? # TODO issue 102
         else:
             properties[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
         return properties
