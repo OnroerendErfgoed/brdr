@@ -150,7 +150,7 @@ def update_to_actual_grb(
     )
 
     return result.get_results_as_geojson(
-        aligner = actual_aligner,
+        aligner=actual_aligner,
         formula=True,
         attributes=attributes,
     )

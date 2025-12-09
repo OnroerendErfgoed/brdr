@@ -11,6 +11,7 @@ from brdr.utils import get_collection_by_partition
 
 log = logging.getLogger(__name__)
 
+
 def get_oe_dict_by_ids(objectids, oetype=OEType.AO):
     """
     Fetches thematic data for a list of objectIDs from the Inventaris Onroerend Erfgoed
@@ -102,8 +103,10 @@ def get_collection_oe_objects(
             "Undefined OE-type: " + str(oetype) + ": Empty collection returned"
         )
         return {}, None
-    crs=to_crs(crs)
-    theme_url ="https://www.mercator.vlaanderen.be/raadpleegdienstenmercatorpubliek/wfs?"
+    crs = to_crs(crs)
+    theme_url = (
+        "https://www.mercator.vlaanderen.be/raadpleegdienstenmercatorpubliek/wfs?"
+    )
     params = {
         "SERVICE": "WFS",
         "VERSION": "2.0.0",
@@ -114,12 +117,18 @@ def get_collection_oe_objects(
         "limit": limit,
     }
     if objectids is not None:
-        params["CQL_FILTER"] = f"{id_property} IN ("+ ", ".join(str(o) for o in objectids)+ ")"
+        params["CQL_FILTER"] = (
+            f"{id_property} IN (" + ", ".join(str(o) for o in objectids) + ")"
+        )
     bbox_polygon = None
     if bbox is not None:
         bbox_polygon = box(*tuple(o for o in bbox))
     collection = get_collection_by_partition(
-        url=theme_url,params=params, geometry=bbox_polygon, partition=partition, crs=crs
+        url=theme_url,
+        params=params,
+        geometry=bbox_polygon,
+        partition=partition,
+        crs=crs,
     )
     return (
         collection,

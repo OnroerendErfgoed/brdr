@@ -30,10 +30,12 @@ if __name__ == "__main__":
     alignerresults = aligner.predict(
         relevant_distances=series,
     )
-    dict_predictions = alignerresults.get_results(result_type=AlignerResultType.PREDICTIONS)
+    dict_predictions = alignerresults.get_results(
+        result_type=AlignerResultType.PREDICTIONS
+    )
 
     # SHOW results of the predictions
-    fcs = alignerresults.get_results_as_geojson(formula=False,aligner=aligner)
+    fcs = alignerresults.get_results_as_geojson(formula=False, aligner=aligner)
     if fcs is None or "result" not in fcs:
         print("empty predictions")
     else:

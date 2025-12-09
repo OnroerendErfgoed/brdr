@@ -15,9 +15,9 @@ from brdr.geometry_utils import buffer_pos, get_bbox, from_crs, to_crs
 from brdr.loader import GeoJsonLoader
 
 
-def gml_response_to_geojson(url,params):
+def gml_response_to_geojson(url, params):
     # Haal de GML-response op
-    response = requests.get(url,params)
+    response = requests.get(url, params)
     response.raise_for_status()  # geeft fout als de request mislukt
 
     # Lees de GML rechtstreeks uit de response
@@ -26,9 +26,10 @@ def gml_response_to_geojson(url,params):
     # Zet om naar GeoJSON (als dict)
     return json.loads(gdf.to_json())
 
+
 # https://ccff02.minfin.fgov.be/geoservices/arcgis/services/WMS/Cadastral_LayersWFS/MapServer/WFSServer?SERVICE=WFS&REQUEST=GetFeature&VERSION=2.0.0&TYPENAMES=CL:Cadastral_parcel&SRSNAME=urn:ogc:def:crs:EPSG::3812&BBOX=673571.04613103601150215,670958.87597115384414792,674256.50507965590804815,671696.05491833412088454,urn:ogc:def:crs:EPSG::3812
 def get_collection_cadastral(geometry, crs="EPSG:3812"):
-    crs=to_crs(crs)
+    crs = to_crs(crs)
     name_reference_id = "CaPaKey"
     bbox = get_bbox(geometry)
     url = f"https://ccff02.minfin.fgov.be/geoservices/arcgis/services/WMS/Cadastral_LayersWFS/MapServer/WFSServer?"
@@ -39,10 +40,10 @@ def get_collection_cadastral(geometry, crs="EPSG:3812"):
         "VERSION": "2.0.0",
         "TYPENAMES": "CL:Cadastral_parcel",
         "SRSNAME": from_crs(crs),
-        "BBOX":bbox + "," + from_crs(crs),
-        #"outputFormat": "application/json" #not available in json for this WFS, only returning XML/GML
+        "BBOX": bbox + "," + from_crs(crs),
+        # "outputFormat": "application/json" #not available in json for this WFS, only returning XML/GML
     }
-    geojson = gml_response_to_geojson(url,params)
+    geojson = gml_response_to_geojson(url, params)
     collection = geojson
     return collection, name_reference_id
 
@@ -63,14 +64,12 @@ class BeCadastralParcelLoader(GeoJsonLoader):
         # EPSG:3812 – Belgian Lambert 2008
         # EPSG:4258 – ETRS89 (geografische coördinaten)
         supported_crs = ["EPSG:31370", "EPSG:3812", "EPSG:4258"]
-        aligner_crs_epsg = from_crs(self.aligner.CRS,format="epsg")
+        aligner_crs_epsg = from_crs(self.aligner.CRS, format="epsg")
         if aligner_crs_epsg not in supported_crs:
             raise ValueError(
                 f"BeCadastralParcelLoader only supports alignment in CRS '{str(supported_crs)}' while CRS '{aligner_crs_epsg}' is used"
             )
-        geom_union = buffer_pos(
-            self.aligner.get_thematic_union(), MAX_REFERENCE_BUFFER
-        )
+        geom_union = buffer_pos(self.aligner.get_thematic_union(), MAX_REFERENCE_BUFFER)
 
         collection, id_property = get_collection_cadastral(
             geometry=geom_union,

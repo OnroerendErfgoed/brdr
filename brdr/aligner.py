@@ -87,7 +87,7 @@ class AlignerResult:
 
     def get_results(
         self,
-        result_type:AlignerResultType=AlignerResultType.PROCESSRESULTS,
+        result_type: AlignerResultType = AlignerResultType.PROCESSRESULTS,
     ) -> dict[ThematicId, dict[float, ProcessResult | None]]:
         if result_type == AlignerResultType.PROCESSRESULTS:
             return self.results
@@ -183,7 +183,9 @@ class AlignerResult:
             series_prop_dict=prop_dictionary,
         )
 
-    def save_results(self, aligner, path, formula=True, result_type = AlignerResultType.PROCESSRESULTS):
+    def save_results(
+        self, aligner, path, formula=True, result_type=AlignerResultType.PROCESSRESULTS
+    ):
         """
         Exports analysis results (as geojson) to path.
 
@@ -555,7 +557,7 @@ class Aligner:
                     corresponding distance.
             diffs_dict: a dictionary with the differences for each relevant distance
         """
-        if dict_thematic is None :#or dict_thematic =={}
+        if dict_thematic is None:  # or dict_thematic =={}
             dict_thematic = self.dict_thematic
 
         if relevant_distances is None:
@@ -585,40 +587,38 @@ class Aligner:
         rd_prediction = sorted(rd_prediction)
 
         dict_series = {}
-        for theme_id,geom in dict_thematic.items():
+        for theme_id, geom in dict_thematic.items():
 
             def _check_interval_stability(
                 res_start: ProcessResult, res_end: ProcessResult
             ) -> bool:
 
                 return geometric_equality(
-                res_start["result"],
-                res_end["result"],
-                correction_distance=self.correction_distance,
-                mitre_limit=self.mitre_limit,
-            )
+                    res_start["result"],
+                    res_end["result"],
+                    correction_distance=self.correction_distance,
+                    mitre_limit=self.mitre_limit,
+                )
 
-            def _process_result(theme_id,relevant_distances):
+            def _process_result(theme_id, relevant_distances):
                 aligner_result = self.process(
-                    dict_thematic_to_process={theme_id:geom},
+                    dict_thematic_to_process={theme_id: geom},
                     relevant_distances=relevant_distances,
                 )
-                rd=relevant_distances[0]
+                rd = relevant_distances[0]
                 return aligner_result.results[theme_id][rd]
 
             def _process_wrapper(x: float):
-                return _process_result(theme_id=theme_id,relevant_distances=[x])
+                return _process_result(theme_id=theme_id, relevant_distances=[x])
 
-            non_stable_points,cache = recursive_stepwise_interval_check(
+            non_stable_points, cache = recursive_stepwise_interval_check(
                 f_value=_process_wrapper,
                 f_condition=_check_interval_stability,
                 discrete_list=rd_prediction,
                 initial_sample_size=3,
             )
-            interpolated_cache = create_full_interpolated_dataset(
-                rd_prediction, cache
-            )
-            dict_series[theme_id]=interpolated_cache
+            interpolated_cache = create_full_interpolated_dataset(rd_prediction, cache)
+            dict_series[theme_id] = interpolated_cache
 
         process_result = AlignerResult(dict_series)
         if diff_metric is None:
@@ -653,11 +653,13 @@ class Aligner:
                             PREDICTION_SCORE
                         ] = dict_stability[rd][ZERO_STREAK][3]
 
-        self.diffs_dict=diffs_dict
+        self.diffs_dict = diffs_dict
         self.count_predictions(process_result.results)
         return process_result
 
-    def count_predictions(self, dict_predictions: dict[ThematicId, dict[float, ProcessResult]]):
+    def count_predictions(
+        self, dict_predictions: dict[ThematicId, dict[float, ProcessResult]]
+    ):
         """
         # Check if the predicted geometries are unique (and remove duplicated predictions)
         """
@@ -686,11 +688,13 @@ class Aligner:
                         f"Duplicate prediction found for key {theme_id} at distance {rel_dist}"
                     )
             for dist, processresult in dist_results.items():
-                processresult["properties"][PREDICTION_COUNT] = len(predicted_geoms_for_theme_id)
+                processresult["properties"][PREDICTION_COUNT] = len(
+                    predicted_geoms_for_theme_id
+                )
 
     def evaluate(
         self,
-        relevant_distances = None,
+        relevant_distances=None,
         *,
         ids_to_evaluate=None,
         base_formula_field=FORMULA_FIELD_NAME,
@@ -711,7 +715,10 @@ class Aligner:
 
         if ids_to_evaluate is None:
             ids_to_evaluate = list(self.dict_thematic.keys())
-        if any(id_to_evaluate not in self.dict_thematic.keys() for id_to_evaluate in ids_to_evaluate):
+        if any(
+            id_to_evaluate not in self.dict_thematic.keys()
+            for id_to_evaluate in ids_to_evaluate
+        ):
             raise ValueError("not all ids_to_evaluate are found in the thematic data")
         if relevant_distances is None:
             relevant_distances = [
@@ -737,7 +744,9 @@ class Aligner:
             relevant_distances=relevant_distances,
             diff_metric=self.diff_metric,
         )
-        dict_affected_predictions = prediction_result.get_results(AlignerResultType.PREDICTIONS)
+        dict_affected_predictions = prediction_result.get_results(
+            AlignerResultType.PREDICTIONS
+        )
         dict_predictions_evaluated = {}
 
         for theme_id in dict_affected.keys():

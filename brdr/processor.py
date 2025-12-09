@@ -574,7 +574,9 @@ class DieussaertGeometryProcessor(BaseProcessor):
             ref_geom = dict_reference[key_ref]
             ref_intersections_geoms.append(ref_geom)
             if not isinstance(ref_geom, (Polygon, MultiPolygon)):
-                raise ValueError("Dieussaert algorithm can only be used when all reference geometries are polygons or multipolygons.")
+                raise ValueError(
+                    "Dieussaert algorithm can only be used when all reference geometries are polygons or multipolygons."
+                )
 
         buffer_distance = relevant_distance / 2
         (
@@ -1303,20 +1305,19 @@ class AlignerGeometryProcessor(BaseProcessor):
 
             # For calculations with RD=0 the original input is returned
             if relevant_distance == 0:
-                remark= [ProcessRemark.RESULT_UNCHANGED]
+                remark = [ProcessRemark.RESULT_UNCHANGED]
                 self.logger.feedback_debug("Calculation for RD = 0")
                 return unary_union_result_dict(
                     {
                         "result": input_geometry,
-                        "properties": {
-                            REMARK_FIELD_NAME: remark
-                        },
+                        "properties": {REMARK_FIELD_NAME: remark},
                     }
                 )
 
             try:
                 processor = DieussaertGeometryProcessor(
-                    self.config, self.logger.feedback,
+                    self.config,
+                    self.logger.feedback,
                 )
                 return processor.process(
                     input_geometry=input_geometry,

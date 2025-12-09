@@ -34,7 +34,6 @@ def dissolve_topo(
     for k, v in dict_thematic_topo_geoms.items():
         dict_series_topo[k] = {}
 
-
     for relevant_distance in relevant_distances:
         for obj in topo_thematic.output["objects"]["data"]["geometries"]:
             key = obj["id"]
@@ -61,8 +60,12 @@ def dissolve_topo(
             for feature in topo_geojson["features"]:
                 if feature["id"] == key:
                     result = geojson_geometry_to_shapely(feature["geometry"])
-            result_diff_plus = make_valid(safe_difference(result, dict_thematic_topo_geoms[key]))
-            result_diff_min = make_valid(safe_difference(dict_thematic_topo_geoms[key], result))
+            result_diff_plus = make_valid(
+                safe_difference(result, dict_thematic_topo_geoms[key])
+            )
+            result_diff_min = make_valid(
+                safe_difference(dict_thematic_topo_geoms[key], result)
+            )
             result_diff = safe_unary_union([result_diff_plus, result_diff_min])
             dict_series_topo[key][relevant_distance] = {
                 "result": result,
@@ -84,7 +87,7 @@ def generate_topo(dict_thematic_to_process):
     :param dict_thematic_to_process: (key-geometry)
     :return: dict_thematic_to_process: (key-LineString (Arcs)) & Topojson
     """
-    dict_thematic_topo_geoms=copy.deepcopy(dict_thematic_to_process)
+    dict_thematic_topo_geoms = copy.deepcopy(dict_thematic_to_process)
     topo_thematic = topojson.Topology(dict_thematic_to_process, prequantize=False)
     print(topo_thematic.to_json())
     arc_id = 0

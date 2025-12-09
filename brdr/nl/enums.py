@@ -6,9 +6,7 @@ import requests
 class BRKCollectionLoader:
     @classmethod
     def _fetch_values(cls):
-        _url = (
-            "https://api.pdok.nl/kadaster/brk-kadastrale-kaart/ogc/v1/collections?f=json"
-        )
+        _url = "https://api.pdok.nl/kadaster/brk-kadastrale-kaart/ogc/v1/collections?f=json"
         response = requests.get(_url)
         response.raise_for_status()
         data = response.json()
@@ -26,9 +24,8 @@ class BRKCollectionLoader:
                 "kadastralegrens": "KadastraleGrens",
                 "perceel": "Perceel",
                 "openbareruimtenaam": "OpenbareRuimteNaam",
-                "bebouwing":"Bebouwing",
-                "nummeraanduidingreeks":"Nummeraanduidingreeks"
-
+                "bebouwing": "Bebouwing",
+                "nummeraanduidingreeks": "Nummeraanduidingreeks",
             }
         return Enum("BRKType", dict_values)
 
