@@ -40,7 +40,7 @@ iniconfig==2.0.0
     # via pytest
 kiwisolver==1.4.5
     # via matplotlib
-matplotlib==3.8.4
+matplotlib==3.10.7
     # via brdr (pyproject.toml)
 mccabe==0.7.0
     # via flake8
