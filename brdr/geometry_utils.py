@@ -1794,7 +1794,7 @@ def find_best_path_in_network(
     geom_to_process, nw_multilinestring, snap_strategy, relevant_distance
 ):
     """
-    Detrlmine the best path between 2 points in the network using the Hausdorf-distance
+    Determine the best path between 2 points in the network using the Hausdorf-distance
     Parameters:
     - geom_to_process: shapely.geometry.MultiLineString -  geometry (line) with startpoint-endpoint and to determine hausdorf-distance
     - nw_multilinestring: shapely.geometry.MultiLineString - MultiLineString with all parts of a network
@@ -1832,11 +1832,8 @@ def find_best_path_in_network(
     # Determine the network-path that fits the best to the original inputgeometry
     min_dist = inf
     best_line = None
-    # i=0
     for path in all_paths:
-        # i=i+1
-        # print(str(i))
-        try:
+        try:#added try/except because 'path' sometimes exists out of 1 point, resulting in LineString-error
             line = LineString(path)
             dist = total_vertex_distance(line, geom_to_process)
             if dist < min_dist:

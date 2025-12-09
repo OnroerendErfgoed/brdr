@@ -172,7 +172,7 @@ class AlignerResult:
                     formula
                 ):  # and not (theme_id in prop_dictionary and relevant_distance in prop_dictionary[theme_id] and NEW_FORMULA_FIELD_NAME in prop_dictionary[theme_id][relevant_distance]):
                     result = process_result["result"]
-                    formula = aligner.get_brdr_formula(result)
+                    formula = aligner.compare_to_reference(result)
                     prop_dictionary[theme_id][relevant_distance][FORMULA_FIELD_NAME] = (
                         json.dumps(formula)
                     )
@@ -928,7 +928,7 @@ class Aligner:
 
         return AlignerResult(dict_predictions_evaluated)
 
-    def get_brdr_formula(self, geometry: BaseGeometry, with_geom=False):
+    def compare_to_reference(self, geometry: BaseGeometry, with_geom=False):
         """
         Calculates formula-related information based on the input geometry.
 
@@ -1182,7 +1182,7 @@ class Aligner:
             DIFF_PERCENTAGE_FIELD_NAME: None,
             DIFF_AREA_FIELD_NAME: None,
         }
-        actual_formula = self.get_brdr_formula(geom_predicted)
+        actual_formula = self.compare_to_reference(geom_predicted)
         if actual_formula is None:
             properties[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
             properties[FULL_ACTUAL_FIELD_NAME] = False

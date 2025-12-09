@@ -242,7 +242,7 @@ def print_brdr_formula(dict_results, aligner):
                 + str(rel_dist)
                 + "--------------"
             )
-            print(aligner.get_brdr_formula(processresults["result"]))
+            print(aligner.compare_to_reference(processresults["result"]))
     return
 
 

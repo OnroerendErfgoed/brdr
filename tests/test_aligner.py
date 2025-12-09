@@ -88,7 +88,7 @@ class TestAligner(unittest.TestCase):
         key = "a"
         ref_dict = {key: self.sample_geom}
         self.sample_aligner.load_reference_data(DictLoader(ref_dict))
-        res = self.sample_aligner.get_brdr_formula(self.sample_geom, with_geom=True)
+        res = self.sample_aligner.compare_to_reference(self.sample_geom, with_geom=True)
         self.assertTrue(res["full"])
         result = res["reference_features"][key]
         self.assertTrue(result["full"])
@@ -99,7 +99,7 @@ class TestAligner(unittest.TestCase):
         key = "a"
         ref_dict = {key: self.sample_geom.buffer(0.5)}
         self.sample_aligner.load_reference_data(DictLoader(ref_dict))
-        res = self.sample_aligner.get_brdr_formula(self.sample_geom, with_geom=True)
+        res = self.sample_aligner.compare_to_reference(self.sample_geom, with_geom=True)
         self.assertFalse(res["full"])
         result = res["reference_features"][key]
         self.assertFalse(result["full"])

@@ -52,7 +52,7 @@ class TestExamples:
         rel_dist = 2
         process_result = aligner.process(relevant_distances=[rel_dist])
         for process_results in process_result.results.values():
-            aligner.get_brdr_formula(process_results[rel_dist]["result"])
+            aligner.compare_to_reference(process_results[rel_dist]["result"])
 
     @pytest.mark.usefixtures("callback_grb_response")
     def test_example_multipolygon(self):

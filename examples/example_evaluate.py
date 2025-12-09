@@ -43,7 +43,7 @@ if __name__ == "__main__":
         thematic_dict_result[key] = base_results[key][relevant_distance]["result"]
         thematic_dict_formula[key] = {
             name_formula: json.dumps(
-                base_aligner.get_brdr_formula(thematic_dict_result[key])
+                base_aligner.compare_to_reference(thematic_dict_result[key])
             )
         }
         print(key + ": " + thematic_dict_result[key].wkt)
