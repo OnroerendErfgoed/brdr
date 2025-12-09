@@ -1,4 +1,3 @@
-# TODO - cleanup full file: make generic for all types, extract WFS - GML function, CRS ...
 import json
 from datetime import datetime
 from io import BytesIO
@@ -6,6 +5,7 @@ from io import BytesIO
 import geopandas as gpd
 import requests
 
+from brdr.be.constants import BE_SUPPORTED_CRS
 from brdr.constants import (
     DATE_FORMAT,
     VERSION_DATE,
@@ -16,14 +16,31 @@ from brdr.loader import GeoJsonLoader
 
 
 def gml_response_to_geojson(url, params):
-    # Haal de GML-response op
-    response = requests.get(url, params)
-    response.raise_for_status()  # geeft fout als de request mislukt
+    """
+    Fetches a GML (Geography Markup Language) response from a URL,
+    reads it using GeoPandas, and converts the result to
+    GeoJSON format (as a Python dictionary).
 
-    # Lees de GML rechtstreeks uit de response
+    Args:
+        url (str): The URL to fetch the GML data from (e.g., a WFS endpoint).
+        params (dict): The parameters to be sent with the GET request
+                       (e.g., service, version, request, typeName).
+
+    Returns:
+        dict: The geographical data in GeoJSON format.
+
+    Raises:
+        requests.exceptions.HTTPError: If the HTTP request fails.
+        fiona.errors.DriverError: If the GML data cannot be read correctly.
+    """
+    # Fetch the GML response
+    response = requests.get(url, params)
+    response.raise_for_status()  # Raises an error if the request failed
+
+    # Read the GML directly from the response (using BytesIO for in-memory processing)
     gdf = gpd.read_file(BytesIO(response.content))
 
-    # Zet om naar GeoJSON (als dict)
+    # Convert to GeoJSON (as a dict)
     return json.loads(gdf.to_json())
 
 
@@ -52,6 +69,10 @@ class BeCadastralParcelLoader(GeoJsonLoader):
     def __init__(self, aligner, partition: int = 1000):
         super().__init__()
         self.aligner = aligner
+        if not self.aligner.CRS in (to_crs(element) for element in BE_SUPPORTED_CRS):
+            raise ValueError(
+                f"BeCadastralParcelLoader only supports alignment in CRS '{BE_SUPPORTED_CRS}' while CRS '{self.aligner.CRS}' is used"
+            )
         self.part = partition
         self.data_dict_source["source"] = "Kadaster"
         # self.versiondate_info = {"name": "LastUpdDTS", "format": DATE_FORMAT}
@@ -59,16 +80,6 @@ class BeCadastralParcelLoader(GeoJsonLoader):
     def load_data(self):
         if not self.aligner.dict_thematic:
             raise ValueError("Thematic data not loaded")
-        # CRS:
-        # EPSG:31370 – Belge Lambert 72
-        # EPSG:3812 – Belgian Lambert 2008
-        # EPSG:4258 – ETRS89 (geografische coördinaten)
-        supported_crs = ["EPSG:31370", "EPSG:3812", "EPSG:4258"]
-        aligner_crs_epsg = from_crs(self.aligner.CRS, format="epsg")
-        if aligner_crs_epsg not in supported_crs:
-            raise ValueError(
-                f"BeCadastralParcelLoader only supports alignment in CRS '{str(supported_crs)}' while CRS '{aligner_crs_epsg}' is used"
-            )
         geom_union = buffer_pos(self.aligner.get_thematic_union(), MAX_REFERENCE_BUFFER)
 
         collection, id_property = get_collection_cadastral(
