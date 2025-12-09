@@ -6,7 +6,7 @@ from itertools import islice
 from math import dist
 from math import inf
 from math import pi
-from typing import Union, List
+from typing import Union, List, Tuple
 
 import networkx as nx
 import numpy as np
@@ -777,11 +777,11 @@ def _get_sublinestring_coordinates(
     )
     if line_substring is None or line_substring.is_empty:
         return coordinates
-    # TODO what if line_substring is a multilinestring? error detected in brdrQ
-    for p in line_substring.coords:
-        point = Point(p)
-        if (point.distance(p_start) + point.distance(p_end)) / 2 <= tolerance:
-            coordinates.append(p)
+    for line in list(to_multi(line_substring).geoms):
+        for p in line.coords:
+            point = Point(p)
+            if (point.distance(p_start) + point.distance(p_end)) / 2 <= tolerance:
+                coordinates.append(p)
     return coordinates
 
 
@@ -928,9 +928,7 @@ def get_partitions(geom, delta):
         list: A filtered list of Polygon objects representing the partitions
             overlapping the original geometric object.
     """
-    # TODO: partitioning results in multiple squares, this can be improved by
-    #  partitioning with a quadtree with rectangles?
-    #  https://www.fundza.com/algorithmic/quadtree/index.html
+    ##259 Research around optimization of partitioning
     prepared_geom = prep(geom)
     partitions = _grid_bounds(geom, delta)
     filtered_grid = list(filter(prepared_geom.intersects, partitions))
@@ -1426,50 +1424,79 @@ def longest_linestring_from_multilinestring(multilinestring):
 
 
 def find_longest_path_in_network(
-    geom_to_process, multilinestring, snap_strategy, relevant_distance
-):
+    geom_to_process: LineString,
+    multilinestring: MultiLineString,
+    snap_strategy: SnapStrategy,
+    relevant_distance: float,
+) -> Union[LineString, None]:
     """
-    Bepaal het langste pad tussen twee punten in een MultiLineString-geometrie.
+    Determines the longest simple path between the start and end points of a
+    LineString within a given MultiLineString network geometry.
 
-    Parameters:
-    - multilinestring: shapely.geometry.MultiLineString
-    - start_point: shapely.geometry.Point
-    - end_point: shapely.geometry.Point
+    Note: Finding the longest simple path is NP-hard. This function uses
+    `nx.all_simple_paths`, which can be very slow for large or highly connected graphs.
+
+    Args:
+        geom_to_process (LineString): The LineString whose start and end points
+                                      are used as source and target.
+        multilinestring (MultiLineString): The network geometry containing the possible paths.
+        snap_strategy (SnapStrategy): Strategy for snapping the start/end points to nodes
+                                      (e.g., preferring existing vertices).
+        relevant_distance (float): Distance threshold used for snapping to vertices
+                                   when a vertex preference strategy is active.
 
     Returns:
-    - shapely.geometry.LineString van het langste pad tussen de twee punten
+        Union[LineString, None]: A Shapely LineString representing the longest path
+                                 between the two snapped points, or None if no path is found.
     """
+    # If the network is empty, return an empty GeometryCollection
     if multilinestring is None or multilinestring.is_empty:
         return GeometryCollection()
 
+    # If the network is just a single line, return it directly
     if isinstance(multilinestring, LineString):
         return multilinestring
 
+    # Extract the start and end points from the geometry to process
     start_point = Point(geom_to_process.coords[0])
     end_point = Point(geom_to_process.coords[-1])
 
+    # Convert the MultiLineString to a NetworkX graph
     graph = graph_from_multilinestring(multilinestring)
 
+    # Find the nearest existing node for the start and end points
     start_node = nearest_node(start_point, graph.nodes)
     end_node = nearest_node(end_point, graph.nodes)
+
+    # If the snapped start and end nodes are the same, look for a circle path
     if start_node == end_node:
         return find_circle_path(graph.to_directed())
+
+    # Apply snapping strategy if relevant (e.g., PREFER_VERTICES or ONLY_VERTICES)
     if not snap_strategy is None and snap_strategy != SnapStrategy.NO_PREFERENCE:
-        # when SnapStrategy = PREFER_VERTICES or ONLY_VERTICES
         start_node = get_vertex_node(graph, relevant_distance, start_node, start_point)
         end_node = get_vertex_node(graph, relevant_distance, end_node, end_point)
 
+    # Find all simple paths between the nodes
     all_paths = nx.all_simple_paths(graph, source=start_node, target=end_node)
 
     max_length = 0
-    longest_path = []
-    # TODO; when having long lines, this loop becomes very slow due to amount of possibities to check
+    longest_path: List[Tuple[float, float]] = []
+
+    # WARNING:#275 To reserach for optimization When having long lines or dense networks, this loop becomes very slow
+    # due to the amount of possibilities to check (NP-hard problem).
     for path in all_paths:
-        length = sum(graph[path[i]][path[i + 1]]["weight"] for i in range(len(path) - 1))
+        # Calculate the total length of the current path
+        length = sum(
+            graph[path[i]][path[i + 1]]["weight"] for i in range(len(path) - 1)
+        )
+
+        # Check if this path is longer than the current maximum
         if length > max_length:
             max_length = length
             longest_path = path
 
+    # Convert the list of nodes (path) back into a LineString
     if longest_path:
         return LineString(longest_path)
     else:
@@ -1646,7 +1673,7 @@ def connect_disconnected_networks(graph):
 def prepare_network(segments):
     network = line_merge(safe_unary_union(segments))
     network = snap(network, network, tolerance=0.01)
-    # TODO check if this is sufficient; possibly we also need to inject vertex on edge where line almost touches an edge
+    # #274: Research if this is sufficient; possibly we also need to inject vertex on edge where line almost touches an edge
     network = fill_gaps_in_multilinestring(
         network, 0.1
     )  # also needed to fill 'gaps' to connect reference objects fe points
@@ -1711,95 +1738,36 @@ def total_vertex_distance(
     return total_distance / len_vertices
 
 
-
 def hausdorff_distance(ls1, ls2):
     return ls1.hausdorff_distance(ls2)
 
 
-def path_to_linestring(path):
-    return LineString(path)
+# def path_to_linestring(path):
+#     return LineString(path)
 
 
-def find_cycle_paths(cycle):
-    """Split a cycle into two alternative paths between the furthest nodes"""
-    max_dist = 0
-    start, end = cycle[0], cycle[1]
-    for i in range(len(cycle)):
-        for j in range(i + 1, len(cycle)):
-            d = euclidean_distance(cycle[i], cycle[j])
-            if d > max_dist:
-                max_dist = d
-                start, end = cycle[i], cycle[j]
-
-    idx_start = cycle.index(start)
-    idx_end = cycle.index(end)
-
-    if idx_start < idx_end:
-        path1 = cycle[idx_start : idx_end + 1]
-        path2 = cycle[idx_end:] + cycle[: idx_start + 1]
-    else:
-        path1 = cycle[idx_end : idx_start + 1]
-        path2 = cycle[idx_start:] + cycle[: idx_end + 1]
-
-    return path1, path2
-
-
-def remove_path_from_graph(graph, path):
-    for i in range(len(path) - 1):
-        if graph.has_edge(path[i], path[i + 1]):
-            graph.remove_edge(path[i], path[i + 1])
-
-
-def simplify_graph_by_best_cycle_path(graph, input_line):
-    """
-    Vereenvoudigt een undirected graph door in elke cycle enkel het pad te behouden
-    dat het dichtst ligt bij een opgegeven LineString.
-
-    Parameters:
-    - G: NetworkX Graph met nodes die een 'pos' attribuut hebben (x, y)
-    - input_line: Shapely LineString waartegen afstand gemeten wordt
-
-    Returns:
-    - G_simplified: een nieuwe NetworkX Graph met vereenvoudigde edges
-    """
-    # Zet om naar directed graph voor cycle detectie
-    directed_graph = nx.DiGraph(graph)
-    cycles = list(nx.simple_cycles(directed_graph))
-    edges_to_keep = set()
-
-    for cycle in cycles:
-        # Genereer beide richtingen van het pad in de cycle
-        paths = [
-            [(cycle[i], cycle[(i + 1) % len(cycle)]) for i in range(len(cycle))],
-            [(cycle[i], cycle[i - 1]) for i in range(len(cycle))],
-        ]
-
-        path_distances = []
-
-        for path in paths:
-            total_distance = 0
-            for u, v in path:
-                p1 = Point(u)
-                p2 = Point(v)
-                edge_line = LineString([p1, p2])
-                total_distance += edge_line.distance(input_line)
-            avg_distance = total_distance / len(path)
-            path_distances.append((avg_distance, path))
-
-        # Kies het pad met de kleinste gemiddelde afstand
-        best_path = min(path_distances, key=lambda x: x[0])[1]
-        edges_to_keep.update(best_path)
-
-    # Bouw de vereenvoudigde graaf
-    graph_simplified = nx.Graph()
-    for node, data in graph.nodes(data=True):
-        graph_simplified.add_node(node, **data)
-
-    for u, v in graph.edges():
-        if (u, v) in edges_to_keep or (v, u) in edges_to_keep:
-            graph_simplified.add_edge(u, v)
-
-    return graph_simplified
+# def find_cycle_paths(cycle):
+#     """Split a cycle into two alternative paths between the furthest nodes"""
+#     max_dist = 0
+#     start, end = cycle[0], cycle[1]
+#     for i in range(len(cycle)):
+#         for j in range(i + 1, len(cycle)):
+#             d = euclidean_distance(cycle[i], cycle[j])
+#             if d > max_dist:
+#                 max_dist = d
+#                 start, end = cycle[i], cycle[j]
+#
+#     idx_start = cycle.index(start)
+#     idx_end = cycle.index(end)
+#
+#     if idx_start < idx_end:
+#         path1 = cycle[idx_start : idx_end + 1]
+#         path2 = cycle[idx_end:] + cycle[: idx_start + 1]
+#     else:
+#         path1 = cycle[idx_end : idx_start + 1]
+#         path2 = cycle[idx_start:] + cycle[: idx_end + 1]
+#
+#     return path1, path2
 
 
 def find_best_path_in_network(
@@ -1824,8 +1792,10 @@ def find_best_path_in_network(
 
     # Create graph
     graph = graph_from_multilinestring(nw_multilinestring)
-    # remove cycles #todo test if this improves
-    # G,removed_edges = simplify_graph_by_best_cycle_path(G,geom_to_process)
+    # remove cycles
+
+    # #273: Research if simplification of graph improves 'find_best_path_in_network'
+    #G,removed_edges = simplify_graph_by_best_cycle_path(G,geom_to_process)
 
     start_node = nearest_node(start_point, graph.nodes)
     end_node = nearest_node(end_point, graph.nodes)
@@ -1838,8 +1808,8 @@ def find_best_path_in_network(
         start_node = get_vertex_node(graph, relevant_distance, start_node, start_point)
         end_node = get_vertex_node(graph, relevant_distance, end_node, end_point)
 
-    # Search all simple paths (limited to 100, because cyclic paths can result in a lot of simple paths
-    all_paths = islice(nx.all_simple_paths(graph, source=start_node, target=end_node), 1000)
+    # Search all simple paths (limited to 500, because cyclic paths can result in a lot of simple paths
+    all_paths = islice(nx.all_simple_paths(graph, source=start_node, target=end_node), 500)
 
     # Determine the network-path that fits the best to the original inputgeometry
     min_dist = inf
@@ -1860,7 +1830,7 @@ def get_vertex_node(graph, relevant_distance, input_node, point):
     min_dist = inf
     for node in graph.neighbors(input_node):
         dist = point.distance(Point(node)) * BUFFER_MULTIPLICATION_FACTOR
-        # TODO is there a better way to check which nodes to use? If the distance is almost the same as the relevant distance, it could be that the vertex is constructed vertex by reference_intersection
+        # #272: Research if there is a better way to check which nodes to use? If the distance is almost the same as the relevant distance, it could be that the vertex is constructed vertex by reference_intersection
         if dist < relevant_distance and dist < min_dist:
             min_dist = dist
             input_node = node
@@ -1868,68 +1838,73 @@ def get_vertex_node(graph, relevant_distance, input_node, point):
 
 
 def remove_pseudonodes(graph):
-    # TODO; research if removing pseudonodes can improve performance.
+    # #271 ; research if removing pseudonodes can improve performance.
     # Maybe better to control when making the initial graph?
     graph = graph.copy()
     for node in list(graph.nodes):
         if graph.degree[node] == 2:
             neighbors = list(graph.neighbors(node))
             if len(neighbors) == 2:
-                # Voeg een nieuwe edge toe tussen de buren
+                # Add a new edge between the neighbors
                 if not graph.has_edge(neighbors[0], neighbors[1]):
                     graph.add_edge(neighbors[0], neighbors[1])
                 graph.remove_node(node)
     return graph
 
 
-# def scale_segments(segments, factor=1.01):
-#     scaled_segments = []
-#     for segment in segments:
-#         scaled_segment = scale(segment, xfact=factor, yfact=factor, origin="center")
-#         scaled_segments.append(scaled_segment)
-#     return scaled_segments
+def _get_snapped_point(
+    point: Point,
+    ref_line: LineString,
+    ref_coords: List[Tuple[float, float]],
+    snap_strategy: str,
+    tolerance: float,
+) -> Union[Point, None]:
+    """
+    Determines the nearest point to the given `point` from either the reference line
+    or the set of reference coordinates (vertices), and returns the snapped point
+    based on the specified snapping strategy and tolerance.
 
+    The function prioritizes finding the closest feature (line or vertex) to the point.
 
-# def extend_line_in_graph(existing_line, graph):
-#     # TODO; check if we are going to use this
-#
-#     start_node = nearest_node(Point(existing_line.coords[0]), graph.nodes)
-#     end_node = nearest_node(Point(existing_line.coords[-1]), graph.nodes)
-#
-#     # Zoek de bijbehorende node in de graph
-#     # (je moet hier mogelijk een mapping hebben tussen coördinaten en node IDs)
-#
-#     start_geom = get_next_geometry(graph, start_node)
-#     end_geom = get_next_geometry(graph, end_node)
-#
-#     # Voeg toe aan bestaande lijn
-#     return safe_unary_union([existing_line, start_geom, end_geom])
-#
-#
-# def get_next_geometry(graph, node):
-#     # TODO; check if we are going to use this
-#
-#     # Stel dat je de node ID hebt:
-#     neighbors = list(graph.neighbors(node))
-#     # Kies een volgende node (bijv. de eerste)
-#     next_node = neighbors[0]
-#     # Haal de edge geometrie op
-#     edge_data = graph.get_edge_data(node, next_node)
-#     return edge_data[0]["geometry"]
+    Args:
+        point (Point): The point to be snapped.
+        ref_line (LineString): The reference line geometry to snap onto. Can be empty.
+        ref_coords (List[Tuple[float, float]]): A list of (x, y) coordinates representing
+                                                 reference vertices. Can be empty.
+        snap_strategy (str): The method used for snapping (e.g., 'nearest', 'vertex').
+        tolerance (float): The maximum distance allowed for snapping.
 
-
-def _get_snapped_point(point, ref_line, ref_coords, snap_strategy, tolerance):
+    Returns:
+        Union[Point, None]: The calculated snapped Point, or None if snapping is not applied
+                            based on the strategy and tolerance (delegated to the internal function).
+    """
     p1, p2 = None, None
     p1_vertices, p2_vertices = None, None
+
+    # Initialize minimum distance to the reference line to infinity
     distance_ref_line = inf
+
+    # 1. Check proximity to the reference line
     if not ref_line.is_empty:
+        # p1 is the point on the line, p2 is the input point
         p1, p2 = nearest_points(point, ref_line)
         distance_ref_line = p2.distance(point)
+
+    # 2. Check proximity to the reference coordinates (vertices)
     if len(ref_coords) != 0:
+        # Find the nearest point from the input point to the set of vertices
         p1_vertices, p2_vertices = nearest_points(point, MultiPoint(ref_coords))
         distance_ref_coords = p2_vertices.distance(point)
+
+        # 3. Determine the overall nearest feature (line or vertex)
         if distance_ref_coords < distance_ref_line:
+            # The nearest feature is a vertex
             p1, p2 = p1_vertices, p2_vertices
+
+    # 4. Delegate the final snapping logic based on strategy and tolerance
+    # The internal function decides whether to snap and returns the final Point.
+    # We pass p2 (the nearest point found) and p2_vertices (the nearest vertex,
+    # which might be None if ref_coords was empty)
     return _snapped_point_by_snapstrategy(
         point, p2, p2_vertices, snap_strategy, tolerance
     )
@@ -1937,45 +1912,61 @@ def _get_snapped_point(point, ref_line, ref_coords, snap_strategy, tolerance):
 
 def add_point_as_node_on_closest_edge(graph, point):
     """
-    Voeg een Shapely Point toe als node op de dichtstbijzijnde edge in een NetworkX-graaf.
-    De originele edge wordt gesplitst in twee nieuwe edges, met aangepaste lengtes.
+    Adds a Shapely Point as a node onto the closest edge in a NetworkX graph.
+    The original edge is split into two new edges with adjusted lengths.
 
-    Parameters:
-    - G: NetworkX-graaf met nodes als (x, y)-tuples
-    - point: Shapely Point
+    Args:
+        graph (nx.Graph): NetworkX graph where nodes are (x, y) tuples.
+        point (Point): Shapely Point object to be inserted.
 
     Returns:
-    - G: aangepaste graaf met nieuwe node en gesplitste edges
+        nx.Graph: The modified graph with the new node and split edges.
+
+    Raises:
+        ValueError: If no suitable edge is found in the graph.
     """
     min_distance = float("inf")
     closest_edge = None
     projected_point = None
 
-    # Zoek de dichtstbijzijnde edge
+    # Find the closest edge
     for u, v, data in graph.edges(data=True):
+        # Create a LineString from the edge endpoints
         line = LineString([u, v])
+
+        # Project the point onto the line and get the projected point (proj)
         proj = line.interpolate(line.project(point))
+
+        # Calculate the distance from the point to the projected point on the line
         distance = point.distance(proj)
+
         if distance < min_distance:
             min_distance = distance
             closest_edge = (u, v)
             projected_point = proj
 
     if closest_edge is None or projected_point is None:
-        raise ValueError("Geen geschikte edge gevonden.")
+        raise ValueError("No suitable edge found.")
 
     u, v = closest_edge
-    #TODO check if not used
-    #original_length = graph[u][v].get("length", dist(u, v))
+
+    # original length of edge can be calculated by following, but we do not need it
+    # original_length = graph[u][v].get("length", dist(u, v))
+
+    # Remove the original edge
     graph.remove_edge(u, v)
 
+    # Define the coordinates of the new node
     new_node = (projected_point.x, projected_point.y)
+
+    # Add the new node to the graph
     graph.add_node(new_node)
 
-    # Bereken nieuwe lengtes
+    # Calculate new lengths for the split edges
     length1 = dist(u, new_node)
     length2 = dist(new_node, v)
 
+    # Add the two new edges
     graph.add_edge(u, new_node, length=length1)
     graph.add_edge(new_node, v, length=length2)
 
@@ -2037,8 +2028,6 @@ def add_point_as_node_on_closest_edge(graph, point):
 #         G.add_edge(p1, p2, length=length)
 #
 #     return G
-
-
 
 
 def extract_points_lines_from_geometry(geometry: ShapelyGeometry) -> GeometryCollection:
