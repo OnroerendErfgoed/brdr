@@ -608,19 +608,20 @@ def merge_process_results(
             grouped_results[id_theme_global] = dict_results
         else:
             for rel_dist, process_result in dict_results.items():
+                # TODO about grouping remarks inside the properties: making a list of enums?
                 for key in process_result:
                     value = process_result[key]  # noqa
-                    if isinstance(value, str) and value != "":
-                        existing_remark: str = grouped_results[id_theme_global][
-                            rel_dist
-                        ][
-                            key
-                        ]  # noqa
-                        grouped_results[id_theme_global][rel_dist][key] = (
-                            existing_remark + " | " + str(value)
-                        )
-                        continue
-                    elif isinstance(value, BaseGeometry):
+                    # if isinstance(value, str) and value != "":
+                    #     existing_remark: str = grouped_results[id_theme_global][
+                    #         rel_dist
+                    #     ][
+                    #         key
+                    #     ]  # noqa
+                    #     grouped_results[id_theme_global][rel_dist][key] = (
+                    #         existing_remark + " | " + str(value)
+                    #     )
+                    #     continue
+                    if isinstance(value, BaseGeometry):
                         geom = value
                         if geom.is_empty or geom is None:
                             continue

@@ -81,6 +81,35 @@ class DiffMetric(str, Enum):
     REFERENCE_USAGE = "reference_usage"
 
 
+class ProcessRemark(str, Enum):
+    """
+    Enum with all possible process-remarks that can be added when processing. These are added into a list to the properties of the result
+    * RESULT_UNCHANGED = "resulting geometry equal to original geometry"
+    * INPUT_CIRCLE = "circle detected: original_geometry_returned"
+    * RESULT_EMPTY = "resulting geometry empty: empty geometry returned"
+    * RESULT_EMPTY_ORIGINAL = "resulting geometry empty: original geometry returned"
+    * CHANGED_GEOMETRYTYPE = "resulting geometry has different geometrytype: empty geometry returned"
+    * CHANGED_AMOUNT_GEOMETRIES = "resulting (multi) geometry has different amount of geometries"
+    * NO_PREDICTION_ORIGINAL_RETURNED = "NO_PREDICTION_ORIGINAL_RETURNED"
+    * MULTIPLE_PREDICTIONS_ORIGINAL_RETURNED = "MULTIPLE_PREDICTIONS_ORIGINAL_RETURNED"
+    * NOT_AFFECTED_ORIGINAL_RETURNED = "NOT_AFFECTED_ORIGINAL_RETURNED"
+    """
+
+    RESULT_UNCHANGED = "resulting geometry equal to original geometry"
+    INPUT_CIRCLE = "circle detected: original_geometry_returned"
+    RESULT_EMPTY = "resulting geometry empty: empty geometry returned"
+    RESULT_EMPTY_ORIGINAL = "resulting geometry empty: original geometry returned"
+    CHANGED_GEOMETRYTYPE = (
+        "resulting geometry has different geometrytype: empty geometry returned"
+    )
+    CHANGED_AMOUNT_GEOMETRIES = (
+        "resulting (multi) geometry has different amount of geometries"
+    )
+    NO_PREDICTION_ORIGINAL_RETURNED = "NO_PREDICTION_ORIGINAL_RETURNED"
+    MULTIPLE_PREDICTIONS_ORIGINAL_RETURNED = "MULTIPLE_PREDICTIONS_ORIGINAL_RETURNED"
+    NOT_AFFECTED_ORIGINAL_RETURNED = "NOT_AFFECTED_ORIGINAL_RETURNED"
+
+
 class Evaluation(str, Enum):
     """
     Enum to evaluate an automatically updated geometry:

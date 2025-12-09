@@ -40,7 +40,7 @@ from brdr.constants import REMARK_FIELD_NAME
 from brdr.constants import STABILITY
 from brdr.constants import VERSION_DATE
 from brdr.constants import ZERO_STREAK
-from brdr.enums import AlignerInputType
+from brdr.enums import AlignerInputType, ProcessRemark
 from brdr.enums import AlignerResultType
 from brdr.enums import DiffMetric
 from brdr.enums import Evaluation
@@ -392,7 +392,7 @@ class Aligner:
         dict_multi_as_single = {}
         topo_thematic = None
         dict_thematic_topo_geoms = None
-
+        # TODO: what about topology?
         if self.multi_as_single_modus:
             dict_thematic_to_process, dict_multi_as_single = multi_to_singles(
                 dict_thematic_to_process
@@ -476,11 +476,14 @@ class Aligner:
                 except:
                     resulting_geometry_length = 1
                 if original_geometry_length != resulting_geometry_length:
-                    msg = "Difference in amount of geometries"
-                    self.logger.feedback_debug(msg)
-                    process_result["properties"][REMARK_FIELD_NAME] = (
-                        process_result["properties"][REMARK_FIELD_NAME] + " | " + msg
-                    )
+                    remark = ProcessRemark.CHANGED_AMOUNT_GEOMETRIES
+                    self.logger.feedback_debug(remark)
+                    if REMARK_FIELD_NAME in process_result["properties"]:
+                        remarks = process_result["properties"][REMARK_FIELD_NAME]
+                    else:
+                        remarks = []
+                    remarks.append(remark)
+                    process_result["properties"][REMARK_FIELD_NAME] = remarks
 
         self.logger.feedback_info(
             "End of processing series: " + str(relevant_distances)
@@ -612,13 +615,9 @@ class Aligner:
                 discrete_list=rd_prediction,
                 initial_sample_size=3,
             )
-            #print(non_stable_points)
-            #TODO: remove remark about rd 0 so it is generic to interpolate
             interpolated_cache = create_full_interpolated_dataset(
                 rd_prediction, cache
             )
-            #print(interpolated_cache)
-            # process_result[theme_id]= individual_process_result[theme_id]
             dict_series[theme_id]=interpolated_cache
 
         process_result = AlignerResult(dict_series)
@@ -662,7 +661,7 @@ class Aligner:
         """
         # Check if the predicted geometries are unique (and remove duplicated predictions)
         """
-        #TODO moet deze functie niets teruggeven?
+        # TODO moet deze functie niets teruggeven?
         dict_predictions_unique = defaultdict(dict)
         for theme_id, dist_results in dict_predictions.items():
             dict_predictions_unique[theme_id] = {}
@@ -754,7 +753,12 @@ class Aligner:
                 props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
                 props[PREDICTION_COUNT] = 0
                 props[PREDICTION_SCORE] = -1
-                props[REMARK_FIELD_NAME] = "no predictions available, original returned"
+                if REMARK_FIELD_NAME in props:
+                    remarks = props[REMARK_FIELD_NAME]
+                else:
+                    remarks = []
+                remarks.append(ProcessRemark.NO_PREDICTION_ORIGINAL_RETURNED)
+                props[REMARK_FIELD_NAME] = remarks
                 dict_predictions_evaluated[theme_id][relevant_distance] = {
                     "result": dict_affected[theme_id],
                     "properties": props,
@@ -850,7 +854,12 @@ class Aligner:
                     relevant_distance = round(0, RELEVANT_DISTANCE_DECIMALS)
                     props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_ORIGINAL
                     props[PREDICTION_SCORE] = -1
-                    props[REMARK_FIELD_NAME] = "multiple predictions, original returned"
+                    if REMARK_FIELD_NAME in props:
+                        remarks = props[REMARK_FIELD_NAME]
+                    else:
+                        remarks = []
+                    remarks.append(ProcessRemark.MULTIPLE_PREDICTIONS_ORIGINAL_RETURNED)
+                    props[REMARK_FIELD_NAME] = remarks
                     dict_predictions_evaluated[theme_id][relevant_distance] = {
                         "result": dict_affected[theme_id],
                         "properties": props,
@@ -875,7 +884,12 @@ class Aligner:
                 props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
                 props[PREDICTION_SCORE] = -1
                 props[PREDICTION_COUNT] = 0
-                props[REMARK_FIELD_NAME] = "no prediction, original returned"
+                if REMARK_FIELD_NAME in props:
+                    remarks = props[REMARK_FIELD_NAME]
+                else:
+                    remarks = []
+                remarks.append(ProcessRemark.NO_PREDICTION_ORIGINAL_RETURNED)
+                props[REMARK_FIELD_NAME] = remarks
                 dict_predictions_evaluated[theme_id][relevant_distance] = {
                     "result": dict_affected[theme_id],
                     "properties": props,
@@ -892,9 +906,12 @@ class Aligner:
             )
             props[EVALUATION_FIELD_NAME] = Evaluation.NO_CHANGE
             props[PREDICTION_SCORE] = -1
-            props[REMARK_FIELD_NAME] = (
-                "Unaffected (no change) --> original geometry returned"
-            )
+            if REMARK_FIELD_NAME in props:
+                remarks = props[REMARK_FIELD_NAME]
+            else:
+                remarks = []
+            remarks.append(ProcessRemark.NOT_AFFECTED_ORIGINAL_RETURNED)
+            props[REMARK_FIELD_NAME] = remarks
             dict_predictions_evaluated[theme_id][relevant_distance] = {
                 "result": geom,
                 "properties": props,

@@ -47,8 +47,14 @@ if __name__ == "__main__":
     loader = GeoJsonLoader(_input=thematic_json, id_property="theme_identifier")
     aligner.load_thematic_data(loader)
     # Load reference data: The actual GRB-parcels
-    wfs_url ="https://geo.api.vlaanderen.be/GRB/wfs"
-    loader = WFSReferenceLoader(url=wfs_url,id_property="OIDN", typename= "GRB:ADP" , partition=1000, aligner=aligner)
+    wfs_url = "https://geo.api.vlaanderen.be/GRB/wfs"
+    loader = WFSReferenceLoader(
+        url=wfs_url,
+        id_property="OIDN",
+        typename="GRB:ADP",
+        partition=1000,
+        aligner=aligner,
+    )
     aligner.load_reference_data(loader)
 
     # Example how to use the Aligner

@@ -6,7 +6,6 @@ from shapely import from_wkt
 from shapely.geometry import Polygon
 
 from brdr.aligner import Aligner
-from brdr.aligner import AlignerResult
 from brdr.be.grb.enums import GRBType
 from brdr.be.grb.loader import GRBActualLoader
 from brdr.configs import ProcessorConfig

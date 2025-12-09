@@ -46,7 +46,7 @@ base_aligner = Aligner()
 print("start loading OE-objects")
 # Load the thematic data to evaluate
 loader = OnroerendErfgoedLoader(bbox=bbox, partition=0)
-#loader = OnroerendErfgoedLoader(objectids= [276,120380])
+# loader = OnroerendErfgoedLoader(objectids= [276,120380])
 base_aligner.load_thematic_data(loader)
 
 # Exclude objects bigger than specified area
@@ -75,7 +75,9 @@ print("Process base objects")
 starttime = datetime.now()
 base_process_result = base_aligner.process(relevant_distances=[base_correction])
 # get resulting aligned features on Adpfxxxx, with formula
-processresults = base_process_result.get_results_as_geojson(aligner=base_aligner,formula=True)
+processresults = base_process_result.get_results_as_geojson(
+    aligner=base_aligner, formula=True
+)
 if len(processresults) == 0:
     print("empty processresults")
     exit()
