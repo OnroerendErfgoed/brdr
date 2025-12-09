@@ -215,14 +215,13 @@ class AlignerResult:
         fcs = self.get_results_as_geojson(
             aligner=aligner,
             formula=formula,
+            result_type=result_type
         )
         for name, fc in fcs.items():
             write_geojson(
                 os.path.join(path, result_type.value + "_" + name + ".geojson"), fc
             )
 
-
-# TODO what about the Aligner-parameters; AlignerConfig-class?
 class Aligner:
     """
     This class is used to compare and align the thematic data with the reference data.

@@ -17,7 +17,7 @@ from shapely import polygonize
 from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
 
-from brdr.constants import AREA_ATTRIBUTE
+from brdr.constants import AREA_ATTRIBUTE, REMARK_FIELD_NAME
 from brdr.constants import DEFAULT_CRS
 from brdr.constants import DOWNLOAD_LIMIT
 from brdr.constants import MULTI_SINGLE_ID_SEPARATOR
@@ -608,19 +608,13 @@ def merge_process_results(
             grouped_results[id_theme_global] = dict_results
         else:
             for rel_dist, process_result in dict_results.items():
-                # TODO about grouping remarks inside the properties: making a list of enums?
                 for key in process_result:
                     value = process_result[key]  # noqa
-                    # if isinstance(value, str) and value != "":
-                    #     existing_remark: str = grouped_results[id_theme_global][
-                    #         rel_dist
-                    #     ][
-                    #         key
-                    #     ]  # noqa
-                    #     grouped_results[id_theme_global][rel_dist][key] = (
-                    #         existing_remark + " | " + str(value)
-                    #     )
-                    #     continue
+                    if key == "properties" :
+                        existing_remarks: list =  grouped_results[id_theme_global][ rel_dist][key][REMARK_FIELD_NAME]  # noqa
+                        existing_remarks.extend(value[REMARK_FIELD_NAME])
+                        grouped_results[id_theme_global][rel_dist][key][REMARK_FIELD_NAME] = existing_remarks
+                        continue
                     if isinstance(value, BaseGeometry):
                         geom = value
                         if geom.is_empty or geom is None:

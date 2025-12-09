@@ -24,32 +24,26 @@ if __name__ == "__main__":
     print("EXAMPLE with 'multi_as_single_modus'=False")
     aligner = Aligner(
         multi_as_single_modus=False,
-        relevant_distance=relevant_distance,
-        od_strategy=od_strategy,
-        threshold_circle_ratio=threshold_circle_ratio,
     )
     aligner.load_thematic_data(loader)
     aligner.load_reference_data(
         GRBActualLoader(aligner=aligner, grb_type=GRBType.ADP, partition=1000)
     )
-    dict_results = aligner.process()
-    aligner.save_results("output/")
-    print_brdr_formula(dict_results, aligner)
-    show_map(dict_results, aligner.dict_thematic, aligner.dict_reference)
+    aligner_results = aligner.process(relevant_distances=[relevant_distance])
+    aligner_results.save_results(path="output/", aligner=aligner)
+    print_brdr_formula(aligner_results.get_results(), aligner)
+    show_map(aligner_results.get_results(), aligner.dict_thematic, aligner.dict_reference)
 
     # WITH "multi_as_single_modus"=True
     print("EXAMPLE with 'multi_as_single_modus'=True")
     aligner = Aligner(
         multi_as_single_modus=True,
-        relevant_distance=relevant_distance,
-        od_strategy=od_strategy,
-        threshold_circle_ratio=threshold_circle_ratio,
     )
     aligner.load_thematic_data(loader)
     aligner.load_reference_data(
         GRBActualLoader(aligner=aligner, grb_type=GRBType.ADP, partition=1000)
     )
-    dict_results = aligner.process()
-    aligner.save_results("output/")
-    print_brdr_formula(dict_results, aligner)
-    show_map(dict_results, aligner.dict_thematic, aligner.dict_reference)
+    aligner_results = aligner.process(relevant_distances=[relevant_distance])
+    aligner_results.save_results(path="output/", aligner=aligner)
+    print_brdr_formula(aligner_results.get_results(), aligner)
+    show_map(aligner_results.get_results(), aligner.dict_thematic, aligner.dict_reference)
