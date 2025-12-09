@@ -52,7 +52,7 @@ dev = [
     "flake8==7.1.1",
     "geopandas==1.1.0",
     "hatchling==1.28.0",
-    "matplotlib==3.8.4",
+    "matplotlib==3.10.7",
     "mypy==1.13.0",
     "pip-tools==7.4.1",
     "types-requests==2.31.0.20240406",

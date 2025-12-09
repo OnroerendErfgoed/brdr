@@ -77,7 +77,7 @@ pathspec==0.12.1
     # via
     #   black
     #   hatchling
-pillow==10.3.0
+pillow>=11.0.0
     # via matplotlib
 pip-tools==7.5.2
     # via brdr (pyproject.toml)
