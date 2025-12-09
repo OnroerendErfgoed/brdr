@@ -292,7 +292,7 @@ def get_collection_grb_parcels_by_date(
         crs=crs,
     )
     # Filter on specific date: delete all features > specific_date
-    # TODO: experimental loader; unclear if we have to use "year-1 & year" OR if we have to use "year & year + 1"
+    # This is an experimental loader and results are not guaranteed; unclear if we have to use "year-1 & year" OR if we have to use "year & year + 1"
     collection_year_after_filtered = deepcopy(collection_year_after)
     logging.debug(len(collection_year_after_filtered["features"]))
     if (
@@ -333,8 +333,7 @@ def get_collection_grb_parcels_by_date(
 
         # search for intersection and check if it more than x%
         # keep these features
-
-        # add them to
+        # add them
 
     collection_specific_date = deepcopy(collection_year_after_filtered)
     filtered_features = collection_year_after_filtered["features"]
