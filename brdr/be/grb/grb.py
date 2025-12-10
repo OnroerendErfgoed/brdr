@@ -14,7 +14,7 @@ from brdr.constants import (
     FORMULA_FIELD_NAME,
     BASE_FORMULA_FIELD_NAME,
 )
-from brdr.enums import FullReferenceStrategy
+from brdr.enums import FullReferenceStrategy, AlignerResultType
 from brdr.loader import DictLoader
 from brdr.logger import Logger
 
@@ -149,7 +149,7 @@ def update_to_actual_grb(
         multi_to_best_prediction=multi_to_best_prediction,
     )
 
-    return aligner_result.get_results_as_geojson(aligner=actual_aligner,
+    return aligner_result.get_results_as_geojson(aligner=actual_aligner,result_type=AlignerResultType.EVALUATED_PREDICTIONS,
         formula=True,
         attributes=attributes,
     )

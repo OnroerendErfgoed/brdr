@@ -887,8 +887,7 @@ class Aligner:
                 geom_predicted=geom,
                 base_formula_field=base_formula_field,
             )
-            #TODO - NOTEVALUATED instead of NO_CHANGE
-            props[EVALUATION_FIELD_NAME] = Evaluation.NO_CHANGE
+            props[EVALUATION_FIELD_NAME] = Evaluation.NOT_EVALUATED
             props[PREDICTION_SCORE] = -1
             if REMARK_FIELD_NAME in props:
                 remarks = props[REMARK_FIELD_NAME]
@@ -1157,7 +1156,7 @@ class Aligner:
             DIFF_AREA_FIELD_NAME: None,
         }
         actual_formula = self.compare_to_reference(geom_predicted)
-        if actual_formula is None:
+        if actual_formula is None or geom_predicted is None or geom_predicted.is_empty:
             properties[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
             properties[FULL_ACTUAL_FIELD_NAME] = False
             return properties
@@ -1216,14 +1215,18 @@ class Aligner:
                     base_formula["reference_features"][key]["area"]
                     - actual_formula["reference_features"][key]["area"]
                 )
-                diff_percentage_reference_feature = (
-                    abs(
-                        base_formula["reference_features"][key]["area"]
-                        - actual_formula["reference_features"][key]["area"]
+                area = base_formula["reference_features"][key]["area"]
+                if area>0:
+                    diff_percentage_reference_feature = (
+                        abs(
+                            base_formula["reference_features"][key]["area"]
+                            - actual_formula["reference_features"][key]["area"]
+                        )
+                        * 100
+                        / base_formula["reference_features"][key]["area"]
                     )
-                    * 100
-                    / base_formula["reference_features"][key]["area"]
-                )
+                else:
+                    diff_percentage_reference_feature=0
                 if diff_area_reference_feature > max_diff_area_reference_feature:
                     max_diff_area_reference_feature = diff_area_reference_feature
                 if (

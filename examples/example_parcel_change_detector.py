@@ -45,8 +45,8 @@ max_distance_for_actualisation = 2
 base_aligner = Aligner()
 print("start loading OE-objects")
 # Load the thematic data to evaluate
-loader = OnroerendErfgoedLoader(bbox=bbox, partition=0)
-# loader = OnroerendErfgoedLoader(objectids= [276,120380])
+#loader = OnroerendErfgoedLoader(bbox=bbox, partition=0)
+loader = OnroerendErfgoedLoader(objectids= [276,120380])
 base_aligner.load_thematic_data(loader)
 
 # Exclude objects bigger than specified area
