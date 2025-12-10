@@ -74,7 +74,7 @@ class TestAligner(unittest.TestCase):
         process_result = aligner.process([1])
         path = "./tmp/"
         resulttype = AlignerResultType.PROCESSRESULTS
-        process_result.save_results(path=path)
+        process_result.save_results(aligner=aligner,path=path)
         filenames = [
             resulttype.value + f"_{k}.geojson" for k in ProcessResult.__annotations__
         ]
@@ -196,7 +196,7 @@ class TestAligner(unittest.TestCase):
         aligner.load_reference_data(loader)
         relevant_distance = 5
         aligner_result = aligner.process([relevant_distance], max_workers=-1)
-        process_results= aligner_result.get_results()
+        process_results= aligner_result.get_results(aligner=aligner)
         self.assertEqual(
             process_results["theme_id_1"][relevant_distance]["result"].geom_type,
             "Polygon",
@@ -501,7 +501,7 @@ class TestAligner(unittest.TestCase):
         )
         self.sample_aligner.load_reference_data(DictLoader({"ref_id_1": aligned_shape}))
         process_result = self.sample_aligner.process([1])
-        fcs = process_result.get_results_as_geojson(formula=True,attributes=True)
+        fcs = process_result.get_results_as_geojson(aligner=self.sample_aligner,formula=True,attributes=True)
         assert fcs["result"]["features"][0]["properties"][AREA_ATTRIBUTE] > 0
         assert fcs["result_diff"]["features"][0]["properties"][AREA_ATTRIBUTE] == 0
         assert fcs["result_diff_min"]["features"][0]["properties"][AREA_ATTRIBUTE] == 0

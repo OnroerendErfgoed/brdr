@@ -28,13 +28,13 @@ counter_excluded = 0
 crs = "EPSG:31370"
 limit = 10
 bbox = [172800, 170900, 173000, 171100]
-bbox = [172000, 172000, 174000, 174000]
+#bbox = [172000, 172000, 174000, 174000]
 base_year = "2022"
 # relevant distance that is used to align the original geometries to the
 # reference-polygons of the base-year
 base_correction = 2
 # geometries bigger than this, will be excluded
-excluded_area = 500
+excluded_area = 50000
 # max_distance_for_actualisation  of relevant distance that is used to check if we can auto-align the geometries
 # to the actual reference-polygons to get an 'equal' formula
 max_distance_for_actualisation = 2

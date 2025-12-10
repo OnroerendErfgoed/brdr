@@ -73,10 +73,10 @@ class TestAligner(unittest.TestCase):
 
         series = np.arange(0, 810, 10, dtype=int) / 100
         # predict which relevant distances are interesting to propose as resulting geometry
-        dict_predictions = aligner.predict(series).get_results(
-            AlignerResultType.PREDICTIONS
-        )
-        assert len(dict_predictions["id1"]) >= 1
+        aligner_result = aligner.predict(relevant_distances=series)
+
+        process_results_predicted=aligner_result.get_results(aligner=aligner,result_type=AlignerResultType.PREDICTIONS)
+        assert len(process_results_predicted["id1"]) >= 1
 
     @pytest.mark.usefixtures("callback_grb_response")
     def test_predictor_no_prediction(self):
@@ -96,10 +96,9 @@ class TestAligner(unittest.TestCase):
 
         series = np.arange(0, 110, 10, dtype=int) / 100
         # predict which relevant distances are interesting to propose as resulting geometry
-        dict_predictions = aligner.predict(series).get_results(
-            AlignerResultType.PREDICTIONS
-        )
-        assert len(dict_predictions["id1"]) <= 1
+        aligner_result = aligner.predict(relevant_distances=series)
+        process_results_predicted=aligner_result.get_results(aligner=aligner,result_type=AlignerResultType.PREDICTIONS)
+        assert len(process_results_predicted["id1"]) <= 1
 
     def test_predictor_point(self):
         # Load thematic data & reference data

@@ -163,13 +163,14 @@ class TestEvaluate(unittest.TestCase):
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         )
 
-        evaluation_result = aligner.evaluate(
+        aligner_result = aligner.evaluate(
             relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
             full_strategy=FullReferenceStrategy.ONLY_FULL_REFERENCE,
         )
-        assert len(evaluation_result.results["theme_id_1"]) == 1
+        process_results_evaluated = aligner_result.get_results(aligner=aligner,result_type=AlignerResultType.EVALUATED_PREDICTIONS)
+        assert len(process_results_evaluated["theme_id_1"]) == 1
         assert (
-            evaluation_result.results["theme_id_1"][3.5]["properties"][
+            process_results_evaluated["theme_id_1"][3.5]["properties"][
                 EVALUATION_FIELD_NAME
             ]
             == Evaluation.PREDICTION_UNIQUE_FULL
@@ -188,15 +189,15 @@ class TestEvaluate(unittest.TestCase):
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         )
 
-        dict_evaluated = aligner.evaluate(
+        aligner_result = aligner.evaluate(
             relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
             full_strategy=FullReferenceStrategy.PREFER_FULL_REFERENCE,
-            max_predictions=-1,
-        ).get_results(AlignerResultType.EVALUATED_PREDICTIONS)
+            max_predictions=-1)
+        process_results_evaluated=aligner_result.get_results(aligner=aligner,result_type=AlignerResultType.EVALUATED_PREDICTIONS)
 
-        assert len(dict_evaluated["theme_id_1"]) > 1
+        assert len(process_results_evaluated["theme_id_1"]) > 1
         assert (
-            dict_evaluated["theme_id_1"][3.5]["properties"][EVALUATION_FIELD_NAME]
+            process_results_evaluated["theme_id_1"][3.5]["properties"][EVALUATION_FIELD_NAME]
             == Evaluation.TO_CHECK_PREDICTION_FULL
         )
 
@@ -236,16 +237,19 @@ class TestEvaluate(unittest.TestCase):
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         )
 
-        evaluation_result = aligner.evaluate(
+        aligner_result = aligner.evaluate(
             relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
             full_strategy=FullReferenceStrategy.NO_FULL_REFERENCE,
             max_predictions=1,
             multi_to_best_prediction=True,
         )
-        assert len(evaluation_result.results["theme_id_1"]) == 1
+        process_results_evaluated = aligner_result.get_results(aligner=aligner,
+            result_type=AlignerResultType.EVALUATED_PREDICTIONS
+        )
+        assert len(process_results_evaluated["theme_id_1"]) == 1
         assert (
-            evaluation_result.results["theme_id_1"][
-                list(evaluation_result.results["theme_id_1"].keys())[0]
+            process_results_evaluated["theme_id_1"][
+                list(process_results_evaluated["theme_id_1"].keys())[0]
             ]["properties"][PREDICTION_COUNT]
             > 1
         )
@@ -263,15 +267,18 @@ class TestEvaluate(unittest.TestCase):
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         )
 
-        evaluation_result = aligner.evaluate(
+        aligner_result = aligner.evaluate(
             relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
             full_strategy=FullReferenceStrategy.NO_FULL_REFERENCE,
             max_predictions=1,
             multi_to_best_prediction=False,
         )
-        assert len(evaluation_result.results["theme_id_1"]) == 1
+        process_results_evaluated = aligner_result.get_results(aligner=aligner,
+            result_type=AlignerResultType.EVALUATED_PREDICTIONS
+        )
+        assert len(process_results_evaluated["theme_id_1"]) == 1
         assert (
-            evaluation_result.results["theme_id_1"][0]["properties"][
+            process_results_evaluated["theme_id_1"][0]["properties"][
                 EVALUATION_FIELD_NAME
             ]
             == Evaluation.TO_CHECK_ORIGINAL
@@ -290,15 +297,18 @@ class TestEvaluate(unittest.TestCase):
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         )
 
-        evaluation_result = aligner.evaluate(
+        aligner_result = aligner.evaluate(
             relevant_distances=np.arange(10, 410, 10, dtype=int) / 100,
             full_strategy=FullReferenceStrategy.NO_FULL_REFERENCE,
             max_predictions=1,
             multi_to_best_prediction=False,
         )
-        assert len(evaluation_result.results["theme_id_1"]) == 1
+        process_results_evaluated = aligner_result.get_results(aligner=aligner,
+            result_type=AlignerResultType.EVALUATED_PREDICTIONS
+        )
+        assert len(process_results_evaluated["theme_id_1"]) == 1
         assert (
-            evaluation_result.results["theme_id_1"][0]["properties"][
+            process_results_evaluated["theme_id_1"][0]["properties"][
                 EVALUATION_FIELD_NAME
             ]
             == Evaluation.TO_CHECK_ORIGINAL
@@ -393,12 +403,6 @@ class TestEvaluate(unittest.TestCase):
             multi_to_best_prediction=False,
         )
         assert True
-        #     (
-        #         len(evaluation_result.results["theme_id"]) == 3))
-        # assert (
-        #     evaluation_result.results["theme_id"][0]["properties"][EVALUATION_FIELD_NAME]
-        #     == Evaluation.TO_CHECK_PREDICTION_MULTI_FULL
-        # )
 
     @pytest.mark.usefixtures("mock_grb_response3")
     def test_evaluate_best_no_prediction(self):
@@ -495,27 +499,28 @@ class TestEvaluate(unittest.TestCase):
         aligner.load_reference_data(loader)
 
         # Use the EVALUATE-function
-        evaluation_result = aligner.evaluate(
+        aligner_result = aligner.evaluate(
             relevant_distances=np.arange(0, 310, 10, dtype=int) / 100,
             max_predictions=1,
             full_strategy=FullReferenceStrategy.ONLY_FULL_REFERENCE,
             multi_to_best_prediction=True,
         )
+        process_results_evaluated = aligner_result.get_results(aligner=aligner,result_type=AlignerResultType.EVALUATED_PREDICTIONS)
 
         assert (
-            evaluation_result.results[1][list(evaluation_result.results[1].keys())[0]][
+            process_results_evaluated[1][list(process_results_evaluated[1].keys())[0]][
                 "properties"
             ][EVALUATION_FIELD_NAME]
             == Evaluation.PREDICTION_UNIQUE_FULL
         )
         assert (
-            evaluation_result.results[2][list(evaluation_result.results[2].keys())[0]][
+            process_results_evaluated[2][list(process_results_evaluated[2].keys())[0]][
                 "properties"
             ][EVALUATION_FIELD_NAME]
             == Evaluation.TO_CHECK_NO_PREDICTION
         )
         assert (
-            evaluation_result.results[3][list(evaluation_result.results[3].keys())[0]][
+            process_results_evaluated[3][list(process_results_evaluated[3].keys())[0]][
                 "properties"
             ][EVALUATION_FIELD_NAME]
             == Evaluation.TO_CHECK_NO_PREDICTION

@@ -187,7 +187,7 @@ class TestExamples:
         prediction_result = aligner.predict()
 
         assert len(prediction_result.results) > 0
-        fcs = prediction_result.get_results_as_geojson( formula=True)
+        fcs = prediction_result.get_results_as_geojson(aligner=aligner,formula=True)
         assert len(fcs) == 6
 
 
