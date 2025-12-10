@@ -68,7 +68,6 @@ from brdr.utils import (
 from brdr.utils import determine_stability
 from brdr.utils import diff_from_processresult
 from brdr.utils import diffs_from_dict_processresult
-from brdr.utils import equal_geom_in_array
 from brdr.utils import geojson_from_dict
 from brdr.utils import get_dict_geojsons_from_series_dict
 from brdr.utils import is_brdr_formula
@@ -582,7 +581,7 @@ class Aligner:
         rd_prediction = list(set(rd_prediction))
         rd_prediction = sorted(rd_prediction)
 
-        dict_series = {}
+        process_results = {}
         for theme_id, geom in dict_thematic.items():
 
             def _check_interval_stability(
@@ -614,15 +613,14 @@ class Aligner:
                 initial_sample_size=3,
             )
             interpolated_cache = create_full_interpolated_dataset(rd_prediction, cache)
-            dict_series[theme_id] = interpolated_cache
+            process_results[theme_id] = interpolated_cache
 
-        aligner_result = AlignerResult(dict_series)
         if diff_metric is None:
             diff_metric = self.diff_metric
         diffs_dict = {}
-        for theme_id, dict_processresult in aligner_result.results.items():
+        for theme_id, process_result in process_results.items():
             diffs = diffs_from_dict_processresult(
-                dict_processresult,
+                process_result,
                 dict_thematic[theme_id],
                 self._get_reference_union(),
                 diff_metric=diff_metric,
@@ -636,58 +634,26 @@ class Aligner:
                 continue
             diff_values = list(diffs.values())
             dict_stability = determine_stability(rd_prediction, diff_values)
+            prediction_count=0
             for rd in rd_prediction:
                 if rd not in relevant_distances:
-                    del aligner_result.results[theme_id][rd]
+                    del process_results[theme_id][rd]
                     continue
-                aligner_result.results[theme_id][rd]["properties"][STABILITY] = (
+                process_results[theme_id][rd]["properties"][STABILITY] = (
                     dict_stability[rd][STABILITY]
                 )
                 if dict_stability[rd][ZERO_STREAK] is not None:
                     if cvg_ratio > cvg_ratio_threshold:
-                        aligner_result.results[theme_id][rd]["properties"][
+                        prediction_count += 1
+                        process_results[theme_id][rd]["properties"][
                             PREDICTION_SCORE
                         ] = dict_stability[rd][ZERO_STREAK][3]
+            for rd, process_result in process_results[theme_id].items():
+                if PREDICTION_SCORE in process_result["properties"]:
+                    process_result["properties"][PREDICTION_COUNT] = prediction_count
 
         self.diffs_dict = diffs_dict
-        self.count_predictions(aligner_result.get_results(result_type=AlignerResultType.PREDICTIONS))
-        #TODO: check if the brdr_count is inside the aligner_result
-        return aligner_result
-
-    def count_predictions(
-        self, dict_predictions: dict[ThematicId, dict[float, ProcessResult]]
-    ):
-        """
-        # Check if the predicted geometries are unique (and remove duplicated predictions)
-        """
-        # TODO moet deze functie niets teruggeven?
-        dict_predictions_unique = defaultdict(dict)
-        for theme_id, dist_results in dict_predictions.items():
-            dict_predictions_unique[theme_id] = {}
-            predicted_geoms_for_theme_id = []
-            for rel_dist, processresult in dist_results.items():
-                predicted_geom = processresult["result"]
-                if not equal_geom_in_array(
-                    predicted_geom,
-                    predicted_geoms_for_theme_id,
-                    self.correction_distance,
-                    self.mitre_limit,
-                ) or predicted_geom.geom_type in (
-                    "Point",
-                    "MultiPoint",
-                    "LineString",
-                    "MultiLineString",
-                ):
-                    dict_predictions_unique[theme_id][rel_dist] = processresult
-                    predicted_geoms_for_theme_id.append(processresult["result"])
-                else:
-                    self.logger.feedback_info(
-                        f"Duplicate prediction found for key {theme_id} at distance {rel_dist}"
-                    )
-            for dist, processresult in dist_results.items():
-                processresult["properties"][PREDICTION_COUNT] = len(
-                    predicted_geoms_for_theme_id
-                )
+        return AlignerResult(process_results)
 
     def evaluate(
         self,
