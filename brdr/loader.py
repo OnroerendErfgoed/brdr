@@ -1,26 +1,37 @@
 import json
+import uuid
 import xml.etree.ElementTree as ET
 from abc import ABC
 from datetime import datetime
+from typing import Any
 
 import requests as requests
 from shapely import force_2d
 from shapely import make_valid
 from shapely.geometry.base import BaseGeometry
 
-from brdr.constants import DATE_FORMAT, MAX_REFERENCE_BUFFER, DOWNLOAD_LIMIT
+from brdr.constants import DATE_FORMAT
+from brdr.constants import DOWNLOAD_LIMIT
+from brdr.constants import MAX_REFERENCE_BUFFER
 from brdr.constants import VERSION_DATE
-from brdr.geometry_utils import buffer_pos, to_crs, from_crs
+from brdr.feature_data import AlignerFeature
+from brdr.feature_data import AlignerFeatureCollection
+from brdr.geometry_utils import buffer_pos
+from brdr.geometry_utils import from_crs
+from brdr.geometry_utils import to_crs
 from brdr.typings import FeatureCollection
-from brdr.utils import geojson_to_dicts, get_collection_by_partition
+from brdr.typings import ThematicId
+from brdr.utils import geojson_to_dicts
+from brdr.utils import get_collection_by_partition
 
 
 class Loader(ABC):
-    def __init__(self):
-        self.data_dict: dict[any, BaseGeometry] = {}
-        self.data_dict_properties: dict[any, dict] = {}
-        self.data_dict_source: dict[any, str] = {}
-        self.versiondate_info: dict[any, str] = None
+    def __init__(self, is_reference: bool):
+        self.data_dict: dict[ThematicId, BaseGeometry] = {}
+        self.data_dict_properties: dict[ThematicId, dict] = {}
+        self.data_dict_source: dict[Any, str] = {}
+        self.versiondate_info: dict[Any, str] = None
+        self.is_reference = is_reference
 
     def load_data(self):
         self.data_dict = {
@@ -55,6 +66,23 @@ class Loader(ABC):
 
         return self.data_dict, self.data_dict_properties, self.data_dict_source
 
+    def load_data_as_feature_collection(self):
+        # TODO: rework loaders to make load_data itself return AlignerFeatureCollection
+        self.load_data()
+        features = {
+            key: AlignerFeature(
+                brdr_id=uuid.uuid4().hex, #TODO use id from dict if available
+                geometry=self.data_dict[key],
+                properties=self.data_dict_properties.get(key, {}),
+            )
+            for key in self.data_dict
+        }
+        return AlignerFeatureCollection(
+            features=features,
+            source=self.data_dict_source,
+            is_reference=self.is_reference,
+        )
+
 
 class DictLoader(Loader):
     def __init__(
@@ -62,8 +90,9 @@ class DictLoader(Loader):
         data_dict: dict[str:BaseGeometry],
         data_dict_properties: dict[str:dict] = {},
         data_dict_source: dict[str:str] = {},
+        is_reference: bool = False,
     ):
-        super().__init__()
+        super().__init__(is_reference=is_reference)
         self.data_dict = data_dict
         self.data_dict_properties = data_dict_properties
         self.data_dict_source = data_dict_source
@@ -73,8 +102,14 @@ class DictLoader(Loader):
 
 
 class GeoJsonLoader(Loader):
-    def __init__(self, *, id_property: str = None, _input: FeatureCollection = None):
-        super().__init__()
+    def __init__(
+        self,
+        *,
+        id_property: str = None,
+        _input: FeatureCollection = None,
+        is_reference: bool = False,
+    ):
+        super().__init__(is_reference=is_reference)
         self.id_property = id_property
         self.input = _input
 
@@ -101,19 +136,39 @@ class GeoJsonLoader(Loader):
 
 
 class GeoJsonFileLoader(GeoJsonLoader):
-    def __init__(self, path_to_file, id_property):
+    def __init__(
+        self,
+        path_to_file,
+        id_property,
+        is_reference: bool = False,
+    ):
         with open(path_to_file, "r") as f:
             _input = json.load(f)
-        super().__init__(_input=_input, id_property=id_property)
+        super().__init__(
+            _input=_input,
+            id_property=id_property,
+            is_reference=is_reference,
+        )
 
 
 class GeoJsonUrlLoader(GeoJsonLoader):
-    def __init__(self, url, id_property):
+
+    def __init__(
+        self,
+        url,
+        id_property,
+        is_reference: bool = False,
+    ):
         _input = requests.get(url).json()
-        super().__init__(_input=_input, id_property=id_property)
+        super().__init__(
+            _input=_input,
+            id_property=id_property,
+            is_reference=is_reference,
+        )
 
 
 class OGCFeatureAPIReferenceLoader(GeoJsonLoader):
+
     def __init__(
         self,
         url,
@@ -122,8 +177,9 @@ class OGCFeatureAPIReferenceLoader(GeoJsonLoader):
         aligner,
         partition: int = 1000,
         limit=DOWNLOAD_LIMIT,
+        is_reference: bool = False,
     ):
-        super().__init__()
+        super().__init__(is_reference=is_reference)
         self.aligner = aligner
         self.url = url
         self.id_property = id_property
@@ -179,6 +235,7 @@ class OGCFeatureAPIReferenceLoader(GeoJsonLoader):
 
 
 class WFSReferenceLoader(GeoJsonLoader):
+
     def __init__(
         self,
         url,
@@ -187,8 +244,9 @@ class WFSReferenceLoader(GeoJsonLoader):
         aligner,
         partition: int = 1000,
         limit=DOWNLOAD_LIMIT,
+        is_reference: bool = False,
     ):
-        super().__init__()
+        super().__init__(is_reference=is_reference)
         self.aligner = aligner
         self.url = url
         self.id_property = id_property

@@ -116,13 +116,9 @@ class TestAligner(unittest.TestCase):
         process_result = AlignerGeometryProcessor(config).process(
             input_geometry=thematic_geom,
             relevant_distance=1,
+            reference_data=self.sample_aligner.reference_data,
             correction_distance=self.sample_aligner.correction_distance,
-            dict_reference=self.sample_aligner.dict_reference,
             mitre_limit=self.sample_aligner.mitre_limit,
-            reference_elements=self.sample_aligner.reference_elements,
-            reference_items=self.sample_aligner.reference_items,
-            reference_tree=self.sample_aligner.reference_tree,
-            reference_union=self.sample_aligner._get_reference_union(),
         )
         self.assertTrue(
             from_wkt(process_result["result"].wkt).equals(
