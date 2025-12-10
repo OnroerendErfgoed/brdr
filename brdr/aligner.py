@@ -69,7 +69,7 @@ from brdr.utils import determine_stability
 from brdr.utils import diff_from_processresult
 from brdr.utils import diffs_from_dict_processresult
 from brdr.utils import geojson_from_dict
-from brdr.utils import get_dict_geojsons_from_series_dict
+from brdr.utils import get_geojsons_from_process_results
 from brdr.utils import is_brdr_formula
 from brdr.utils import merge_process_results
 from brdr.utils import multi_to_singles
@@ -80,14 +80,37 @@ from brdr.utils import write_geojson
 class AlignerResult:
     def __init__(
         self,
+        aligner: "Aligner",
         process_results: dict[ThematicId, dict[float, ProcessResult | None]],
     ):
+        self.aligner = aligner
         self.results = process_results
 
     def get_results(
         self,
         result_type: AlignerResultType = AlignerResultType.PROCESSRESULTS,
     ) -> dict[ThematicId, dict[float, ProcessResult | None]]:
+        for theme_id, results_dict in self.results.items():
+            nr_calculations = len(results_dict)
+            for relevant_distance, process_result in results_dict.items():
+                properties = process_result["properties"]
+                # Adding extra properties
+                properties[ID_THEME_FIELD_NAME] = theme_id
+                properties[NR_CALCULATION_FIELD_NAME] = nr_calculations
+                properties[RELEVANT_DISTANCE_FIELD_NAME] = relevant_distance
+                properties[DIFF_INDEX] = diff_from_processresult(
+                    process_result,
+                    self.aligner.dict_thematic[theme_id],
+                    None,
+                    DIFF_METRIC.CHANGES_AREA,
+                )
+                properties[DIFF_PERC_INDEX] = diff_from_processresult(
+                    process_result,
+                    self.aligner.dict_thematic[theme_id],
+                    None,
+                    DIFF_METRIC.CHANGES_PERCENTAGE,
+                )
+
         if result_type == AlignerResultType.PROCESSRESULTS:
             return self.results
         elif result_type == AlignerResultType.PREDICTIONS:
@@ -119,10 +142,9 @@ class AlignerResult:
 
     def get_results_as_geojson(
         self,
-        aligner,
+        result_type: AlignerResultType = AlignerResultType.PROCESSRESULTS,
         formula=False,
         attributes=False,
-        result_type: AlignerResultType = AlignerResultType.PROCESSRESULTS,
     ):
         """
         get a geojson of a dictionary containing the resulting geometries for all
@@ -135,33 +157,14 @@ class AlignerResult:
             raise ValueError("Empty results: No calculated results to export.")
         results = self.get_results(result_type=result_type)
         prop_dictionary = defaultdict(dict)
-
         for theme_id, results_dict in results.items():
-            nr_calculations = len(results_dict)
+            prop_dictionary[theme_id]={}
             for relevant_distance, process_result in results_dict.items():
-                properties = process_result["properties"]
-
-                # Adding extra properties
-                properties[ID_THEME_FIELD_NAME] = theme_id
-                properties[NR_CALCULATION_FIELD_NAME] = nr_calculations
-                properties[RELEVANT_DISTANCE_FIELD_NAME] = relevant_distance
-                properties[DIFF_INDEX] = diff_from_processresult(
-                    process_result,
-                    aligner.dict_thematic[theme_id],
-                    None,
-                    DIFF_METRIC.CHANGES_AREA,
-                )
-                properties[DIFF_PERC_INDEX] = diff_from_processresult(
-                    process_result,
-                    aligner.dict_thematic[theme_id],
-                    None,
-                    DIFF_METRIC.CHANGES_PERCENTAGE,
-                )
-                prop_dictionary[theme_id][relevant_distance] = properties
+                prop_dictionary[theme_id] [relevant_distance] = {}
 
                 # Adding original attributes
-                if attributes and theme_id in aligner.dict_thematic_properties.keys():
-                    for attr, value in aligner.dict_thematic_properties[
+                if attributes and theme_id in self.aligner.dict_thematic_properties.keys():
+                    for attr, value in self.aligner.dict_thematic_properties[
                         theme_id
                     ].items():
                         prop_dictionary[theme_id][relevant_distance][attr] = value
@@ -171,19 +174,23 @@ class AlignerResult:
                     formula
                 ):  # and not (theme_id in prop_dictionary and relevant_distance in prop_dictionary[theme_id] and NEW_FORMULA_FIELD_NAME in prop_dictionary[theme_id][relevant_distance]):
                     result = process_result["result"]
-                    formula = aligner.compare_to_reference(result)
+                    formula = self.aligner.compare_to_reference(result)
                     prop_dictionary[theme_id][relevant_distance][FORMULA_FIELD_NAME] = (
                         json.dumps(formula)
                     )
-        return get_dict_geojsons_from_series_dict(
+        return get_geojsons_from_process_results(
             results,
-            crs=aligner.CRS,
-            id_field=aligner.name_thematic_id,
+            crs=self.aligner.CRS,
+            id_field=self.aligner.name_thematic_id,
             series_prop_dict=prop_dictionary,
         )
 
     def save_results(
-        self, aligner, path, formula=True, result_type=AlignerResultType.PROCESSRESULTS
+        self,
+            path,
+            result_type: AlignerResultType = AlignerResultType.PROCESSRESULTS,
+            formula=False,
+            attributes=False
     ):
         """
         Exports analysis results (as geojson) to path.
@@ -212,9 +219,11 @@ class AlignerResult:
         """
 
         fcs = self.get_results_as_geojson(
-            aligner=aligner,
+            #aligner=aligner,
+            result_type=result_type,
             formula=formula,
-            result_type=result_type
+            attributes=attributes,
+
         )
         for name, fc in fcs.items():
             write_geojson(
@@ -383,7 +392,7 @@ class Aligner:
 
         self.logger.feedback_debug("Process series" + str(relevant_distances))
 
-        dict_series: dict[ThematicId, dict[float, ProcessResult | None]] = {}
+        process_results: dict[ThematicId, dict[float, ProcessResult | None]] = {}
         futures = {}
 
         dict_multi_as_single = {}
@@ -421,20 +430,20 @@ class Aligner:
                     f"thematic id {str(thematic_id)} processed with "
                     f"relevant distances (m) [{str(relevant_distances)}]"
                 )
-                dict_series[thematic_id] = {}
+                process_results[thematic_id] = {}
                 for rd in relevant_distances:
                     try:
                         fn = process_geom_for_rd
                         if executor:
                             futures[(thematic_id, rd)] = executor.submit(fn, geom, rd)
                         else:
-                            dict_series[thematic_id][rd] = fn(geom, rd)
+                            process_results[thematic_id][rd] = fn(geom, rd)
                     except ValueError as e:
                         self.logger.feedback_warning(
                             f"error for thematic id {str(thematic_id)} processed with "
                             f"relevant distances (m) [{str(relevant_distances)}]"
                         )
-                        dict_series[thematic_id][rd] = None
+                        process_results[thematic_id][rd] = None
                         self.logger.feedback_warning(str(e))
 
         if max_workers == -1:
@@ -445,11 +454,11 @@ class Aligner:
                 self.logger.feedback_debug("waiting all started RD calculations")
                 wait(list(futures.values()))
                 for (key, rd), future in futures.items():
-                    dict_series[key][rd] = future.result()
+                    process_results[key][rd] = future.result()
 
         if self.preserve_topology:
-            dict_series = dissolve_topo(
-                dict_series,
+            process_results = dissolve_topo(
+                process_results,
                 dict_thematic_topo_geoms,
                 dict_thematic_to_process,
                 topo_thematic,
@@ -457,10 +466,10 @@ class Aligner:
             )
 
         if self.multi_as_single_modus:
-            dict_series = merge_process_results(dict_series, dict_multi_as_single)
+            process_results = merge_process_results(process_results, dict_multi_as_single)
 
         # Check if geom changes from multi to single or vice versa
-        for theme_id, dict_dist_results in dict_series.items():
+        for theme_id, dict_dist_results in process_results.items():
             original_geometry = self.dict_thematic[theme_id]
             try:
                 original_geometry_length = len(original_geometry.geoms)  # noqa
@@ -486,7 +495,7 @@ class Aligner:
             "End of processing series: " + str(relevant_distances)
         )
 
-        return AlignerResult(dict_series)
+        return AlignerResult(self,process_results)
 
     def predict(
         self,
@@ -653,7 +662,7 @@ class Aligner:
                     process_result["properties"][PREDICTION_COUNT] = prediction_count
 
         self.diffs_dict = diffs_dict
-        return AlignerResult(process_results)
+        return AlignerResult(self,process_results)
 
     def evaluate(
         self,
@@ -702,19 +711,19 @@ class Aligner:
         #   *Predictions available
 
         # AFFECTED
-        prediction_result = self.predict(
+        aligner_result = self.predict(
             dict_thematic=dict_affected,
             relevant_distances=relevant_distances,
             diff_metric=self.diff_metric,
         )
-        dict_affected_predictions = prediction_result.get_results(
+        process_results_affected_predictions = aligner_result.get_results(
             AlignerResultType.PREDICTIONS
         )
         dict_predictions_evaluated = {}
 
         for theme_id in dict_affected.keys():
             dict_predictions_evaluated[theme_id] = {}
-            if theme_id not in dict_affected_predictions.keys():
+            if theme_id not in process_results_affected_predictions.keys():
                 # No predictions available
                 relevant_distance = round(0, RELEVANT_DISTANCE_DECIMALS)
                 props = self._evaluate(
@@ -738,7 +747,7 @@ class Aligner:
                 continue
 
             # When there are predictions available
-            dict_predictions_results = dict_affected_predictions[theme_id]
+            dict_predictions_results = process_results_affected_predictions[theme_id]
             scores = []
             distances = []
             predictions = []
@@ -749,7 +758,7 @@ class Aligner:
                     geom_predicted=dict_predictions_results[dist]["result"],
                     base_formula_field=base_formula_field,
                 )
-                props.update(dict_affected_predictions[theme_id][dist]["properties"])
+                props.update(process_results_affected_predictions[theme_id][dist]["properties"])
 
                 full = props[FULL_ACTUAL_FIELD_NAME]
                 if full_strategy == FullReferenceStrategy.ONLY_FULL_REFERENCE and not full:
@@ -774,8 +783,8 @@ class Aligner:
                     predictions = []
                     scores.append(props[PREDICTION_SCORE])
                     distances.append(dist)
-                    dict_affected_predictions[theme_id][dist]["properties"] = props
-                    predictions.append(dict_affected_predictions[theme_id][dist])
+                    process_results_affected_predictions[theme_id][dist]["properties"] = props
+                    predictions.append(process_results_affected_predictions[theme_id][dist])
                     continue
                 if full:
                     if full_strategy != FullReferenceStrategy.NO_FULL_REFERENCE:
@@ -793,8 +802,8 @@ class Aligner:
 
                 scores.append(props[PREDICTION_SCORE])
                 distances.append(dist)
-                dict_affected_predictions[theme_id][dist]["properties"] = props
-                predictions.append(dict_affected_predictions[theme_id][dist])
+                process_results_affected_predictions[theme_id][dist]["properties"] = props
+                predictions.append(process_results_affected_predictions[theme_id][dist])
 
             # get max amount of best-scoring predictions
             best_ix = sorted(range(len(scores)), reverse=True, key=lambda i: scores[i])
@@ -888,8 +897,8 @@ class Aligner:
                 "result": geom,
                 "properties": props,
             }
-
-        return AlignerResult(dict_predictions_evaluated)
+        # TODO: moeten hier niet volledige serie worden teruggegeven?
+        return AlignerResult(self, dict_predictions_evaluated)
 
     def compare_to_reference(self, geometry: BaseGeometry, with_geom=False):
         """

@@ -44,8 +44,8 @@ from brdr.typings import ProcessResult
 log = logging.getLogger(__name__)
 
 
-def get_dict_geojsons_from_series_dict(
-    series_dict: dict[str | int, dict[float, ProcessResult]],
+def get_geojsons_from_process_results(
+    process_results: dict[str | int, dict[float, ProcessResult]],
     crs: CRS,
     id_field: str,
     series_prop_dict: dict[str | int, dict[float, str | int]] = None,
@@ -55,7 +55,7 @@ def get_dict_geojsons_from_series_dict(
     Convert a series of process results to a GeoJSON feature collection.
 
     Args:
-        series_dict (dict): Dictionary containing process results.
+        process_results (dict): Dictionary containing process results.
         crs (str): Coordinate reference system.
         id_field (str): Field name for the ID.
         series_prop_dict (dict, optional): Dictionary containing series properties.
@@ -66,29 +66,30 @@ def get_dict_geojsons_from_series_dict(
     """
     features_list_dict = {}
 
-    for theme_id, results_dict in series_dict.items():
+    for theme_id, results_dict in process_results.items():
 
         prop_dict = dict(series_prop_dict or {}).get(theme_id, {})
         for relevant_distance, process_result in results_dict.items():
             properties = prop_dict.get(relevant_distance, {})
             properties[id_field] = theme_id
-            for results_type, geom in process_result.items():
-                if not isinstance(geom, BaseGeometry):
+            properties.update(process_result["properties"])
+            for results_type, value in process_result.items():
+                if not isinstance(value, BaseGeometry):
                     continue
                 if results_type not in features_list_dict:
                     features_list_dict[results_type] = []
 
                 feature = _feature_from_geom(
-                    geom, theme_id, properties, geom_attributes
+                    value, theme_id, properties, geom_attributes
                 )
                 features_list_dict[results_type].append(feature)
 
     crs_geojson = {"type": "name", "properties": {"name": from_crs(crs)}}
-    result = {
+    geojsons = {
         result_type: FeatureCollection(features, crs=crs_geojson)
         for result_type, features in features_list_dict.items()
     }
-    return result
+    return geojsons
 
 
 def _feature_from_geom(
