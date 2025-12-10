@@ -6,7 +6,7 @@ from copy import copy
 import pytest
 import responses
 
-from tests.testdata.responses import grb_responses
+from tests.testdata.responses import grb_responses, osm_responses
 from tests.testdata.responses import inventaris_responses
 
 here = os.path.dirname(os.path.abspath(__file__))
@@ -66,6 +66,19 @@ def mock_inventaris_responses(requests_mock):
             "https://inventaris.onroerenderfgoed.be/aanduidingsobjecten/131635"
         ),
         json=inventaris_responses.response_131635,
+        status=200,
+        content_type="application/json",
+    )
+
+
+@pytest.fixture
+def mock_osm_responses(requests_mock):
+    requests_mock.add(
+        requests_mock.POST,
+        multi_url_pattern(
+            "https://overpass-api.de/api/interpreter"
+        ),
+        json=osm_responses.osm_buildings,
         status=200,
         content_type="application/json",
     )
