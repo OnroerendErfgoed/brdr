@@ -472,8 +472,9 @@ class TestAligner(unittest.TestCase):
             )
         )
         rd = 2
-        result = self.sample_aligner.process([rd])
-        assert result.results["theme_id_1"][rd]["properties"][REMARK_FIELD_NAME] == [
+        aligner_result = self.sample_aligner.process([rd])
+        process_results=aligner_result.get_results(aligner=self.sample_aligner)
+        assert process_results["theme_id_1"][rd]["properties"][REMARK_FIELD_NAME] == [
             ProcessRemark.CHANGED_AMOUNT_GEOMETRIES
         ]
 

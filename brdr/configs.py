@@ -8,10 +8,6 @@ from brdr.enums import SnapStrategy
 class ProcessorConfig:
     """
     Attributes:
-        relevant_distance (int, optional): The relevant distance (in meters) for
-            processing. Defaults to 1.
-        relevant_distances ([],optional): Relevant distances (in meters) for
-            processing
         od_strategy (int, optional): The strategy to determine how to handle
             information outside the reference polygons (Open Domain)
             (default: SNAP_FULL_AREA_ALL_SIDE)
@@ -24,13 +20,10 @@ class ProcessorConfig:
         threshold_exclusion_area (int, optional):Area in m² for excluding candidate reference-polygons when overlap(m²) is smaller than the threshold (Default=0)
         buffer_multiplication_factor (float, optional): Multiplication factor, used to buffer the thematic objects searching for reference borders (buffer= buffer_multiplication_factor*relevant_distance)(Default=1.01)
         threshold_circle_ratio (float, optional): Threshold-value to exclude circles getting processed (perfect circle = 1) based on POLSBY-POPPER algorithm(Default=0.98)
-        correction_distance (float, optional): Distance used in a pos_neg_buffer to remove slivers (technical correction) (Default= 0.01 = 1cm )
         mitre_limit (int, optional):buffer-parameter - The mitre ratio is the ratio of the distance from the corner to the end of the mitred offset corner.
             When two line segments meet at a sharp angle, a miter join will extend far beyond the original geometry. (and in the extreme case will be infinitely far.) To prevent unreasonable geometry, the mitre limit allows controlling the maximum length of the join corner.
             Corners with a ratio which exceed the limit will be beveled(Default=10)
         area_limit (int, optional): Maximum area for processing. (default 100000)
-        max_workers (int, optional): Amount of workers that is used in ThreadPoolExecutor (for parallel execution) when processing objects for multiple relevant distances. (default None). If set to -1, no parallel exececution is used.
-
     """
 
     od_strategy: OpenDomainStrategy = OpenDomainStrategy.SNAP_ALL_SIDE
@@ -45,4 +38,5 @@ class ProcessorConfig:
     partial_snapping: bool = False
     partial_snap_strategy: SnapStrategy = SnapStrategy.PREFER_VERTICES
     partial_snap_max_segment_length: int = 2
+    #TODO: is area limit een processConfig of iets van de aligner?
     area_limit: int = None

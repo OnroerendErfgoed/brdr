@@ -6,7 +6,9 @@ from shapely.geometry import Polygon
 from brdr.aligner import Aligner
 from brdr.be.grb.enums import GRBType
 from brdr.be.grb.loader import GRBActualLoader
+from brdr.configs import ProcessorConfig
 from brdr.loader import GeoJsonLoader
+from brdr.processor import TopologyProcessor
 
 
 class TestTopology(unittest.TestCase):
@@ -131,15 +133,18 @@ class TestTopology(unittest.TestCase):
             ],
         }
 
-        aligner = Aligner(crs="EPSG:31370", preserve_topology=True)
+        processor = TopologyProcessor(config=ProcessorConfig(), feedback=None)
+        aligner = Aligner(
+            crs="EPSG:31370", processor=processor, multi_as_single_modus=False
+        )
         loader = GeoJsonLoader(_input=geojson, id_property="CAPAKEY")
         aligner.load_thematic_data(loader)
         aligner.load_reference_data(
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         )
         relevant_distance = 2
-        process_result = aligner.process(relevant_distances=[relevant_distance])
+        aligner_result = aligner.process(relevant_distances=[relevant_distance])
 
-        self.assertEqual(len(process_result.results), 2)
+        self.assertEqual(len(aligner_result.results), 2)
         dict_predictions_evaluated = aligner.evaluate()
         print(dict_predictions_evaluated)

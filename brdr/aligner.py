@@ -4,7 +4,7 @@ from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import wait
 from datetime import datetime
-from typing import Iterable
+from typing import Iterable, Any
 
 import numpy as np
 from Lib.copy import deepcopy
@@ -57,8 +57,6 @@ from brdr.loader import Loader
 from brdr.logger import Logger
 from brdr.processor import AlignerGeometryProcessor
 from brdr.processor import BaseProcessor
-from brdr.topo import dissolve_topo
-from brdr.topo import generate_topo
 from brdr.typings import ProcessResult
 from brdr.typings import ThematicId
 from brdr.utils import (
@@ -91,7 +89,12 @@ class AlignerResult:
         result_type: AlignerResultType = AlignerResultType.PROCESSRESULTS,
     ) -> dict[ThematicId, dict[float, ProcessResult | None]]:
         for theme_id, results_dict in self.results.items():
+            original_geometry = aligner.dict_thematic[theme_id]
             nr_calculations = len(results_dict)
+            try:
+                original_geometry_length = len(original_geometry.geoms)  # noqa
+            except:
+                original_geometry_length = 1
             for relevant_distance, process_result in results_dict.items():
                 properties = process_result["properties"]
                 # Adding extra properties
@@ -110,6 +113,19 @@ class AlignerResult:
                     None,
                     DIFF_METRIC.CHANGES_PERCENTAGE,
                 )
+                resulting_geom = process_result["result"]
+                try:
+                    resulting_geometry_length = len(resulting_geom.geoms)  # noqa
+                except:
+                    resulting_geometry_length = 1
+                if original_geometry_length != resulting_geometry_length:
+                    remark = ProcessRemark.CHANGED_AMOUNT_GEOMETRIES
+                    if REMARK_FIELD_NAME in properties:
+                        remarks = properties[REMARK_FIELD_NAME]
+                    else:
+                        remarks = []
+                    remarks.append(remark)
+                    properties[REMARK_FIELD_NAME] = remarks
 
         if result_type == AlignerResultType.PROCESSRESULTS:
             return self.results
@@ -326,7 +342,6 @@ class Aligner:
         # this parameter is used to treat multipolygon as single polygons. So polygons
         # with ID splitter are separately evaluated and merged on result.
         self.multi_as_single_modus = multi_as_single_modus
-        self.preserve_topology = preserve_topology
         self.diff_metric = diff_metric
         self.logger.feedback_info("Aligner initialized")
 
@@ -362,7 +377,7 @@ class Aligner:
         self,
         relevant_distances: Iterable[float] = None,
         *,
-        dict_thematic_to_process=None,
+        dict_thematic=None,
         max_workers: int = None,
     ) -> AlignerResult:
         """
@@ -370,7 +385,7 @@ class Aligner:
             relevant distances.
 
         Args:
-            dict_thematic_to_process: the dictionary with the thematic geometries to 'predict'. Default is None, so all thematic geometries inside the aligner will be processed.
+            dict_thematic: the dictionary with the thematic geometries to 'predict'. Default is None, so all thematic geometries inside the aligner will be processed.
             relevant_distances (Iterable[float]): A series of relevant distances
                 (in meters) to process
             max_workers (int, optional): Amount of workers that is used in ThreadPoolExecutor (for parallel execution) when processing objects for multiple relevant distances. (default None). If set to -1, no parallel exececution is used.
@@ -388,8 +403,8 @@ class Aligner:
         """
         if relevant_distances is None:
             raise ValueError("provide at least 1 relevant distance")
-        if dict_thematic_to_process is None:
-            dict_thematic_to_process = self.dict_thematic
+        if dict_thematic is None:
+            dict_thematic = self.dict_thematic
         if max_workers is None:
             max_workers = self.max_workers
 
@@ -399,20 +414,17 @@ class Aligner:
         futures = {}
 
         dict_multi_as_single = {}
-        topo_thematic = None
-        dict_thematic_topo_geoms = None
-        # TODO: what about topology?
+        #TODO: multi_as_single_modus opnemen in de processorConfig??
         if self.multi_as_single_modus:
-            dict_thematic_to_process, dict_multi_as_single = multi_to_singles(
-                dict_thematic_to_process
+            dict_thematic, dict_multi_as_single = multi_to_singles(
+                dict_thematic
             )
+            dict_thematic_all, dict_multi_as_single_all = multi_to_singles(
+                self.dict_thematic
+            )
+        else:
+            dict_thematic_all = self.dict_thematic
 
-        if self.preserve_topology:
-            # self.max_workers =-1
-            # self.logger.feedback_info("max_workers set to -1 when using 'preserve_topology'")
-            dict_thematic_to_process, topo_thematic, dict_thematic_topo_geoms = (
-                generate_topo(dict_thematic_to_process)
-            )
 
         def process_geom_for_rd(geometry, relevant_distance):
             return self.processor.process(
@@ -425,10 +437,11 @@ class Aligner:
                 reference_union=self._get_reference_union(),
                 input_geometry=geometry,
                 relevant_distance=relevant_distance,
+                dict_thematic=dict_thematic_all
             )
 
         def run_process(executor: ThreadPoolExecutor = None):
-            for thematic_id, geom in dict_thematic_to_process.items():
+            for thematic_id, geom in dict_thematic.items():
                 self.logger.feedback_info(
                     f"thematic id {str(thematic_id)} processed with "
                     f"relevant distances (m) [{str(relevant_distances)}]"
@@ -459,46 +472,15 @@ class Aligner:
                 for (key, rd), future in futures.items():
                     process_results[key][rd] = future.result()
 
-        if self.preserve_topology:
-            process_results = dissolve_topo(
-                process_results,
-                dict_thematic_topo_geoms,
-                dict_thematic_to_process,
-                topo_thematic,
-                relevant_distances,
-            )
-
         if self.multi_as_single_modus:
             process_results = merge_process_results(process_results, dict_multi_as_single)
-
-        # Check if geom changes from multi to single or vice versa
-        for theme_id, dict_dist_results in process_results.items():
-            original_geometry = self.dict_thematic[theme_id]
-            try:
-                original_geometry_length = len(original_geometry.geoms)  # noqa
-            except:
-                original_geometry_length = 1
-            for relevant_distance, process_result in dict_dist_results.items():
-                resulting_geom = process_result["result"]
-                try:
-                    resulting_geometry_length = len(resulting_geom.geoms)  # noqa
-                except:
-                    resulting_geometry_length = 1
-                if original_geometry_length != resulting_geometry_length:
-                    remark = ProcessRemark.CHANGED_AMOUNT_GEOMETRIES
-                    self.logger.feedback_debug(remark)
-                    if REMARK_FIELD_NAME in process_result["properties"]:
-                        remarks = process_result["properties"][REMARK_FIELD_NAME]
-                    else:
-                        remarks = []
-                    remarks.append(remark)
-                    process_result["properties"][REMARK_FIELD_NAME] = remarks
 
         self.logger.feedback_info(
             "End of processing series: " + str(relevant_distances)
         )
 
         return AlignerResult(process_results)
+
 
     def predict(
         self,
@@ -609,7 +591,7 @@ class Aligner:
 
             def _process_result(theme_id, relevant_distances):
                 aligner_result = self.process(
-                    dict_thematic_to_process={theme_id: geom},
+                    dict_thematic={theme_id: geom},
                     relevant_distances=relevant_distances,
                 )
                 rd = relevant_distances[0]

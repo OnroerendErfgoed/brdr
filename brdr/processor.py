@@ -43,13 +43,19 @@ from brdr.geometry_utils import shortest_connections_between_geometries
 from brdr.geometry_utils import snap_geometry_to_reference
 from brdr.geometry_utils import to_multi
 from brdr.logger import Logger
+from brdr.topo import generate_topo, dissolve_topo, topojson_id_to_arcs
 from brdr.typings import ProcessResult
-from brdr.utils import get_relevant_polygons_from_geom
+from brdr.utils import (
+    get_relevant_polygons_from_geom,
+    build_reverse_index_wkb,
+    flatten_iter,
+)
 from brdr.utils import unary_union_result_dict
 
 
 class BaseProcessor(ABC):
     def __init__(self, config: ProcessorConfig, feedback=None):
+        self.feedback = feedback
         self.logger = Logger(feedback)
         self.config = config
 
@@ -66,6 +72,8 @@ class BaseProcessor(ABC):
         reference_tree,
         reference_union,
         relevant_distance,
+        dict_thematic,
+        id_thematic
     ) -> ProcessResult:
         """
         method to align a geometry to the reference layer
@@ -1063,7 +1071,7 @@ class NetworkGeometryProcessor(BaseProcessor):
         reference_union,
         mitre_limit,
         correction_distance,
-        relevant_distance: float = 1.0,
+        relevant_distance: float,
         **kwargs,
     ) -> ProcessResult:
         input_geometry = to_multi(input_geometry)
@@ -1341,3 +1349,63 @@ class AlignerGeometryProcessor(BaseProcessor):
             mitre_limit=mitre_limit,
             correction_distance=correction_distance,
         )
+class TopologyProcessor(BaseProcessor):
+    def __init__(self,config,feedback):
+        super().__init__(config,feedback)
+        self.topo_thematic = None
+        self.dict_thematic_topo_geoms = None
+        self.dict_thematic_to_process = None
+        self.id_to_arcs = None
+    def process(
+        self,
+        *,
+        input_geometry,
+        reference_elements,
+        reference_union,
+        mitre_limit,
+        correction_distance,
+        relevant_distance: float,
+        dict_thematic,
+        **kwargs,
+    ) -> ProcessResult:
+        wkb_to_id = build_reverse_index_wkb(dict_thematic)
+        id_thematic =wkb_to_id[input_geometry.wkb]
+        self.get_topo(dict_thematic)
+
+        processor = NetworkGeometryProcessor(config=self.config,feedback=self.feedback)
+        process_results = {}
+        id_to_arcs = topojson_id_to_arcs(self.topo_thematic)
+        arcs_to_process=flatten_iter(id_to_arcs[id_thematic])
+        for key in arcs_to_process:
+            key=abs(key)
+            geometry= self.dict_thematic_to_process[key]
+            process_results[key] = {}
+            process_results[key][relevant_distance] = processor.process(
+                correction_distance=correction_distance,
+                mitre_limit=mitre_limit,
+                reference_elements=reference_elements,
+                reference_union=reference_union,
+                input_geometry=geometry,
+                relevant_distance=relevant_distance,
+            )
+        dissolved_result = dissolve_topo(id_thematic,
+            process_results,
+            self.dict_thematic_topo_geoms,
+            self.dict_thematic_to_process,
+            self.topo_thematic,
+            relevant_distance,
+        )
+        return dissolved_result
+
+    def get_topo(self,dict_thematic):
+        """
+        returns the top information of thematic geometries
+        :return:
+        """
+        if self.topo_thematic is None:
+            self.dict_thematic_to_process, self.topo_thematic, self.dict_thematic_topo_geoms = (
+                generate_topo(dict_thematic)
+            )
+            #self.id_to_arcs = topojson_ids_naar_arcs(self.topo_thematic)
+
+        return

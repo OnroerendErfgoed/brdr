@@ -193,6 +193,12 @@ def multi_to_singles(dict_geoms):
     return resulting_dict_geoms, dict_multi_as_single
 
 
+def flatten_iter(lst):
+    while any(isinstance(i, list) for i in lst):
+        lst = [item for sublist in lst for item in (sublist if isinstance(sublist, list) else [sublist])]
+    return lst
+
+
 def polygonize_reference_data(dict_ref):
     """
     Create a new dictionary with non-overlapping polygons based on a reference data dictionary.
@@ -583,6 +589,9 @@ def get_collection_by_partition(
             elif "features" in collection and "features" in coll:
                 collection["features"].extend(coll["features"])
     return collection
+
+def build_reverse_index_wkb(d: dict):
+    return {g.wkb: k for k, g in d.items()}
 
 
 def merge_process_results(
