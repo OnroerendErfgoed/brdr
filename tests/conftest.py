@@ -75,9 +75,7 @@ def mock_inventaris_responses(requests_mock):
 def mock_osm_responses(requests_mock):
     requests_mock.add(
         requests_mock.POST,
-        multi_url_pattern(
-            "https://overpass-api.de/api/interpreter"
-        ),
+            "https://overpass-api.de/api/interpreter",
         json=osm_responses.osm_buildings,
         status=200,
         content_type="application/json",
