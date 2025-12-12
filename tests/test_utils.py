@@ -9,7 +9,6 @@ from shapely.geometry import Polygon
 from brdr.constants import MULTI_SINGLE_ID_SEPARATOR
 from brdr.typings import ProcessResult
 from brdr.utils import get_collection, get_geometry_difference_metrics_from_processresults
-from brdr.utils import merge_process_results
 from brdr.utils import multi_to_singles
 from brdr.utils import polygonize_reference_data
 
@@ -118,23 +117,3 @@ class TestUtils(unittest.TestCase):
         collection = get_collection(url=ref_url, params=params)
         self.assertTrue("features" in collection.keys())
 
-    def test_merge_process_results(self):
-        key_1 = "key" + MULTI_SINGLE_ID_SEPARATOR + "1"
-        key_2 = "key" + MULTI_SINGLE_ID_SEPARATOR + "2"
-        key_3 = "key_3"
-        dict_multi_as_single = {key_1: "key", key_2: "key"}
-        process_result_1 = ProcessResult()
-        process_result_1["result"] = Polygon([(0, 0), (10, 0), (10, 10), (0, 10)])
-        process_result_2 = ProcessResult()
-        process_result_2["result"] = Polygon([(0, 0), (8, 0), (8, 8), (0, 8)])
-        process_result_3 = ProcessResult()
-        process_result_3["result"] = Polygon([(0, 0), (8, 0), (8, 8), (0, 8)])
-        testdict = {
-            key_1: {0: process_result_1},
-            key_2: {0: process_result_2},
-            key_3: {0: process_result_3},
-        }
-        merged_testdict = merge_process_results(
-            result_dict=testdict, dict_multi_as_single=dict_multi_as_single
-        )
-        assert len(merged_testdict.keys()) == 2

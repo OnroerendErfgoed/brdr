@@ -598,58 +598,6 @@ def build_reverse_index_wkb(d: dict):
     return {g.wkb: k for k, g in d.items()}
 
 
-def merge_process_results(
-    result_dict: dict[str | int, dict[float, ProcessResult]], dict_multi_as_single: dict
-) -> dict[str | int, dict[float, ProcessResult]]:
-    """
-     Merges processresults in a dictionary from multiple themeIDs into a single themeID.
-
-    Args: result_dict (dict): A dictionary where keys are theme IDs and values are
-        process results
-
-    Returns: dict: A new dictionary with merged geometries and remarks (processresults), where keys are global
-        theme IDs and values are merged geometries and remarks.
-
-    """
-    grouped_results: dict[str | int, dict[float, ProcessResult]] = {}
-
-    for id_theme, dict_results in result_dict.items():
-        if id_theme in dict_multi_as_single.keys():
-            id_theme_global = dict_multi_as_single[id_theme]
-        else:
-            id_theme_global = id_theme
-        if id_theme_global not in grouped_results:
-            grouped_results[id_theme_global] = dict_results
-        else:
-            _merge_process_results(dict_results, grouped_results, id_theme_global)
-    return grouped_results
-
-
-def _merge_process_results(dict_results: dict[float, ProcessResult],
-                           grouped_results: dict[str | int, dict[float, ProcessResult]],
-                           id_theme_global: str | int | Any):
-    for rel_dist, process_result in dict_results.items():
-        for key in process_result:
-            value = process_result[key]  # noqa
-            if key == "properties":
-                existing_remarks: list = grouped_results[id_theme_global][rel_dist][key][REMARK_FIELD_NAME]  # noqa
-                existing_remarks.extend(value[REMARK_FIELD_NAME])
-                grouped_results[id_theme_global][rel_dist][key][REMARK_FIELD_NAME] = existing_remarks
-                continue
-            if isinstance(value, BaseGeometry):
-                geom = value
-                if geom.is_empty or geom is None:
-                    continue
-                existing: BaseGeometry = grouped_results[id_theme_global][
-                    rel_dist
-                ][
-                    key
-                ]  # noqa
-                grouped_results[id_theme_global][rel_dist][key] = (
-                    safe_unary_union([existing, geom])
-                )  # noqa
-
-
 def is_brdr_formula(brdr_formula):
     """
     returns true if the value has the correct structure of a base_formula, otherwise False
