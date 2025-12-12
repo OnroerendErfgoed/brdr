@@ -113,15 +113,15 @@ def update_to_actual_grb(
         )
         logger.feedback_info(
             "Number of possible affected OE-thematic during timespan: "
-            + str(len(affected))
+            + str(len(affected.keys()))
         )
-        if len(affected) == 0:
+        if len(affected.keys()) == 0:
             logger.feedback_info(
                 "No change detected in referencelayer during timespan. Script is finished"
             )
     else:
-        unaffected = []
-        affected = list(dict_thematic.keys())
+        unaffected = {}
+        affected = dict_thematic.keys()
 
     # Initiate a Aligner to reference thematic features to the actual borders
     actual_aligner = Aligner(feedback=feedback, max_workers=None)
@@ -141,7 +141,7 @@ def update_to_actual_grb(
     ]
     # EXECUTE evaluation
     aligner_result = actual_aligner.evaluate(
-        ids_to_evaluate=affected,
+        dict_thematic=affected,
         base_formula_field=BASE_FORMULA_FIELD_NAME,
         max_predictions=max_predictions,
         relevant_distances=relevant_distances,

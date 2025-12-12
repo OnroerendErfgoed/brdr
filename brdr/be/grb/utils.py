@@ -102,17 +102,17 @@ def get_affected_by_grb_change(
 
     """
 
-    affected = []
-    unaffected = []
+    affected = {}
+    unaffected = {}
     if one_by_one:
         for key in dict_thematic:
             geom = dict_thematic[key]
             if is_grb_changed(
                 geom, grb_type, date_start, date_end, border_distance=border_distance
             ):
-                affected.append(key)
+                affected[key]=geom
             else:
-                unaffected.append(key)
+                unaffected[key]=geom
         return affected, unaffected
     else:
         # Temporal filter on VERDATUM
@@ -146,7 +146,7 @@ def get_affected_by_grb_change(
             logging.info(
                 f"No detected changes for thematic geometry in timespan (border distance: {str(border_distance)})"
             )
-            return affected, list(dict_thematic.keys())  # empty affected dict
+            return {}, dict_thematic  # empty affected dict
         logging.info(
             f"Changed parcels in timespan with border_distance {str(border_distance)}: {str(len(dict_changed_grb))}"
         )
@@ -158,11 +158,10 @@ def get_affected_by_grb_change(
         )
         logging.info("Number of filtered features: " + str(len(thematic_intersections)))
         for key, geom in dict_thematic.items():
-            (
-                affected.append(key)
-                if key in thematic_intersections
-                else unaffected.append(key)
-            )
+            if key in thematic_intersections:
+                affected[key] = geom
+            else:
+                 unaffected[key]=geom
     return affected, unaffected
 
 

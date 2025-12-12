@@ -429,6 +429,11 @@ class Aligner:
             raise ValueError("provide at least 1 relevant distance")
         if dict_thematic is None:
             dict_thematic = self.dict_thematic
+        if any(
+            id_to_process not in self.dict_thematic.keys()
+            for id_to_process in dict_thematic.keys()
+        ):
+            raise ValueError("not all ids are found in the thematic data")
         if max_workers is None:
             max_workers = self.max_workers
 
@@ -559,7 +564,11 @@ class Aligner:
         """
         if dict_thematic is None:  # or dict_thematic =={}
             dict_thematic = self.dict_thematic
-
+        if any(
+            id_to_predict not in self.dict_thematic.keys()
+            for id_to_predict in dict_thematic.keys()
+        ):
+            raise ValueError("not all ids are found in the thematic data")
         if relevant_distances is None:
             relevant_distances = [
                 round(k, RELEVANT_DISTANCE_DECIMALS)
@@ -664,7 +673,7 @@ class Aligner:
         self,
         relevant_distances=None,
         *,
-        ids_to_evaluate=None,
+        dict_thematic=None,
         base_formula_field=FORMULA_FIELD_NAME,
         full_strategy=FullReferenceStrategy.NO_FULL_REFERENCE,
         max_predictions=-1,
@@ -681,49 +690,51 @@ class Aligner:
         multi_to_best_prediction (default True): Only usable in combination with max_predictions=1. If True (and max_predictions=1), the prediction with highest score will be taken.If False, the original geometry is returned.
         """
 
-        if ids_to_evaluate is None:
+        if dict_thematic is None:
             ids_to_evaluate = list(self.dict_thematic.keys())
+        else:
+            ids_to_evaluate = list(dict_thematic.keys())
         if any(
             id_to_evaluate not in self.dict_thematic.keys()
             for id_to_evaluate in ids_to_evaluate
         ):
-            raise ValueError("not all ids_to_evaluate are found in the thematic data")
+            raise ValueError("not all ids are found in the thematic data")
         if relevant_distances is None:
             relevant_distances = [
                 round(k, RELEVANT_DISTANCE_DECIMALS)
                 for k in np.arange(0, 310, 10, dtype=int) / 100
             ]
-        dict_affected = {}
-        dict_unaffected = {}
+        dict_evaluated = {}
+        dict_not_evaluated = {}
         for id_theme, geom in self.dict_thematic.items():
             if id_theme in ids_to_evaluate:
-                dict_affected[id_theme] = geom
+                dict_evaluated[id_theme] = geom
             else:
-                dict_unaffected[id_theme] = geom
+                dict_not_evaluated[id_theme] = geom
 
-        # Features are split up in 2 dicts: affected and unaffected (no_change)
-        # The affected features will be split up:
+        # Features are split up in 2 dicts: EVALUATED and NOT_EVALUATED (original returned)
+        # The evaluated features will be split up:
         #   *No prediction available
         #   *Predictions available
 
-        # AFFECTED
+        #PART 1: EVALUATED
         aligner_result = self.predict(
-            dict_thematic=dict_affected,
+            dict_thematic=dict_evaluated,
             relevant_distances=relevant_distances,
             diff_metric=self.diff_metric,
         )
-        process_results_affected = aligner_result.get_results(aligner=self)
-        process_results_affected_predictions = aligner_result.get_results(aligner=self,result_type=AlignerResultType.PREDICTIONS
+        process_results_evaluated = aligner_result.get_results(aligner=self)
+        process_results_evaluated_predictions = aligner_result.get_results(aligner=self,result_type=AlignerResultType.PREDICTIONS
         )
-        process_results_evaluated = deepcopy(process_results_affected)
+        process_results_evaluated = deepcopy(process_results_evaluated)
 
-        for theme_id in dict_affected.keys():
-            if theme_id not in process_results_affected_predictions.keys():
+        for theme_id in dict_evaluated.keys():
+            if theme_id not in process_results_evaluated_predictions.keys():
                 # No predictions available
                 relevant_distance = round(0, RELEVANT_DISTANCE_DECIMALS)
                 props = self._evaluate(
                     id_theme=theme_id,
-                    geom_predicted=dict_affected[theme_id],
+                    geom_predicted=dict_evaluated[theme_id],
                     base_formula_field=base_formula_field,
                 )
                 props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
@@ -736,13 +747,13 @@ class Aligner:
                 remarks.append(ProcessRemark.NO_PREDICTION_ORIGINAL_RETURNED)
                 props[REMARK_FIELD_NAME] = remarks
                 process_results_evaluated[theme_id][relevant_distance] = {
-                    "result": dict_affected[theme_id],
+                    "result": dict_evaluated[theme_id],
                     "properties": props,
                 }
                 continue
 
             # When there are predictions available
-            dict_predictions_results = process_results_affected_predictions[theme_id]
+            dict_predictions_results = process_results_evaluated_predictions[theme_id]
             scores = []
             distances = []
             predictions = []
@@ -753,7 +764,7 @@ class Aligner:
                     geom_predicted=dict_predictions_results[dist]["result"],
                     base_formula_field=base_formula_field,
                 )
-                props.update(process_results_affected_predictions[theme_id][dist]["properties"])
+                props.update(process_results_evaluated_predictions[theme_id][dist]["properties"])
 
                 full = props[FULL_ACTUAL_FIELD_NAME]
                 if full_strategy == FullReferenceStrategy.ONLY_FULL_REFERENCE and not full:
@@ -778,8 +789,8 @@ class Aligner:
                     predictions = []
                     scores.append(props[PREDICTION_SCORE])
                     distances.append(dist)
-                    process_results_affected_predictions[theme_id][dist]["properties"] = props
-                    predictions.append(process_results_affected_predictions[theme_id][dist])
+                    process_results_evaluated_predictions[theme_id][dist]["properties"] = props
+                    predictions.append(process_results_evaluated_predictions[theme_id][dist])
                     continue
                 if full:
                     if full_strategy != FullReferenceStrategy.NO_FULL_REFERENCE:
@@ -797,8 +808,8 @@ class Aligner:
 
                 scores.append(props[PREDICTION_SCORE])
                 distances.append(dist)
-                process_results_affected_predictions[theme_id][dist]["properties"] = props
-                predictions.append(process_results_affected_predictions[theme_id][dist])
+                process_results_evaluated_predictions[theme_id][dist]["properties"] = props
+                predictions.append(process_results_evaluated_predictions[theme_id][dist])
 
             # get max amount of best-scoring predictions
             best_ix = sorted(range(len(scores)), reverse=True, key=lambda i: scores[i])
@@ -837,7 +848,7 @@ class Aligner:
                     remarks.append(ProcessRemark.MULTIPLE_PREDICTIONS_ORIGINAL_RETURNED)
                     props[REMARK_FIELD_NAME] = remarks
                     process_results_evaluated[theme_id][relevant_distance] = {
-                        "result": dict_affected[theme_id],
+                        "result": dict_evaluated[theme_id],
                         "properties": props,
                     }
                     continue
@@ -854,7 +865,7 @@ class Aligner:
                 relevant_distance = round(0, RELEVANT_DISTANCE_DECIMALS)
                 props = self._evaluate(
                     id_theme=theme_id,
-                    geom_predicted=dict_affected[theme_id],
+                    geom_predicted=dict_evaluated[theme_id],
                     base_formula_field=base_formula_field,
                 )
                 props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
@@ -867,13 +878,13 @@ class Aligner:
                 remarks.append(ProcessRemark.NO_PREDICTION_ORIGINAL_RETURNED)
                 props[REMARK_FIELD_NAME] = remarks
                 process_results_evaluated[theme_id][relevant_distance] = {
-                    "result": dict_affected[theme_id],
+                    "result": dict_evaluated[theme_id],
                     "properties": props,
                 }
 
-        # UNAFFECTED
+        # PART 2: NOT EVALUATED
         relevant_distance = round(0, RELEVANT_DISTANCE_DECIMALS)
-        for theme_id, geom in dict_unaffected.items():
+        for theme_id, geom in dict_not_evaluated.items():
             process_results_evaluated[theme_id] = {}
             props = self._evaluate(
                 id_theme=theme_id,
@@ -886,7 +897,7 @@ class Aligner:
                 remarks = props[REMARK_FIELD_NAME]
             else:
                 remarks = []
-            remarks.append(ProcessRemark.NOT_AFFECTED_ORIGINAL_RETURNED)
+            remarks.append(ProcessRemark.NOT_EVALUATED_ORIGINAL_RETURNED)
             props[REMARK_FIELD_NAME] = remarks
             process_results_evaluated[theme_id][relevant_distance] = {
                 "result": geom,
