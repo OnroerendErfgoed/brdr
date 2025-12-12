@@ -43,7 +43,6 @@ from brdr.geometry_utils import shortest_connections_between_geometries
 from brdr.geometry_utils import snap_geometry_to_reference
 from brdr.geometry_utils import to_multi
 from brdr.logger import Logger
-
 from brdr.topo_utils import _dissolve_topo, _generate_topo, _topojson_id_to_arcs
 from brdr.typings import ProcessResult
 from brdr.utils import (
@@ -548,8 +547,86 @@ class SnapGeometryProcessor(BaseProcessor):
 
 
 class DieussaertGeometryProcessor(BaseProcessor):
-
     def process(
+        self,
+        *,
+        input_geometry,
+        relevant_distance,
+        mitre_limit,
+        reference_union,
+        correction_distance,
+        dict_reference,
+        reference_items,
+        reference_tree,
+        **kwargs,
+    ) -> ProcessResult:
+        if not self.config.multi_as_single_modus or input_geometry is None or input_geometry.is_empty or len(to_multi(input_geometry).geoms)==1:
+            return self._process(
+                input_geometry=input_geometry,
+                relevant_distance=relevant_distance,
+                mitre_limit=mitre_limit,
+                reference_union=reference_union,
+                correction_distance=correction_distance,
+                dict_reference=dict_reference,
+                reference_items=reference_items,
+                reference_tree=reference_tree,
+            )
+        else:
+            input_geometry=to_multi(input_geometry)
+            list_with_process_results=[]
+            for input_geom_single in input_geometry.geoms:
+                process_result = self._process(
+                input_geometry=input_geom_single,
+                relevant_distance=relevant_distance,
+                mitre_limit=mitre_limit,
+                reference_union=reference_union,
+                correction_distance=correction_distance,
+                dict_reference=dict_reference,
+                reference_items=reference_items,
+                reference_tree=reference_tree
+                )
+                list_with_process_results.append(process_result)
+            return self._merge_process_results(list_with_process_results)
+
+    def _merge_process_results(
+        self,list_process_results: list[ProcessResult]
+    ):
+        if len(list_process_results) == 1:
+            return list_process_results[0]
+        merged_process_result=ProcessResult() #list_process_results[0]
+        for process_result in list_process_results:
+            for key in process_result:
+                value = process_result[key]  # noqa
+                if key == "properties":
+                    if key in merged_process_result:
+                        existing_remarks: list = merged_process_result[key][
+                            REMARK_FIELD_NAME
+                        ]  # noqa
+                    else:
+                        merged_process_result[key]={}
+                        existing_remarks: list = []
+
+                    existing_remarks.extend(value[REMARK_FIELD_NAME])
+                    merged_process_result[key][
+                        REMARK_FIELD_NAME
+                    ] = existing_remarks
+                    continue
+                if isinstance(value, BaseGeometry):
+                    geom = value
+                    if geom.is_empty or geom is None:
+                        continue
+                    if key in merged_process_result:
+                        existing: BaseGeometry = merged_process_result[
+                            key
+                        ]  # noqa
+                    else:
+                        existing: BaseGeometry = GeometryCollection()
+                    merged_process_result[key] = safe_unary_union(
+                        [existing, geom]
+                    )  # noqa
+        return merged_process_result
+
+    def _process(
         self,
         *,
         input_geometry,
@@ -633,7 +710,7 @@ class DieussaertGeometryProcessor(BaseProcessor):
             relevant_diff = Polygon()
         preresult.append(input_geometry_inner)
         geom_preresult = safe_unary_union(preresult)
-        result_dict = self._postprocess_preresult(
+        process_result = self._postprocess_preresult(
             geom_preresult,
             input_geometry,
             relevant_intersection,
@@ -643,7 +720,7 @@ class DieussaertGeometryProcessor(BaseProcessor):
             mitre_limit,
             correction_distance,
         )
-        return result_dict
+        return process_result
 
     def _od_snap(
         self, geometry, relevant_distance, snap_strategy, mitre_limit, reference_union

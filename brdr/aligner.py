@@ -4,7 +4,7 @@ from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import wait
 from datetime import datetime
-from typing import Iterable, Any
+from typing import Iterable
 
 import numpy as np
 from Lib.copy import deepcopy
@@ -264,11 +264,9 @@ class Aligner:
         feedback=None,
         processor: BaseProcessor = None,
         crs=DEFAULT_CRS,
-        multi_as_single_modus=True,
-        preserve_topology=False,
-        correction_distance=0.01,
-        diff_metric=DIFF_METRIC,
-        mitre_limit=10,
+        correction_distance=0.01, #useed in aligner to define equality
+        diff_metric=DIFF_METRIC,#used in aligner/predictor to measure diffs
+        mitre_limit=10,#used in aligner to define equality in combination with correction distance
         max_workers=None,
     ):
         """
@@ -279,9 +277,6 @@ class Aligner:
                 feedback in QGIS. Defaults to None.
             crs (str, optional): Coordinate Reference System (CRS) of the data.
                 (default EPSG:31370)
-            multi_as_single_modus (boolean, optional): Modus to handle multipolygons (Default=True):
-                True: input-multipolygons will be split-up into single polygons and handled by the algorithm. After executing the algorithm, the results are merged together.
-                False: Multipolygons are directly processed by the algorithm
             correction_distance (float, optional): Distance used in a pos_neg_buffer to remove slivers (technical correction) (Default= 0.01 = 1cm )
             mitre_limit (int, optional):buffer-parameter - The mitre ratio is the ratio of the distance from the corner to the end of the mitred offset corner.
                 When two line segments meet at a sharp angle, a miter join will extend far beyond the original geometry. (and in the extreme case will be infinitely far.) To prevent unreasonable geometry, the mitre limit allows controlling the maximum length of the join corner.
@@ -341,7 +336,6 @@ class Aligner:
 
         # this parameter is used to treat multipolygon as single polygons. So polygons
         # with ID splitter are separately evaluated and merged on result.
-        self.multi_as_single_modus = multi_as_single_modus
         self.diff_metric = diff_metric
         self.logger.feedback_info("Aligner initialized")
 
@@ -413,18 +407,6 @@ class Aligner:
         process_results: dict[ThematicId, dict[float, ProcessResult | None]] = {}
         futures = {}
 
-        dict_multi_as_single = {}
-        #TODO: multi_as_single_modus opnemen in de processorConfig??
-        if self.multi_as_single_modus:
-            dict_thematic, dict_multi_as_single = multi_to_singles(
-                dict_thematic
-            )
-            dict_thematic_all, dict_multi_as_single_all = multi_to_singles(
-                self.dict_thematic
-            )
-        else:
-            dict_thematic_all = self.dict_thematic
-
 
         def process_geom_for_rd(geometry, relevant_distance):
             return self.processor.process(
@@ -437,7 +419,7 @@ class Aligner:
                 reference_union=self._get_reference_union(),
                 input_geometry=geometry,
                 relevant_distance=relevant_distance,
-                dict_thematic=dict_thematic_all
+                dict_thematic=self.dict_thematic
             )
 
         def run_process(executor: ThreadPoolExecutor = None):
@@ -472,8 +454,7 @@ class Aligner:
                 for (key, rd), future in futures.items():
                     process_results[key][rd] = future.result()
 
-        if self.multi_as_single_modus:
-            process_results = merge_process_results(process_results, dict_multi_as_single)
+
 
         self.logger.feedback_info(
             "End of processing series: " + str(relevant_distances)

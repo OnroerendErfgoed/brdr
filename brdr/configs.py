@@ -8,6 +8,9 @@ from brdr.enums import SnapStrategy
 class ProcessorConfig:
     """
     Attributes:
+            multi_as_single_modus (boolean, optional): Modus to handle multipolygons (Default=True):
+                True: input-multipolygons will be split-up into single polygons and handled by the algorithm. After executing the algorithm, the results are merged together.
+                False: Multipolygons are directly processed by the algorithm
         od_strategy (int, optional): The strategy to determine how to handle
             information outside the reference polygons (Open Domain)
             (default: SNAP_FULL_AREA_ALL_SIDE)
@@ -26,6 +29,7 @@ class ProcessorConfig:
         area_limit (int, optional): Maximum area for processing. (default 100000)
     """
 
+    multi_as_single_modus: bool = True
     od_strategy: OpenDomainStrategy = OpenDomainStrategy.SNAP_ALL_SIDE
     threshold_overlap_percentage: int = 50
     threshold_exclusion_area: int = 0

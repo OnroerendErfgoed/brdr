@@ -135,8 +135,7 @@ class TestTopology(unittest.TestCase):
 
         processor = TopologyProcessor(config=ProcessorConfig(), feedback=None)
         aligner = Aligner(
-            crs="EPSG:31370", processor=processor, multi_as_single_modus=False
-        )
+            crs="EPSG:31370", processor=processor)
         loader = GeoJsonLoader(_input=geojson, id_property="CAPAKEY")
         aligner.load_thematic_data(loader)
         aligner.load_reference_data(

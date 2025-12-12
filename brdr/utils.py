@@ -617,27 +617,33 @@ def merge_process_results(
         if id_theme_global not in grouped_results:
             grouped_results[id_theme_global] = dict_results
         else:
-            for rel_dist, process_result in dict_results.items():
-                for key in process_result:
-                    value = process_result[key]  # noqa
-                    if key == "properties" :
-                        existing_remarks: list =  grouped_results[id_theme_global][ rel_dist][key][REMARK_FIELD_NAME]  # noqa
-                        existing_remarks.extend(value[REMARK_FIELD_NAME])
-                        grouped_results[id_theme_global][rel_dist][key][REMARK_FIELD_NAME] = existing_remarks
-                        continue
-                    if isinstance(value, BaseGeometry):
-                        geom = value
-                        if geom.is_empty or geom is None:
-                            continue
-                        existing: BaseGeometry = grouped_results[id_theme_global][
-                            rel_dist
-                        ][
-                            key
-                        ]  # noqa
-                        grouped_results[id_theme_global][rel_dist][key] = (
-                            safe_unary_union([existing, geom])
-                        )  # noqa
+            _merge_process_results(dict_results, grouped_results, id_theme_global)
     return grouped_results
+
+
+def _merge_process_results(dict_results: dict[float, ProcessResult],
+                           grouped_results: dict[str | int, dict[float, ProcessResult]],
+                           id_theme_global: str | int | Any):
+    for rel_dist, process_result in dict_results.items():
+        for key in process_result:
+            value = process_result[key]  # noqa
+            if key == "properties":
+                existing_remarks: list = grouped_results[id_theme_global][rel_dist][key][REMARK_FIELD_NAME]  # noqa
+                existing_remarks.extend(value[REMARK_FIELD_NAME])
+                grouped_results[id_theme_global][rel_dist][key][REMARK_FIELD_NAME] = existing_remarks
+                continue
+            if isinstance(value, BaseGeometry):
+                geom = value
+                if geom.is_empty or geom is None:
+                    continue
+                existing: BaseGeometry = grouped_results[id_theme_global][
+                    rel_dist
+                ][
+                    key
+                ]  # noqa
+                grouped_results[id_theme_global][rel_dist][key] = (
+                    safe_unary_union([existing, geom])
+                )  # noqa
 
 
 def is_brdr_formula(brdr_formula):
