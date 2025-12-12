@@ -186,3 +186,11 @@ class PredictionStrategy(str, Enum):
     ALL = "all"
     BEST = "best"
     ORIGINAL = "original"
+
+
+class ProcessorID(str, Enum):
+    DIEUSSAERT = "2024:dieussaert2024a"
+    SNAP = "2024:snap2024a"
+    NETWORK = "2024:network2024a"
+    ALIGNER = "2024:aligner2024a"
+    TOPOLOGY = "2024:topology2024a"

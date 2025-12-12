@@ -23,8 +23,11 @@ from brdr.configs import ProcessorConfig
 from brdr.constants import MAX_OUTER_BUFFER
 from brdr.constants import RELEVANT_DISTANCE_DECIMALS
 from brdr.constants import REMARK_FIELD_NAME
-from brdr.enums import OpenDomainStrategy, ProcessRemark
+from brdr.enums import OpenDomainStrategy
+from brdr.enums import ProcessRemark
+from brdr.enums import ProcessorID
 from brdr.enums import SnapStrategy
+from brdr.feature_data import AlignerFeatureCollection
 from brdr.geometry_utils import buffer_neg
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import buffer_pos
@@ -64,13 +67,9 @@ class BaseProcessor(ABC):
         self,
         *,
         correction_distance,
-        dict_reference,
+        reference_data: AlignerFeatureCollection,
         input_geometry: BaseGeometry,
         mitre_limit,
-        reference_elements,
-        reference_items,
-        reference_tree,
-        reference_union,
         relevant_distance,
         dict_thematic,
         id_thematic
@@ -492,14 +491,16 @@ class BaseProcessor(ABC):
 
 
 class SnapGeometryProcessor(BaseProcessor):
+    process_id = ProcessorID.SNAP
+
     def process(
         self,
         *,
         correction_distance,
+        reference_data: AlignerFeatureCollection,
         input_geometry: BaseGeometry,
         mitre_limit,
         ref_intersections_geoms,
-        reference_union,
         relevant_distance,
         snap_strategy,
         **kwargs,
@@ -510,7 +511,7 @@ class SnapGeometryProcessor(BaseProcessor):
             virtual_reference = self._create_virtual_reference(
                 input_geometry,
                 relevant_distance,
-                reference_union,
+                reference_data.union,
                 correction_distance,
                 mitre_limit,
                 False,
@@ -538,7 +539,7 @@ class SnapGeometryProcessor(BaseProcessor):
             GeometryCollection(),
             GeometryCollection(),
             relevant_distance,
-            reference_union,
+            reference_data.union,
             mitre_limit,
             correction_distance,
         )
@@ -546,17 +547,16 @@ class SnapGeometryProcessor(BaseProcessor):
 
 
 class DieussaertGeometryProcessor(BaseProcessor):
+    process_id = ProcessorID.DIEUSSAERT
+
     def process(
         self,
         *,
         input_geometry,
+        reference_data,
         relevant_distance,
         mitre_limit,
-        reference_union,
         correction_distance,
-        dict_reference,
-        reference_items,
-        reference_tree,
         **kwargs,
     ) -> ProcessResult:
         if not self.config.multi_as_single_modus or input_geometry is None or input_geometry.is_empty or len(to_multi(input_geometry).geoms)==1:
@@ -564,11 +564,8 @@ class DieussaertGeometryProcessor(BaseProcessor):
                 input_geometry=input_geometry,
                 relevant_distance=relevant_distance,
                 mitre_limit=mitre_limit,
-                reference_union=reference_union,
+                reference_data=reference_data,
                 correction_distance=correction_distance,
-                dict_reference=dict_reference,
-                reference_items=reference_items,
-                reference_tree=reference_tree,
             )
         else:
             input_geometry=to_multi(input_geometry)
@@ -578,11 +575,8 @@ class DieussaertGeometryProcessor(BaseProcessor):
                 input_geometry=input_geom_single,
                 relevant_distance=relevant_distance,
                 mitre_limit=mitre_limit,
-                reference_union=reference_union,
+                reference_data=reference_data,
                 correction_distance=correction_distance,
-                dict_reference=dict_reference,
-                reference_items=reference_items,
-                reference_tree=reference_tree
                 )
                 list_with_process_results.append(process_result)
             return self._merge_process_results(list_with_process_results)
@@ -629,14 +623,10 @@ class DieussaertGeometryProcessor(BaseProcessor):
         self,
         *,
         input_geometry,
+        reference_data,
         relevant_distance,
         mitre_limit,
-        reference_union,
         correction_distance,
-        dict_reference,
-        reference_items,
-        reference_tree,
-        **kwargs,
     ) -> ProcessResult:
 
         # CALCULATE INNER and OUTER INPUT GEOMETRY for performance optimisation on big geometries
@@ -649,13 +639,13 @@ class DieussaertGeometryProcessor(BaseProcessor):
             input_geometry_outer,
             relevant_distance * self.config.buffer_multiplication_factor,
         )
-        ref_intersections = reference_items.take(
-            reference_tree.query(input_geometry_outer_buffered)
+        ref_intersections = reference_data.items.take(
+            reference_data.tree.query(input_geometry_outer_buffered)
         ).tolist()
 
         ref_intersections_geoms = []
         for key_ref in ref_intersections:
-            ref_geom = dict_reference[key_ref]
+            ref_geom = reference_data[key_ref].geometry
             ref_intersections_geoms.append(ref_geom)
             if not isinstance(ref_geom, (Polygon, MultiPolygon)):
                 raise ValueError(
@@ -671,7 +661,7 @@ class DieussaertGeometryProcessor(BaseProcessor):
             input_geometry_outer,
             input_geometry_inner,
             relevant_distance,
-            reference_union,
+            reference_data.union,
             mitre_limit,
             correction_distance,
         )
@@ -715,7 +705,7 @@ class DieussaertGeometryProcessor(BaseProcessor):
             relevant_intersection,
             relevant_diff,
             relevant_distance,
-            reference_union,
+            reference_data.union,
             mitre_limit,
             correction_distance,
         )
@@ -1139,13 +1129,13 @@ class DieussaertGeometryProcessor(BaseProcessor):
 
 
 class NetworkGeometryProcessor(BaseProcessor):
+    process_id = ProcessorID.NETWORK
 
     def process(
         self,
         *,
         input_geometry,
-        reference_elements,
-        reference_union,
+        reference_data,
         mitre_limit,
         correction_distance,
         relevant_distance: float,
@@ -1157,7 +1147,7 @@ class NetworkGeometryProcessor(BaseProcessor):
             relevant_distance * self.config.buffer_multiplication_factor,
         )
         reference = safe_unary_union(
-            safe_intersection(reference_elements, input_geometry_buffered)
+            safe_intersection(reference_data.elements, input_geometry_buffered)
         )
         geom_processed_list = []
         if isinstance(input_geometry, MultiPolygon):
@@ -1197,7 +1187,7 @@ class NetworkGeometryProcessor(BaseProcessor):
             GeometryCollection(),
             GeometryCollection(),
             relevant_distance,
-            reference_union,
+            reference_data.union,
             mitre_limit,
             correction_distance,
         )
@@ -1361,17 +1351,15 @@ class NetworkGeometryProcessor(BaseProcessor):
 
 
 class AlignerGeometryProcessor(BaseProcessor):
+    processor_id = ProcessorID.ALIGNER
+
     def process(
         self,
         *,
         correction_distance,
-        dict_reference,
+        reference_data,
         input_geometry: BaseGeometry,
         mitre_limit,
-        reference_elements,
-        reference_items,
-        reference_tree,
-        reference_union,
         relevant_distance: float = 1.0,
         **kwargs,
     ) -> ProcessResult:
@@ -1405,13 +1393,10 @@ class AlignerGeometryProcessor(BaseProcessor):
                 )
                 return processor.process(
                     input_geometry=input_geometry,
+                    reference_data=reference_data,
                     relevant_distance=relevant_distance,
                     mitre_limit=mitre_limit,
-                    reference_union=reference_union,
                     correction_distance=correction_distance,
-                    dict_reference=dict_reference,
-                    reference_items=reference_items,
-                    reference_tree=reference_tree,
                 )
             except ValueError as e:
                 self.logger.feedback_debug(
@@ -1420,13 +1405,14 @@ class AlignerGeometryProcessor(BaseProcessor):
         processor = NetworkGeometryProcessor(self.config, self.logger.feedback)
         return processor.process(
             input_geometry=input_geometry,
-            reference_elements=reference_elements,
-            reference_union=reference_union,
+            reference_data=reference_data,
             relevant_distance=relevant_distance,
             mitre_limit=mitre_limit,
             correction_distance=correction_distance,
         )
 class TopologyProcessor(BaseProcessor):
+    processor_id = ProcessorID.TOPOLOGY
+
     def __init__(self,config,feedback):
         super().__init__(config,feedback)
         self.dict_thematic = None
@@ -1438,8 +1424,7 @@ class TopologyProcessor(BaseProcessor):
         self,
         *,
         input_geometry,
-        reference_elements,
-        reference_union,
+        reference_data,
         mitre_limit,
         correction_distance,
         relevant_distance: float,
@@ -1460,8 +1445,7 @@ class TopologyProcessor(BaseProcessor):
             process_results[key][relevant_distance] = processor.process(
                 correction_distance=correction_distance,
                 mitre_limit=mitre_limit,
-                reference_elements=reference_elements,
-                reference_union=reference_union,
+                reference_data=reference_data,
                 input_geometry=geometry,
                 relevant_distance=relevant_distance,
             )

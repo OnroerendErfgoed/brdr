@@ -1,15 +1,16 @@
+import hashlib
+import inspect
 import json
 import os
+import uuid
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import wait
+from copy import deepcopy
 from datetime import datetime
 from typing import Iterable
 
 import numpy as np
-from Lib.copy import deepcopy
-from shapely import GeometryCollection
-from shapely import STRtree
 from shapely import make_valid
 from shapely import to_geojson
 from shapely.geometry.base import BaseGeometry
@@ -47,14 +48,16 @@ from brdr.constants import REMARK_FIELD_NAME
 from brdr.constants import STABILITY
 from brdr.constants import VERSION_DATE
 from brdr.constants import ZERO_STREAK
-from brdr.enums import AlignerInputType, ProcessRemark
+from brdr.enums import AlignerInputType
 from brdr.enums import AlignerResultType
 from brdr.enums import DiffMetric
 from brdr.enums import Evaluation
 from brdr.enums import FullReferenceStrategy
-from brdr.geometry_utils import buffer_neg, geometric_equality
+from brdr.enums import ProcessRemark
+from brdr.feature_data import AlignerFeatureCollection
+from brdr.geometry_utils import buffer_neg
 from brdr.geometry_utils import buffer_pos
-from brdr.geometry_utils import extract_points_lines_from_geometry
+from brdr.geometry_utils import geometric_equality
 from brdr.geometry_utils import safe_difference
 from brdr.geometry_utils import safe_intersection
 from brdr.geometry_utils import safe_unary_union
@@ -65,24 +68,22 @@ from brdr.processor import AlignerGeometryProcessor
 from brdr.processor import BaseProcessor
 from brdr.typings import ProcessResult
 from brdr.typings import ThematicId
-from brdr.utils import (
-    coverage_ratio,
-    create_full_interpolated_dataset,
-    recursive_stepwise_interval_check,
-)
+from brdr.utils import coverage_ratio
+from brdr.utils import create_full_interpolated_dataset
 from brdr.utils import determine_stability
 from brdr.utils import get_geometry_difference_metrics_from_processresult
 from brdr.utils import get_geometry_difference_metrics_from_processresults
 from brdr.utils import geojson_from_dict
 from brdr.utils import get_geojsons_from_process_results
 from brdr.utils import is_brdr_formula
-from brdr.utils import merge_process_results
-from brdr.utils import multi_to_singles
+from brdr.utils import recursive_stepwise_interval_check
 from brdr.utils import write_geojson
 
 
 ###################
 class AlignerResult:
+    metadata = None
+
     def __init__(
         self,
         process_results: dict[ThematicId, dict[float, ProcessResult | None]],
@@ -91,7 +92,7 @@ class AlignerResult:
 
     def get_results(
         self,
-            aligner,
+        aligner,
         result_type: AlignerResultType = AlignerResultType.PROCESSRESULTS,
     ) -> dict[ThematicId, dict[float, ProcessResult | None]]:
         for theme_id, results_dict in self.results.items():
@@ -202,12 +203,12 @@ class AlignerResult:
 
         if self.results is None or self.results == {}:
             raise ValueError("Empty results: No calculated results to export.")
-        results = self.get_results(aligner=aligner,result_type=result_type)
+        results = self.get_results(aligner=aligner, result_type=result_type)
         prop_dictionary = defaultdict(dict)
         for theme_id, results_dict in results.items():
-            prop_dictionary[theme_id]={}
+            prop_dictionary[theme_id] = {}
             for relevant_distance, process_result in results_dict.items():
-                prop_dictionary[theme_id] [relevant_distance] = {}
+                prop_dictionary[theme_id][relevant_distance] = {}
 
                 # Adding original attributes
                 if attributes and theme_id in aligner.dict_thematic_properties.keys():
@@ -271,7 +272,6 @@ class AlignerResult:
             result_type=result_type,
             formula=formula,
             attributes=attributes,
-
         )
         for name, fc in fcs.items():
             write_geojson(
@@ -279,6 +279,63 @@ class AlignerResult:
             )
 
 
+def aligner_metadata_decorator(f):
+    def inner_func(aligner, *args, **kwargs):
+        assert isinstance(aligner, Aligner)
+        response = f(aligner, *args, **kwargs)
+        if aligner.log_metadata:
+            # generate uuid for actuation
+            actuation_id = "brdrid:actuations/" + uuid.uuid4().hex
+            processor_id = aligner.processor.processor_id.value
+            processor_name = type(aligner.processor).__name__
+            reference_data = aligner.reference_data
+            reference_features = reference_data.features.values()
+            reference_geometries = [
+                {
+                    "id": feature.brdr_id,
+                    "type": feature.geometry.geom_type,
+                    "version_date": reference_data.source.get(VERSION_DATE, ""),
+                }
+                for feature in reference_features
+            ]
+            stack = inspect.stack()
+            f_locals = stack[0][0].f_locals
+
+            for thematic_id, rd, result in [
+                (thematic_id, rd, res)
+                for thematic_id, rd_res in response.results.items()
+                for rd, res in rd_res.items()
+            ]:
+                thematic_feature = aligner.thematic_data.features[thematic_id]
+                feature_of_interest_id = thematic_feature.brdr_id  # TODO
+                result_hash = hashlib.sha256(result["result"].wkt.encode()).hexdigest()
+                result["metadata"] = {
+                    "id": actuation_id,
+                    "type": "sosa:Actuation",
+                    "reference_geometries": reference_geometries,
+                    "changes": "geo:hasGeometry",
+                    "sosa:hasFeatureOfInterest": {"id": feature_of_interest_id},
+                    "result": f"brdrid:geoms/{result_hash}",  # id is sha265 hash of wkt
+                    "procedure": {
+                        "id": processor_id,
+                        "implementedBy": processor_name,
+                        "type": "sosa:Procedure",
+                        "ssn:hasInput": [
+                            {
+                                "id": "brdr:relevante_afstand",
+                                "type": "ssn:Input",
+                                "input_value": {"type": "xsd:integer", "value": rd},
+                            },
+                        ],
+                    },
+                }
+
+        return response
+
+    return inner_func
+
+
+# TODO what about the Aligner-parameters; AlignerConfig-class?
 class Aligner:
     """
     This class is used to compare and align the thematic data with the reference data.
@@ -298,6 +355,7 @@ class Aligner:
         diff_metric=DIFF_METRIC,#used in aligner/predictor to measure diffs,defaults to the symmatrical area change. for linestrings/points, this value will be overwritten to a usefull metric
         mitre_limit=10,#used in aligner to define equality in combination with correction distance
         max_workers=None,
+        log_metadata=True,
     ):
         """
         Initializes the Aligner object
@@ -314,6 +372,7 @@ class Aligner:
 
         """
         self.logger = Logger(feedback)
+        self.log_metadata = log_metadata
         self.processor = (
             processor
             if processor
@@ -342,18 +401,6 @@ class Aligner:
         # CAPAKEY for GRB-parcels)
         self.name_reference_id = ID_REFERENCE_FIELD_NAME
         # dictionary to store all reference geometries
-        self.dict_reference: dict[ThematicId, BaseGeometry] = {}
-        # dictionary to store properties of the reference-features (optional)
-        self.dict_reference_properties: dict[ThematicId, dict] = {}
-        # Dict to store source-information of the reference dictionary
-        self.dict_reference_source: dict[ThematicId, str] = {}
-        # to save a unioned geometry of all reference polygons; needed for calculation
-        # in most OD-strategies
-        self.reference_union = None
-
-        # to save a the reference_elements (points and lines) that form the reference borders; needed for networkx-calculation
-        # in most OD-strategies
-        self.reference_elements = None
 
         # Coordinate reference system
         # The crs that is defined on the aligner is the CRS we are working with. So we expect that the loaded thematic data is in this CRS and also the reference data is in this CRS. Or will be downloaded and transformed to this CRS.
@@ -369,6 +416,9 @@ class Aligner:
         self.diff_metric = diff_metric
         self.logger.feedback_info("Aligner initialized")
 
+        self.reference_data: AlignerFeatureCollection | None = None
+        self.thematic_data: AlignerFeatureCollection | None = None
+
     ##########LOADERS##########################
     ###########################################
 
@@ -383,6 +433,7 @@ class Aligner:
         )
 
         self.thematic_union = None
+        self.thematic_data = loader.load_data_as_feature_collection()
 
     def load_reference_data(self, loader: Loader):
         """
@@ -395,8 +446,11 @@ class Aligner:
             self.dict_reference_properties,
             self.dict_reference_source,
         ) = loader.load_data()
-        self._prepare_reference_data()
+        # self._prepare_reference_data()
+        self.reference_data = loader.load_data_as_feature_collection()
+        self.reference_data.is_reference = True
 
+    @aligner_metadata_decorator
     def process(
         self,
         relevant_distances: Iterable[float] = None,
@@ -442,19 +496,14 @@ class Aligner:
         process_results: dict[ThematicId, dict[float, ProcessResult | None]] = {}
         futures = {}
 
-
         def process_geom_for_rd(geometry, relevant_distance):
             return self.processor.process(
                 correction_distance=self.correction_distance,
-                dict_reference=self.dict_reference,
+                reference_data=self.reference_data,
                 mitre_limit=self.mitre_limit,
-                reference_elements=self._get_reference_elements(),
-                reference_items=self.reference_items,
-                reference_tree=self.reference_tree,
-                reference_union=self._get_reference_union(),
                 input_geometry=geometry,
                 relevant_distance=relevant_distance,
-                dict_thematic=self.dict_thematic
+                dict_thematic=self.dict_thematic,
             )
 
         def run_process(executor: ThreadPoolExecutor = None):
@@ -489,14 +538,11 @@ class Aligner:
                 for (key, rd), future in futures.items():
                     process_results[key][rd] = future.result()
 
-
-
         self.logger.feedback_info(
             "End of processing series: " + str(relevant_distances)
         )
 
         return AlignerResult(process_results)
-
 
     def predict(
         self,
@@ -636,7 +682,7 @@ class Aligner:
             diffs = get_geometry_difference_metrics_from_processresults(
                 process_result,
                 dict_thematic[theme_id],
-                self._get_reference_union(),
+                self.reference_data.union,
                 diff_metric=diff_metric,
             )
             diffs_dict[theme_id] = diffs
@@ -648,14 +694,14 @@ class Aligner:
                 continue
             diff_values = list(diffs.values())
             dict_stability = determine_stability(rd_prediction, diff_values)
-            prediction_count=0
+            prediction_count = 0
             for rd in rd_prediction:
                 if rd not in relevant_distances:
                     del process_results[theme_id][rd]
                     continue
-                process_results[theme_id][rd]["properties"][STABILITY] = (
-                    dict_stability[rd][STABILITY]
-                )
+                process_results[theme_id][rd]["properties"][STABILITY] = dict_stability[
+                    rd
+                ][STABILITY]
                 if dict_stability[rd][ZERO_STREAK] is not None:
                     if cvg_ratio > cvg_ratio_threshold:
                         prediction_count += 1
@@ -767,7 +813,10 @@ class Aligner:
                 props.update(process_results_evaluated_predictions[theme_id][dist]["properties"])
 
                 full = props[FULL_ACTUAL_FIELD_NAME]
-                if full_strategy == FullReferenceStrategy.ONLY_FULL_REFERENCE and not full:
+                if (
+                    full_strategy == FullReferenceStrategy.ONLY_FULL_REFERENCE
+                    and not full
+                ):
                     # this prediction is ignored
                     continue
                 if (
@@ -936,7 +985,7 @@ class Aligner:
         dict_formula = {
             "alignment_date": datetime.now().strftime(DATE_FORMAT),
             "brdr_version": str(__version__),
-            "reference_source": self.dict_reference_source,
+            "reference_source": self.reference_data.source,
             "full": True,
             "area": round(geometry.area, 2),
             "reference_features": {},
@@ -946,14 +995,14 @@ class Aligner:
         full_total = True
         last_version_date = None
 
-        ref_intersections = self.reference_items.take(
-            self.reference_tree.query(geometry)
+        ref_intersections = self.reference_data.items.take(
+            self.reference_data.tree.query(geometry)
         ).tolist()
         intersected = []
         for key_ref in ref_intersections:
             geom = None
             version_date = None
-            geom_reference = self.dict_reference[key_ref]
+            geom_reference = self.reference_data[key_ref].geometry
             geom_intersection = make_valid(safe_intersection(geometry, geom_reference))
             if geom_intersection.is_empty or geom_intersection is None:
                 continue
@@ -1052,7 +1101,7 @@ class Aligner:
             diffs[key] = get_geometry_difference_metrics_from_processresults(
                 dict_processresult=dict_processresults[key],
                 geom_thematic=dict_thematic[key],
-                reference_union=self._get_reference_union(),
+                reference_union=self.reference_data.union,
                 diff_metric=diff_metric,
             )
 
@@ -1092,55 +1141,6 @@ class Aligner:
         if self.thematic_union is None:
             self.thematic_union = safe_unary_union(list(self.dict_thematic.values()))
         return self.thematic_union
-
-    def _prepare_reference_data(self):
-        """
-        Prepares reference data for spatial queries and analysis.
-        It performs the following tasks:
-        1. **Optimizes spatial queries:**
-            - Creates a Spatial Relationship Tree (STRtree) using `STRtree` for
-              efficient spatial queries against the reference data in
-              `self.dict_reference`.
-            - Converts the dictionary keys (reference identifiers) to a NumPy array
-              for potential performance benefits in future operations.
-
-        2. **Clears reference union:**
-            - Sets `self.reference_union` to `None`. This variable stores the combined
-              geometry of all reference data, and it's cleared here to indicate that
-              it needs to be recalculated if requested later.
-
-        Returns:
-            None
-        """
-        # create an SRTree for performance optimisation
-        self.logger.feedback_info(
-            "length of reference_dict: " + str(len(self.dict_reference))
-        )
-        self.reference_tree = STRtree(list(self.dict_reference.values()))
-        self.reference_items = np.array(list(self.dict_reference.keys()), dtype=object)
-        # clear the reference_union, so it will be recalculated on request when needed
-        self.reference_union = None
-        return
-
-    def _get_reference_union(self) -> BaseGeometry:
-        """
-        returns a unary_unioned geometry from all the reference geometries
-        :return:
-        """
-        if self.reference_union is None:
-            self.reference_union = safe_unary_union(list(self.dict_reference.values()))
-        return self.reference_union
-
-    def _get_reference_elements(self):
-        """
-        returns the points and lines from the reference geometries
-        :return:
-        """
-        if self.reference_elements is None:
-            self.reference_elements = extract_points_lines_from_geometry(
-                GeometryCollection(list(self.dict_reference.values()))
-            )
-        return self.reference_elements
 
     def _evaluate(
         self, id_theme, geom_predicted, base_formula_field=FORMULA_FIELD_NAME
@@ -1220,7 +1220,7 @@ class Aligner:
                     - actual_formula["reference_features"][key]["area"]
                 )
                 area = base_formula["reference_features"][key]["area"]
-                if area>0:
+                if area > 0:
                     diff_percentage_reference_feature = (
                         abs(
                             base_formula["reference_features"][key]["area"]
@@ -1230,7 +1230,7 @@ class Aligner:
                         / base_formula["reference_features"][key]["area"]
                     )
                 else:
-                    diff_percentage_reference_feature=0
+                    diff_percentage_reference_feature = 0
                 if diff_area_reference_feature > max_diff_area_reference_feature:
                     max_diff_area_reference_feature = diff_area_reference_feature
                 if (
