@@ -343,7 +343,7 @@ def get_geometry_difference_metrics_from_processresults(
             "LineString",
             "MultiLineString",
         ):
-            diff_metric = DiffMetric.LENGTH_REMOVED
+            diff_metric = DiffMetric.LENGTH_CHANGE
         elif geom_thematic.geom_type in (
             "Point",
             "MultiPoint",
