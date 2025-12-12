@@ -8,7 +8,7 @@ from shapely.geometry import Polygon
 
 from brdr.constants import MULTI_SINGLE_ID_SEPARATOR
 from brdr.typings import ProcessResult
-from brdr.utils import get_collection, diffs_from_dict_processresult
+from brdr.utils import get_collection, get_geometry_difference_metrics_from_processresults
 from brdr.utils import merge_process_results
 from brdr.utils import multi_to_singles
 from brdr.utils import polygonize_reference_data
@@ -99,7 +99,7 @@ class TestUtils(unittest.TestCase):
         }
         expected_diffs = {10: 16.0}
 
-        assert expected_diffs == diffs_from_dict_processresult(
+        assert expected_diffs == get_geometry_difference_metrics_from_processresults(
             dict_processresult, geom_thematic, reference_union=None
         )
 

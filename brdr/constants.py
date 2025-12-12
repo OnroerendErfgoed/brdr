@@ -14,7 +14,7 @@ SNAP_SRATEGY = (
 SNAP_MAX_SEGMENT_LENGTH = 2  # when alignment is done by 'snap_geometry_to_reference', the input geometry (line, lineair ring,...) will be split up by default in parts of max X meter
 
 DIFF_METRIC = (
-    DiffMetric.CHANGES_AREA
+    DiffMetric.SYMMETRICAL_AREA_CHANGE
 )  # Measurement technique for determining stability in the results ='predictions'
 # PARTIAL SNAPPING CONSTANTS: snapping-constants when 'brdr' is used, and snapping-function is used inside the 'brdr'-implementation
 PARTIAL_SNAPPING = False
@@ -57,8 +57,12 @@ SHAPE_INDEX_ATTRIBUTE = PREFIX_FIELDNAME + "shape_index"
 NR_CALCULATION_FIELD_NAME = PREFIX_FIELDNAME + "nr_calculations"
 RELEVANT_DISTANCE_FIELD_NAME = PREFIX_FIELDNAME + "relevant_distance"
 REMARK_FIELD_NAME = PREFIX_FIELDNAME + "remark"
-DIFF_INDEX = PREFIX_FIELDNAME + "diff_index"
-DIFF_PERC_INDEX = PREFIX_FIELDNAME + "diff_index_perc"
+SYMMETRICAL_AREA_CHANGE = PREFIX_FIELDNAME + "sym_diff_area_index"
+SYMMETRICAL_AREA_PERCENTAGE_CHANGE = PREFIX_FIELDNAME + "sym_diff_area_index_perc"
+AREA_CHANGE = PREFIX_FIELDNAME + "diff_area_index"
+AREA_PERCENTAGE_CHANGE = PREFIX_FIELDNAME + "diff_area_index_perc"
+LENGTH_CHANGE = PREFIX_FIELDNAME + "diff_length_index"
+LENGTH_PERCENTAGE_CHANGE = PREFIX_FIELDNAME + "diff_length_index_perc"
 LAST_VERSION_DATE = "last_version_date"
 VERSION_DATE = "version_date"
 DATE_FORMAT = "%Y-%m-%d"

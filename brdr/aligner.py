@@ -16,13 +16,19 @@ from shapely.geometry.base import BaseGeometry
 
 from brdr import __version__
 from brdr.configs import ProcessorConfig
-from brdr.constants import DATE_FORMAT
+from brdr.constants import (
+    DATE_FORMAT,
+    SYMMETRICAL_AREA_CHANGE,
+    SYMMETRICAL_AREA_PERCENTAGE_CHANGE,
+    AREA_CHANGE,
+    AREA_PERCENTAGE_CHANGE,
+    LENGTH_CHANGE,
+    LENGTH_PERCENTAGE_CHANGE,
+)
 from brdr.constants import DEFAULT_CRS
 from brdr.constants import DIFF_AREA_FIELD_NAME
-from brdr.constants import DIFF_INDEX
 from brdr.constants import DIFF_METRIC
 from brdr.constants import DIFF_PERCENTAGE_FIELD_NAME
-from brdr.constants import DIFF_PERC_INDEX
 from brdr.constants import EQUAL_REFERENCE_FEATURES_FIELD_NAME
 from brdr.constants import EVALUATION_FIELD_NAME
 from brdr.constants import FORMULA_FIELD_NAME
@@ -65,8 +71,8 @@ from brdr.utils import (
     recursive_stepwise_interval_check,
 )
 from brdr.utils import determine_stability
-from brdr.utils import diff_from_processresult
-from brdr.utils import diffs_from_dict_processresult
+from brdr.utils import get_geometry_difference_metrics_from_processresult
+from brdr.utils import get_geometry_difference_metrics_from_processresults
 from brdr.utils import geojson_from_dict
 from brdr.utils import get_geojsons_from_process_results
 from brdr.utils import is_brdr_formula
@@ -101,17 +107,41 @@ class AlignerResult:
                 properties[ID_THEME_FIELD_NAME] = theme_id
                 properties[NR_CALCULATION_FIELD_NAME] = nr_calculations
                 properties[RELEVANT_DISTANCE_FIELD_NAME] = relevant_distance
-                properties[DIFF_INDEX] = diff_from_processresult(
+                properties[SYMMETRICAL_AREA_CHANGE] = get_geometry_difference_metrics_from_processresult(
                     process_result,
                     aligner.dict_thematic[theme_id],
                     None,
-                    DIFF_METRIC.CHANGES_AREA,
+                    DIFF_METRIC.SYMMETRICAL_AREA_CHANGE,
                 )
-                properties[DIFF_PERC_INDEX] = diff_from_processresult(
+                properties[SYMMETRICAL_AREA_PERCENTAGE_CHANGE] = get_geometry_difference_metrics_from_processresult(
                     process_result,
                     aligner.dict_thematic[theme_id],
                     None,
-                    DIFF_METRIC.CHANGES_PERCENTAGE,
+                    DIFF_METRIC.SYMMETRICAL_AREA_PERCENTAGE_CHANGE,
+                )
+                properties[AREA_CHANGE] = get_geometry_difference_metrics_from_processresult(
+                    process_result,
+                    aligner.dict_thematic[theme_id],
+                    None,
+                    DIFF_METRIC.AREA_CHANGE,
+                )
+                properties[AREA_PERCENTAGE_CHANGE] = get_geometry_difference_metrics_from_processresult(
+                    process_result,
+                    aligner.dict_thematic[theme_id],
+                    None,
+                    DIFF_METRIC.AREA_PERCENTAGE_CHANGE,
+                )
+                properties[LENGTH_CHANGE] = get_geometry_difference_metrics_from_processresult(
+                    process_result,
+                    aligner.dict_thematic[theme_id],
+                    None,
+                    DIFF_METRIC.LENGTH_CHANGE,
+                )
+                properties[LENGTH_PERCENTAGE_CHANGE] = get_geometry_difference_metrics_from_processresult(
+                    process_result,
+                    aligner.dict_thematic[theme_id],
+                    None,
+                    DIFF_METRIC.LENGTH_PERCENTAGE_CHANGE,
                 )
                 resulting_geom = process_result["result"]
                 try:
@@ -265,7 +295,7 @@ class Aligner:
         processor: BaseProcessor = None,
         crs=DEFAULT_CRS,
         correction_distance=0.01, #useed in aligner to define equality
-        diff_metric=DIFF_METRIC,#used in aligner/predictor to measure diffs
+        diff_metric=DIFF_METRIC,#used in aligner/predictor to measure diffs,defaults to the symmatrical area change. for linestrings/points, this value will be overwritten to a usefull metric
         mitre_limit=10,#used in aligner to define equality in combination with correction distance
         max_workers=None,
     ):
@@ -575,8 +605,8 @@ class Aligner:
                     dict_thematic={theme_id: geom},
                     relevant_distances=relevant_distances,
                 )
-                rd = relevant_distances[0]
-                return aligner_result.results[theme_id][rd]
+                relevant_distance = relevant_distances[0]
+                return aligner_result.results[theme_id][relevant_distance]
 
             def _process_wrapper(x: float):
                 return _process_result(theme_id=theme_id, relevant_distances=[x])
@@ -594,7 +624,7 @@ class Aligner:
             diff_metric = self.diff_metric
         diffs_dict = {}
         for theme_id, process_result in process_results.items():
-            diffs = diffs_from_dict_processresult(
+            diffs = get_geometry_difference_metrics_from_processresults(
                 process_result,
                 dict_thematic[theme_id],
                 self._get_reference_union(),
@@ -985,11 +1015,11 @@ class Aligner:
         self.logger.feedback_debug(str(dict_formula))
         return dict_formula
 
-    def get_diff_metrics(
+    def get_difference_metrics_for_dict_thematic(
         self,
         dict_processresults=None,
         dict_thematic=None,
-        diff_metric=DiffMetric.CHANGES_AREA,
+        diff_metric=DiffMetric.SYMMETRICAL_AREA_CHANGE,
     ):
         """
         Calculates a dictionary containing difference metrics for thematic elements based on a distance series.
@@ -1008,7 +1038,7 @@ class Aligner:
             dict_thematic = self.dict_thematic
         diffs = {}
         for key in dict_thematic:
-            diffs[key] = diffs_from_dict_processresult(
+            diffs[key] = get_geometry_difference_metrics_from_processresults(
                 dict_processresult=dict_processresults[key],
                 geom_thematic=dict_thematic[key],
                 reference_union=self._get_reference_union(),

@@ -61,24 +61,26 @@ class DiffMetric(str, Enum):
     Determines which metric is used to determine the difference between the thematic and
     reference data. Different metrics are available:
 
-    * TOTAL_AREA: the total difference area
-    * TOTAL_PERCENTAGE: the percentage of the total difference area
-    * CHANGES_AREA: the sum of the negative and positive difference areas
-    * CHANGES_PERCENTAGE: the percentage of the changed area
-    * TOTAL_LENGTH ="total_length"
-    * CHANGES_LENGTH = "changes_length"
-    * TOTAL_DISTANCE = "total_distance"
-    * REFERENCE_USAGE = "reference_usage": Amount of reference borders that is used (m, m²)
+    AREA_CHANGE = "AREA_CHANGE"
+    AREA_PERCENTAGE_CHANGE = "AREA_PERCENTAGE_CHANGE"
+    SYMMETRICAL_AREA_CHANGE = "SYMMETRICAL_AREA_CHANGE"
+    SYMMETRICAL_AREA_PERCENTAGE_CHANGE = "SYMMETRICAL_AREA_PERCENTAGE_CHANGE"
+    LENGTH_CHANGE = "LENGTH_CHANGE"
+    LENGTH_PERCENTAGE_CHANGE = "LENGTH_PERCENTAGE_CHANGE"
+    LENGTH_REMOVED = "LENGTH_REMOVED"
+    TOTAL_DISTANCE = "TOTAL_DISTANCE"
+    REFERENCE_USAGE = "REFERENCE_USAGE" Amount of reference borders that is used (m, m²)
     """
 
-    TOTAL_AREA = "total_area"
-    TOTAL_PERCENTAGE = "total_percentage"
-    CHANGES_AREA = "changes_area"
-    CHANGES_PERCENTAGE = "changes_percentage"
-    TOTAL_LENGTH = "total_length"
-    CHANGES_LENGTH = "changes_length"
-    TOTAL_DISTANCE = "total_distance"
-    REFERENCE_USAGE = "reference_usage"
+    AREA_CHANGE = "AREA_CHANGE"
+    AREA_PERCENTAGE_CHANGE = "AREA_PERCENTAGE_CHANGE"
+    SYMMETRICAL_AREA_CHANGE = "SYMMETRICAL_AREA_CHANGE"
+    SYMMETRICAL_AREA_PERCENTAGE_CHANGE = "SYMMETRICAL_AREA_PERCENTAGE_CHANGE"
+    LENGTH_CHANGE = "LENGTH_CHANGE"
+    LENGTH_PERCENTAGE_CHANGE = "LENGTH_PERCENTAGE_CHANGE"
+    LENGTH_REMOVED = "LENGTH_REMOVED"
+    TOTAL_DISTANCE = "TOTAL_DISTANCE"
+    REFERENCE_USAGE = "REFERENCE_USAGE"
 
 
 class ProcessRemark(str, Enum):

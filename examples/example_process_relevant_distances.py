@@ -68,7 +68,7 @@ if __name__ == "__main__":
         150,
         filename,
     )
-    resulting_areas = aligner.get_diff_metrics(
+    resulting_areas = aligner.get_difference_metrics_for_dict_thematic(
         dict_processresults=dict_results,
         dict_thematic=aligner.dict_thematic,
     )

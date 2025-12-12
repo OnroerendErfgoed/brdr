@@ -316,11 +316,11 @@ def _numerical_derivative(x, y):
     return derivative
 
 
-def diffs_from_dict_processresult(
+def get_geometry_difference_metrics_from_processresults(
     dict_processresult: dict[float, ProcessResult],
     geom_thematic: BaseGeometry,
     reference_union: BaseGeometry,
-    diff_metric: DiffMetric = DiffMetric.CHANGES_AREA,
+    diff_metric: DiffMetric = DiffMetric.SYMMETRICAL_AREA_CHANGE,
 ):
     """
     Calculates a dictionary containing difference metrics for thematic geometry based on a distance series.
@@ -339,7 +339,17 @@ def diffs_from_dict_processresult(
 
     for rel_dist in dict_processresult:
         processresult = dict_processresult.get(rel_dist, {})
-        diff = diff_from_processresult(
+        if geom_thematic.geom_type in (
+            "LineString",
+            "MultiLineString",
+        ):
+            diff_metric = DiffMetric.LENGTH_REMOVED
+        elif geom_thematic.geom_type in (
+            "Point",
+            "MultiPoint",
+        ):
+            diff_metric = DiffMetric.TOTAL_DISTANCE
+        diff = get_geometry_difference_metrics_from_processresult(
             processresult, geom_thematic, reference_union, diff_metric
         )
 
@@ -347,41 +357,35 @@ def diffs_from_dict_processresult(
     return diffs
 
 
-def diff_from_processresult(processresult, geom_thematic, reference_union, diff_metric):
-    if geom_thematic.geom_type in (
-        "LineString",
-        "MultiLineString",
-    ):
-        diff_metric = DiffMetric.CHANGES_LENGTH
-        # diff_metric = DiffMetric.REFERENCE_USAGE
-        # diff_metric = DiffMetric.TOTAL_DISTANCE
-    elif geom_thematic.geom_type in (
-        "Point",
-        "MultiPoint",
-    ):
-        diff_metric = DiffMetric.TOTAL_DISTANCE
-        diff_metric = DiffMetric.REFERENCE_USAGE
-        diff_metric = DiffMetric.TOTAL_DISTANCE
+def get_geometry_difference_metrics_from_processresult(processresult, geom_thematic, reference_union, diff_metric):
     result = processresult.get("result")
     result_diff = processresult.get("result_diff")
+    result_diff_min = processresult.get("result_diff_min")
     diff = 0
     original = geom_thematic
     if result_diff is None or result_diff.is_empty or result is None or result.is_empty:
         diff = 0
-    elif diff_metric == DiffMetric.TOTAL_AREA:
-        diff = result.area - original.area
-    elif diff_metric == DiffMetric.TOTAL_PERCENTAGE:
-        diff = result.area - original.area
-        diff = diff * 100 / result.area
-    elif diff_metric == DiffMetric.CHANGES_AREA:
+    elif diff_metric == DiffMetric.SYMMETRICAL_AREA_CHANGE:
         diff = result_diff.area
-    elif diff_metric == DiffMetric.CHANGES_PERCENTAGE:
+    elif diff_metric == DiffMetric.SYMMETRICAL_AREA_PERCENTAGE_CHANGE:
         diff = result_diff.area
-        diff = diff * 100 / result.area
-    elif diff_metric == DiffMetric.TOTAL_LENGTH:
+        if original.area !=0:
+            diff = diff * 100 / original.area
+    elif diff_metric == DiffMetric.AREA_CHANGE:
+        diff = result.area - original.area
+    elif diff_metric == DiffMetric.AREA_PERCENTAGE_CHANGE:
+        diff = result.area - original.area
+        if original.area !=0:
+            diff = diff * 100 / original.area
+    elif diff_metric == DiffMetric.LENGTH_CHANGE:
         diff = result.length - original.length
-    elif diff_metric == DiffMetric.CHANGES_LENGTH:
-        diff = result_diff.length
+    elif diff_metric == DiffMetric.LENGTH_PERCENTAGE_CHANGE:
+        diff = result.length - original.length
+        if original.length !=0:
+            diff=diff*100/original.length
+    elif diff_metric == DiffMetric.LENGTH_REMOVED:
+        if not result_diff_min is None or result_diff_min.is_empty:
+            diff = result_diff_min.length
     elif diff_metric == DiffMetric.REFERENCE_USAGE:
         if not reference_union is None and not reference_union.is_empty:
             reference_union_buffer = buffer_pos(reference_union, 0.01)
@@ -399,7 +403,7 @@ def diff_from_processresult(processresult, geom_thematic, reference_union, diff_
         diff = total_vertex_distance(original, result, bidirectional=False)
 
     # round, so the detected changes are within 10cm, 10cm² or 0.1%
-    diff = round(diff, 1)
+    diff = round(abs(diff), 1)
     return diff
 
 

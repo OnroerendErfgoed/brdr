@@ -213,7 +213,7 @@ class TestExamples:
         # Example how to use a series (for histogram)
         series = np.arange(0, 310, 10, dtype=int) / 100
         process_result = aligner.process(relevant_distances=series)
-        resulting_areas = aligner.get_diff_metrics(
+        resulting_areas = aligner.get_difference_metrics_for_dict_thematic(
             process_result.results, aligner.dict_thematic
         )
         for key in resulting_areas:
