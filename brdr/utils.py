@@ -17,7 +17,7 @@ from shapely import polygonize
 from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
 
-from brdr.constants import AREA_ATTRIBUTE, REMARK_FIELD_NAME
+from brdr.constants import AREA_ATTRIBUTE
 from brdr.constants import DEFAULT_CRS
 from brdr.constants import DOWNLOAD_LIMIT
 from brdr.constants import MULTI_SINGLE_ID_SEPARATOR
