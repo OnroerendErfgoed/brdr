@@ -132,11 +132,11 @@ class BaseProcessor(ABC):
         remark = []
         geom_thematic = make_valid(geom_thematic)
         if geom_preresult is None or geom_preresult.is_empty:
-            geom_preresult = GeometryCollection()
-            remark.append(ProcessRemark.RESULT_EMPTY)
+            geom_preresult =geom_thematic
+            remark.append(ProcessRemark.RESULT_EMPTY_ORIGINAL)
         if to_multi(geom_preresult).geom_type != to_multi(geom_thematic).geom_type:
-            geom_preresult = GeometryCollection()
-            remark.append(ProcessRemark.CHANGED_GEOMETRYTYPE)
+            geom_preresult =geom_thematic
+            remark.append(ProcessRemark.CHANGED_GEOMETRYTYPE_ORIGINAL_RETURNED)
 
         if geom_preresult.geom_type in [
             "Point",
@@ -166,7 +166,6 @@ class BaseProcessor(ABC):
                 }
             )
         # Process array
-
         buffer_distance = relevant_distance / 2
         result = []
         geom_thematic_for_add_delete = geom_thematic
