@@ -1,6 +1,8 @@
 import os
 from datetime import datetime
 
+import numpy as np
+
 from brdr.aligner import Aligner
 from brdr.be.grb.grb import update_to_actual_grb
 from brdr.be.grb.loader import GRBFiscalParcelLoader
@@ -42,11 +44,11 @@ max_distance_for_actualisation = 2
 # =====
 # Initiate an Aligner to create a themeset that is base-referenced on a specific
 # base_year
-base_aligner = Aligner(max_workers=10)
+base_aligner = Aligner(max_workers=5)
 print("start loading OE-objects")
 # Load the thematic data to evaluate
 loader = OnroerendErfgoedLoader(bbox=bbox, partition=0)
-#loader = OnroerendErfgoedLoader(objectids= [276,120380])
+# loader = OnroerendErfgoedLoader(objectids= [276,120380])
 base_aligner.load_thematic_data(loader)
 
 # Exclude objects bigger than specified area
@@ -73,7 +75,8 @@ print("Reference-data loaded")
 # # Align the features to the base-GRB
 print("Process base objects")
 starttime = datetime.now()
-base_process_result = base_aligner.process(relevant_distances=[base_correction])
+series = np.arange(0, 210, 10, dtype=int) / 100
+base_process_result = base_aligner.process(relevant_distances=series)
 # get resulting aligned features on Adpfxxxx, with formula
 processresults = base_process_result.get_results_as_geojson(
     aligner=base_aligner, formula=True
@@ -83,59 +86,7 @@ if len(processresults) == 0:
     exit()
 featurecollection_base_result = processresults["result"]
 
-# Update Featurecollection to actual version
-starttime = datetime.now()
-print("Actualise base objects")
-fcs = update_to_actual_grb(
-    featurecollection_base_result,
-    base_aligner.name_thematic_id,
-    base_formula_field=FORMULA_FIELD_NAME,
-    max_distance_for_actualisation=max_distance_for_actualisation,
-)
 
-write_geojson(
-    os.path.join("output/", "parcel_change_detector_with.geojson"), fcs["result"]
-)
-
-counter_equality = 0
-counter_equality_by_alignment = 0
-counter_prediction_unique = 0
-counter_difference = 0
-counter_no_change = 0
-
-# #270: Move this as general output from the updater?
-for feature in fcs["result"]["features"]:
-    if EVALUATION_FIELD_NAME in feature["properties"].keys():
-        ev = feature["properties"][EVALUATION_FIELD_NAME]
-        print(ev)
-        rd = feature["properties"][RELEVANT_DISTANCE_FIELD_NAME]
-        if ev.startswith("equal") and rd == 0:
-            counter_equality = counter_equality + 1
-        elif ev.startswith("equal") and rd > 0:
-            counter_equality_by_alignment = counter_equality_by_alignment + 1
-        elif ev.startswith("prediction_unique"):
-            counter_prediction_unique = counter_prediction_unique + 1
-        elif ev.startswith("no_change"):
-            counter_no_change = counter_no_change + 1
-        else:
-            counter_difference = counter_difference + 1
-
-print(
-    "Features: "
-    + str(nr_features)
-    + "//Equality: "
-    + str(counter_equality)
-    + "//Equality by alignment: "
-    + str(counter_equality_by_alignment)
-    + "//Prediction (unique): "
-    + str(counter_prediction_unique)
-    + "//No change: "
-    + str(counter_no_change)
-    + "//Difference: "
-    + str(counter_difference)
-    + "//Excluded: "
-    + str(counter_excluded)
-)
 endtime = datetime.now()
 seconds = (endtime - starttime).total_seconds()
 print("duration of actualisation: " + str(seconds))

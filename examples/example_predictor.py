@@ -15,7 +15,7 @@ if __name__ == "__main__":
     relevant distances of 'no-change')
     """
     # Initiate an Aligner
-    aligner = Aligner(max_workers=-1)
+    aligner = Aligner(max_workers=None)
     # Load thematic data & reference data
     loader = GeoJsonFileLoader("input/predictor_one.geojson", "theme_id")
 
@@ -30,7 +30,7 @@ if __name__ == "__main__":
     alignerresults = aligner.predict(
         relevant_distances=series,
     )
-    dict_predictions = alignerresults.get_results(
+    dict_predictions = alignerresults.get_results(aligner=aligner,
         result_type=AlignerResultType.PREDICTIONS
     )
 

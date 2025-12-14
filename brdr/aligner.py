@@ -488,6 +488,7 @@ class Aligner:
             for id_to_process in dict_thematic.keys()
         ):
             raise ValueError("not all ids are found in the thematic data")
+        # TODO: laten we deze parameter niet weg in de functie; en altijd uitlezen uit de Aligner?
         if max_workers is None:
             max_workers = self.max_workers
 
@@ -642,7 +643,9 @@ class Aligner:
         rd_prediction = sorted(rd_prediction)
 
         process_results = {}
-        for theme_id, geom in dict_thematic.items():
+        futures={}
+
+        def _predict_geom(theme_id,geom,_rd_prediction):
 
             def _check_interval_stability(
                 res_start: ProcessResult, res_end: ProcessResult
@@ -655,25 +658,59 @@ class Aligner:
                     mitre_limit=self.mitre_limit,
                 )
 
-            def _process_result(theme_id, relevant_distances):
+            def _process_result(_theme_id, _relevant_distances):
                 aligner_result = self.process(
-                    dict_thematic={theme_id: geom},
-                    relevant_distances=relevant_distances,
+                    dict_thematic={_theme_id: geom},
+                    relevant_distances=_relevant_distances,
                 )
-                relevant_distance = relevant_distances[0]
-                return aligner_result.results[theme_id][relevant_distance]
+                relevant_distance = _relevant_distances[0]
+                return aligner_result.results[_theme_id][relevant_distance]
 
             def _process_wrapper(x: float):
-                return _process_result(theme_id=theme_id, relevant_distances=[x])
+                return _process_result(_theme_id=theme_id, _relevant_distances=[x])
 
             non_stable_points, cache = recursive_stepwise_interval_check(
                 f_value=_process_wrapper,
                 f_condition=_check_interval_stability,
-                discrete_list=rd_prediction,
+                discrete_list=_rd_prediction,
                 initial_sample_size=3,
             )
-            interpolated_cache = create_full_interpolated_dataset(rd_prediction, cache)
-            process_results[theme_id] = interpolated_cache
+            interpolated_cache = create_full_interpolated_dataset(_rd_prediction, cache)
+            return interpolated_cache
+            # process_results[thematic_id] = interpolated_cache
+
+        def run_prediction(executor: ThreadPoolExecutor = None):
+
+            for theme_key, geom in dict_thematic.items():
+
+                self.logger.feedback_info(
+                    f"thematic id {str(theme_key)} predictions calculated with "
+                    f"relevant distances (m) [{str(relevant_distances)}]"
+                )
+                process_results[theme_key] = {}
+                try:
+                    fn = _predict_geom
+                    if executor:
+                        futures[theme_key] = executor.submit(fn, theme_key,geom,rd_prediction)
+                    else:
+                        process_results[theme_key] = fn(theme_key,geom,rd_prediction)
+                except ValueError as e:
+                    self.logger.feedback_warning(
+                        f"error for thematic id {str(theme_key)} processed with "
+                        f"relevant distances (m) [{str(relevant_distances)}]"
+                    )
+                    process_results[theme_key] = None
+                    self.logger.feedback_warning(str(e))
+
+        if self.max_workers == -1:
+            run_prediction()
+        else:
+            with ThreadPoolExecutor(self.max_workers) as prediction_executor:
+                run_prediction(prediction_executor)
+                self.logger.feedback_debug("waiting all started thematic calculations")
+                wait(list(futures.values()))
+                for thematic_id, future in futures.items():
+                    process_results[thematic_id] = future.result()
 
         if diff_metric is None:
             diff_metric = self.diff_metric
@@ -763,7 +800,7 @@ class Aligner:
         #   *No prediction available
         #   *Predictions available
 
-        #PART 1: EVALUATED
+        # PART 1: EVALUATED
         aligner_result = self.predict(
             dict_thematic=dict_evaluated,
             relevant_distances=relevant_distances,
