@@ -42,7 +42,7 @@ max_distance_for_actualisation = 2
 # =====
 # Initiate an Aligner to create a themeset that is base-referenced on a specific
 # base_year
-base_aligner = Aligner(max_workers=10)
+base_aligner = Aligner(max_workers=-1)
 print("start loading OE-objects")
 # Load the thematic data to evaluate
 loader = OnroerendErfgoedLoader(bbox=bbox, partition=0)
@@ -85,12 +85,14 @@ featurecollection_base_result = processresults["result"]
 
 # Update Featurecollection to actual version
 starttime = datetime.now()
+print (starttime)
 print("Actualise base objects")
 fcs = update_to_actual_grb(
     featurecollection_base_result,
     base_aligner.name_thematic_id,
     base_formula_field=FORMULA_FIELD_NAME,
     max_distance_for_actualisation=max_distance_for_actualisation,
+    max_workers=-1
 )
 
 write_geojson(
@@ -138,4 +140,5 @@ print(
 )
 endtime = datetime.now()
 seconds = (endtime - starttime).total_seconds()
+print (endtime)
 print("duration of actualisation: " + str(seconds))

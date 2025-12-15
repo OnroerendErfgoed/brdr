@@ -488,7 +488,6 @@ class Aligner:
             for id_to_process in dict_thematic.keys()
         ):
             raise ValueError("not all ids are found in the thematic data")
-        # TODO: laten we deze parameter niet weg in de functie; en altijd uitlezen uit de Aligner?
         if max_workers is None:
             max_workers = self.max_workers
 
@@ -662,9 +661,8 @@ class Aligner:
                 aligner_result = self.process(
                     dict_thematic={_theme_id: geom},
                     relevant_distances=_relevant_distances,
-                )
-                relevant_distance = _relevant_distances[0]
-                return aligner_result.results[_theme_id][relevant_distance]
+                    max_workers=self.max_workers)
+                return aligner_result.results[_theme_id][_relevant_distances[0]]
 
             def _process_wrapper(x: float):
                 return _process_result(_theme_id=theme_id, _relevant_distances=[x])
@@ -677,7 +675,6 @@ class Aligner:
             )
             interpolated_cache = create_full_interpolated_dataset(_rd_prediction, cache)
             return interpolated_cache
-            # process_results[thematic_id] = interpolated_cache
 
         def run_prediction(executor: ThreadPoolExecutor = None):
 

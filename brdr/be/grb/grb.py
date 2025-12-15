@@ -30,6 +30,7 @@ def update_to_actual_grb(
     multi_to_best_prediction=True,
     feedback=None,
     attributes=True,
+        max_workers=-1
 ):
     """
     Function to update a thematic featurecollection to the most actual version of GRB.
@@ -41,6 +42,7 @@ def update_to_actual_grb(
     :param max_distance_for_actualisation: Maximum relevant distance that is used to search and evaluate resulting geometries. All relevant distance between 0 and this max_distance are used to search, with a interval of 0.1m.
     :param feedback:  (default None): a QGIS feedback can be added to push all the logging to QGIS
     :param attributes: (boolean, default=True): States of all original attributes has to be added to the result
+        :param max_workers:
     :return: featurecollection
     """
     logger = Logger(feedback)
@@ -124,7 +126,7 @@ def update_to_actual_grb(
         affected = dict_thematic.keys()
 
     # Initiate a Aligner to reference thematic features to the actual borders
-    actual_aligner = Aligner(feedback=feedback, max_workers=None)
+    actual_aligner = Aligner(feedback=feedback, max_workers=max_workers)
     actual_aligner.load_thematic_data(
         DictLoader(data_dict=dict_thematic, data_dict_properties=dict_thematic_props)
     )

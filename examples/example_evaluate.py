@@ -77,11 +77,11 @@ if __name__ == "__main__":
     )
     # Use the EVALUATE-function
     dict_evaluated = actual_aligner.evaluate(
-        ids_to_evaluate=affected,
+        dict_thematic=affected,
         base_formula_field=name_formula,
         relevant_distances=np.arange(0, 310, 10, dtype=int) / 100,
     )
-    dict_evaluated.get_results(result_type=AlignerResultType.EVALUATED_PREDICTIONS)
+    dict_evaluated.get_results(result_type=AlignerResultType.EVALUATED_PREDICTIONS,aligner=actual_aligner)
     # SHOW the EVALUATED results
     fc = dict_evaluated.get_results_as_geojson(
         formula=True, attributes=True, aligner=actual_aligner
