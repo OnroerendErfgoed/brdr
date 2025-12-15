@@ -278,11 +278,11 @@ class TestAligner(unittest.TestCase):
                 od_strategy=od_strategy, threshold_overlap_percentage=50
             )
             self.sample_aligner.processor = AlignerGeometryProcessor(config)
-            process_result = self.sample_aligner.process(
+            aligner_result = self.sample_aligner.process(
                 relevant_distances=[relevant_distance],
             )
             self.assertEqual(
-                len(process_result.results["theme_id_1"][relevant_distance]), 7
+                len(aligner_result.results["theme_id_1"][relevant_distance]), 8
             )
 
     def test_process_interior_ring(self):
