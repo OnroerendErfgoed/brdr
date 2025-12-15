@@ -55,9 +55,8 @@ from brdr.enums import Evaluation
 from brdr.enums import FullReferenceStrategy
 from brdr.enums import ProcessRemark
 from brdr.feature_data import AlignerFeatureCollection
-from brdr.geometry_utils import buffer_neg
+from brdr.geometry_utils import buffer_neg, geometric_equality
 from brdr.geometry_utils import buffer_pos
-from brdr.geometry_utils import geometric_equality
 from brdr.geometry_utils import safe_difference
 from brdr.geometry_utils import safe_intersection
 from brdr.geometry_utils import safe_unary_union
@@ -68,15 +67,17 @@ from brdr.processor import AlignerGeometryProcessor
 from brdr.processor import BaseProcessor
 from brdr.typings import ProcessResult
 from brdr.typings import ThematicId
-from brdr.utils import coverage_ratio
-from brdr.utils import create_full_interpolated_dataset
+from brdr.utils import (
+    coverage_ratio,
+    recursive_stepwise_interval_check,
+    create_full_interpolated_dataset,
+)
 from brdr.utils import determine_stability
-from brdr.utils import get_geometry_difference_metrics_from_processresult
-from brdr.utils import get_geometry_difference_metrics_from_processresults
 from brdr.utils import geojson_from_dict
 from brdr.utils import get_geojsons_from_process_results
+from brdr.utils import get_geometry_difference_metrics_from_processresult
+from brdr.utils import get_geometry_difference_metrics_from_processresults
 from brdr.utils import is_brdr_formula
-from brdr.utils import recursive_stepwise_interval_check
 from brdr.utils import write_geojson
 
 
@@ -550,6 +551,8 @@ class Aligner:
         *,
         dict_thematic=None,
         diff_metric=None,
+            process_all_at_once=True,
+
     ) -> AlignerResult:
         """
         Predicts the 'most interesting' relevant distances for changes in thematic
@@ -593,6 +596,9 @@ class Aligner:
             relevant_distances (np.ndarray, optional): A NumPy array of distances to
               be analyzed. Defaults to np.arange(0.1, 5.05, 0.1).
             diff_metric (enum, optional): A enum thjat determines the method how differences are measured to determine the 'predictions'
+            process_all_at_once=True
+                #True: All calculations are done for all relevant distances. This seems to be faster than the other method of doing calculations for some intermediate points and copy result when the same.
+                #False: Uses the logic to only calculate intermediate points and copy if equal, otherwise extra points are calculated. Until the full range is filled.
 
         Returns:
             dict_series: A dictionary containing the resultset for all relevant distances for each thematic element.
@@ -607,6 +613,8 @@ class Aligner:
                     your implementation) from the distance series for the
                     corresponding distance.
             diffs_dict: a dictionary with the differences for each relevant distance
+
+
         """
         if dict_thematic is None:  # or dict_thematic =={}
             dict_thematic = self.dict_thematic
@@ -640,9 +648,6 @@ class Aligner:
             )
         rd_prediction = list(set(rd_prediction))
         rd_prediction = sorted(rd_prediction)
-        process_all_at_once=True
-        #True: All calculations are done for all relevant distances. This seems to be faster than the other method of doing calculations for some intermediate points and copy result when the same.
-        #False: Uses the logic to only calculate intermediate points and copy if equal, otherwise extra points are calculated. Until the full range is filled.
         if process_all_at_once:
             aligner_result = self.process(
                 dict_thematic=dict_thematic,

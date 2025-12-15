@@ -659,16 +659,16 @@ def get_relevant_polygons_from_geom(
     return safe_unary_union(array)
 
 
-def equal_geom_in_array(geom, geom_array, correction_distance, mitre_limit):
-    """
-    Check if a predicted geometry is equal to other predicted geometries in a list.
-    Equality is defined as there is the symmetrical difference is smaller than the CORRECTION DISTANCE
-    Returns True if one of the elements is equal, otherwise False
-    """
-    for g in geom_array:
-        if geometric_equality(geom, g, correction_distance, mitre_limit):
-            return True
-    return False
+# def equal_geom_in_array(geom, geom_array, correction_distance, mitre_limit):
+#     """
+#     Check if a predicted geometry is equal to other predicted geometries in a list.
+#     Equality is defined as there is the symmetrical difference is smaller than the CORRECTION DISTANCE
+#     Returns True if one of the elements is equal, otherwise False
+#     """
+#     for g in geom_array:
+#         if geometric_equality(geom, g, correction_distance, mitre_limit):
+#             return True
+#     return False
 
 
 def create_full_interpolated_dataset(

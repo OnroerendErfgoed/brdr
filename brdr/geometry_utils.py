@@ -3,7 +3,6 @@ import math
 from collections import Counter
 from itertools import combinations
 from itertools import islice
-from math import dist
 from math import inf
 from math import pi
 from typing import Union, List, Tuple
@@ -1160,82 +1159,82 @@ def get_geoms_from_geometry(geometry):
     return geoms
 
 
-def snap_multilinestring_endpoints(multilinestring, tolerance):
-    """
-    Snapt de begin- en eindpunten van elke LineString in een MultiLineString
-    aan nabijgelegen lijnen binnen een gegeven tolerantie.
+# def snap_multilinestring_endpoints(multilinestring, tolerance):
+#     """
+#     Snapt de begin- en eindpunten van elke LineString in een MultiLineString
+#     aan nabijgelegen lijnen binnen een gegeven tolerantie.
+#
+#     Parameters:
+#     - multilinestring: shapely.geometry.MultiLineString
+#     - tolerance: float, afstandstolerantie voor snappen
+#
+#     Returns:
+#     - Een nieuwe MultiLineString met gesnapte eindpunten
+#     """
+#     if isinstance(multilinestring, LineString):
+#         return MultiLineString([multilinestring])
+#     lines = list(multilinestring.geoms)
+#     snapped_lines = []
+#
+#     for i, line in enumerate(lines):
+#         start = Point(line.coords[0])
+#         end = Point(line.coords[-1])
+#
+#         # Verzamel alle andere lijnen
+#         other_lines = [l for j, l in enumerate(lines) if j != i]
+#
+#         # Snap begin- en eindpunt indien binnen tolerantie
+#         for other in other_lines:
+#             if start.distance(other) <= tolerance:
+#                 start = snap(start, other, tolerance)
+#             if end.distance(other) <= tolerance:
+#                 end = snap(end, other, tolerance)
+#
+#         # Herbouw de lijn met eventueel gesnapte punten
+#         new_coords = [start.coords[0]] + list(line.coords[1:-1]) + [end.coords[0]]
+#         snapped_lines.append(LineString(new_coords))
+#
+#     return MultiLineString(snapped_lines)
 
-    Parameters:
-    - multilinestring: shapely.geometry.MultiLineString
-    - tolerance: float, afstandstolerantie voor snappen
 
-    Returns:
-    - Een nieuwe MultiLineString met gesnapte eindpunten
-    """
-    if isinstance(multilinestring, LineString):
-        return MultiLineString([multilinestring])
-    lines = list(multilinestring.geoms)
-    snapped_lines = []
-
-    for i, line in enumerate(lines):
-        start = Point(line.coords[0])
-        end = Point(line.coords[-1])
-
-        # Verzamel alle andere lijnen
-        other_lines = [l for j, l in enumerate(lines) if j != i]
-
-        # Snap begin- en eindpunt indien binnen tolerantie
-        for other in other_lines:
-            if start.distance(other) <= tolerance:
-                start = snap(start, other, tolerance)
-            if end.distance(other) <= tolerance:
-                end = snap(end, other, tolerance)
-
-        # Herbouw de lijn met eventueel gesnapte punten
-        new_coords = [start.coords[0]] + list(line.coords[1:-1]) + [end.coords[0]]
-        snapped_lines.append(LineString(new_coords))
-
-    return MultiLineString(snapped_lines)
-
-
-def get_connection_lines_to_nearest(multilinestring):
-    # Extract all endpoints
-    endpoints = []
-    for line in multilinestring.geoms:
-        coords = list(line.coords)
-        endpoints.append(Point(coords[0]))
-        endpoints.append(Point(coords[-1]))
-
-    # Count occurrences of each endpoint
-    endpoint_counts = Counter((pt.x, pt.y) for pt in endpoints)
-
-    # Identify loose endpoints (those that appear only once)
-    loose_endpoints = [Point(xy) for xy, count in endpoint_counts.items() if count == 1]
-
-    # Keep track of which points have been connected
-    used = set()
-    connection_lines = []
-
-    while loose_endpoints:
-        pt = loose_endpoints.pop(0)
-        if (pt.x, pt.y) in used:
-            continue
-        # Find the closest other loose endpoint
-        closest_pt = min(
-            (other for other in loose_endpoints if (other.x, other.y) not in used),
-            key=lambda p: pt.distance(p),
-            default=None,
-        )
-        if closest_pt:
-            connection_lines.append(LineString([pt, closest_pt]))
-            used.add((pt.x, pt.y))
-            used.add((closest_pt.x, closest_pt.y))
-            loose_endpoints.remove(closest_pt)
-
-    # Combine original lines with connection lines
-    # all_lines = list(multilinestring.geoms) + connection_lines
-    # return MultiLineString(all_lines)
-    return connection_lines
+# def get_connection_lines_to_nearest(multilinestring):
+#     # Extract all endpoints
+#     endpoints = []
+#     for line in multilinestring.geoms:
+#         coords = list(line.coords)
+#         endpoints.append(Point(coords[0]))
+#         endpoints.append(Point(coords[-1]))
+#
+#     # Count occurrences of each endpoint
+#     endpoint_counts = Counter((pt.x, pt.y) for pt in endpoints)
+#
+#     # Identify loose endpoints (those that appear only once)
+#     loose_endpoints = [Point(xy) for xy, count in endpoint_counts.items() if count == 1]
+#
+#     # Keep track of which points have been connected
+#     used = set()
+#     connection_lines = []
+#
+#     while loose_endpoints:
+#         pt = loose_endpoints.pop(0)
+#         if (pt.x, pt.y) in used:
+#             continue
+#         # Find the closest other loose endpoint
+#         closest_pt = min(
+#             (other for other in loose_endpoints if (other.x, other.y) not in used),
+#             key=lambda p: pt.distance(p),
+#             default=None,
+#         )
+#         if closest_pt:
+#             connection_lines.append(LineString([pt, closest_pt]))
+#             used.add((pt.x, pt.y))
+#             used.add((closest_pt.x, closest_pt.y))
+#             loose_endpoints.remove(closest_pt)
+#
+#     # Combine original lines with connection lines
+#     # all_lines = list(multilinestring.geoms) + connection_lines
+#     # return MultiLineString(all_lines)
+#     return connection_lines
 
 
 def shortest_connections_between_geometries(geometry):
@@ -1354,21 +1353,21 @@ def find_best_circle_path(directed_graph, geom_to_process):
     return best_cycle_line
 
 
-def find_circle_path(directed_graph):
-    # Vind alle eenvoudige cycli
-    cycles = list(nx.simple_cycles(directed_graph))
-
-    # Bepaal de langste cyclus op basis van gewichten
-    def cycle_weight(cycle):
-        weight = 0
-        for i in range(len(cycle)):
-            u = cycle[i]
-            v = cycle[(i + 1) % len(cycle)]
-            if directed_graph.has_edge(u, v):
-                weight += directed_graph[u][v]["weight"]
-            else:
-                return -1  # ongeldig pad
-        return weight
+# def find_circle_path(directed_graph):
+#     # Vind alle eenvoudige cycli
+#     cycles = list(nx.simple_cycles(directed_graph))
+#
+#     # Bepaal de langste cyclus op basis van gewichten
+#     def cycle_weight(cycle):
+#         weight = 0
+#         for i in range(len(cycle)):
+#             u = cycle[i]
+#             v = cycle[(i + 1) % len(cycle)]
+#             if directed_graph.has_edge(u, v):
+#                 weight += directed_graph[u][v]["weight"]
+#             else:
+#                 return -1  # ongeldig pad
+#         return weight
 
     # Selecteer de langste cyclus
     longest_cycle = max(cycles, key=cycle_weight)

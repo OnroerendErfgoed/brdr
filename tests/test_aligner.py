@@ -62,7 +62,10 @@ class TestAligner(unittest.TestCase):
             self.assertIsInstance(partition, Polygon)
 
     def test_export_results(self):
-        aligner = Aligner()
+        config = ProcessorConfig()
+        config.od_strategy=OpenDomainStrategy.EXCLUDE
+        processor= AlignerGeometryProcessor(config=config)
+        aligner = Aligner(processor=processor)
         aligner.load_thematic_data(
             DictLoader(
                 {"theme_id_1": from_wkt("POLYGON ((0 0, 0 9, 5 10, 10 0, 0 0))")}
@@ -155,8 +158,10 @@ class TestAligner(unittest.TestCase):
 
     def test_reference_mix(self):
         "reference exists out of points, lines and polygons"
-        max_workers = -1
-        aligner = Aligner()
+        config = ProcessorConfig()
+        config.od_strategy=OpenDomainStrategy.AS_IS
+        processor= AlignerGeometryProcessor(config=config)
+        aligner = Aligner(processor=processor)
         wkt = "POLYGON ((174043.1035556931165047 179299.26716663906699978, 174042.53709723605425097 179306.22651339753065258, 174048.52537235378986225 179305.9837454873486422, 174055.16102856534416787 179305.49820966698462144, 174055.16102856534416787 179293.19796888460405171, 174071.26463327385135926 179293.92627261512097903, 174071.34555591057869606 179287.69522958720335737, 174083.40302878280635923 179282.83987138362135738, 174072.154782277852064 179278.14635845352313481, 174072.72124073494342156 179260.58614628392388113, 174056.69855866313446313 179258.88677091267891228, 174048.60629499051719904 179273.21007761321379803, 174038.97650122008053586 179273.85745870703249238, 174041.97063877896289341 179286.72415794650441967, 174044.96477633781614713 179292.71243306424003094, 174035.25405993068125099 179292.14597460714867339, 174043.1035556931165047 179299.26716663906699978))"
         thematic_dict = {"theme_id_1": from_wkt(wkt)}
         loader = DictLoader(thematic_dict)

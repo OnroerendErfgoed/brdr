@@ -1,7 +1,7 @@
 import unittest
 
 from shapely import from_wkt, MultiLineString, LineString
-from shapely.geometry import Point
+from shapely.geometry import Point, shape
 from shapely.geometry import Polygon
 
 from brdr.geometry_utils import (
@@ -9,7 +9,7 @@ from brdr.geometry_utils import (
     get_shape_index,
     geom_from_wkt,
     _get_line_substring,
-    longest_linestring_from_multilinestring,
+    longest_linestring_from_multilinestring, geojson_to_multi,
 )
 from brdr.geometry_utils import buffer_neg
 from brdr.geometry_utils import buffer_neg_pos
@@ -2982,6 +2982,40 @@ class TestSafeOperations(unittest.TestCase):
         )
         result = safe_difference(polygon_a, polygon_b)  # GEOS exception is caught
         self.assertTrue(result.is_valid)
+
+
+    def test_geojson_to_multi(self):
+        geojson=     thematic_json = {
+        "type": "FeatureCollection",
+        "name": "test",
+        "crs": {"type": "name", "properties": {"name": "urn:ogc:def:crs:EPSG::31370"}},
+        "features": [
+            {
+                "type": "Feature",
+                "properties": {"fid": 1, "id": 1, "theme_identifier": "1"},
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates":
+                        [
+                            [
+                                [170020.885142877610633, 171986.324472956912359],
+                                [170078.339491307124263, 172031.344329243671382],
+                                [170049.567976467020344, 172070.009247593494365],
+                                [169971.609697333740769, 172057.093288242496783],
+                                [170020.885142877610633, 171986.324472956912359],
+
+                        ]
+                    ],
+                },
+            }
+        ],
+    }
+
+        geojson_multi = geojson_to_multi(geojson)
+        for feature in geojson_multi["features"]:
+            geom = shape (feature["geometry"])
+            assert geom.geom_type == "MultiPolygon"
+
 
     def test_safe_symmetric_difference(self):
         """Tests safe_symmetric_difference with two disjoint polygons."""

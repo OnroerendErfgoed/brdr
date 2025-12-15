@@ -7,7 +7,6 @@ if __name__ == "__main__":
     """
     Example to reference data with CadastralLoader (FODFIN Cadastral Parcels - Belgium)
     """
-    # CREATE AN ALIGNER
     aligner = Aligner(crs="EPSG:3812")
     # ADD A THEMATIC POLYGON ( a building-draft) TO THEMATIC DICTIONARY and LOAD into Aligner
     id = "my_countour_id"
@@ -25,12 +24,15 @@ if __name__ == "__main__":
     aligner.load_reference_data(loader)
     # EXECUTE THE ALIGNMENT
     relevant_distance = 5
-    process_result = aligner.process(relevant_distance=relevant_distance)
-    # PRINT RESULTS IN WKT
-    print("result: " + process_result[id][relevant_distance]["result"].wkt)
+    aligner_result = aligner.process(relevant_distances=[relevant_distance])
+    process_results = aligner_result.get_results(aligner=aligner)
+    #PRINT RESULTS IN WKT
+    print("result: " + process_results[id][relevant_distance]["result"].wkt)
     print(
-        "added area: " + process_result[id][relevant_distance]["result_diff_plus"].wkt
+        "added area: "
+        + process_results[id][relevant_distance]["result_diff_plus"].wkt
     )
     print(
-        "removed area: " + process_result[id][relevant_distance]["result_diff_min"].wkt
+        "removed area: "
+        + process_results[id][relevant_distance]["result_diff_min"].wkt
     )
