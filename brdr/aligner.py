@@ -640,74 +640,84 @@ class Aligner:
             )
         rd_prediction = list(set(rd_prediction))
         rd_prediction = sorted(rd_prediction)
-
-        process_results = {}
-        futures={}
-
-        def _predict_geom(theme_id,geom,_rd_prediction):
-
-            def _check_interval_stability(
-                res_start: ProcessResult, res_end: ProcessResult
-            ) -> bool:
-
-                return geometric_equality(
-                    res_start["result"],
-                    res_end["result"],
-                    correction_distance=self.correction_distance,
-                    mitre_limit=self.mitre_limit,
-                )
-
-            def _process_result(_theme_id, _relevant_distances):
-                aligner_result = self.process(
-                    dict_thematic={_theme_id: geom},
-                    relevant_distances=_relevant_distances,
-                    max_workers=self.max_workers)
-                return aligner_result.results[_theme_id][_relevant_distances[0]]
-
-            def _process_wrapper(x: float):
-                return _process_result(_theme_id=theme_id, _relevant_distances=[x])
-
-            non_stable_points, cache = recursive_stepwise_interval_check(
-                f_value=_process_wrapper,
-                f_condition=_check_interval_stability,
-                discrete_list=_rd_prediction,
-                initial_sample_size=3,
+        process_all_at_once=True
+        #True: All calculations are done for all relevant distances. This seems to be faster than the other method of doing calculations for some intermediate points and copy result when the same.
+        #False: Uses the logic to only calculate intermediate points and copy if equal, otherwise extra points are calculated. Until the full range is filled.
+        if process_all_at_once:
+            aligner_result = self.process(
+                dict_thematic=dict_thematic,
+                relevant_distances=rd_prediction,
             )
-            interpolated_cache = create_full_interpolated_dataset(_rd_prediction, cache)
-            return interpolated_cache
+            process_results =  aligner_result.results
 
-        def run_prediction(executor: ThreadPoolExecutor = None):
+        else:
+            process_results = {}
+            futures={}
 
-            for theme_key, geom in dict_thematic.items():
+            def _predict_geom(theme_id,geom,_rd_prediction):
 
-                self.logger.feedback_info(
-                    f"thematic id {str(theme_key)} predictions calculated with "
-                    f"relevant distances (m) [{str(relevant_distances)}]"
+                def _check_interval_stability(
+                    res_start: ProcessResult, res_end: ProcessResult
+                ) -> bool:
+
+                    return geometric_equality(
+                        res_start["result"],
+                        res_end["result"],
+                        correction_distance=self.correction_distance,
+                        mitre_limit=self.mitre_limit,
+                    )
+
+                def _process_result(_theme_id, _relevant_distances):
+                    aligner_result = self.process(
+                        dict_thematic={_theme_id: geom},
+                        relevant_distances=_relevant_distances,
+                        max_workers=self.max_workers)
+                    return aligner_result.results[_theme_id][_relevant_distances[0]]
+
+                def _process_wrapper(x: float):
+                    return _process_result(_theme_id=theme_id, _relevant_distances=[x])
+
+                non_stable_points, cache = recursive_stepwise_interval_check(
+                    f_value=_process_wrapper,
+                    f_condition=_check_interval_stability,
+                    discrete_list=_rd_prediction,
+                    initial_sample_size=3,
                 )
-                process_results[theme_key] = {}
-                try:
-                    fn = _predict_geom
-                    if executor:
-                        futures[theme_key] = executor.submit(fn, theme_key,geom,rd_prediction)
-                    else:
-                        process_results[theme_key] = fn(theme_key,geom,rd_prediction)
-                except ValueError as e:
-                    self.logger.feedback_warning(
-                        f"error for thematic id {str(theme_key)} processed with "
+                interpolated_cache = create_full_interpolated_dataset(_rd_prediction, cache)
+                return interpolated_cache
+
+            def run_prediction(executor: ThreadPoolExecutor = None):
+
+                for theme_key, geom in dict_thematic.items():
+
+                    self.logger.feedback_info(
+                        f"thematic id {str(theme_key)} predictions calculated with "
                         f"relevant distances (m) [{str(relevant_distances)}]"
                     )
-                    process_results[theme_key] = None
-                    self.logger.feedback_warning(str(e))
+                    process_results[theme_key] = {}
+                    try:
+                        fn = _predict_geom
+                        if executor:
+                            futures[theme_key] = executor.submit(fn, theme_key,geom,rd_prediction)
+                        else:
+                            process_results[theme_key] = fn(theme_key,geom,rd_prediction)
+                    except ValueError as e:
+                        self.logger.feedback_warning(
+                            f"error for thematic id {str(theme_key)} processed with "
+                            f"relevant distances (m) [{str(relevant_distances)}]"
+                        )
+                        process_results[theme_key] = None
+                        self.logger.feedback_warning(str(e))
 
-        if self.max_workers == -1:
-            run_prediction()
-        else:
-            with ThreadPoolExecutor(self.max_workers) as prediction_executor:
-                run_prediction(prediction_executor)
-                self.logger.feedback_debug("waiting all started thematic calculations")
-                wait(list(futures.values()))
-                for thematic_id, future in futures.items():
-                    process_results[thematic_id] = future.result()
+            if self.max_workers == -1:
+                run_prediction()
+            else:
+                with ThreadPoolExecutor(self.max_workers) as prediction_executor:
+                    run_prediction(prediction_executor)
+                    self.logger.feedback_debug("waiting all started thematic calculations")
+                    wait(list(futures.values()))
+                    for thematic_id, future in futures.items():
+                        process_results[thematic_id] = future.result()
 
         if diff_metric is None:
             diff_metric = self.diff_metric
