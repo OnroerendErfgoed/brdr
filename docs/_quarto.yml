@@ -44,6 +44,7 @@ quartodoc:
         # the functions being documented in the package.
         # you can refer to anything: class methods, modules, etc..
         - Aligner
+        - AlignerResult
     - title: Loaders
       package: brdr.loader
       desc: Loaders to load data
