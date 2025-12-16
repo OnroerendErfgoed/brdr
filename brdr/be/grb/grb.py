@@ -123,7 +123,7 @@ def update_to_actual_grb(
             )
     else:
         unaffected = {}
-        affected = dict_thematic.keys()
+        affected = dict_thematic
 
     # Initiate a Aligner to reference thematic features to the actual borders
     actual_aligner = Aligner(feedback=feedback, max_workers=max_workers)
