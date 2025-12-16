@@ -27,6 +27,7 @@ def update_to_actual_grb(
     max_distance_for_actualisation=2,
     max_predictions=-1,
     full_reference_strategy=FullReferenceStrategy.NO_FULL_REFERENCE,
+    process_all_at_once=True,
     multi_to_best_prediction=True,
     feedback=None,
     attributes=True,
@@ -149,6 +150,7 @@ def update_to_actual_grb(
         relevant_distances=relevant_distances,
         full_reference_strategy=full_reference_strategy,
         multi_to_best_prediction=multi_to_best_prediction,
+        process_all_at_once=process_all_at_once,
     )
 
     return aligner_result.get_results_as_geojson(aligner=actual_aligner,result_type=AlignerResultType.EVALUATED_PREDICTIONS,
