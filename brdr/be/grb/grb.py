@@ -31,7 +31,7 @@ def update_to_actual_grb(
     multi_to_best_prediction=True,
     feedback=None,
     attributes=True,
-        max_workers=-1
+    max_workers=None
 ):
     """
     Function to update a thematic featurecollection to the most actual version of GRB.

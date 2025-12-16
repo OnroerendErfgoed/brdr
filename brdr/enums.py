@@ -102,9 +102,9 @@ class ProcessRemark(str, Enum):
 
     RESULT_UNCHANGED = "resulting geometry equal to original geometry"
     INPUT_CIRCLE = "circle detected: original_geometry_returned"
-    RESULT_EMPTY_ORIGINAL = "resulting geometry empty: original geometry returned"
-    CHANGED_GEOMETRYTYPE_ORIGINAL_RETURNED = (
-        "resulting geometry has different geometrytype: original geometry returned"
+    RESULT_EMPTY_RETURNED = "resulting geometry empty: empty geometry returned"
+    CHANGED_GEOMETRYTYPE_EMPTY_RETURNED = (
+        "resulting geometry has different geometrytype: empty geometry returned"
     )
     CHANGED_AMOUNT_GEOMETRIES = (
         "resulting (multi) geometry has different amount of geometries"
