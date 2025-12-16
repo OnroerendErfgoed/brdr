@@ -42,5 +42,4 @@ class ProcessorConfig:
     partial_snapping: bool = False
     partial_snap_strategy: SnapStrategy = SnapStrategy.PREFER_VERTICES
     partial_snap_max_segment_length: int = 2
-    #TODO: is area limit een processConfig of iets van de aligner?
     area_limit: int = None
