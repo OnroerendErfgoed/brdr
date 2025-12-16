@@ -100,6 +100,6 @@ aligner.load_reference_data(loader)
 # Use the EVALUATE-function
 dict_predictions_evaluated = aligner.evaluate(
     max_predictions=1,
-    full_strategy=FullReferenceStrategy.ONLY_FULL,
+    full_reference_strategy=FullReferenceStrategy.ONLY_FULL,
     multi_to_best_prediction=True,
 )

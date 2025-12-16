@@ -26,7 +26,7 @@ def update_to_actual_grb(
     grb_type=GRBType.ADP,
     max_distance_for_actualisation=2,
     max_predictions=-1,
-    full_strategy=FullReferenceStrategy.NO_FULL_REFERENCE,
+    full_reference_strategy=FullReferenceStrategy.NO_FULL_REFERENCE,
     multi_to_best_prediction=True,
     feedback=None,
     attributes=True,
@@ -147,7 +147,7 @@ def update_to_actual_grb(
         base_formula_field=BASE_FORMULA_FIELD_NAME,
         max_predictions=max_predictions,
         relevant_distances=relevant_distances,
-        full_strategy=full_strategy,
+        full_reference_strategy=full_reference_strategy,
         multi_to_best_prediction=multi_to_best_prediction,
     )
 

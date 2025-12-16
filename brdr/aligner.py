@@ -72,6 +72,7 @@ from brdr.utils import (
     recursive_stepwise_interval_check,
     create_full_interpolated_dataset,
 )
+from brdr.utils import unary_union_result_dict
 from brdr.utils import determine_stability
 from brdr.utils import geojson_from_dict
 from brdr.utils import get_geojsons_from_process_results
@@ -645,7 +646,7 @@ class Aligner:
         *,
         dict_thematic=None,
         diff_metric=None,
-            process_all_at_once=True,
+        process_all_at_once=True,
 
     ) -> AlignerResult:
         """
@@ -864,9 +865,10 @@ class Aligner:
         *,
         dict_thematic=None,
         base_formula_field=FORMULA_FIELD_NAME,
-        full_strategy=FullReferenceStrategy.NO_FULL_REFERENCE,
+        full_reference_strategy=FullReferenceStrategy.NO_FULL_REFERENCE,
         max_predictions=-1,
         multi_to_best_prediction=True,
+        process_all_at_once=True,
     ):
         """
         Compares and evaluate input-geometries (with formula). Attributes are added to evaluate and decide if new
@@ -911,6 +913,7 @@ class Aligner:
             dict_thematic=dict_evaluated,
             relevant_distances=relevant_distances,
             diff_metric=self.diff_metric,
+            process_all_at_once=process_all_at_once,
         )
         process_results_evaluated = aligner_result.get_results(aligner=self)
         process_results_evaluated_predictions = aligner_result.get_results(aligner=self,result_type=AlignerResultType.PREDICTIONS
@@ -935,10 +938,10 @@ class Aligner:
                     remarks = []
                 remarks.append(ProcessRemark.NO_PREDICTION_ORIGINAL_RETURNED)
                 props[REMARK_FIELD_NAME] = remarks
-                process_results_evaluated[theme_id][relevant_distance] = {
+                process_results_evaluated[theme_id][relevant_distance] = unary_union_result_dict({
                     "result": dict_evaluated[theme_id],
                     "properties": props,
-                }
+                })
                 continue
 
             # When there are predictions available
@@ -957,7 +960,7 @@ class Aligner:
 
                 full = props[FULL_ACTUAL_FIELD_NAME]
                 if (
-                    full_strategy == FullReferenceStrategy.ONLY_FULL_REFERENCE
+                    full_reference_strategy == FullReferenceStrategy.ONLY_FULL_REFERENCE
                     and not full
                 ):
                     # this prediction is ignored
@@ -985,7 +988,7 @@ class Aligner:
                     predictions.append(process_results_evaluated_predictions[theme_id][dist])
                     continue
                 if full:
-                    if full_strategy != FullReferenceStrategy.NO_FULL_REFERENCE:
+                    if full_reference_strategy != FullReferenceStrategy.NO_FULL_REFERENCE:
                         props[EVALUATION_FIELD_NAME] = (
                             Evaluation.TO_CHECK_PREDICTION_FULL
                         )
@@ -1039,10 +1042,10 @@ class Aligner:
                         remarks = []
                     remarks.append(ProcessRemark.MULTIPLE_PREDICTIONS_ORIGINAL_RETURNED)
                     props[REMARK_FIELD_NAME] = remarks
-                    process_results_evaluated[theme_id][relevant_distance] = {
+                    process_results_evaluated[theme_id][relevant_distance] = unary_union_result_dict({
                         "result": dict_evaluated[theme_id],
                         "properties": props,
-                    }
+                    })
                     continue
 
             if max_predictions > 0 and len_best_ix > max_predictions:
@@ -1069,10 +1072,10 @@ class Aligner:
                     remarks = []
                 remarks.append(ProcessRemark.NO_PREDICTION_ORIGINAL_RETURNED)
                 props[REMARK_FIELD_NAME] = remarks
-                process_results_evaluated[theme_id][relevant_distance] = {
+                process_results_evaluated[theme_id][relevant_distance] = unary_union_result_dict({
                     "result": dict_evaluated[theme_id],
                     "properties": props,
-                }
+                })
 
         # PART 2: NOT EVALUATED
         relevant_distance = round(0, RELEVANT_DISTANCE_DECIMALS)
@@ -1091,10 +1094,10 @@ class Aligner:
                 remarks = []
             remarks.append(ProcessRemark.NOT_EVALUATED_ORIGINAL_RETURNED)
             props[REMARK_FIELD_NAME] = remarks
-            process_results_evaluated[theme_id][relevant_distance] = {
+            process_results_evaluated[theme_id][relevant_distance] = unary_union_result_dict({
                 "result": geom,
                 "properties": props,
-            }
+            })
         return AlignerResult(process_results_evaluated)
 
     def compare_to_reference(self, geometry: BaseGeometry, with_geom=False):

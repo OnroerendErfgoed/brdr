@@ -1379,12 +1379,10 @@ class AlignerGeometryProcessor(BaseProcessor):
             if relevant_distance == 0:
                 remark = [ProcessRemark.RESULT_UNCHANGED]
                 self.logger.feedback_debug("Calculation for RD = 0")
-                return unary_union_result_dict(
-                    {
-                        "result": input_geometry,
-                        "properties": {REMARK_FIELD_NAME: remark},
-                    }
-                )
+                process_result = ProcessResult()
+                process_result ["result"]=input_geometry
+                process_result["properties"] = {REMARK_FIELD_NAME: remark}
+                return unary_union_result_dict(process_result)
 
             try:
                 processor = DieussaertGeometryProcessor(

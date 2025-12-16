@@ -29,7 +29,7 @@ if __name__ == "__main__":
     dict_evaluated = actual_aligner.evaluate(
         ids_to_evaluate=None,
         base_formula_field=None,
-        full_strategy=FullReferenceStrategy.PREFER_FULL_REFERENCE,
+        full_reference_strategy=FullReferenceStrategy.PREFER_FULL_REFERENCE,
         relevant_distances=relevant_distances,
     )
 
