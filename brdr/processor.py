@@ -128,14 +128,18 @@ class BaseProcessor(ABC):
                 geometry
             *   remark (str): Remark when processing the geometry
         """
-        remark = []
+        remarks = []
         geom_thematic = make_valid(geom_thematic)
         if geom_preresult is None or geom_preresult.is_empty:
             geom_preresult =GeometryCollection()
-            remark.append(ProcessRemark.RESULT_EMPTY_RETURNED)
+            remark = ProcessRemark.RESULT_EMPTY_RETURNED
+            remarks.append(remark)
+            self.logger.feedback_warning(remark)
         if to_multi(geom_preresult).geom_type != to_multi(geom_thematic).geom_type:
             geom_preresult =GeometryCollection()
-            remark.append(ProcessRemark.CHANGED_GEOMETRYTYPE_EMPTY_RETURNED)
+            remark=ProcessRemark.CHANGED_GEOMETRYTYPE_EMPTY_RETURNED
+            remarks.append(remark)
+            self.logger.feedback_warning(remark)
 
         if geom_preresult.geom_type in [
             "Point",
@@ -161,7 +165,7 @@ class BaseProcessor(ABC):
                     "result_diff_min": result_diff_min,
                     "result_relevant_intersection": relevant_intersection,
                     "result_relevant_diff": relevant_diff,
-                    "properties": {REMARK_FIELD_NAME: remark},
+                    "properties": {REMARK_FIELD_NAME: remarks},
                 }
             )
         # Process array
@@ -183,10 +187,11 @@ class BaseProcessor(ABC):
                 get_shape_index(geom_thematic.area, geom_thematic.length)
                 > self.config.threshold_circle_ratio
             ):
-                remark.append(ProcessRemark.INPUT_CIRCLE)
+                remark = ProcessRemark.INPUT_CIRCLE
+                remarks.append(remark)
                 self.logger.feedback_debug(remark)
                 return unary_union_result_dict(
-                    {"result": geom_thematic, "properties": {REMARK_FIELD_NAME: remark}}
+                    {"result": geom_thematic, "properties": {REMARK_FIELD_NAME: remarks}}
                 )
 
             # Correction for unchanged geometries
@@ -196,10 +201,11 @@ class BaseProcessor(ABC):
                 correction_distance=correction_distance,
                 mitre_limit=mitre_limit,
             ):
-                remark.append(ProcessRemark.RESULT_UNCHANGED)
+                remark = ProcessRemark.RESULT_UNCHANGED
+                remarks.append(remark)
                 self.logger.feedback_debug(remark)
                 return unary_union_result_dict(
-                    {"result": geom_thematic, "properties": {REMARK_FIELD_NAME: remark}}
+                    {"result": geom_thematic, "properties": {REMARK_FIELD_NAME: remarks}}
                 )
 
         # Corrections for areas that differ more than the relevant distance
@@ -283,7 +289,8 @@ class BaseProcessor(ABC):
         # Correction for empty preresults
         if geom_thematic_result.is_empty or geom_thematic_result is None:
             geom_thematic_result = GeometryCollection()
-            remark.append(ProcessRemark.RESULT_EMPTY_RETURNED)
+            remark = ProcessRemark.RESULT_EMPTY_RETURNED
+            remarks.append(remark)
             self.logger.feedback_warning(remark)
 
         # group all initial multipolygons into a new resulting dictionary
@@ -336,7 +343,7 @@ class BaseProcessor(ABC):
                 "result_diff_min": geom_result_diff_min,
                 "result_relevant_intersection": relevant_intersection,
                 "result_relevant_diff": relevant_diff,
-                "properties": {REMARK_FIELD_NAME: remark},
+                "properties": {REMARK_FIELD_NAME: remarks},
             }
         )
 
@@ -1376,11 +1383,12 @@ class AlignerGeometryProcessor(BaseProcessor):
 
             # For calculations with RD=0 the original input is returned
             if relevant_distance == 0:
-                remark = [ProcessRemark.RESULT_UNCHANGED]
-                self.logger.feedback_debug("Calculation for RD = 0")
+                remark = ProcessRemark.RESULT_UNCHANGED
+                self.logger.feedback_debug(remark)
+                remarks=[remark]
                 process_result = ProcessResult()
                 process_result ["result"]=input_geometry
-                process_result["properties"] = {REMARK_FIELD_NAME: remark}
+                process_result["properties"] = {REMARK_FIELD_NAME: remarks}
                 return unary_union_result_dict(process_result)
 
             try:
