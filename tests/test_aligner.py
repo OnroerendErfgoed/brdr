@@ -418,7 +418,7 @@ class TestAligner(unittest.TestCase):
         aligner.thematic_data = thematic_loader.load_data()
         assert aligner.thematic_data.features["4"].geometry == shape(geojson["features"][0]["geometry"])
 
-    def test_get_reference_as_geojson(self):
+    def test_get_input_as_geojson(self):
         self.sample_aligner.load_thematic_data(
             DictLoader(
                 {"theme_id_1": from_wkt("POLYGON ((0 0, 0 9, 5 10, 10 0, 0 0))")}
@@ -428,7 +428,8 @@ class TestAligner(unittest.TestCase):
             DictLoader({"ref_id_1": from_wkt("POLYGON ((0 1, 0 10,8 10,10 1,0 1))")})
         )
         self.sample_aligner.process([1])
-        self.sample_aligner.get_input_as_geojson()
+        self.sample_aligner.reference_data.to_geojson()
+        self.sample_aligner.reference_data.to_geojson()
 
     def test_fully_aligned_input(self):
         aligned_shape = from_wkt("POLYGON ((0 0, 0 9, 5 10, 10 0, 0 0))")

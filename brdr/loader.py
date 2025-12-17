@@ -205,20 +205,20 @@ class OGCFeatureAPIReferenceLoader(GeoJsonLoader):
                 supported_crs.add(to_crs(crs))
             except:
                 pass
-        if self.aligner.CRS not in supported_crs:
+        if self.aligner.crs not in supported_crs:
             raise ValueError(
-                f"OGCFeatureAPIReferenceLoader '{collection_url}' only supports alignment in CRS '{str(supported_crs)}' while CRS '{self.aligner.CRS}' is used."
+                f"OGCFeatureAPIReferenceLoader '{collection_url}' only supports alignment in CRS '{str(supported_crs)}' while CRS '{self.aligner.crs}' is used."
             )
         geom_union = buffer_pos(self.aligner.thematic_data.union, MAX_REFERENCE_BUFFER)
         ogcfeature_url = collection_url + "/items?"
-        params = {"limit": self.limit, "crs": from_crs(self.aligner.CRS), "f": "json"}
+        params = {"limit": self.limit, "crs": from_crs(self.aligner.crs), "f": "json"}
 
         collection = get_collection_by_partition(
             url=ogcfeature_url,
             params=params,
             geometry=geom_union,
             partition=self.part,
-            crs=self.aligner.CRS,
+            crs=self.aligner.crs,
         )
         self.input = dict(collection)
         self.data_dict_source[VERSION_DATE] = datetime.now().strftime(DATE_FORMAT)
@@ -280,9 +280,9 @@ class WFSReferenceLoader(GeoJsonLoader):
                 f"Collection {self.typename} not found inside OGC WFS{self.url}"
             )
 
-        if self.aligner.CRS not in supported_crs:
+        if self.aligner.crs not in supported_crs:
             raise ValueError(
-                f"WFS '{self.url}' only supports alignment in CRS '{str(supported_crs)}' while CRS '{self.aligner.CRS}' is used."
+                f"WFS '{self.url}' only supports alignment in CRS '{str(supported_crs)}' while CRS '{self.aligner.crs}' is used."
             )
         geom_union = buffer_pos(self.aligner.thematic_data.union, MAX_REFERENCE_BUFFER)
 
@@ -291,7 +291,7 @@ class WFSReferenceLoader(GeoJsonLoader):
             "REQUEST": "GetFeature",
             "VERSION": "2.0.0",
             "TYPENAMES": self.typename,
-            "SRSNAME": from_crs(self.aligner.CRS, format="epsg"),
+            "SRSNAME": from_crs(self.aligner.crs, format="epsg"),
             "outputFormat": "application/json",
             "limit": self.limit,
         }
@@ -301,7 +301,7 @@ class WFSReferenceLoader(GeoJsonLoader):
             params=params,
             geometry=geom_union,
             partition=self.part,
-            crs=self.aligner.CRS,
+            crs=self.aligner.crs,
         )
         self.input = dict(collection)
         self.data_dict_source[VERSION_DATE] = datetime.now().strftime(DATE_FORMAT)

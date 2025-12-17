@@ -35,7 +35,6 @@ from brdr.constants import EVALUATION_FIELD_NAME
 from brdr.constants import FORMULA_FIELD_NAME
 from brdr.constants import FULL_ACTUAL_FIELD_NAME
 from brdr.constants import FULL_BASE_FIELD_NAME
-from brdr.constants import ID_REFERENCE_FIELD_NAME
 from brdr.constants import ID_THEME_FIELD_NAME
 from brdr.constants import LAST_VERSION_DATE
 from brdr.constants import NR_CALCULATION_FIELD_NAME
@@ -48,7 +47,6 @@ from brdr.constants import REMARK_FIELD_NAME
 from brdr.constants import STABILITY
 from brdr.constants import VERSION_DATE
 from brdr.constants import ZERO_STREAK
-from brdr.enums import AlignerInputType
 from brdr.enums import AlignerResultType
 from brdr.enums import DiffMetric
 from brdr.enums import Evaluation
@@ -73,7 +71,6 @@ from brdr.utils import (
     create_full_interpolated_dataset,
 )
 from brdr.utils import determine_stability
-from brdr.utils import geojson_from_dict
 from brdr.utils import get_geojsons_from_process_results
 from brdr.utils import get_geometry_difference_metrics_from_processresult
 from brdr.utils import get_geometry_difference_metrics_from_processresults
@@ -325,7 +322,7 @@ class AlignerResult:
 
         return get_geojsons_from_process_results(
             results,
-            crs=aligner.CRS,
+            crs=aligner.crs,
             id_field=aligner.thematic_data.id_fieldname,
             series_prop_dict=prop_dictionary,
         )
@@ -453,7 +450,7 @@ class Aligner:
         Parameter for the buffer operation to control the maximum length of join corners.
     max_workers : int | None
         The maximum number of workers for parallel execution (ThreadPoolExecutor).
-    CRS : str
+    crs : str
         The Coordinate Reference System (CRS) being used (e.g., 'EPSG:31370').
     name_thematic_id : str
         Name of the identifier field for thematic data.
@@ -525,7 +522,7 @@ class Aligner:
         self.dict_thematic_source: dict[ThematicId, str] = {}
 
         # The CRS is the working CRS for all calculations (assumed to be projected/in meters)
-        self.CRS = to_crs(crs)
+        self.crs = to_crs(crs)
 
         self.diff_metric = config.diff_metric
         self.logger.feedback_info("Aligner initialized")
@@ -544,6 +541,9 @@ class Aligner:
         """
 
         self.thematic_data = loader.load_data()
+        self.thematic_data.crs=self.crs
+
+        # TODO this has to be eliminated
         thematic_features = self.thematic_data.features
         dict_thematic = {}
         dict_thematic_properties = {}
@@ -563,8 +563,10 @@ class Aligner:
         """
 
         self.reference_data = loader.load_data()
+        self.reference_data.crs=self.crs
         self.reference_data.is_reference = True
 
+        # TODO this has to be eliminated
         reference_features = self.reference_data.features
         dict_reference = {}
         dict_reference_properties = {}
@@ -1282,32 +1284,6 @@ class Aligner:
             )
 
         return diffs
-
-    def get_input_as_geojson(self, inputtype=AlignerInputType.REFERENCE):
-        """
-        get a geojson of the input polygons (thematic or reference-polygons)
-        """
-
-        if inputtype == AlignerInputType.THEMATIC:
-            dict_to_geojson = self.dict_thematic
-            dict_properties = self.dict_thematic_properties
-            property_id = self.thematic_data.id_fieldname
-        elif inputtype == AlignerInputType.REFERENCE:
-            dict_to_geojson = self.dict_reference
-            dict_properties = self.dict_reference_properties
-            property_id = self.reference_data.id_fieldname
-        else:
-            raise (ValueError, "AlignerInputType unknown")
-        if dict_to_geojson is None or dict_to_geojson == {}:
-            self.logger.feedback_warning("Empty input: No input to export.")
-            return {}
-        return geojson_from_dict(
-            dict_to_geojson,
-            self.CRS,
-            property_id,
-            prop_dict=dict_properties,
-            geom_attributes=False,
-        )
 
     def _evaluate(
         self, id_theme, geom_predicted, base_formula_field=FORMULA_FIELD_NAME

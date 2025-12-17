@@ -120,31 +120,6 @@ def _feature_from_geom(
     return Feature(geometry=geom, id=feature_id, properties=properties)
 
 
-def geojson_from_dict(
-    dictionary, crs: CRS, id_field, prop_dict=None, geom_attributes=True
-):
-    """
-    Get a GeoJSON (FeatureCollection) from a dictionary of IDs (keys) and geometries (values).
-
-    Args:
-        dictionary (dict): Dictionary of geometries.
-        crs (str): Coordinate reference system.
-        id_field (str): Field name for the ID.
-        prop_dict (dict, optional): Dictionary of properties.
-        geom_attributes (bool, optional): Whether to include geometry attributes.
-
-    Returns:
-        FeatureCollection: The GeoJSON FeatureCollection.
-    """
-    features = []
-    for key, geom in dictionary.items():
-        properties = dict(prop_dict or {}).get(key, {})
-        properties[id_field] = key
-        features.append(_feature_from_geom(geom, key, properties, geom_attributes))
-    crs_geojson = {"type": "name", "properties": {"name": from_crs(crs)}}
-    geojson = FeatureCollection(features, crs=crs_geojson)
-    return geojson
-
 
 def write_geojson(path_to_file, geojson):
     """

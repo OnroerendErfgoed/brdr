@@ -117,7 +117,7 @@ def update_to_actual_grb(
             one_by_one=False,
             geometry_thematic_union=base_aligner_result.thematic_data.union,
             border_distance=max_distance_for_actualisation,
-            crs=base_aligner_result.CRS,
+            crs=base_aligner_result.crs,
         )
         logger.feedback_info(
             "Number of possible affected OE-thematic during timespan: "

@@ -23,9 +23,9 @@ log = logging.getLogger(__name__)
 datetime_format_TZ = "%Y-%m-%dT%H:%M:%SZ"
 
 def check_crs(aligner):
-    if not aligner.CRS in (to_crs(element) for element in GRB_SUPPORTED_CRS):
+    if not aligner.crs in (to_crs(element) for element in GRB_SUPPORTED_CRS):
         raise ValueError(
-            f"This GRB Loader only supports alignment in CRS '{GRB_SUPPORTED_CRS}' while CRS '{aligner.CRS}' is used"
+            f"This GRB Loader only supports alignment in CRS '{GRB_SUPPORTED_CRS}' while CRS '{aligner.crs}' is used"
         )
 
 
@@ -51,7 +51,7 @@ class GRBActualLoader(GeoJsonLoader):
             grb_type=self.grb_type,
             geometry=geom_union,
             partition=self.part,
-            crs=self.aligner.CRS,
+            crs=self.aligner.crs,
         )
         self.id_property = id_property
         self.input = dict(collection)
@@ -83,7 +83,7 @@ class GRBFiscalParcelLoader(GeoJsonLoader):
             year=self.year,
             geometry=geom_union,
             partition=self.part,
-            crs=self.aligner.CRS,
+            crs=self.aligner.crs,
         )
         self.input = dict(collection)
         self.aligner.logger.feedback_info(f"Adpf downloaded for year: {self.year}")
@@ -124,7 +124,7 @@ class GRBSpecificDateParcelLoader(GeoJsonLoader):
             date=self.date,
             geometry=geom_union,
             partition=self.part,
-            crs=self.aligner.CRS,
+            crs=self.aligner.crs,
         )
         self.input = dict(collection)
         self.aligner.logger.feedback_info(

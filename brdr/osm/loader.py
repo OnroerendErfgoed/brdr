@@ -27,13 +27,13 @@ class OSMLoader(DictLoader):
             self.aligner.thematic_data.union, OSM_MAX_REFERENCE_BUFFER
         )
         # We transform the OSM data to the CRS of the aligner
-        gdf = gpd.GeoDataFrame(geometry=[geom_union], crs=self.aligner.CRS)
+        gdf = gpd.GeoDataFrame(geometry=[geom_union], crs=self.aligner.crs)
         gdf.to_crs(crs="EPSG:4326", inplace=True)
         geom_union_wgs84 = gdf.geometry.iloc[0]
         osm_data = ox.features_from_bbox(geom_union_wgs84.bounds, tags=self.osm_tags)
         osm_data = osm_data.reset_index(drop=False)
         osm_data = osm_data.rename(columns={"id": "osm_id"})
-        osm_data.to_crs(crs=self.aligner.CRS, inplace=True)
+        osm_data.to_crs(crs=self.aligner.crs, inplace=True)
         # osm_data.to_file("dataframe.geojson", driver="GeoJSON")
         self.data_dict = {
             row["osm_id"]: row["geometry"] for idx, row in osm_data.iterrows()

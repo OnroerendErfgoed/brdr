@@ -69,9 +69,9 @@ class BeCadastralParcelLoader(GeoJsonLoader):
     def __init__(self, aligner, partition: int = 1000):
         super().__init__()
         self.aligner = aligner
-        if not self.aligner.CRS in (to_crs(element) for element in BE_SUPPORTED_CRS):
+        if not self.aligner.crs in (to_crs(element) for element in BE_SUPPORTED_CRS):
             raise ValueError(
-                f"BeCadastralParcelLoader only supports alignment in CRS '{BE_SUPPORTED_CRS}' while CRS '{self.aligner.CRS}' is used"
+                f"BeCadastralParcelLoader only supports alignment in CRS '{BE_SUPPORTED_CRS}' while CRS '{self.aligner.crs}' is used"
             )
         self.part = partition
         self.data_dict_source["source"] = "Kadaster"
@@ -84,7 +84,7 @@ class BeCadastralParcelLoader(GeoJsonLoader):
 
         collection, id_property = get_collection_cadastral(
             geometry=geom_union,
-            crs=self.aligner.CRS,
+            crs=self.aligner.crs,
         )
         self.id_property = id_property
         self.input = dict(collection)

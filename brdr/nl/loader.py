@@ -53,9 +53,9 @@ class BRKLoader(GeoJsonLoader):
     def load_data(self):
         if not self.aligner.dict_thematic:
             raise ValueError("Thematic data not loaded")
-        if self.aligner.CRS != to_crs(BRK_CRS):
+        if self.aligner.crs != to_crs(BRK_CRS):
             raise ValueError(
-                f"BRKLoader only supports alignment in CRS '{BRK_CRS}' while CRS '{self.aligner.CRS}' is used"
+                f"BRKLoader only supports alignment in CRS '{BRK_CRS}' while CRS '{self.aligner.crs}' is used"
             )
         geom_union = buffer_pos(
             self.aligner.thematic_data.union, BRK_MAX_REFERENCE_BUFFER
@@ -65,7 +65,7 @@ class BRKLoader(GeoJsonLoader):
             brk_type=self.brk_type,
             geometry=geom_union,
             partition=self.part,
-            crs=self.aligner.CRS,
+            crs=self.aligner.crs,
         )
         self.id_property = id_property
         self.input = dict(collection)
