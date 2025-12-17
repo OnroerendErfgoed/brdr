@@ -64,14 +64,9 @@ class Loader(ABC):
                     # No version date added to features
                     pass
 
-        return self.data_dict, self.data_dict_properties, self.data_dict_source
-
-    def load_data_as_feature_collection(self):
-        # TODO: rework loaders to make load_data itself return AlignerFeatureCollection
-        self.load_data()
         features = {
             key: AlignerFeature(
-                brdr_id=uuid.uuid4().hex, #TODO use id from dict if available
+                brdr_id=uuid.uuid4().hex,  # TODO use id from dict if available
                 geometry=self.data_dict[key],
                 properties=self.data_dict_properties.get(key, {}),
             )
@@ -82,7 +77,6 @@ class Loader(ABC):
             source=self.data_dict_source,
             is_reference=self.is_reference,
         )
-
 
 class DictLoader(Loader):
     def __init__(

@@ -48,9 +48,15 @@ class TestExamples:
         gbg_loader = GRBActualLoader(
             grb_type=GRBType.GBG, partition=1000, aligner=aligner
         )
-        dict_ref, dict_ref_properties_adp, source_adp = adp_loader.load_data()
-        dict_ref2, dict_ref_properties_gbg, source_gbg = gbg_loader.load_data()
-        dict_ref.update(dict_ref2)  # combine 2 dictionaries
+
+        adp_data = adp_loader.load_data()
+        gbg_data = gbg_loader.load_data()
+        dict_ref = {}
+        for id,f in adp_data.features.items():
+            dict_ref[id]=f.geometry
+        for id,f in adp_data.features.items():
+            dict_ref[id]=f.geometry
+
         # make a polygonized version of the reference data with non-overlapping polygons
         aligner.load_reference_data(DictLoader(dict_ref))
 

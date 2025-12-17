@@ -524,7 +524,6 @@ class Aligner:
         self.dict_thematic_properties: dict[ThematicId, dict] = {}
         self.dict_thematic_source: dict[ThematicId, str] = {}
 
-
         # The CRS is the working CRS for all calculations (assumed to be projected/in meters)
         self.CRS = to_crs(crs)
 
@@ -544,10 +543,17 @@ class Aligner:
         :return:
         """
 
-        self.dict_thematic, self.dict_thematic_properties, self.dict_thematic_source = (
-            loader.load_data()
-        )
-        self.thematic_data = loader.load_data_as_feature_collection()
+        self.thematic_data = loader.load_data()
+        thematic_features = self.thematic_data.features
+        dict_thematic = {}
+        dict_thematic_properties = {}
+        for id,feat in thematic_features.items():
+            dict_thematic[id] = feat.geometry
+            dict_thematic_properties[id] = feat.properties
+
+        self.dict_thematic = dict_thematic
+        self.dict_thematic_properties = dict_thematic_properties
+        self.dict_thematic_source = self.thematic_data.source
 
     def load_reference_data(self, loader: Loader):
         """
@@ -555,13 +561,20 @@ class Aligner:
         :param loader:
         :return:
         """
-        (
-            self.dict_reference,
-            self.dict_reference_properties,
-            self.dict_reference_source,
-        ) = loader.load_data()
-        self.reference_data = loader.load_data_as_feature_collection()
+
+        self.reference_data = loader.load_data()
         self.reference_data.is_reference = True
+
+        reference_features = self.reference_data.features
+        dict_reference = {}
+        dict_reference_properties = {}
+        for id,feat in reference_features.items():
+            dict_reference[id] = feat.geometry
+            dict_reference_properties[id] = feat.properties
+
+        self.dict_reference = dict_reference
+        self.dict_reference_properties = dict_reference_properties
+        self.dict_reference_source = self.reference_data.source
 
     @aligner_metadata_decorator
     def process(
