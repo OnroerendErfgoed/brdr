@@ -326,7 +326,7 @@ class AlignerResult:
         return get_geojsons_from_process_results(
             results,
             crs=aligner.CRS,
-            id_field=aligner.name_thematic_id,
+            id_field=aligner.thematic_data.id_fieldname,
             series_prop_dict=prop_dictionary,
         )
 
@@ -431,7 +431,6 @@ def aligner_metadata_decorator(f):
 
     return inner_func
 
-    # TODO what about the Aligner-parameters; AlignerConfig-class?
 class Aligner:
     """
     Compares and aligns thematic geospatial data against a set of reference data.
@@ -521,12 +520,11 @@ class Aligner:
         self.max_workers = config.max_workers
 
         # PROCESSING DEFAULTS (Internal state variables)
-        self.name_thematic_id = ID_THEME_FIELD_NAME
         self.dict_thematic: dict[ThematicId, BaseGeometry] = {}
         self.dict_thematic_properties: dict[ThematicId, dict] = {}
         self.dict_thematic_source: dict[ThematicId, str] = {}
 
-        self.name_reference_id = ID_REFERENCE_FIELD_NAME
+
         # The CRS is the working CRS for all calculations (assumed to be projected/in meters)
         self.CRS = to_crs(crs)
 
@@ -1280,11 +1278,11 @@ class Aligner:
         if inputtype == AlignerInputType.THEMATIC:
             dict_to_geojson = self.dict_thematic
             dict_properties = self.dict_thematic_properties
-            property_id = self.name_thematic_id
+            property_id = self.thematic_data.id_fieldname
         elif inputtype == AlignerInputType.REFERENCE:
             dict_to_geojson = self.dict_reference
             dict_properties = self.dict_reference_properties
-            property_id = self.name_reference_id
+            property_id = self.reference_data.id_fieldname
         else:
             raise (ValueError, "AlignerInputType unknown")
         if dict_to_geojson is None or dict_to_geojson == {}:

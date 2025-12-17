@@ -19,10 +19,11 @@ from brdr.enums import FullReferenceStrategy, AlignerResultType
 from brdr.loader import DictLoader
 from brdr.logger import Logger
 
-#TODO improve logic. Do first a quickscan on x meter to detect the not_changed ones, and afterwards a full calculation
+
+# TODO improve logic. Do first a quickscan on x meter to detect the not_changed ones, and afterwards a full calculation
 def update_to_actual_grb(
     featurecollection,
-    id_theme_fieldname,
+    id_theme_fieldname=None,
     base_formula_field=FORMULA_FIELD_NAME,
     grb_type=GRBType.ADP,
     max_distance_for_actualisation=2,
@@ -32,7 +33,7 @@ def update_to_actual_grb(
     multi_to_best_prediction=True,
     feedback=None,
     attributes=True,
-    max_workers=None
+    max_workers=None,
 ):
     """
     Function to update a thematic featurecollection to the most actual version of GRB.
@@ -55,7 +56,10 @@ def update_to_actual_grb(
 
     last_version_date = None
     for feature in featurecollection["features"]:
-        id_theme = feature["properties"][id_theme_fieldname]
+        if not id_theme_fieldname is None and id_theme_fieldname!="" and id_theme_fieldname  in feature["properties"]:
+            id_theme = feature["properties"][id_theme_fieldname]
+        else:
+            id_theme = feature["id"]
         try:
             geom = shape(feature["geometry"])
         except:
@@ -103,7 +107,7 @@ def update_to_actual_grb(
         datetime_end = datetime.now().date()
         base_aligner_result = Aligner(feedback=feedback)
         base_aligner_result.load_thematic_data(DictLoader(dict_thematic))
-        base_aligner_result.name_thematic_id = id_theme_fieldname
+        # base_aligner_result.name_thematic_id = id_theme_fieldname
 
         affected, unaffected = get_affected_by_grb_change(
             dict_thematic=base_aligner_result.dict_thematic,

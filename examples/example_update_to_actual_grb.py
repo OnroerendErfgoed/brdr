@@ -72,7 +72,7 @@ if __name__ == "__main__":
     # Update Featurecollection to actual version
     featurecollection = update_to_actual_grb(
         featurecollection_base_result,
-        base_aligner.name_thematic_id,
+        #base_aligner.name_thematic_id,
         base_formula_field=FORMULA_FIELD_NAME,
         max_distance_for_actualisation=3,
     )
@@ -91,7 +91,7 @@ if __name__ == "__main__":
 
     featurecollection = update_to_actual_grb(
         featurecollection_base_result,
-        base_aligner.name_thematic_id,
+        #base_aligner.name_thematic_id,
         base_formula_field=FORMULA_FIELD_NAME,
         max_distance_for_actualisation=0,
     )
@@ -110,7 +110,7 @@ if __name__ == "__main__":
 
     featurecollection = update_to_actual_grb(
         featurecollection_base_result,
-        base_aligner.name_thematic_id,
+        #base_aligner.name_thematic_id,
         base_formula_field=None,
         max_distance_for_actualisation=3,
     )
