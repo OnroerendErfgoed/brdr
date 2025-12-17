@@ -183,7 +183,7 @@ class OGCFeatureAPIReferenceLoader(GeoJsonLoader):
         self.data_dict_source["source"] = url
 
     def load_data(self):
-        if not self.aligner.dict_thematic:
+        if not self.aligner.thematic_data:
             raise ValueError("Thematic data not loaded")
         # Check if collection exists
         collections_url = self.url.rstrip("/") + "/" + "collections"
@@ -250,7 +250,7 @@ class WFSReferenceLoader(GeoJsonLoader):
         self.limit = limit
 
     def load_data(self):
-        if not self.aligner.dict_thematic:
+        if not self.aligner.thematic_data:
             raise ValueError("Thematic data not loaded")
 
         # Get all supported CRS for the collection of OGCFeatureAPI

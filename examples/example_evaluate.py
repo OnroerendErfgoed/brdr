@@ -51,7 +51,7 @@ if __name__ == "__main__":
 
     # (OPTIONAL) Check for changes in the period 2022-now of the reference-parcels (GRB/Flanders-specific function)
     affected, unaffected = get_affected_by_grb_change(
-        dict_thematic=thematic_dict_result,
+        thematic_geometries=thematic_dict_result,
         grb_type=GRBType.ADP,
         date_start=date(2022, 1, 1),
         date_end=date.today(),

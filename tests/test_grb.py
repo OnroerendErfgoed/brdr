@@ -114,7 +114,7 @@ class TestGrb:
         aligner = Aligner()
         aligner.load_thematic_data(DictLoader(thematic_dict))
         affected, unaffected = get_affected_by_grb_change(
-            dict_thematic=thematic_dict,
+            thematic_geometries=thematic_dict,
             grb_type=GRBType.ADP,
             date_start=date(2025, 1, 1),
             date_end=date.today(),
@@ -125,7 +125,7 @@ class TestGrb:
         assert affected_1 > 0
 
         affected, unaffected = get_affected_by_grb_change(
-            dict_thematic=thematic_dict,
+            thematic_geometries=thematic_dict,
             grb_type=GRBType.ADP,
             date_start=date(2025, 1, 1),
             date_end=date.today(),
@@ -149,7 +149,7 @@ class TestGrb:
         aligner = Aligner()
         aligner.load_thematic_data(DictLoader(thematic_dict))
         affected, unaffected = get_affected_by_grb_change(
-            dict_thematic=thematic_dict,
+            thematic_geometries=thematic_dict,
             grb_type=GRBType.ADP,
             date_start=date.today() - timedelta(days=1),
             date_end=date.today(),
@@ -158,7 +158,7 @@ class TestGrb:
         assert len(affected) == 0
 
         affected, unaffected = get_affected_by_grb_change(
-            dict_thematic=thematic_dict,
+            thematic_geometries=thematic_dict,
             grb_type=GRBType.ADP,
             date_start=date.today() - timedelta(days=1000),
             date_end=date.today(),
@@ -180,7 +180,7 @@ class TestGrb:
         aligner2 = Aligner()
         aligner2.load_thematic_data(DictLoader(thematic_dict2))
         affected, unaffected = get_affected_by_grb_change(
-            dict_thematic=thematic_dict2,
+            thematic_geometries=thematic_dict2,
             grb_type=GRBType.ADP,
             date_start=date.today() - timedelta(days=1000),
             date_end=date.today(),
@@ -202,7 +202,7 @@ class TestGrb:
         aligner = Aligner()
         aligner.load_thematic_data(DictLoader(thematic_dict))
         affected, unaffected = get_affected_by_grb_change(
-            dict_thematic=thematic_dict,
+            thematic_geometries=thematic_dict,
             grb_type=GRBType.ADP,
             date_start=date.today() - timedelta(days=1),
             date_end=date.today(),
@@ -212,7 +212,7 @@ class TestGrb:
 
         callback_grb_response.update(grb_responses.grb_response4)
         affected, unaffected = get_affected_by_grb_change(
-            dict_thematic=thematic_dict,
+            thematic_geometries=thematic_dict,
             grb_type=GRBType.ADP,
             date_start=date.today() - timedelta(days=1000),
             date_end=date.today(),

@@ -42,7 +42,7 @@ class GRBActualLoader(GeoJsonLoader):
 
 
     def load_data(self):
-        if not self.aligner.dict_thematic:
+        if not self.aligner.thematic_data:
             raise ValueError("Thematic data not loaded")
         geom_union = buffer_pos(
             self.aligner.thematic_data.union, GRB_MAX_REFERENCE_BUFFER
@@ -74,7 +74,7 @@ class GRBFiscalParcelLoader(GeoJsonLoader):
         self.versiondate_info = {"name": GRB_VERSION_DATE, "format": datetime_format_TZ}
 
     def load_data(self):
-        if not self.aligner.dict_thematic:
+        if not self.aligner.thematic_data:
             raise ValueError("Thematic data not loaded")
         geom_union = buffer_pos(
             self.aligner.thematic_data.union, GRB_MAX_REFERENCE_BUFFER
@@ -115,7 +115,7 @@ class GRBSpecificDateParcelLoader(GeoJsonLoader):
         self.versiondate_info = {"name": GRB_VERSION_DATE, "format": datetime_format_TZ}
 
     def load_data(self):
-        if not self.aligner.dict_thematic:
+        if not self.aligner.thematic_data:
             raise ValueError("Thematic data not loaded")
         geom_union = buffer_pos(
             self.aligner.thematic_data.union, GRB_MAX_REFERENCE_BUFFER

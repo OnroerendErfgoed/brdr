@@ -180,7 +180,7 @@ class TestExamples:
             GeoJsonLoader(_input=testdata, id_property="theme_identifier")
         )
         aligner0.multi_as_single_modus = True
-        dict_thematic = aligner0.dict_thematic
+        dict_thematic = {key: feat.geometry for key, feat in aligner0.thematic_data.features.items()}
         aligner0.load_thematic_data(DictLoader(dict_thematic))
 
         # gebruik de actuele adp-percelen adp= administratieve percelen
@@ -219,8 +219,8 @@ class TestExamples:
         # Example how to use a series (for histogram)
         series = np.arange(0, 310, 10, dtype=int) / 100
         process_result = aligner.process(relevant_distances=series)
-        resulting_areas = aligner.get_difference_metrics_for_dict_thematic(
-            process_result.results, aligner.dict_thematic
+        resulting_areas = aligner.get_difference_metrics_for_thematic_data(
+            process_result.results, aligner.thematic_data
         )
         for key in resulting_areas:
             if len(resulting_areas[key]) == len(series):

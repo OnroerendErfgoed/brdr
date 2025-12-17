@@ -2,9 +2,11 @@ import logging
 from copy import deepcopy
 from datetime import date
 from datetime import datetime
+from typing import Dict, Any
 
 from shapely import intersects
 from shapely.geometry import shape
+from shapely.geometry.base import BaseGeometry
 
 from brdr.be.grb.constants import (
     GRB_FEATURE_URL,
@@ -72,7 +74,8 @@ def is_grb_changed(
 
 
 def get_affected_by_grb_change(
-    dict_thematic,
+    thematic_geometries:Dict[Any,BaseGeometry],
+        *,
     grb_type=GRBType.ADP,
     date_start=date.today(),
     date_end=date.today(),
@@ -86,7 +89,7 @@ def get_affected_by_grb_change(
     specific timespan
 
     Args:
-        dict_thematic: dictionary if thematicID & Geometry
+        thematic_geometries: dictionary if thematicID & Geometry
         grb_type: Type of GRB: parcels, buildings,...
         date_start: start-date to check changes in GRB
         date_end: end-date to check changes in GRB
@@ -102,22 +105,22 @@ def get_affected_by_grb_change(
 
     """
 
-    affected = {}
-    unaffected = {}
+    affected = []
+    unaffected = []
     if one_by_one:
-        for key in dict_thematic:
-            geom = dict_thematic[key]
+        for key in thematic_geometries:
+            geom = thematic_geometries[key]
             if is_grb_changed(
                 geom, grb_type, date_start, date_end, border_distance=border_distance
             ):
-                affected[key]=geom
+                affected.append(key)
             else:
-                unaffected[key]=geom
+                unaffected.append(key)
         return affected, unaffected
     else:
         # Temporal filter on VERDATUM
         if geometry_thematic_union is None:
-            geometry_thematic_union = safe_unary_union(list(dict_thematic.values()))
+            geometry_thematic_union = safe_unary_union(list(thematic_geometries.values()))
         coll_changed_grb, name_reference_id = get_collection_grb_actual(
             buffer_pos(geometry_thematic_union, GRB_MAX_REFERENCE_BUFFER),
             grb_type=grb_type,
@@ -146,22 +149,22 @@ def get_affected_by_grb_change(
             logging.info(
                 f"No detected changes for thematic geometry in timespan (border distance: {str(border_distance)})"
             )
-            return {}, dict_thematic  # empty affected dict
+            return [], list(thematic_geometries.keys())  # empty affected dict
         logging.info(
             f"Changed parcels in timespan with border_distance {str(border_distance)}: {str(len(dict_changed_grb))}"
         )
         thematic_intersections = features_by_geometric_operation(
-            list(dict_thematic.values()),
-            list(dict_thematic.keys()),
+            list(thematic_geometries.values()),
+            list(thematic_geometries.keys()),
             list(dict_changed_grb.values()),
             predicate="intersects",
         )
         logging.info("Number of filtered features: " + str(len(thematic_intersections)))
-        for key, geom in dict_thematic.items():
+        for key, geom in thematic_geometries.items():
             if key in thematic_intersections:
-                affected[key] = geom
+                affected.append(key)
             else:
-                 unaffected[key]=geom
+                 unaffected.append(key)
     return affected, unaffected
 
 

@@ -1,9 +1,11 @@
 import copy
 import json
+from typing import Any, Dict
 
 import topojson
 from shapely import make_valid, LineString
 from shapely.geometry import GeometryCollection
+from shapely.geometry.base import BaseGeometry
 
 from brdr.constants import REMARK_FIELD_NAME
 from brdr.geometry_utils import (
@@ -11,17 +13,18 @@ from brdr.geometry_utils import (
     safe_difference,
     longest_linestring_from_multilinestring,
 )
+from brdr.typings import ProcessResult
 from brdr.utils import geojson_geometry_to_shapely
 
 
 def _dissolve_topo(
     thematic_id,
-    dict_series,
+    process_results,
     input_geometry,
-    dict_thematic_to_process,
+    thematic_geometries_to_process:Dict[Any,BaseGeometry],
     topo_thematic,
     relevant_distance,
-):
+)->ProcessResult:
     """
     Dissolves a processed dictionary of LineStrings (Arcs) into a geometry collection
     of the original features based on TopoJSON.
@@ -33,11 +36,11 @@ def _dissolve_topo(
 
     Args:
         thematic_id (str): The ID of the thematic object to dissolve in the TopoJSON.
-        dict_series (dict): A dictionary where keys are arc IDs and values contain
+        process_results (dict): A dictionary where keys are arc IDs and values contain
                             the processed result geometry (LineString or MultiLineString)
                             under the key relevant_distance -> "result".
         input_geometry (shapely.Geometry): The original input geometry for comparison.
-        dict_thematic_to_process (dict): A dictionary mapping arc IDs to their
+        thematic_geometries_to_process (dict): A dictionary mapping arc IDs to their
                                          original Shapely LineString geometries.
         topo_thematic (TopoJSON object): The TopoJSON object containing the
                                          geometries and arcs to be processed.
@@ -80,10 +83,10 @@ def _dissolve_topo(
         if obj["id"] != thematic_id:
             continue
 
-        for arc_id in dict_series.keys():
+        for arc_id in process_results.keys():
             try:
                 # Get the processed line geometry
-                result_line = dict_series[arc_id][relevant_distance]["result"]
+                result_line = process_results[arc_id][relevant_distance]["result"]
 
                 # Extract the longest linestring if the result is a MultiLineString
                 linestring = longest_linestring_from_multilinestring(result_line)
@@ -97,7 +100,7 @@ def _dissolve_topo(
 
             except Exception:
                 # If processing failed (e.g., TypeError or KeyError), use the original arc geometry
-                linestring = dict_thematic_to_process[arc_id]
+                linestring = thematic_geometries_to_process[arc_id]
                 # Convert the coordinates of the original linestring into the TopoJSON arc format
                 old_arc = [list(coord) for coord in linestring.coords]
                 new_arc = old_arc
@@ -131,7 +134,7 @@ def _dissolve_topo(
     result_diff = safe_unary_union([result_diff_plus, result_diff_min])
 
     # Construct the final result dictionary
-    process_result = {
+    process_result: ProcessResult= {
         "result": result,
         "result_diff": result_diff,
         "result_diff_plus": result_diff_plus,
@@ -144,7 +147,7 @@ def _dissolve_topo(
     return process_result
 
 
-def _generate_topo(dict_thematic_to_process):
+def _generate_topo(thematic_data):
     """
     Converts a dictionary of named Shapely geometries into a dictionary of
     LineStrings (Arcs) based on the generated TopoJSON structure.
@@ -153,13 +156,13 @@ def _generate_topo(dict_thematic_to_process):
     shared set of simple edges (arcs) for further topological processing.
 
     Args:
-        dict_thematic_to_process (dict): A dictionary where keys are object IDs
+        thematic_geometries_to_process (dict): A dictionary where keys are object IDs
                                          (e.g., thematic IDs) and values are
                                          Shapely geometries (e.g., Polygon, LineString).
 
     Returns:
         tuple: A tuple containing:
-               - dict_thematic_to_process (dict): A new dictionary where keys are
+               - thematic_geometries_to_process (dict): A new dictionary where keys are
                  integer arc IDs and values are the corresponding Shapely LineStrings (Arcs).
                - topo_thematic (TopoJSON object): The generated TopoJSON object.
     """
@@ -169,7 +172,10 @@ def _generate_topo(dict_thematic_to_process):
 
     # Generate the TopoJSON structure from the input geometries.
     # prequantize=False is used to prevent coordinate quantization.
-    topo_thematic = topojson.Topology(dict_thematic_to_process, prequantize=False)
+    thematic_geometries: Dict[Any,BaseGeometry]={}
+    for key,feat in thematic_data.features.items():
+        thematic_geometries[key] = feat.geometry
+    topo_thematic = topojson.Topology(thematic_geometries, prequantize=False)
 
     # Print the resulting TopoJSON structure (for debugging/inspection)
     print(topo_thematic.to_json())
@@ -187,10 +193,10 @@ def _generate_topo(dict_thematic_to_process):
         arc_id = arc_id + 1
 
     # Replace the input dictionary with the new dictionary of arcs
-    dict_thematic_to_process = arc_dict
+    thematic_geometries_to_process = arc_dict
 
     # Return the dictionary of arcs and the TopoJSON object
-    return dict_thematic_to_process, topo_thematic
+    return thematic_geometries_to_process, topo_thematic
 
 
 def _topojson_id_to_arcs(topojson):

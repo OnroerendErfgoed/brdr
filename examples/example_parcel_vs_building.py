@@ -41,9 +41,9 @@ if __name__ == "__main__":
         relevant_distances=series
     )
     x_results=x_aligner_result.get_results(aligner=aligner_x)
-    x_resulting_areas = aligner_x.get_difference_metrics_for_dict_thematic(
+    x_resulting_areas = aligner_x.get_difference_metrics_for_thematic_data(
         dict_processresults=x_results,
-        dict_thematic=aligner_x.dict_thematic,
+        thematic_data=aligner_x.dict_thematic,
     )
     y_aligner_result = aligner_y.process(
         relevant_distances=series
@@ -51,8 +51,8 @@ if __name__ == "__main__":
 
     y_results=y_aligner_result.get_results(aligner=aligner_x)
 
-    y_resulting_areas = aligner_y.get_difference_metrics_for_dict_thematic(
-        dict_processresults=y_results, dict_thematic=aligner_y.dict_thematic
+    y_resulting_areas = aligner_y.get_difference_metrics_for_thematic_data(
+        dict_processresults=y_results, thematic_data=aligner_y.dict_thematic
     )
 
     # Make a 1-by-1 comparison for each thematic feature compared to the 2 references (

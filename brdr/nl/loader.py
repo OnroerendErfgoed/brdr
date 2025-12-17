@@ -51,7 +51,7 @@ class BRKLoader(GeoJsonLoader):
         self.versiondate_info = {"name": BRK_VERSION_DATE, "format": DATE_FORMAT}
 
     def load_data(self):
-        if not self.aligner.dict_thematic:
+        if not self.aligner.thematic_data:
             raise ValueError("Thematic data not loaded")
         if self.aligner.crs != to_crs(BRK_CRS):
             raise ValueError(

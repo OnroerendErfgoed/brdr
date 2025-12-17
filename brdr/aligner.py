@@ -8,7 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import wait
 from copy import deepcopy
 from datetime import datetime
-from typing import Iterable, Dict, Any, Optional
+from typing import Iterable, Dict, Any, Optional, List
 
 import numpy as np
 from shapely import make_valid
@@ -146,7 +146,7 @@ class AlignerResult:
             If an unknown `result_type` is provided.
         """
         for theme_id, results_dict in self.results.items():
-            original_geometry = aligner.dict_thematic[theme_id]
+            original_geometry = aligner.thematic_data.features.get(theme_id).geometry
             nr_calculations = len(results_dict)
             try:
                 original_geometry_length = len(original_geometry.geoms)
@@ -167,7 +167,7 @@ class AlignerResult:
                 properties[SYMMETRICAL_AREA_CHANGE] = (
                     get_geometry_difference_metrics_from_processresult(
                         process_result,
-                        aligner.dict_thematic[theme_id],
+                        original_geometry,
                         None,
                         DIFF_METRIC.SYMMETRICAL_AREA_CHANGE,
                     )
@@ -175,7 +175,7 @@ class AlignerResult:
                 properties[SYMMETRICAL_AREA_PERCENTAGE_CHANGE] = (
                     get_geometry_difference_metrics_from_processresult(
                         process_result,
-                        aligner.dict_thematic[theme_id],
+                        original_geometry,
                         None,
                         DIFF_METRIC.SYMMETRICAL_AREA_PERCENTAGE_CHANGE,
                     )
@@ -183,7 +183,7 @@ class AlignerResult:
                 properties[AREA_CHANGE] = (
                     get_geometry_difference_metrics_from_processresult(
                         process_result,
-                        aligner.dict_thematic[theme_id],
+                        original_geometry,
                         None,
                         DIFF_METRIC.AREA_CHANGE,
                     )
@@ -191,7 +191,7 @@ class AlignerResult:
                 properties[AREA_PERCENTAGE_CHANGE] = (
                     get_geometry_difference_metrics_from_processresult(
                         process_result,
-                        aligner.dict_thematic[theme_id],
+                        original_geometry,
                         None,
                         DIFF_METRIC.AREA_PERCENTAGE_CHANGE,
                     )
@@ -199,7 +199,7 @@ class AlignerResult:
                 properties[LENGTH_CHANGE] = (
                     get_geometry_difference_metrics_from_processresult(
                         process_result,
-                        aligner.dict_thematic[theme_id],
+                        original_geometry,
                         None,
                         DIFF_METRIC.LENGTH_CHANGE,
                     )
@@ -207,7 +207,7 @@ class AlignerResult:
                 properties[LENGTH_PERCENTAGE_CHANGE] = (
                     get_geometry_difference_metrics_from_processresult(
                         process_result,
-                        aligner.dict_thematic[theme_id],
+                        original_geometry,
                         None,
                         DIFF_METRIC.LENGTH_PERCENTAGE_CHANGE,
                     )
@@ -305,10 +305,8 @@ class AlignerResult:
                 prop_dictionary[theme_id][relevant_distance] = {}
 
                 # Adding original attributes
-                if attributes and theme_id in aligner.dict_thematic_properties.keys():
-                    for attr, value in aligner.dict_thematic_properties[
-                        theme_id
-                    ].items():
+                if attributes and theme_id in aligner.thematic_data.features.get(theme_id).properties:
+                    for attr, value in aligner.thematic_data.features.get(theme_id).properties.items():
                         prop_dictionary[theme_id][relevant_distance][attr] = value
 
                 # Adding formula
@@ -454,10 +452,6 @@ class Aligner:
         The Coordinate Reference System (CRS) being used (e.g., 'EPSG:31370').
     name_thematic_id : str
         Name of the identifier field for thematic data.
-    dict_thematic : dict[ThematicId, BaseGeometry]
-        Dictionary storing all thematic geometries.
-    dict_thematic_properties : dict[ThematicId, dict]
-        Dictionary storing properties of thematic features.
     diff_metric : DiffMetric
         The metric used to measure differences between geometries (e.g., area change).
     reference_data : AlignerFeatureCollection | None
@@ -517,9 +511,6 @@ class Aligner:
         self.max_workers = config.max_workers
 
         # PROCESSING DEFAULTS (Internal state variables)
-        self.dict_thematic: dict[ThematicId, BaseGeometry] = {}
-        self.dict_thematic_properties: dict[ThematicId, dict] = {}
-        self.dict_thematic_source: dict[ThematicId, str] = {}
 
         # The CRS is the working CRS for all calculations (assumed to be projected/in meters)
         self.crs = to_crs(crs)
@@ -543,18 +534,6 @@ class Aligner:
         self.thematic_data = loader.load_data()
         self.thematic_data.crs=self.crs
 
-        # TODO this has to be eliminated
-        thematic_features = self.thematic_data.features
-        dict_thematic = {}
-        dict_thematic_properties = {}
-        for id,feat in thematic_features.items():
-            dict_thematic[id] = feat.geometry
-            dict_thematic_properties[id] = feat.properties
-
-        self.dict_thematic = dict_thematic
-        self.dict_thematic_properties = dict_thematic_properties
-        self.dict_thematic_source = self.thematic_data.source
-
     def load_reference_data(self, loader: Loader):
         """
         Loads the reference features into the aligner, and prepares the reference-data for processing
@@ -571,7 +550,7 @@ class Aligner:
         self,
         relevant_distances: Iterable[float] = None,
         *,
-        dict_thematic=None,
+        thematic_ids: List[ThematicId]=None,
         max_workers: int = None,
     ) -> AlignerResult:
         """
@@ -579,7 +558,7 @@ class Aligner:
             relevant distances.
 
         Args:
-            dict_thematic: the dictionary with the thematic geometries to 'predict'. Default is None, so all thematic geometries inside the aligner will be processed.
+            thematic_data: the dictionary with the thematic geometries to 'predict'. Default is None, so all thematic geometries inside the aligner will be processed.
             relevant_distances (Iterable[float]): A series of relevant distances
                 (in meters) to process
             max_workers (int, optional): Amount of workers that is used in ThreadPoolExecutor (for parallel execution) when processing objects for multiple relevant distances. (default None). If set to -1, no parallel exececution is used.
@@ -597,11 +576,11 @@ class Aligner:
         """
         if relevant_distances is None:
             raise ValueError("provide at least 1 relevant distance")
-        if dict_thematic is None:
-            dict_thematic = self.dict_thematic
+        if thematic_ids is None:
+            thematic_ids = self.thematic_data.features.keys()
         if any(
-            id_to_process not in self.dict_thematic.keys()
-            for id_to_process in dict_thematic.keys()
+            id_to_process not in self.thematic_data.features.keys()
+            for id_to_process in thematic_ids
         ):
             raise ValueError("not all ids are found in the thematic data")
         if max_workers is None:
@@ -619,11 +598,12 @@ class Aligner:
                 mitre_limit=self.mitre_limit,
                 input_geometry=geometry,
                 relevant_distance=relevant_distance,
-                dict_thematic=self.dict_thematic,
+                thematic_data=self.thematic_data,
             )
 
         def run_process(executor: ThreadPoolExecutor = None):
-            for thematic_id, geom in dict_thematic.items():
+            for thematic_id in thematic_ids:
+                geom = self.thematic_data.features.get(thematic_id).geometry
                 self.logger.feedback_info(
                     f"thematic id {str(thematic_id)} processed with "
                     f"relevant distances (m) [{str(relevant_distances)}]"
@@ -664,16 +644,15 @@ class Aligner:
         self,
         relevant_distances=None,
         *,
-        dict_thematic=None,
-        diff_metric=None,
-        process_all_at_once=True,
+        thematic_ids: List[ThematicId]=None,
+        diff_metric=None
 
     ) -> AlignerResult:
         """
         Predicts the 'most interesting' relevant distances for changes in thematic
         elements based on a distance series.
 
-        This function analyzes a set of thematic geometries (`self.dict_thematic`) to
+        This function analyzes a set of thematic geometries (`self.`) to
         identify potentially interesting distances where changes occur. It performs
         the following steps:
 
@@ -704,7 +683,7 @@ class Aligner:
               those distances are included.
 
         Args:
-            dict_thematic: the dictionary with the thematic geometries to 'predict'. Default is None, so all thematic geometries inside the aligner will be processed.
+            : the dictionary with the thematic geometries to 'predict'. Default is None, so all thematic geometries inside the aligner will be processed.
             relevant_distances (np.ndarray, optional): A series of relevant distances
                 (in meters) to process. : A NumPy array of distances to
               be analyzed.
@@ -719,7 +698,7 @@ class Aligner:
             dict_series: A dictionary containing the resultset for all relevant distances for each thematic element.
             dict_predictions: A dictionary containing predicted interesting distances for each
             thematic element.
-                - Keys: Thematic element identifiers from `self.dict_thematic`.
+                - Keys: Thematic element identifiers from `self.`.
                 - Values: Dictionaries with the following structure for each
                    thematic element:
                     - Keys: Distances identified as interesting (breakpoints or
@@ -731,11 +710,11 @@ class Aligner:
 
 
         """
-        if dict_thematic is None:  # or dict_thematic =={}
-            dict_thematic = self.dict_thematic
+        if thematic_ids is None:
+            thematic_ids = self.thematic_data.features.keys()
         if any(
-            id_to_predict not in self.dict_thematic.keys()
-            for id_to_predict in dict_thematic.keys()
+            id_to_predict not in self.thematic_data.features.keys()
+            for id_to_predict in thematic_ids
         ):
             raise ValueError("not all ids are found in the thematic data")
         if relevant_distances is None:
@@ -763,81 +742,82 @@ class Aligner:
             )
         rd_prediction = list(set(rd_prediction))
         rd_prediction = sorted(rd_prediction)
+        process_all_at_once=True
         if process_all_at_once:
             aligner_result = self.process(
-                dict_thematic=dict_thematic,
+                thematic_ids=thematic_ids,
                 relevant_distances=rd_prediction,
             )
             process_results =  aligner_result.results
 
-        else:
-            process_results = {}
-            futures={}
-
-            def _predict_geom(theme_id,geom,_rd_prediction):
-
-                def _check_interval_stability(
-                    res_start: ProcessResult, res_end: ProcessResult
-                ) -> bool:
-
-                    return geometric_equality(
-                        res_start["result"],
-                        res_end["result"],
-                        correction_distance=self.correction_distance,
-                        mitre_limit=self.mitre_limit,
-                    )
-
-                def _process_result(_theme_id, _relevant_distances):
-                    aligner_result = self.process(
-                        dict_thematic={_theme_id: geom},
-                        relevant_distances=_relevant_distances,
-                        max_workers=self.max_workers)
-                    return aligner_result.results[_theme_id][_relevant_distances[0]]
-
-                def _process_wrapper(x: float):
-                    return _process_result(_theme_id=theme_id, _relevant_distances=[x])
-
-                non_stable_points, cache = recursive_stepwise_interval_check(
-                    f_value=_process_wrapper,
-                    f_condition=_check_interval_stability,
-                    discrete_list=_rd_prediction,
-                    initial_sample_size=3,
-                )
-                interpolated_cache = create_full_interpolated_dataset(_rd_prediction, cache)
-                return interpolated_cache
-
-            def run_prediction(executor: ThreadPoolExecutor = None):
-
-                for theme_key, geom in dict_thematic.items():
-
-                    self.logger.feedback_info(
-                        f"thematic id {str(theme_key)} predictions calculated with "
-                        f"relevant distances (m) [{str(relevant_distances)}]"
-                    )
-                    process_results[theme_key] = {}
-                    try:
-                        fn = _predict_geom
-                        if executor:
-                            futures[theme_key] = executor.submit(fn, theme_key,geom,rd_prediction)
-                        else:
-                            process_results[theme_key] = fn(theme_key,geom,rd_prediction)
-                    except ValueError as e:
-                        self.logger.feedback_warning(
-                            f"error for thematic id {str(theme_key)} processed with "
-                            f"relevant distances (m) [{str(relevant_distances)}]"
-                        )
-                        process_results[theme_key] = None
-                        self.logger.feedback_warning(str(e))
-
-            if self.max_workers == -1:
-                run_prediction()
-            else:
-                with ThreadPoolExecutor(self.max_workers) as prediction_executor:
-                    run_prediction(prediction_executor)
-                    self.logger.feedback_debug("waiting all started thematic calculations")
-                    wait(list(futures.values()))
-                    for thematic_id, future in futures.items():
-                        process_results[thematic_id] = future.result()
+        # else:
+        #     process_results = {}
+        #     futures={}
+        #
+        #     def _predict_geom(theme_id,geom,_rd_prediction):
+        #
+        #         def _check_interval_stability(
+        #             res_start: ProcessResult, res_end: ProcessResult
+        #         ) -> bool:
+        #
+        #             return geometric_equality(
+        #                 res_start["result"],
+        #                 res_end["result"],
+        #                 correction_distance=self.correction_distance,
+        #                 mitre_limit=self.mitre_limit,
+        #             )
+        #
+        #         def _process_result(_theme_id, _relevant_distances):
+        #             aligner_result = self.process(
+        #                 thematic_ids=[_theme_id],
+        #                 relevant_distances=_relevant_distances,
+        #                 max_workers=self.max_workers)
+        #             return aligner_result.results[_theme_id][_relevant_distances[0]]
+        #
+        #         def _process_wrapper(x: float):
+        #             return _process_result(_theme_id=theme_id, _relevant_distances=[x])
+        #
+        #         non_stable_points, cache = recursive_stepwise_interval_check(
+        #             f_value=_process_wrapper,
+        #             f_condition=_check_interval_stability,
+        #             discrete_list=_rd_prediction,
+        #             initial_sample_size=3,
+        #         )
+        #         interpolated_cache = create_full_interpolated_dataset(_rd_prediction, cache)
+        #         return interpolated_cache
+        #
+        #     def run_prediction(executor: ThreadPoolExecutor = None):
+        #
+        #         for key in thematic_ids:
+        #             geom=self.thematic_data.features.get(key).geometry
+        #             self.logger.feedback_info(
+        #                 f"thematic id {str(key)} predictions calculated with "
+        #                 f"relevant distances (m) [{str(relevant_distances)}]"
+        #             )
+        #             process_results[key] = {}
+        #             try:
+        #                 fn = _predict_geom
+        #                 if executor:
+        #                     futures[key] = executor.submit(fn, key,geom,rd_prediction)
+        #                 else:
+        #                     process_results[key] = fn(key,geom,rd_prediction)
+        #             except ValueError as e:
+        #                 self.logger.feedback_warning(
+        #                     f"error for thematic id {str(key)} processed with "
+        #                     f"relevant distances (m) [{str(relevant_distances)}]"
+        #                 )
+        #                 process_results[key] = None
+        #                 self.logger.feedback_warning(str(e))
+        #
+        #     if self.max_workers == -1:
+        #         run_prediction()
+        #     else:
+        #         with ThreadPoolExecutor(self.max_workers) as prediction_executor:
+        #             run_prediction(prediction_executor)
+        #             self.logger.feedback_debug("waiting all started thematic calculations")
+        #             wait(list(futures.values()))
+        #             for thematic_id, future in futures.items():
+        #                 process_results[thematic_id] = future.result()
 
         if diff_metric is None:
             diff_metric = self.diff_metric
@@ -845,7 +825,7 @@ class Aligner:
         for theme_id, process_result in process_results.items():
             diffs = get_geometry_difference_metrics_from_processresults(
                 process_result,
-                dict_thematic[theme_id],
+                self.thematic_data.features.get(theme_id).geometry,
                 self.reference_data.union,
                 diff_metric=diff_metric,
             )
@@ -883,17 +863,16 @@ class Aligner:
         self,
         relevant_distances=None,
         *,
-        dict_thematic=None,
+        thematic_ids: List[ThematicId]=None,
         base_formula_field=FORMULA_FIELD_NAME,
         full_reference_strategy=FullReferenceStrategy.NO_FULL_REFERENCE,
         max_predictions=-1,
         multi_to_best_prediction=True,
-        process_all_at_once=True,
     ):
         """
         Compares and evaluate input-geometries (with formula). Attributes are added to evaluate and decide if new
         proposals can be used
-        ids_to_evaluate: list with all IDs to evaluate. all other IDs will be unchanged. If None (default), all self.dict_thematic will be evaluated.
+        ids_to_evaluate: list with all IDs to evaluate. all other IDs will be unchanged. If None (default), all self. will be evaluated.
         base_formula_field: name of the field where the base_formula is found in the data
         max_predictions: integer that indicates how mstr|int predictions are maximally returned. (-1 indicates all predictions are returned)
         relevant_distances: relevant distances to evaluate
@@ -901,13 +880,11 @@ class Aligner:
         multi_to_best_prediction (default True): Only usable in combination with max_predictions=1. If True (and max_predictions=1), the prediction with highest score will be taken.If False, the original geometry is returned.
         """
 
-        if dict_thematic is None:
-            ids_to_evaluate = list(self.dict_thematic.keys())
-        else:
-            ids_to_evaluate = list(dict_thematic.keys())
+        if thematic_ids is None:
+            thematic_ids = self.thematic_data.features.keys()
         if any(
-            id_to_evaluate not in self.dict_thematic.keys()
-            for id_to_evaluate in ids_to_evaluate
+            id_to_evaluate not in self.thematic_data.features.keys()
+            for id_to_evaluate in thematic_ids
         ):
             raise ValueError("not all ids are found in the thematic data")
         if relevant_distances is None:
@@ -915,209 +892,202 @@ class Aligner:
                 round(k, RELEVANT_DISTANCE_DECIMALS)
                 for k in np.arange(0, 310, 10, dtype=int) / 100
             ]
-        dict_evaluated = {}
-        dict_not_evaluated = {}
-        for id_theme, geom in self.dict_thematic.items():
-            if id_theme in ids_to_evaluate:
-                dict_evaluated[id_theme] = geom
-            else:
-                dict_not_evaluated[id_theme] = geom
 
-        # Features are split up in 2 dicts: EVALUATED and NOT_EVALUATED (original returned)
-        # The evaluated features will be split up:
-        #   *No prediction available
-        #   *Predictions available
-
-        # PART 1: EVALUATED
         aligner_result = self.predict(
-            dict_thematic=dict_evaluated,
+            thematic_ids=thematic_ids,
             relevant_distances=relevant_distances,
             diff_metric=self.diff_metric,
-            process_all_at_once=process_all_at_once,
         )
         process_results_evaluated = aligner_result.get_results(aligner=self)
         process_results_evaluated_predictions = aligner_result.get_results(aligner=self,result_type=AlignerResultType.PREDICTIONS
         )
         process_results_evaluated = deepcopy(process_results_evaluated)
 
-        for theme_id in dict_evaluated.keys():
-            if theme_id not in process_results_evaluated_predictions.keys():
-                # No predictions available
-                relevant_distance = round(0, RELEVANT_DISTANCE_DECIMALS)
-                props = self._evaluate(
-                    id_theme=theme_id,
-                    geom_predicted=dict_evaluated[theme_id],
-                    base_formula_field=base_formula_field,
-                )
-                props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
-                props[PREDICTION_COUNT] = 0
-                props[PREDICTION_SCORE] = -1
-                if REMARK_FIELD_NAME in props:
-                    remarks = props[REMARK_FIELD_NAME]
-                else:
-                    remarks = []
-                remarks.append(ProcessRemark.NO_PREDICTION_ORIGINAL_RETURNED)
-                props[REMARK_FIELD_NAME] = remarks
-                process_results_evaluated[theme_id][relevant_distance] = unary_union_result_dict({
-                    "result": dict_evaluated[theme_id],
-                    "properties": props,
-                })
-                continue
+        for theme_id,feat in self.thematic_data.features.items():
+            original_geometry = feat.geometry
+            # Features are split up in 2 groups: TO_EVALUATE and NOT_TO_EVALUATE (original returned)
+            # The evaluated features will be split up:
+            #   *No prediction available
+            #   *Predictions available
 
-            # When there are predictions available
-            dict_predictions_results = process_results_evaluated_predictions[theme_id]
-            scores = []
-            distances = []
-            predictions = []
-            formula_match = False
-            for dist in sorted(dict_predictions_results.keys()):
-                props = self._evaluate(
-                    id_theme=theme_id,
-                    geom_predicted=dict_predictions_results[dist]["result"],
-                    base_formula_field=base_formula_field,
-                )
-                props.update(process_results_evaluated_predictions[theme_id][dist]["properties"])
-
-                full = props[FULL_ACTUAL_FIELD_NAME]
-                if (
-                    full_reference_strategy == FullReferenceStrategy.ONLY_FULL_REFERENCE
-                    and not full
-                ):
-                    # this prediction is ignored
-                    continue
-                if (
-                    props[EVALUATION_FIELD_NAME] == Evaluation.TO_CHECK_NO_PREDICTION
-                    and props[PREDICTION_COUNT] == 1
-                ):
-                    props[EVALUATION_FIELD_NAME] = Evaluation.PREDICTION_UNIQUE
-                elif (
-                    props[EVALUATION_FIELD_NAME] == Evaluation.TO_CHECK_NO_PREDICTION
-                    and props[PREDICTION_COUNT] > 1
-                ):
-                    props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_PREDICTION_MULTI
-                elif props[EVALUATION_FIELD_NAME] != Evaluation.TO_CHECK_NO_PREDICTION:
-                    # this prediction has a equality based on formula so the rest is not checked anymore
-                    formula_match = True
-                    props[PREDICTION_SCORE] = 100
-                    scores = []
-                    distances = []
-                    predictions = []
-                    scores.append(props[PREDICTION_SCORE])
-                    distances.append(dist)
-                    process_results_evaluated_predictions[theme_id][dist]["properties"] = props
-                    predictions.append(process_results_evaluated_predictions[theme_id][dist])
-                    continue
-                if full:
-                    if full_reference_strategy != FullReferenceStrategy.NO_FULL_REFERENCE:
-                        props[EVALUATION_FIELD_NAME] = (
-                            Evaluation.TO_CHECK_PREDICTION_FULL
-                        )
-                        prediction_score = props[PREDICTION_SCORE] + 50
-                        if prediction_score > 100:
-                            prediction_score = 100
-                        props[PREDICTION_SCORE] = prediction_score
-                    else:
-                        props[EVALUATION_FIELD_NAME] = (
-                            Evaluation.TO_CHECK_PREDICTION_MULTI_FULL
-                        )
-
-                scores.append(props[PREDICTION_SCORE])
-                distances.append(dist)
-                process_results_evaluated_predictions[theme_id][dist]["properties"] = props
-                predictions.append(process_results_evaluated_predictions[theme_id][dist])
-
-            # get max amount of best-scoring predictions
-            best_ix = sorted(range(len(scores)), reverse=True, key=lambda i: scores[i])
-            len_best_ix = len(best_ix)
-
-            if not formula_match:
-                # if there is only one prediction left,  evaluation is set to PREDICTION_UNIQUE_FULL
-                if len_best_ix == 1 and not formula_match:
-                    props = predictions[0]["properties"]
-                    if (
-                        FULL_ACTUAL_FIELD_NAME in props
-                        and props[FULL_ACTUAL_FIELD_NAME]
-                    ):
-                        predictions[0]["properties"][
-                            EVALUATION_FIELD_NAME
-                        ] = Evaluation.PREDICTION_UNIQUE_FULL
-                    else:
-                        predictions[0]["properties"][
-                            EVALUATION_FIELD_NAME
-                        ] = Evaluation.PREDICTION_UNIQUE
-
-                # if there are multiple predictions, but we want only one and we ask for the original
-                if (
-                    len_best_ix > 1
-                    and max_predictions == 1
-                    and not multi_to_best_prediction
-                    and not formula_match
-                ):
+            # PART 1: TO_EVALUATE
+            if theme_id in thematic_ids:
+                if theme_id not in process_results_evaluated_predictions.keys():
+                    # No predictions available
                     relevant_distance = round(0, RELEVANT_DISTANCE_DECIMALS)
-                    props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_ORIGINAL
+                    props = self._evaluate(
+                        id_theme=theme_id,
+                        geom_predicted=original_geometry,
+                        base_formula_field=base_formula_field,
+                    )
+                    props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
+                    props[PREDICTION_COUNT] = 0
                     props[PREDICTION_SCORE] = -1
                     if REMARK_FIELD_NAME in props:
                         remarks = props[REMARK_FIELD_NAME]
                     else:
                         remarks = []
-                    remarks.append(ProcessRemark.MULTIPLE_PREDICTIONS_ORIGINAL_RETURNED)
+                    remarks.append(ProcessRemark.NO_PREDICTION_ORIGINAL_RETURNED)
                     props[REMARK_FIELD_NAME] = remarks
                     process_results_evaluated[theme_id][relevant_distance] = unary_union_result_dict({
-                        "result": dict_evaluated[theme_id],
+                        "result": original_geometry,
                         "properties": props,
                     })
                     continue
 
-            if max_predictions > 0 and len_best_ix > max_predictions:
-                best_ix = best_ix[:max_predictions]
-            if len(best_ix) > 0:
-                for ix in best_ix:
-                    distance = distances[ix]
-                    prediction = predictions[ix]
-                    process_results_evaluated[theme_id][distance] = prediction
+                # When there are predictions available
+                dict_predictions_results = process_results_evaluated_predictions[theme_id]
+                scores = []
+                distances = []
+                predictions = []
+                formula_match = False
+                for dist in sorted(dict_predictions_results.keys()):
+                    props = self._evaluate(
+                        id_theme=theme_id,
+                        geom_predicted=dict_predictions_results[dist]["result"],
+                        base_formula_field=base_formula_field,
+                    )
+                    props.update(process_results_evaluated_predictions[theme_id][dist]["properties"])
+
+                    full = props[FULL_ACTUAL_FIELD_NAME]
+                    if (
+                        full_reference_strategy == FullReferenceStrategy.ONLY_FULL_REFERENCE
+                        and not full
+                    ):
+                        # this prediction is ignored
+                        continue
+                    if (
+                        props[EVALUATION_FIELD_NAME] == Evaluation.TO_CHECK_NO_PREDICTION
+                        and props[PREDICTION_COUNT] == 1
+                    ):
+                        props[EVALUATION_FIELD_NAME] = Evaluation.PREDICTION_UNIQUE
+                    elif (
+                        props[EVALUATION_FIELD_NAME] == Evaluation.TO_CHECK_NO_PREDICTION
+                        and props[PREDICTION_COUNT] > 1
+                    ):
+                        props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_PREDICTION_MULTI
+                    elif props[EVALUATION_FIELD_NAME] != Evaluation.TO_CHECK_NO_PREDICTION:
+                        # this prediction has a equality based on formula so the rest is not checked anymore
+                        formula_match = True
+                        props[PREDICTION_SCORE] = 100
+                        scores = []
+                        distances = []
+                        predictions = []
+                        scores.append(props[PREDICTION_SCORE])
+                        distances.append(dist)
+                        process_results_evaluated_predictions[theme_id][dist]["properties"] = props
+                        predictions.append(process_results_evaluated_predictions[theme_id][dist])
+                        continue
+                    if full:
+                        if full_reference_strategy != FullReferenceStrategy.NO_FULL_REFERENCE:
+                            props[EVALUATION_FIELD_NAME] = (
+                                Evaluation.TO_CHECK_PREDICTION_FULL
+                            )
+                            prediction_score = props[PREDICTION_SCORE] + 50
+                            if prediction_score > 100:
+                                prediction_score = 100
+                            props[PREDICTION_SCORE] = prediction_score
+                        else:
+                            props[EVALUATION_FIELD_NAME] = (
+                                Evaluation.TO_CHECK_PREDICTION_MULTI_FULL
+                            )
+
+                    scores.append(props[PREDICTION_SCORE])
+                    distances.append(dist)
+                    process_results_evaluated_predictions[theme_id][dist]["properties"] = props
+                    predictions.append(process_results_evaluated_predictions[theme_id][dist])
+
+                # get max amount of best-scoring predictions
+                best_ix = sorted(range(len(scores)), reverse=True, key=lambda i: scores[i])
+                len_best_ix = len(best_ix)
+
+                if not formula_match:
+                    # if there is only one prediction left,  evaluation is set to PREDICTION_UNIQUE_FULL
+                    if len_best_ix == 1 and not formula_match:
+                        props = predictions[0]["properties"]
+                        if (
+                            FULL_ACTUAL_FIELD_NAME in props
+                            and props[FULL_ACTUAL_FIELD_NAME]
+                        ):
+                            predictions[0]["properties"][
+                                EVALUATION_FIELD_NAME
+                            ] = Evaluation.PREDICTION_UNIQUE_FULL
+                        else:
+                            predictions[0]["properties"][
+                                EVALUATION_FIELD_NAME
+                            ] = Evaluation.PREDICTION_UNIQUE
+
+                    # if there are multiple predictions, but we want only one and we ask for the original
+                    if (
+                        len_best_ix > 1
+                        and max_predictions == 1
+                        and not multi_to_best_prediction
+                        and not formula_match
+                    ):
+                        relevant_distance = round(0, RELEVANT_DISTANCE_DECIMALS)
+                        props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_ORIGINAL
+                        props[PREDICTION_SCORE] = -1
+                        if REMARK_FIELD_NAME in props:
+                            remarks = props[REMARK_FIELD_NAME]
+                        else:
+                            remarks = []
+                        remarks.append(ProcessRemark.MULTIPLE_PREDICTIONS_ORIGINAL_RETURNED)
+                        props[REMARK_FIELD_NAME] = remarks
+                        process_results_evaluated[theme_id][relevant_distance] = unary_union_result_dict({
+                            "result": original_geometry,
+                            "properties": props,
+                        })
+                        continue
+
+                if max_predictions > 0 and len_best_ix > max_predictions:
+                    best_ix = best_ix[:max_predictions]
+                if len(best_ix) > 0:
+                    for ix in best_ix:
+                        distance = distances[ix]
+                        prediction = predictions[ix]
+                        process_results_evaluated[theme_id][distance] = prediction
+                else:
+                    # #when no evaluated predictions, the original is returned
+                    relevant_distance = round(0, RELEVANT_DISTANCE_DECIMALS)
+                    props = self._evaluate(
+                        id_theme=theme_id,
+                        geom_predicted=original_geometry,
+                        base_formula_field=base_formula_field,
+                    )
+                    props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
+                    props[PREDICTION_SCORE] = -1
+                    props[PREDICTION_COUNT] = 0
+                    if REMARK_FIELD_NAME in props:
+                        remarks = props[REMARK_FIELD_NAME]
+                    else:
+                        remarks = []
+                    remarks.append(ProcessRemark.NO_PREDICTION_ORIGINAL_RETURNED)
+                    props[REMARK_FIELD_NAME] = remarks
+                    process_results_evaluated[theme_id][relevant_distance] = unary_union_result_dict({
+                        "result": original_geometry,
+                        "properties": props,
+                    })
             else:
-                # #when no evaluated predictions, the original is returned
+                # PART 2: NOT EVALUATED
                 relevant_distance = round(0, RELEVANT_DISTANCE_DECIMALS)
+                process_results_evaluated[theme_id] = {}
                 props = self._evaluate(
                     id_theme=theme_id,
-                    geom_predicted=dict_evaluated[theme_id],
+                    geom_predicted=original_geometry,
                     base_formula_field=base_formula_field,
                 )
-                props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
+                props[EVALUATION_FIELD_NAME] = Evaluation.NOT_EVALUATED
                 props[PREDICTION_SCORE] = -1
-                props[PREDICTION_COUNT] = 0
                 if REMARK_FIELD_NAME in props:
                     remarks = props[REMARK_FIELD_NAME]
                 else:
                     remarks = []
-                remarks.append(ProcessRemark.NO_PREDICTION_ORIGINAL_RETURNED)
+                remarks.append(ProcessRemark.NOT_EVALUATED_ORIGINAL_RETURNED)
                 props[REMARK_FIELD_NAME] = remarks
                 process_results_evaluated[theme_id][relevant_distance] = unary_union_result_dict({
-                    "result": dict_evaluated[theme_id],
+                    "result": original_geometry,
                     "properties": props,
                 })
-
-        # PART 2: NOT EVALUATED
-        relevant_distance = round(0, RELEVANT_DISTANCE_DECIMALS)
-        for theme_id, geom in dict_not_evaluated.items():
-            process_results_evaluated[theme_id] = {}
-            props = self._evaluate(
-                id_theme=theme_id,
-                geom_predicted=geom,
-                base_formula_field=base_formula_field,
-            )
-            props[EVALUATION_FIELD_NAME] = Evaluation.NOT_EVALUATED
-            props[PREDICTION_SCORE] = -1
-            if REMARK_FIELD_NAME in props:
-                remarks = props[REMARK_FIELD_NAME]
-            else:
-                remarks = []
-            remarks.append(ProcessRemark.NOT_EVALUATED_ORIGINAL_RETURNED)
-            props[REMARK_FIELD_NAME] = remarks
-            process_results_evaluated[theme_id][relevant_distance] = unary_union_result_dict({
-                "result": geom,
-                "properties": props,
-            })
         return AlignerResult(process_results_evaluated)
 
     def compare_to_reference(self, geometry: BaseGeometry, with_geom=False):
@@ -1134,7 +1104,6 @@ class Aligner:
 
             - "alignment_date": datetime.now().strftime(DATE_FORMAT),
             - "brdr_version": str(__version__),
-            - "reference_source": self.dict_reference_source,
             - "full": True if the geometry exists out of all full reference-polygons, else False.
             - "area": Area of the geometry.
             - "reference_features": {
@@ -1242,10 +1211,10 @@ class Aligner:
         self.logger.feedback_debug(str(dict_formula))
         return dict_formula
 
-    def get_difference_metrics_for_dict_thematic(
+    def get_difference_metrics_for_thematic_data(
         self,
         dict_processresults=None,
-        dict_thematic=None,
+        thematic_data=None,
         diff_metric=DiffMetric.SYMMETRICAL_AREA_CHANGE,
     ):
         """
@@ -1253,7 +1222,7 @@ class Aligner:
 
         Parameters:
         dict_series (dict): A dictionary where keys are thematic IDs and values are dictionaries mapping relevant distances to ProcessResult objects.
-        dict_thematic (dict): A dictionary where keys are thematic IDs and values are BaseGeometry objects representing the original geometries.
+         (dict): A dictionary where keys are thematic IDs and values are BaseGeometry objects representing the original geometries.
         diff_metric (DiffMetric, optional): The metric to use for calculating differences. Default is DiffMetric.CHANGES_AREA.
 
         Returns:
@@ -1261,13 +1230,14 @@ class Aligner:
         """
         if dict_processresults is None:
             raise ValueError("dict_processresults is required")
-        if dict_thematic is None:
-            dict_thematic = self.dict_thematic
+        if thematic_data is None:
+            thematic_data = self.thematic_data
         diffs = {}
-        for key in dict_thematic:
+        for key,feat in thematic_data.features.items():
+            original_geom = feat.geometry
             diffs[key] = get_geometry_difference_metrics_from_processresults(
                 dict_processresult=dict_processresults[key],
-                geom_thematic=dict_thematic[key],
+                geom_thematic=original_geom,
                 reference_union=self.reference_data.union,
                 diff_metric=diff_metric,
             )
@@ -1301,7 +1271,7 @@ class Aligner:
 
         try:
             base_formula = json.loads(
-                self.dict_thematic_properties[id_theme][base_formula_field]
+                self.thematic_data.features.get(id_theme).properties[base_formula_field]
             )
         except:
             base_formula = None

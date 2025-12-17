@@ -62,8 +62,8 @@ class TestExamples(unittest.TestCase):
         series = np.arange(0, 61, 1, dtype=float) / 10
 
         process_result = aligner.process(relevant_distances=series)
-        dict_diffs = aligner.get_difference_metrics_for_dict_thematic(
-            process_result.results, aligner.dict_thematic, DiffMetric.SYMMETRICAL_AREA_CHANGE
+        dict_diffs = aligner.get_difference_metrics_for_thematic_data(
+            process_result.results, aligner.thematic_data, DiffMetric.SYMMETRICAL_AREA_CHANGE
         )
 
         dict_diffs = dict_diffs["input_id"]

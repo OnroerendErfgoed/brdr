@@ -177,7 +177,7 @@ def test_load_thematic_data_by_url(requests_mock, haspengouw_geojson):
     aligner.load_thematic_data(
         GeoJsonUrlLoader("https://mock.com/haspengouw.geojson", "Id")
     )
-    assert aligner.dict_thematic is not None
+    assert aligner.thematic_data is not None
 
 
 def test_load_reference_data_url(requests_mock, haspengouw_geojson):

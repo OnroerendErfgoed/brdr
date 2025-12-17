@@ -19,7 +19,7 @@ class TestOE:
         loader = OnroerendErfgoedLoader(objectids=[120288, 10275], oetype=OEType.AO)
         aligner = Aligner()
         aligner.load_thematic_data(loader)
-        assert len(aligner.dict_thematic.keys()) == 2
+        assert len(aligner.thematic_data.features.keys()) == 2
 
     def test_onroerenderfgoedloader_by_erfgoedid(self, requests_mock):
         requests_mock.add(
@@ -32,7 +32,7 @@ class TestOE:
         loader = OnroerendErfgoedLoader(objectids=[42549], oetype=OEType.EO)
         aligner = Aligner()
         aligner.load_thematic_data(loader)
-        assert len(aligner.dict_thematic.keys()) == 1
+        assert len(aligner.thematic_data.features.keys())== 1
 
     def test_onroerenderfgoedloader_by_bbox(self, requests_mock):
         requests_mock.add(
@@ -49,7 +49,7 @@ class TestOE:
         )
         aligner = Aligner()
         aligner.load_thematic_data(loader)
-        assert len(aligner.dict_thematic.keys()) > 0
+        assert len(aligner.thematic_data.features.keys()) > 0
 
     def test_onroerenderfgoedloader_by_bbox_and_objectid(self, requests_mock):
         with pytest.raises(Exception):
