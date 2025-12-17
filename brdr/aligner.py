@@ -525,7 +525,6 @@ class Aligner:
         self.dict_thematic: dict[ThematicId, BaseGeometry] = {}
         self.dict_thematic_properties: dict[ThematicId, dict] = {}
         self.dict_thematic_source: dict[ThematicId, str] = {}
-        self.thematic_union = None
 
         self.name_reference_id = ID_REFERENCE_FIELD_NAME
         # The CRS is the working CRS for all calculations (assumed to be projected/in meters)
@@ -546,12 +545,12 @@ class Aligner:
         :param loader:
         :return:
         """
+
         self.dict_thematic, self.dict_thematic_properties, self.dict_thematic_source = (
             loader.load_data()
         )
-
-        self.thematic_union = None
         self.thematic_data = loader.load_data_as_feature_collection()
+
 
     def load_reference_data(self, loader: Loader):
         """
@@ -564,7 +563,6 @@ class Aligner:
             self.dict_reference_properties,
             self.dict_reference_source,
         ) = loader.load_data()
-        # self._prepare_reference_data()
         self.reference_data = loader.load_data_as_feature_collection()
         self.reference_data.is_reference = True
 
@@ -1306,9 +1304,7 @@ class Aligner:
         returns a unary_unioned geometry from all the thematic geometries
         :return:
         """
-        if self.thematic_union is None:
-            self.thematic_union = safe_unary_union(list(self.dict_thematic.values()))
-        return self.thematic_union
+        return self.thematic_data.union
 
     def _evaluate(
         self, id_theme, geom_predicted, base_formula_field=FORMULA_FIELD_NAME

@@ -39,6 +39,7 @@ class ProcessResult(TypedDict, total=False):
     result_relevant_intersection: BaseGeometry
     result_relevant_diff: BaseGeometry
     properties: Dict[str, Any]
+    metadata: Dict[Any, Any]
 
 
 ThematicId = Union[str, int]

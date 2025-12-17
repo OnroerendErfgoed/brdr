@@ -41,8 +41,6 @@ class AlignerFeatureCollection:
 
     @property
     def union(self):
-        if not self.is_reference:
-            raise ValueError("FeatureCollection is not a reference dataset")
         if not self.features:
             raise ValueError("FeatureCollection has no features")
         if self._union is None:
