@@ -12,8 +12,8 @@ website:
         icon: house-fill
       - text: Reference
         href: reference/index.qmd
-      - text: Examples
-        href: examples.qmd
+#      - text: Examples
+#        href: examples.qmd
 
 lang: en
 
@@ -41,9 +41,22 @@ quartodoc:
       package: brdr.aligner
       desc: Aligner class of the brdr package.
       contents:
+        # Functies: alleen deze twee
+        - Aligner.evaluate # voorbeeldfunctie
+
+        # Klasse: alleen de gewenste methoden
+        - name: Aligner
+          members:
+            - process
+            - predict
+            - evaluate
+
+    - title: AlignerResult
+      package: brdr.aligner
+      desc: AlignerResult class of the brdr package.
+      contents:
         # the functions being documented in the package.
         # you can refer to anything: class methods, modules, etc..
-        - Aligner
         - AlignerResult
     - title: Loaders
       package: brdr.loader

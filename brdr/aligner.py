@@ -430,15 +430,43 @@ def aligner_metadata_decorator(f):
 
     return inner_func
 
-
-# TODO what about the Aligner-parameters; AlignerConfig-class?
+    # TODO what about the Aligner-parameters; AlignerConfig-class?
 class Aligner:
     """
-    This class is used to compare and align the thematic data with the reference data.
-    The reference data can be loaded in different ways, for example by using the GRB
-    data.
-    The thematic data can be loaded by using different Loaders: DictLoader, GeojsonLoader,...
-    The class can be used to compare and aligne the thematic data with the reference data.
+    Compares and aligns thematic geospatial data against a set of reference data.
+
+    The Aligner manages the loading of both thematic and reference data, configures
+    the geometric processing rules, and executes the alignment, prediction, and
+    evaluation logic across a series of relevant distances.
+
+    Attributes
+    ----------
+    logger : Logger
+        Instance for logging feedback and information.
+    log_metadata : bool
+        If True, metadata about the actuation is logged in the results.
+    processor : BaseProcessor | AlignerGeometryProcessor
+        The geometric processor used for alignment calculations.
+    correction_distance : float
+        Distance used in buffer operations to remove slivers (technical correction).
+    mitre_limit : int
+        Parameter for the buffer operation to control the maximum length of join corners.
+    max_workers : int | None
+        The maximum number of workers for parallel execution (ThreadPoolExecutor).
+    CRS : str
+        The Coordinate Reference System (CRS) being used (e.g., 'EPSG:31370').
+    name_thematic_id : str
+        Name of the identifier field for thematic data.
+    dict_thematic : dict[ThematicId, BaseGeometry]
+        Dictionary storing all thematic geometries.
+    dict_thematic_properties : dict[ThematicId, dict]
+        Dictionary storing properties of thematic features.
+    diff_metric : DiffMetric
+        The metric used to measure differences between geometries (e.g., area change).
+    reference_data : AlignerFeatureCollection | None
+        Loaded collection of reference features.
+    thematic_data : AlignerFeatureCollection | None
+        Loaded collection of thematic features.
     """
 
     def __init__(
@@ -447,25 +475,39 @@ class Aligner:
         feedback=None,
         processor: BaseProcessor = None,
         crs=DEFAULT_CRS,
-        correction_distance=0.01, #useed in aligner to define equality
-        diff_metric=DIFF_METRIC,#used in aligner/predictor to measure diffs,defaults to the symmatrical area change. for linestrings/points, this value will be overwritten to a usefull metric
-        mitre_limit=10,#used in aligner to define equality in combination with correction distance
+        correction_distance=0.01,
+        diff_metric=DIFF_METRIC,
+        mitre_limit=10,
         max_workers=None,
         log_metadata=True,
     ):
         """
-        Initializes the Aligner object
+        Initializes the Aligner object.
 
-        Args:
-            feedback (object, optional): Feedback object that can be added to show
-                feedback in QGIS. Defaults to None.
-            crs (str, optional): Coordinate Reference System (CRS) of the data.
-                (default EPSG:31370)
-            correction_distance (float, optional): Distance used in a pos_neg_buffer to remove slivers (technical correction) (Default= 0.01 = 1cm )
-            mitre_limit (int, optional):buffer-parameter - The mitre ratio is the ratio of the distance from the corner to the end of the mitred offset corner.
-                When two line segments meet at a sharp angle, a miter join will extend far beyond the original geometry. (and in the extreme case will be infinitely far.) To prevent unreasonable geometry, the mitre limit allows controlling the maximum length of the join corner.
-                Corners with a ratio which exceed the limit will be beveled(Default=10)
-
+        Parameters
+        ----------
+        feedback : object, optional
+            Feedback object used for logging (e.g., in a QGIS environment). Defaults to None.
+        processor : BaseProcessor, optional
+            The geometric processor instance. If None, AlignerGeometryProcessor is used.
+        crs : str, optional
+            Coordinate Reference System (CRS) of the data (default is EPSG:31370).
+            Expected to be a projected CRS with units in 'meter (m)'.
+        correction_distance : float, optional
+            Distance (in meters) used in a positive/negative buffer operation to remove slivers
+            or define geometric equality. Default is 0.01m (1cm).
+        diff_metric : DiffMetric, optional
+            Metric used to measure differences in alignment/prediction (e.g., symmetrical area change).
+            This value may be overwritten internally for point/line geometries.
+        mitre_limit : int, optional
+            Mitre ratio limit used in buffer operations. Corners exceeding this ratio
+            will be beveled to prevent excessive extensions. Defaults to 10.
+        max_workers : int | None, optional
+            Maximum number of workers for parallel processing. If None, default system
+            concurrency is used. If -1, no parallel execution is used.
+        log_metadata : bool, optional
+            If True, actuation metadata is generated and attached to results (following
+            the SOSA/SSN standard). Defaults to True.
         """
         self.logger = Logger(feedback)
         self.log_metadata = log_metadata
@@ -478,37 +520,17 @@ class Aligner:
         self.mitre_limit = mitre_limit
         self.max_workers = max_workers
 
-        # PROCESSING DEFAULTS
-        # thematic
-        # name of the identifier-field of the thematic data (id has to be unique)
+        # PROCESSING DEFAULTS (Internal state variables)
         self.name_thematic_id = ID_THEME_FIELD_NAME
-        # dictionary to store all thematic geometries to handle
         self.dict_thematic: dict[ThematicId, BaseGeometry] = {}
-        # dictionary to store properties of the reference-features (optional)
         self.dict_thematic_properties: dict[ThematicId, dict] = {}
-        # Dict to store source-information of the thematic dictionary
         self.dict_thematic_source: dict[ThematicId, str] = {}
-        # dictionary to store all unioned thematic geometries
         self.thematic_union = None
 
-        # reference
-
-        # name of the identifier-field of the reference data (id has to be unique,f.e
-        # CAPAKEY for GRB-parcels)
         self.name_reference_id = ID_REFERENCE_FIELD_NAME
-        # dictionary to store all reference geometries
-
-        # Coordinate reference system
-        # The crs that is defined on the aligner is the CRS we are working with. So we expect that the loaded thematic data is in this CRS and also the reference data is in this CRS. Or will be downloaded and transformed to this CRS.
-        # thematic geometries and reference geometries are assumed to be in the same CRS
-        # before loading into the Aligner. No CRS-transformation will be performed.
-        # When loading data, CRS is expected to be a projected CRS with units in 'meter
-        # (m)'.
-        # Default EPSG:31370 (Lambert72), alternative: EPSG:3812 (Lambert2008),...At this moment  we expect the units in meter, because all calculation and parameters are based that unit is 'meter'
+        # The CRS is the working CRS for all calculations (assumed to be projected/in meters)
         self.CRS = to_crs(crs)
 
-        # this parameter is used to treat multipolygon as single polygons. So polygons
-        # with ID splitter are separately evaluated and merged on result.
         self.diff_metric = diff_metric
         self.logger.feedback_info("Aligner initialized")
 

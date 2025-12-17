@@ -10,7 +10,7 @@ if __name__ == "__main__":
     # EXAMPLE for a thematic Polygon from Onroerend Erfgoed (https://inventaris.onroerenderfgoed.be/aanduidingsobjecten/131635)
 
     # Initiate brdr
-    aligner = Aligner(max_workers=-1)
+    aligner = Aligner(max_workers=None)
     # Load thematic data from Onroerend Erfgoed
     loader = OnroerendErfgoedLoader(objectids=[5914, 121125], oetype=OEType.AO)
     aligner.load_thematic_data(loader)

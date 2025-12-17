@@ -148,7 +148,7 @@ class TestAligner(unittest.TestCase):
         loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         aligner.load_reference_data(loader)
         relevant_distance = 3
-        dict_processresults = aligner.process([relevant_distance], max_workers=-1)
+        dict_processresults = aligner.process([relevant_distance], max_workers=None)
         self.assertEqual(
             dict_processresults.results["theme_id_1"][relevant_distance][
                 "result"
@@ -196,7 +196,7 @@ class TestAligner(unittest.TestCase):
         loader = DictLoader(reference_dict)
         aligner.load_reference_data(loader)
         relevant_distance = 5
-        aligner_result = aligner.process([relevant_distance], max_workers=-1)
+        aligner_result = aligner.process([relevant_distance], max_workers=None)
         process_results= aligner_result.get_results(aligner=aligner)
         self.assertEqual(
             process_results["theme_id_1"][relevant_distance]["result"].geom_type,
