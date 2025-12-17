@@ -232,7 +232,7 @@ class TestGrb:
         aligner.load_thematic_data(loader)
         loader = GRBFiscalParcelLoader(year="2023", aligner=aligner)
         aligner.load_reference_data(loader)
-        assert len(aligner.dict_reference.keys()) == 52
+        assert len(aligner.reference_data.features) == 52
 
     def test_grbspecificdateparcelloader(self, callback_grb_response):
         callback_grb_response.update(grb_responses.grb_response5)
@@ -246,13 +246,13 @@ class TestGrb:
         aligner.load_thematic_data(loader)
         loader = GRBSpecificDateParcelLoader(date="2023-01-03", aligner=aligner)
         aligner.load_reference_data(loader)
-        assert len(aligner.dict_reference.keys()) == 52
+        assert len(aligner.reference_data.features) == 52
 
         callback_grb_response["features"].pop()
         callback_grb_response["numberReturned"] = 51
         loader = GRBSpecificDateParcelLoader(date="2023-08-03", aligner=aligner)
         aligner.load_reference_data(loader)
-        assert len(aligner.dict_reference.keys()) == 51
+        assert len(aligner.reference_data.features) == 51
 
     def test_update_to_actual_grb(self, callback_grb_response):
         # Create a featurecollection (aligned on 2022), to use for the 'update_to_actual_grb'

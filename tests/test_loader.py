@@ -193,4 +193,4 @@ def test_load_reference_data_url(requests_mock, haspengouw_geojson):
         GeoJsonUrlLoader("https://mock.com/haspengouw.geojson", "Id")
     )
 
-    assert aligner.dict_reference is not None
+    assert aligner.reference_data.features is not None

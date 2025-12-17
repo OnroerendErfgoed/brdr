@@ -221,7 +221,7 @@ class TestAligner(unittest.TestCase):
                 aligner=self.sample_aligner, grb_type=GRBType.ADP, partition=1000
             )
         )
-        self.assertGreater(len(self.sample_aligner.dict_reference), 0)
+        self.assertGreater(len(self.sample_aligner.reference_data.features), 0)
 
     @pytest.mark.usefixtures("callback_grb_response")
     def test_load_reference_data_grb_actual_gbg(self):
@@ -242,7 +242,7 @@ class TestAligner(unittest.TestCase):
                 aligner=self.sample_aligner, grb_type=GRBType.GBG, partition=1000
             )
         )
-        self.assertGreater(len(self.sample_aligner.dict_reference), 0)
+        self.assertGreater(len(self.sample_aligner.reference_data.features), 0)
 
     @pytest.mark.usefixtures("callback_grb_response")
     def test_load_reference_data_grb_actual_knw(self):
@@ -264,7 +264,7 @@ class TestAligner(unittest.TestCase):
             )
         )
         self.sample_aligner.process([1])
-        self.assertGreaterEqual(len(self.sample_aligner.dict_reference), 0)
+        self.assertGreaterEqual(len(self.sample_aligner.reference_data.features), 0)
 
     def test_all_od_strategies(self):
         # Load thematic data & reference data

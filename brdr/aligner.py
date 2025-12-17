@@ -566,18 +566,6 @@ class Aligner:
         self.reference_data.crs=self.crs
         self.reference_data.is_reference = True
 
-        # TODO this has to be eliminated
-        reference_features = self.reference_data.features
-        dict_reference = {}
-        dict_reference_properties = {}
-        for id,feat in reference_features.items():
-            dict_reference[id] = feat.geometry
-            dict_reference_properties[id] = feat.properties
-
-        self.dict_reference = dict_reference
-        self.dict_reference_properties = dict_reference_properties
-        self.dict_reference_source = self.reference_data.source
-
     @aligner_metadata_decorator
     def process(
         self,
@@ -1194,11 +1182,12 @@ class Aligner:
             if perc < 0.01:
                 continue
             # Add a last_version_date if available in properties
+            reference_feature = self.reference_data.features.get(key_ref)
             if (
-                key_ref in self.dict_reference_properties
-                and VERSION_DATE in self.dict_reference_properties[key_ref]
+                not reference_feature is None
+                and VERSION_DATE in reference_feature.properties
             ):
-                str_version_date = self.dict_reference_properties[key_ref][VERSION_DATE]
+                str_version_date = reference_feature.properties[VERSION_DATE]
                 version_date = datetime.strptime(str_version_date, DATE_FORMAT)
                 if last_version_date is None and version_date is not None:
                     last_version_date = version_date
