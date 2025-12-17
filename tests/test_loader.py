@@ -30,17 +30,12 @@ class TestExamples:
         reference_loader = GRBActualLoader(
             grb_type=GRBType.ADP, aligner=aligner, partition=1000
         )
-        #TODO write test for this, adapted to AlignerFeatureCollection
-        assert True
 
-        # aligner.dict_thematic, props_thematic, thematic_source = (
-        #     thematic_loader.load_data()
-        # )
-        # aligner.dict_reference, props_reference, reference_source = (
-        #     reference_loader.load_data()
-        # )
-        # assert aligner.dict_thematic is not None
-        # assert aligner.dict_reference is not None
+
+        aligner.thematic_data= thematic_loader.load_data()
+        aligner.reference_data= reference_loader.load_data()
+        assert aligner.thematic_data is not None
+        assert aligner.reference_data is not None
 
     # @pytest.mark.usefixtures("callback_grb_response")
     def test_ogcfeaturapiloader(self):
