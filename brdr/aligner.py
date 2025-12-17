@@ -16,7 +16,7 @@ from shapely import to_geojson
 from shapely.geometry.base import BaseGeometry
 
 from brdr import __version__
-from brdr.configs import ProcessorConfig
+from brdr.configs import ProcessorConfig, AlignerConfig
 from brdr.constants import (
     DATE_FORMAT,
     SYMMETRICAL_AREA_CHANGE,
@@ -72,13 +72,13 @@ from brdr.utils import (
     recursive_stepwise_interval_check,
     create_full_interpolated_dataset,
 )
-from brdr.utils import unary_union_result_dict
 from brdr.utils import determine_stability
 from brdr.utils import geojson_from_dict
 from brdr.utils import get_geojsons_from_process_results
 from brdr.utils import get_geometry_difference_metrics_from_processresult
 from brdr.utils import get_geometry_difference_metrics_from_processresults
 from brdr.utils import is_brdr_formula
+from brdr.utils import unary_union_result_dict
 from brdr.utils import write_geojson
 
 
@@ -315,6 +315,7 @@ class AlignerResult:
                         prop_dictionary[theme_id][relevant_distance][attr] = value
 
                 # Adding formula
+                #TODO - check if metadata is exported correctly
                 if formula:
                     result = process_result["result"]
                     formula_result = aligner.compare_to_reference(result)
@@ -472,14 +473,10 @@ class Aligner:
     def __init__(
         self,
         *,
-        feedback=None,
         processor: BaseProcessor = None,
         crs=DEFAULT_CRS,
-        correction_distance=0.01,
-        diff_metric=DIFF_METRIC,
-        mitre_limit=10,
-        max_workers=None,
-        log_metadata=True,
+        config: AlignerConfig = None,
+        feedback=None,
     ):
         """
         Initializes the Aligner object.
@@ -509,16 +506,19 @@ class Aligner:
             If True, actuation metadata is generated and attached to results (following
             the SOSA/SSN standard). Defaults to True.
         """
+        if config is None:
+            config = AlignerConfig()
+        self.config = config
         self.logger = Logger(feedback)
-        self.log_metadata = log_metadata
+        self.log_metadata = config.log_metadata
         self.processor = (
             processor
             if processor
             else AlignerGeometryProcessor(ProcessorConfig(), feedback)
         )
-        self.correction_distance = correction_distance
-        self.mitre_limit = mitre_limit
-        self.max_workers = max_workers
+        self.correction_distance = config.correction_distance
+        self.mitre_limit = config.mitre_limit
+        self.max_workers = config.max_workers
 
         # PROCESSING DEFAULTS (Internal state variables)
         self.name_thematic_id = ID_THEME_FIELD_NAME
@@ -530,7 +530,7 @@ class Aligner:
         # The CRS is the working CRS for all calculations (assumed to be projected/in meters)
         self.CRS = to_crs(crs)
 
-        self.diff_metric = diff_metric
+        self.diff_metric = config.diff_metric
         self.logger.feedback_info("Aligner initialized")
 
         self.reference_data: AlignerFeatureCollection | None = None
@@ -550,7 +550,6 @@ class Aligner:
             loader.load_data()
         )
         self.thematic_data = loader.load_data_as_feature_collection()
-
 
     def load_reference_data(self, loader: Loader):
         """

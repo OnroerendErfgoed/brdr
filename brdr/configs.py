@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
-from brdr.enums import OpenDomainStrategy
+from brdr.constants import DIFF_METRIC
+from brdr.enums import OpenDomainStrategy, DiffMetric
 from brdr.enums import SnapStrategy
 
 
@@ -43,3 +44,14 @@ class ProcessorConfig:
     partial_snap_strategy: SnapStrategy = SnapStrategy.PREFER_VERTICES
     partial_snap_max_segment_length: int = 2
     area_limit: int = None
+
+
+@dataclass
+class AlignerConfig:
+    """
+    """
+    correction_distance: float = 0.01
+    diff_metric: DiffMetric = DIFF_METRIC
+    mitre_limit: float = 10
+    max_workers: int = None
+    log_metadata: bool = True

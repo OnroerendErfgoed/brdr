@@ -8,6 +8,7 @@ from brdr.aligner import Aligner
 from brdr.be.grb.enums import GRBType
 from brdr.be.grb.loader import GRBActualLoader
 from brdr.be.grb.utils import get_affected_by_grb_change
+from brdr.configs import AlignerConfig
 from brdr.constants import (
     LAST_VERSION_DATE,
     DATE_FORMAT,
@@ -127,7 +128,9 @@ def update_to_actual_grb(
         affected = dict_thematic
 
     # Initiate a Aligner to reference thematic features to the actual borders
-    actual_aligner = Aligner(feedback=feedback, max_workers=max_workers)
+    aligner_config= AlignerConfig()
+    aligner_config.max_workers=max_workers
+    actual_aligner = Aligner(feedback=feedback, config=aligner_config)
     actual_aligner.load_thematic_data(
         DictLoader(data_dict=dict_thematic, data_dict_properties=dict_thematic_props)
     )
