@@ -24,7 +24,7 @@ class OSMLoader(DictLoader):
         if not self.aligner.dict_thematic:
             raise ValueError("Thematic data not loaded")
         geom_union = buffer_pos(
-            self.aligner.get_thematic_union(), OSM_MAX_REFERENCE_BUFFER
+            self.aligner.thematic_data.union, OSM_MAX_REFERENCE_BUFFER
         )
         # We transform the OSM data to the CRS of the aligner
         gdf = gpd.GeoDataFrame(geometry=[geom_union], crs=self.aligner.CRS)

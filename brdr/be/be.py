@@ -80,7 +80,7 @@ class BeCadastralParcelLoader(GeoJsonLoader):
     def load_data(self):
         if not self.aligner.dict_thematic:
             raise ValueError("Thematic data not loaded")
-        geom_union = buffer_pos(self.aligner.get_thematic_union(), MAX_REFERENCE_BUFFER)
+        geom_union = buffer_pos(self.aligner.thematic_data.union, MAX_REFERENCE_BUFFER)
 
         collection, id_property = get_collection_cadastral(
             geometry=geom_union,

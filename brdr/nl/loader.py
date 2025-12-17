@@ -58,7 +58,7 @@ class BRKLoader(GeoJsonLoader):
                 f"BRKLoader only supports alignment in CRS '{BRK_CRS}' while CRS '{self.aligner.CRS}' is used"
             )
         geom_union = buffer_pos(
-            self.aligner.get_thematic_union(), BRK_MAX_REFERENCE_BUFFER
+            self.aligner.thematic_data.union, BRK_MAX_REFERENCE_BUFFER
         )
 
         collection, id_property = get_collection_brk(

@@ -1299,13 +1299,6 @@ class Aligner:
             geom_attributes=False,
         )
 
-    def get_thematic_union(self):
-        """
-        returns a unary_unioned geometry from all the thematic geometries
-        :return:
-        """
-        return self.thematic_data.union
-
     def _evaluate(
         self, id_theme, geom_predicted, base_formula_field=FORMULA_FIELD_NAME
     ):

@@ -45,7 +45,7 @@ class GRBActualLoader(GeoJsonLoader):
         if not self.aligner.dict_thematic:
             raise ValueError("Thematic data not loaded")
         geom_union = buffer_pos(
-            self.aligner.get_thematic_union(), GRB_MAX_REFERENCE_BUFFER
+            self.aligner.thematic_data.union, GRB_MAX_REFERENCE_BUFFER
         )
         collection, id_property = get_collection_grb_actual(
             grb_type=self.grb_type,
@@ -77,7 +77,7 @@ class GRBFiscalParcelLoader(GeoJsonLoader):
         if not self.aligner.dict_thematic:
             raise ValueError("Thematic data not loaded")
         geom_union = buffer_pos(
-            self.aligner.get_thematic_union(), GRB_MAX_REFERENCE_BUFFER
+            self.aligner.thematic_data.union, GRB_MAX_REFERENCE_BUFFER
         )
         collection = get_collection_grb_fiscal_parcels(
             year=self.year,
@@ -118,7 +118,7 @@ class GRBSpecificDateParcelLoader(GeoJsonLoader):
         if not self.aligner.dict_thematic:
             raise ValueError("Thematic data not loaded")
         geom_union = buffer_pos(
-            self.aligner.get_thematic_union(), GRB_MAX_REFERENCE_BUFFER
+            self.aligner.thematic_data.union, GRB_MAX_REFERENCE_BUFFER
         )
         collection = get_collection_grb_parcels_by_date(
             date=self.date,

@@ -215,7 +215,7 @@ class OGCFeatureAPIReferenceLoader(GeoJsonLoader):
             raise ValueError(
                 f"OGCFeatureAPIReferenceLoader '{collection_url}' only supports alignment in CRS '{str(supported_crs)}' while CRS '{self.aligner.CRS}' is used."
             )
-        geom_union = buffer_pos(self.aligner.get_thematic_union(), MAX_REFERENCE_BUFFER)
+        geom_union = buffer_pos(self.aligner.thematic_data.union, MAX_REFERENCE_BUFFER)
         ogcfeature_url = collection_url + "/items?"
         params = {"limit": self.limit, "crs": from_crs(self.aligner.CRS), "f": "json"}
 
@@ -290,7 +290,7 @@ class WFSReferenceLoader(GeoJsonLoader):
             raise ValueError(
                 f"WFS '{self.url}' only supports alignment in CRS '{str(supported_crs)}' while CRS '{self.aligner.CRS}' is used."
             )
-        geom_union = buffer_pos(self.aligner.get_thematic_union(), MAX_REFERENCE_BUFFER)
+        geom_union = buffer_pos(self.aligner.thematic_data.union, MAX_REFERENCE_BUFFER)
 
         params = {
             "SERVICE": "WFS",

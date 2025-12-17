@@ -110,7 +110,7 @@ def update_to_actual_grb(
             date_start=datetime_start,
             date_end=datetime_end,
             one_by_one=False,
-            geometry_thematic_union=base_aligner_result.get_thematic_union(),
+            geometry_thematic_union=base_aligner_result.thematic_data.union,
             border_distance=max_distance_for_actualisation,
             crs=base_aligner_result.CRS,
         )
