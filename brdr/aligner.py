@@ -299,7 +299,9 @@ class AlignerResult:
 
                 if formula:
                     result_geom = process_result["result"]
-                    formula_result = process_result.get("formula") or aligner.compare_to_reference(result_geom)
+                    formula_result = process_result.get(
+                        "formula"
+                    ) or aligner.compare_to_reference(result_geom)
                     prop_dictionary[theme_id][relevant_distance][FORMULA_FIELD_NAME] = (
                         json.dumps(formula_result)
                     )
@@ -353,9 +355,18 @@ class AlignerResult:
             write_geojson(os.path.join(path, file_name), fc)
 
 
-def _get_observations_from_formula(formula: Formula) -> List[Dict]:
-    observations = []
-    return []  # TODO
+def _get_observations_from_formula(processResult: ProcessResult) -> List[Dict]:
+    formula = processResult["formula"]
+    actuation_metadata = processResult["metadata"]["actuation"]
+    observation_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S%z")
+    return [
+        {
+            "id": f"metadata:{uuid.uuid4().hex}",
+            "type": "sosa:Observation",
+            "resultTime": observation_time,
+            "procedure": actuation_metadata["procedure"]
+        } for item in formula.items()
+    ]  # TODO
 
 
 def aligner_metadata_decorator(f):
@@ -415,10 +426,8 @@ def aligner_metadata_decorator(f):
                         ],
                     },
                 }
-                if formula := result["formula"]:
-                    result["metadata"]["observations"] = _get_observations_from_formula(
-                        formula
-                    )
+                if result["formula"]:
+                    result["metadata"]["observations"] = _get_observations_from_formula(result)
 
         return response
 
@@ -567,7 +576,7 @@ class Aligner:
         """
 
         self.thematic_data = loader.load_data()
-        self.thematic_data.crs=self.crs
+        self.thematic_data.crs = self.crs
 
     def load_reference_data(self, loader: Loader):
         """
@@ -599,7 +608,7 @@ class Aligner:
         """
 
         self.reference_data = loader.load_data()
-        self.reference_data.crs=self.crs
+        self.reference_data.crs = self.crs
         self.reference_data.is_reference = True
 
     @aligner_metadata_decorator
@@ -829,13 +838,13 @@ class Aligner:
             )
         rd_prediction = list(set(rd_prediction))
         rd_prediction = sorted(rd_prediction)
-        process_all_at_once=True
+        process_all_at_once = True
         if process_all_at_once:
             aligner_result = self.process(
                 thematic_ids=thematic_ids,
                 relevant_distances=rd_prediction,
             )
-            process_results =  aligner_result.results
+            process_results = aligner_result.results
 
         # else:
         #     process_results = {}
@@ -1052,11 +1061,12 @@ class Aligner:
             diff_metric=self.diff_metric,
         )
         process_results_evaluated = aligner_result.get_results(aligner=self)
-        process_results_evaluated_predictions = aligner_result.get_results(aligner=self,result_type=AlignerResultType.PREDICTIONS
+        process_results_evaluated_predictions = aligner_result.get_results(
+            aligner=self, result_type=AlignerResultType.PREDICTIONS
         )
         process_results_evaluated = deepcopy(process_results_evaluated)
 
-        for theme_id,feat in self.thematic_data.features.items():
+        for theme_id, feat in self.thematic_data.features.items():
             original_geometry = feat.geometry
             # Features are split up in 2 groups: TO_EVALUATE and NOT_TO_EVALUATE (original returned)
             # The evaluated features will be split up:
@@ -1082,14 +1092,20 @@ class Aligner:
                         remarks = []
                     remarks.append(ProcessRemark.NO_PREDICTION_ORIGINAL_RETURNED)
                     props[REMARK_FIELD_NAME] = remarks
-                    process_results_evaluated[theme_id][relevant_distance] = unary_union_result_dict({
-                        "result": original_geometry,
-                        "properties": props,
-                    })
+                    process_results_evaluated[theme_id][relevant_distance] = (
+                        unary_union_result_dict(
+                            {
+                                "result": original_geometry,
+                                "properties": props,
+                            }
+                        )
+                    )
                     continue
 
                 # When there are predictions available
-                dict_predictions_results = process_results_evaluated_predictions[theme_id]
+                dict_predictions_results = process_results_evaluated_predictions[
+                    theme_id
+                ]
                 scores = []
                 distances = []
                 predictions = []
@@ -1099,28 +1115,40 @@ class Aligner:
                         id_theme=theme_id,
                         geom_predicted=dict_predictions_results[dist]["result"],
                         base_formula_field=base_formula_field,
-                        formula=dict_predictions_results[dist].get("formula")
+                        formula=dict_predictions_results[dist].get("formula"),
                     )
-                    props.update(process_results_evaluated_predictions[theme_id][dist]["properties"])
+                    props.update(
+                        process_results_evaluated_predictions[theme_id][dist][
+                            "properties"
+                        ]
+                    )
 
                     full = props[FULL_ACTUAL_FIELD_NAME]
                     if (
-                        full_reference_strategy == FullReferenceStrategy.ONLY_FULL_REFERENCE
+                        full_reference_strategy
+                        == FullReferenceStrategy.ONLY_FULL_REFERENCE
                         and not full
                     ):
                         # this prediction is ignored
                         continue
                     if (
-                        props[EVALUATION_FIELD_NAME] == Evaluation.TO_CHECK_NO_PREDICTION
+                        props[EVALUATION_FIELD_NAME]
+                        == Evaluation.TO_CHECK_NO_PREDICTION
                         and props[PREDICTION_COUNT] == 1
                     ):
                         props[EVALUATION_FIELD_NAME] = Evaluation.PREDICTION_UNIQUE
                     elif (
-                        props[EVALUATION_FIELD_NAME] == Evaluation.TO_CHECK_NO_PREDICTION
+                        props[EVALUATION_FIELD_NAME]
+                        == Evaluation.TO_CHECK_NO_PREDICTION
                         and props[PREDICTION_COUNT] > 1
                     ):
-                        props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_PREDICTION_MULTI
-                    elif props[EVALUATION_FIELD_NAME] != Evaluation.TO_CHECK_NO_PREDICTION:
+                        props[EVALUATION_FIELD_NAME] = (
+                            Evaluation.TO_CHECK_PREDICTION_MULTI
+                        )
+                    elif (
+                        props[EVALUATION_FIELD_NAME]
+                        != Evaluation.TO_CHECK_NO_PREDICTION
+                    ):
                         # this prediction has a equality based on formula so the rest is not checked anymore
                         formula_match = True
                         props[PREDICTION_SCORE] = 100
@@ -1129,11 +1157,18 @@ class Aligner:
                         predictions = []
                         scores.append(props[PREDICTION_SCORE])
                         distances.append(dist)
-                        process_results_evaluated_predictions[theme_id][dist]["properties"] = props
-                        predictions.append(process_results_evaluated_predictions[theme_id][dist])
+                        process_results_evaluated_predictions[theme_id][dist][
+                            "properties"
+                        ] = props
+                        predictions.append(
+                            process_results_evaluated_predictions[theme_id][dist]
+                        )
                         continue
                     if full:
-                        if full_reference_strategy != FullReferenceStrategy.NO_FULL_REFERENCE:
+                        if (
+                            full_reference_strategy
+                            != FullReferenceStrategy.NO_FULL_REFERENCE
+                        ):
                             props[EVALUATION_FIELD_NAME] = (
                                 Evaluation.TO_CHECK_PREDICTION_FULL
                             )
@@ -1148,11 +1183,17 @@ class Aligner:
 
                     scores.append(props[PREDICTION_SCORE])
                     distances.append(dist)
-                    process_results_evaluated_predictions[theme_id][dist]["properties"] = props
-                    predictions.append(process_results_evaluated_predictions[theme_id][dist])
+                    process_results_evaluated_predictions[theme_id][dist][
+                        "properties"
+                    ] = props
+                    predictions.append(
+                        process_results_evaluated_predictions[theme_id][dist]
+                    )
 
                 # get max amount of best-scoring predictions
-                best_ix = sorted(range(len(scores)), reverse=True, key=lambda i: scores[i])
+                best_ix = sorted(
+                    range(len(scores)), reverse=True, key=lambda i: scores[i]
+                )
                 len_best_ix = len(best_ix)
 
                 if not formula_match:
@@ -1185,12 +1226,18 @@ class Aligner:
                             remarks = props[REMARK_FIELD_NAME]
                         else:
                             remarks = []
-                        remarks.append(ProcessRemark.MULTIPLE_PREDICTIONS_ORIGINAL_RETURNED)
+                        remarks.append(
+                            ProcessRemark.MULTIPLE_PREDICTIONS_ORIGINAL_RETURNED
+                        )
                         props[REMARK_FIELD_NAME] = remarks
-                        process_results_evaluated[theme_id][relevant_distance] = unary_union_result_dict({
-                            "result": original_geometry,
-                            "properties": props,
-                        })
+                        process_results_evaluated[theme_id][relevant_distance] = (
+                            unary_union_result_dict(
+                                {
+                                    "result": original_geometry,
+                                    "properties": props,
+                                }
+                            )
+                        )
                         continue
 
                 if max_predictions > 0 and len_best_ix > max_predictions:
@@ -1217,10 +1264,14 @@ class Aligner:
                         remarks = []
                     remarks.append(ProcessRemark.NO_PREDICTION_ORIGINAL_RETURNED)
                     props[REMARK_FIELD_NAME] = remarks
-                    process_results_evaluated[theme_id][relevant_distance] = unary_union_result_dict({
-                        "result": original_geometry,
-                        "properties": props,
-                    })
+                    process_results_evaluated[theme_id][relevant_distance] = (
+                        unary_union_result_dict(
+                            {
+                                "result": original_geometry,
+                                "properties": props,
+                            }
+                        )
+                    )
             else:
                 # PART 2: NOT EVALUATED
                 relevant_distance = round(0, RELEVANT_DISTANCE_DECIMALS)
@@ -1238,10 +1289,14 @@ class Aligner:
                     remarks = []
                 remarks.append(ProcessRemark.NOT_EVALUATED_ORIGINAL_RETURNED)
                 props[REMARK_FIELD_NAME] = remarks
-                process_results_evaluated[theme_id][relevant_distance] = unary_union_result_dict({
-                    "result": original_geometry,
-                    "properties": props,
-                })
+                process_results_evaluated[theme_id][relevant_distance] = (
+                    unary_union_result_dict(
+                        {
+                            "result": original_geometry,
+                            "properties": props,
+                        }
+                    )
+                )
         return AlignerResult(process_results_evaluated)
 
     def compare_to_reference(
@@ -1411,71 +1466,71 @@ class Aligner:
         diff_metric: DiffMetric = DiffMetric.SYMMETRICAL_AREA_CHANGE,
     ) -> Dict[ThematicId, Dict[float, float]]:
         """
-                Calculates difference metrics for thematic elements across a series of distances.
+        Calculates difference metrics for thematic elements across a series of distances.
 
-                This method iterates through the processed results and compares the resulting
-                geometries against their original thematic counterparts. It uses the
-                spatial context of the reference data to calculate metrics like area
-                change or symmetrical difference.
+        This method iterates through the processed results and compares the resulting
+        geometries against their original thematic counterparts. It uses the
+        spatial context of the reference data to calculate metrics like area
+        change or symmetrical difference.
 
-                Parameters
-                ----------
-                dict_processresults : Dict[ThematicId, Dict[float, Optional[ProcessResult]]], optional
-                    A nested dictionary where keys are thematic IDs and values are dictionaries
-                    mapping relevant distances to `ProcessResult`[] objects.
-                    Required if not provided via internal state.
-                thematic_data : AlignerFeatureCollection, optional
-                    The collection containing the original thematic geometries.
-                    Defaults to `self.thematic_data`.
-                diff_metric : DiffMetric, optional
-                    The metric used to quantify the geometric change.
-                    Defaults to `DiffMetric.SYMMETRICAL_AREA_CHANGE`.
+        Parameters
+        ----------
+        dict_processresults : Dict[ThematicId, Dict[float, Optional[ProcessResult]]], optional
+            A nested dictionary where keys are thematic IDs and values are dictionaries
+            mapping relevant distances to `ProcessResult`[] objects.
+            Required if not provided via internal state.
+        thematic_data : AlignerFeatureCollection, optional
+            The collection containing the original thematic geometries.
+            Defaults to `self.thematic_data`.
+        diff_metric : DiffMetric, optional
+            The metric used to quantify the geometric change.
+            Defaults to `DiffMetric.SYMMETRICAL_AREA_CHANGE`.
 
-                Returns
-                -------
-                Dict[ThematicId, Dict[float, float]]
-                    A nested dictionary where each thematic ID maps to a dictionary of
-                    distances and their corresponding calculated metric values.
+        Returns
+        -------
+        Dict[ThematicId, Dict[float, float]]
+            A nested dictionary where each thematic ID maps to a dictionary of
+            distances and their corresponding calculated metric values.
 
-                Raises
-                ------
-                ValueError
-                    If `dict_processresults` is not provided and cannot be resolved.
+        Raises
+        ------
+        ValueError
+            If `dict_processresults` is not provided and cannot be resolved.
 
-                Notes
-                -----
-                The calculation involves three primary geometric components:
-                1. **Original Geometry**: The thematic feature before alignment.
-                2. **Result Geometry**: The feature after alignment at a specific distance.
-                3. **Reference Union**: The combined geometry of all reference data, used
-                   to contextualize the change.
+        Notes
+        -----
+        The calculation involves three primary geometric components:
+        1. **Original Geometry**: The thematic feature before alignment.
+        2. **Result Geometry**: The feature after alignment at a specific distance.
+        3. **Reference Union**: The combined geometry of all reference data, used
+           to contextualize the change.
 
 
 
-                ```{mermaid}
-                graph LR
-                    PR[Process Results] --> Calc[Metric Calculator]
-                    Orig[Original Geometries] --> Calc
-                    Ref[Reference Union] --> Calc
-                    Calc --> Output[Distance-Metric Map]
-                ```
+        ```{mermaid}
+        graph LR
+            PR[Process Results] --> Calc[Metric Calculator]
+            Orig[Original Geometries] --> Calc
+            Ref[Reference Union] --> Calc
+            Calc --> Output[Distance-Metric Map]
+        ```
 
-                Examples
-                --------
-                >>> metrics = aligner.get_difference_metrics_for_thematic_data(
-                ...     dict_processresults=my_results,
-                ...     diff_metric=DiffMetric.AREA_CHANGE
-                ... )
-                >>> # Get area change for feature 'A' at distance 0.5
-                >>> print(metrics['A'][0.5])
-                ```
-            """
+        Examples
+        --------
+        >>> metrics = aligner.get_difference_metrics_for_thematic_data(
+        ...     dict_processresults=my_results,
+        ...     diff_metric=DiffMetric.AREA_CHANGE
+        ... )
+        >>> # Get area change for feature 'A' at distance 0.5
+        >>> print(metrics['A'][0.5])
+        ```
+        """
         if dict_processresults is None:
             raise ValueError("dict_processresults is required")
         if thematic_data is None:
             thematic_data = self.thematic_data
         diffs = {}
-        for key,feat in thematic_data.features.items():
+        for key, feat in thematic_data.features.items():
             original_geom = feat.geometry
             diffs[key] = get_geometry_difference_metrics_from_processresults(
                 dict_processresult=dict_processresults[key],
@@ -1487,7 +1542,11 @@ class Aligner:
         return diffs
 
     def _evaluate(
-        self, id_theme, geom_predicted, base_formula_field=FORMULA_FIELD_NAME, formula=None
+        self,
+        id_theme,
+        geom_predicted,
+        base_formula_field=FORMULA_FIELD_NAME,
+        formula=None,
     ):
         """
         function that evaluates a predicted geometry and returns a properties-dictionary
