@@ -1,5 +1,6 @@
 import json
 from datetime import datetime
+from typing import Dict, Optional, Any
 
 import numpy as np
 
@@ -21,35 +22,83 @@ from brdr.logger import Logger
 
 # TODO improve logic. Do first a quickscan on x meter to detect the not_changed ones, and afterwards a full calculation
 def update_featurecollection_to_actual_grb(
-    featurecollection,
-    id_theme_fieldname=None,
-    base_formula_field=FORMULA_FIELD_NAME,
-    grb_type=GRBType.ADP,
-    max_distance_for_actualisation=2,
-    max_predictions=-1,
-    full_reference_strategy=FullReferenceStrategy.NO_FULL_REFERENCE,
-    multi_to_best_prediction=True,
-    feedback=None,
-    crs=DEFAULT_CRS,
-    attributes=True,
-    max_workers=None,
-):
+    featurecollection: Dict[str, Any],
+    id_theme_fieldname: Optional[str] = None,
+    base_formula_field: str = FORMULA_FIELD_NAME,
+    grb_type: GRBType = GRBType.ADP,
+    max_distance_for_actualisation: float = 2.0,
+    max_predictions: int = -1,
+    full_reference_strategy: FullReferenceStrategy = FullReferenceStrategy.NO_FULL_REFERENCE,
+    multi_to_best_prediction: bool = True,
+    feedback: Any = None,
+    crs: str = DEFAULT_CRS,
+    attributes: bool = True,
+    max_workers: Optional[int] = None,
+) -> Dict[str, Any]:
     """
-    Function to update a thematic featurecollection to the most actual version of GRB.
-    Important to notice that the featurecollection needs a 'formula' for the base-alignment.
+    Update a thematic feature collection to the most recent version of the GRB.
 
-    :param featurecollection: Thematic featurecollection
-    :param id_theme_fieldname: property-fieldname that states which property has to be used as unique ID
-    :param base_formula_field: Name of the property-field that holds the original/base formula of the geometry, that has to be compared with the actual formula.
-    :param max_distance_for_actualisation: Maximum relevant distance that is used to search and evaluate resulting geometries. All relevant distance between 0 and this max_distance are used to search, with a interval of 0.1m.
-    :param feedback:  (default None): a QGIS feedback can be added to push all the logging to QGIS
-    :param attributes: (boolean, default=True): States of all original attributes has to be added to the result
-        :param max_workers:
-    :return: featurecollection
+    This function automates the alignment process by first identifying which
+    features are 'affected' by changes in the GRB reference layer within a
+    specific timeframe. It then calculates and evaluates new alignment
+    predictions for those affected features.
+
+    Parameters
+    ----------
+    featurecollection : Dict[str, Any]
+        The thematic data as a GeoJSON-like dictionary.
+    id_theme_fieldname : str, optional
+        The property field name containing the unique ID for each feature.
+    base_formula_field : str, default FORMULA_FIELD_NAME
+        Name of the attribute field that stores the existing alignment formula
+        (JSON string). This is used to determine the last version date.
+    grb_type : GRBType, default GRBType.ADP
+        The type of GRB reference data to align against.
+    max_distance_for_actualisation : float, default 2.0
+        Maximum distance (in meters) to search for potential alignments.
+        The function checks intervals of 0.1m up to this value.
+    max_predictions : int, default -1
+        Maximum number of alignment predictions to return. -1 returns all.
+    full_reference_strategy : FullReferenceStrategy, default NO_FULL_REFERENCE
+        Determines how strictly the result must follow the reference geometry.
+    multi_to_best_prediction : bool, default True
+        If True, merges multiple results into the single most likely prediction.
+    feedback : Any, optional
+        Feedback object (e.g., QgsFeedback) for progress reporting and logging.
+    crs : str, default DEFAULT_CRS
+        The Coordinate Reference System for processing.
+    attributes : bool, default True
+        Whether to include the original thematic attributes in the result.
+    max_workers : int, optional
+        The number of parallel threads to use for processing.
+
+    Returns
+    -------
+    Dict[str, Any]
+        A GeoJSON-like dictionary containing the evaluated predictions and
+        updated alignment formulas.
+
+    Notes
+    -----
+    The function follows a specific lifecycle to optimize performance:
+
+    1. **Initialization**: Loads thematic data and the actual GRB reference data.
+    2. **Temporal Analysis**: Extracts the `last_version_date` from the features'
+       formulas to determine the relevant GRB change-window.
+    3. **Spatial Filtering**: Uses `get_affected_by_grb_change` to isolate only
+       those geometries where the underlying GRB has actually changed.
+    4. **Alignment**: Executes the `Aligner.evaluate` logic only on 'affected'
+       features.
+
+
+
+    Raises
+    ------
+    ValueError
+        If the CRS is unsupported or if the input feature collection is malformed.
     """
     last_version_date = None
     logger = Logger(feedback)
-
 
     # Initiate a Aligner to reference thematic features to the actual borders
     aligner_config= AlignerConfig()
@@ -69,7 +118,6 @@ def update_featurecollection_to_actual_grb(
         )
         / 100
     ]
-
 
     for id_theme,feature in aligner.thematic_data.features.items():
         try:
@@ -131,7 +179,6 @@ def update_featurecollection_to_actual_grb(
     else:
         unaffected = []
         affected = list(aligner.thematic_data.features.keys())
-
 
     # EXECUTE evaluation
     aligner_result = aligner.evaluate(
