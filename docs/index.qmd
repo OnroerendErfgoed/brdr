@@ -1,16 +1,4 @@
-```{mermaid}
-classDiagram
-    class Aligner {
-        +load_thematic_data()
-        +load_reference_data()
-        +process()
-    }
-    class AlignerResult {
-        +Dict steden
-        +render()
-    }
-    Aligner "1" --> "*" AlignerResult : generate
-```
+
 ## Automatische API Referentie
 Hieronder genereert quartodoc de details van de klassen:
 
@@ -270,3 +258,17 @@ and [Flanders Heritage Agency](https://www.onroerenderfgoed.be/flanders-heritage
 
 ![https://athumi.be/en/](figures/athumi_logo-250x84.png)
 ![https://www.onroerenderfgoed.be/flanders-heritage-agency](figures/Vlaanderen_is_erfgoed-250x97.png)
+
+```{mermaid}
+classDiagram
+    class Aligner {
+        +load_thematic_data()
+        +load_reference_data()
+        +process()
+    }
+    class AlignerResult {
+        +Dict steden
+        +render()
+    }
+    Aligner "1" --> "*" AlignerResult : generate
+```

@@ -1,5 +1,5 @@
 from brdr.aligner import Aligner
-from brdr.be.grb.grb import update_to_actual_grb
+from brdr.be.grb.grb import update_featurecollection_to_actual_grb
 from brdr.be.grb.loader import GRBFiscalParcelLoader
 from brdr.constants import EVALUATION_FIELD_NAME, FORMULA_FIELD_NAME
 from brdr.loader import GeoJsonLoader
@@ -70,7 +70,7 @@ if __name__ == "__main__":
     featurecollection_base_result = fcs["result"]
     print(featurecollection_base_result)
     # Update Featurecollection to actual version
-    featurecollection = update_to_actual_grb(
+    featurecollection = update_featurecollection_to_actual_grb(
         featurecollection_base_result,
         #base_aligner.name_thematic_id,
         base_formula_field=FORMULA_FIELD_NAME,
@@ -89,7 +89,7 @@ if __name__ == "__main__":
         geojson = featurecollection["result"]
         print(geojson)
 
-    featurecollection = update_to_actual_grb(
+    featurecollection = update_featurecollection_to_actual_grb(
         featurecollection_base_result,
         #base_aligner.name_thematic_id,
         base_formula_field=FORMULA_FIELD_NAME,
@@ -108,7 +108,7 @@ if __name__ == "__main__":
         geojson = featurecollection["result"]
         print(geojson)
 
-    featurecollection = update_to_actual_grb(
+    featurecollection = update_featurecollection_to_actual_grb(
         featurecollection_base_result,
         #base_aligner.name_thematic_id,
         base_formula_field=None,

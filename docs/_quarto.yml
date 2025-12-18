@@ -35,56 +35,70 @@ quartodoc:
   package: brdr
   sidebar: reference/_sidebar.yml
   css: reference/_styles-quartodoc.css
-
   sections:
-
     - title: Aligner
-      package: brdr
+      package: brdr.aligner
       desc: Aligner class of the brdr package.
       contents:
-        # Functies: alleen deze twee
-        - aligner.Aligner.process # voorbeeldfunctie
-        - feature_data.AlignerFeatureCollection
-
-        # Klasse: alleen de gewenste methoden
-        - name: aligner.Aligner
-          members:
-            - predict
-            - evaluate
-
-    - title: AlignerResult
-      package: brdr.aligner
-      desc: AlignerResult class of the brdr package.
-      contents:
-        # the functions being documented in the package.
-        # you can refer to anything: class methods, modules, etc..
+        - Aligner
         - AlignerResult
-    - title: Loaders
-      package: brdr.loader
-      desc: Loaders to load data
+    - title: AlignerFeatures
+      package: brdr.feature_data
+      desc: Classes for the thematic and reference data to be used by the Aligner
       contents:
-        - Loader
-        - DictLoader
-        - GeoJsonLoader
-        - GeoJsonFileLoader
-        - GeoJsonUrlLoader
-    - title: GRB
-      package: brdr.be.grb.loader
-      desc: GRB specific loaders
-      contents:
-        - GRBActualLoader
-        - GRBFiscalParcelLoader
-        - GRBSpecificDateParcelLoader
-    - title: Enumerators
-      package: brdr.enums
-      desc: Enums used in the brdr package.
-      contents:
-        - FullReferenceStrategy
-        - OpenDomainStrategy
+        - AlignerFeatureCollection
+        - AlignerFeature
+#    - title: Loaders
+#      package: brdr.loader
+#      desc: Loaders to load data
+#      contents:
+#        - Loader
+#        - DictLoader
+#        - GeoJsonLoader
+#        - GeoJsonFileLoader
+#        - GeoJsonUrlLoader
+#    - title: Processors
+#      package: brdr.processor
+#      desc: Processor algorithms
+#      contents:
+#        - BaseProcessor
+#        - AlignerGeometryProcessor
+#        - DieussaertGeometryProcessor
+#        - NetworkGeometryProcessor
+#        - SnapGeometryProcessor
+#        - TopologyProcessor
+#    - title: Enumerators
+#      package: brdr.enums
+#      desc: Enums used in the brdr package.
+#      contents:
+#        - FullReferenceStrategy
+#        - AlignerResultType
+#        - OpenDomainStrategy
+#        - DiffMetric
+#        - ProcessRemark
+#        - Evaluation
+#        - SnapStrategy
+#        - PredictionStrategy
+#        - ProcessorID
     - title: Typings
       package: brdr.typings
       desc: Typings used in 'brdr'
       contents:
         - ProcessResult
+#    - title: GRB (Flanders-specific)
+#      package: brdr.be.grb
+#      desc: GRB (Flanders-specific) classes,methods, enumerators,...
+#      contents:
+#        - name: loader.GRBActualLoader
+#        - name: loader.GRBFiscalParcelLoader
+#        - name: loader.GRBSpecificDateParcelLoader
+#        - name: grb.update_featurecollection_to_actual_grb
+#        - name: enums.GRBType
+#    - title: OSM
+#      package: brdr.osm
+#      desc: OpenStreetMap (OSM) classes,methods, enumerators,...
+#      contents:
+#        - name: loader.OSMLoader
+
 
           

@@ -2,7 +2,7 @@ import os
 from datetime import datetime
 
 from brdr.aligner import Aligner
-from brdr.be.grb.grb import update_to_actual_grb
+from brdr.be.grb.grb import update_featurecollection_to_actual_grb
 from brdr.be.grb.loader import GRBFiscalParcelLoader
 from brdr.be.oe.loader import OnroerendErfgoedLoader
 from brdr.constants import (
@@ -42,7 +42,7 @@ max_distance_for_actualisation = 2
 # =====
 # Initiate an Aligner to create a themeset that is base-referenced on a specific
 # base_year
-base_aligner = Aligner(max_workers=None)
+base_aligner = Aligner()
 print("start loading OE-objects")
 # Load the thematic data to evaluate
 loader = OnroerendErfgoedLoader(bbox=bbox, partition=0)
@@ -51,18 +51,18 @@ base_aligner.load_thematic_data(loader)
 
 # Exclude objects bigger than specified area
 keys_to_exclude = []
-nr_features = len(base_aligner.dict_thematic)
-for key in base_aligner.dict_thematic:
-    if base_aligner.dict_thematic[key].area > excluded_area:
-        keys_to_exclude.append(key)
-        counter_excluded = counter_excluded + 1
-        print("geometrie excluded; bigger than " + str(excluded_area) + ": " + str(key))
-for x in keys_to_exclude:
-    del base_aligner.dict_thematic[x]
+nr_features = len(base_aligner.thematic_data.features)
+# for key in base_aligner.base_aligner.thematic_data.features.keys():
+#     if base_aligner.base_aligner.base_aligner.thematic_data.features.get(key).geometry.area > excluded_area:
+#         keys_to_exclude.append(key)
+#         counter_excluded = counter_excluded + 1
+#         print("geometrie excluded; bigger than " + str(excluded_area) + ": " + str(key))
+# for x in keys_to_exclude:
+#     del base_aligner.dict_thematic[x]
 
 print(
     "Number of OE-thematic features loaded into base-aligner: "
-    + str(len(base_aligner.dict_thematic))
+    + str(len(base_aligner.thematic_data.features))
 )
 base_aligner.load_reference_data(
     GRBFiscalParcelLoader(year=base_year, aligner=base_aligner, partition=1000)
@@ -87,12 +87,11 @@ featurecollection_base_result = processresults["result"]
 starttime = datetime.now()
 print (starttime)
 print("Actualise base objects")
-fcs = update_to_actual_grb(
+fcs = update_featurecollection_to_actual_grb(
     featurecollection_base_result,
-    base_aligner.name_thematic_id,
+    #base_aligner.name_thematic_id,
     base_formula_field=FORMULA_FIELD_NAME,
     max_distance_for_actualisation=max_distance_for_actualisation,
-    max_workers=None
 )
 
 write_geojson(

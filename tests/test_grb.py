@@ -7,7 +7,7 @@ from shapely import from_wkt
 
 from brdr.aligner import Aligner
 from brdr.be.grb.enums import GRBType
-from brdr.be.grb.grb import update_to_actual_grb
+from brdr.be.grb.grb import update_featurecollection_to_actual_grb
 from brdr.be.grb.loader import GRBActualLoader, GRBFiscalParcelLoader
 from brdr.be.grb.loader import GRBSpecificDateParcelLoader
 from brdr.be.grb.utils import get_affected_by_grb_change
@@ -299,7 +299,7 @@ class TestGrb:
         }
 
         # Update Featurecollection to actual version
-        featurecollection = update_to_actual_grb(
+        featurecollection = update_featurecollection_to_actual_grb(
             featurecollection_base_result,
             name_thematic_id,
             base_formula_field="brdr_base_formula",

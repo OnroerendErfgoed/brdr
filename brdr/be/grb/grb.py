@@ -20,7 +20,7 @@ from brdr.logger import Logger
 
 
 # TODO improve logic. Do first a quickscan on x meter to detect the not_changed ones, and afterwards a full calculation
-def update_to_actual_grb(
+def update_featurecollection_to_actual_grb(
     featurecollection,
     id_theme_fieldname=None,
     base_formula_field=FORMULA_FIELD_NAME,
