@@ -1,6 +1,7 @@
 import heapq
 from abc import ABC
 from abc import abstractmethod
+from typing import List, Any
 
 from shapely import GeometryCollection
 from shapely import LinearRing
@@ -47,7 +48,7 @@ from brdr.geometry_utils import snap_geometry_to_reference
 from brdr.geometry_utils import to_multi
 from brdr.logger import Logger
 from brdr.topo_utils import _dissolve_topo, _generate_topo, _topojson_id_to_arcs
-from brdr.typings import ProcessResult
+from brdr.typings import ProcessResult, ThematicId
 from brdr.utils import (
     get_relevant_polygons_from_geom,
     build_reverse_index_wkb,
@@ -57,7 +58,34 @@ from brdr.utils import unary_union_result_dict
 
 
 class BaseProcessor(ABC):
-    def __init__(self, config: ProcessorConfig, feedback=None):
+    """
+    Abstract base class for geometric alignment processors.
+
+    The processor is responsible for the core alignment logic between thematic
+    geometries and reference data. It provides a standardized pipeline for
+    processing, cleaning, and validating resulting geometries.
+
+    Attributes
+    ----------
+    config : ProcessorConfig
+        Configuration object containing thresholds and strategy settings.
+    feedback : Any, optional
+        Feedback mechanism for reporting progress or logs.
+    logger : Logger
+        Internal logger for debugging and user feedback.
+    """
+
+    def __init__(self, config: ProcessorConfig, feedback: Any = None):
+        """
+        Initializes the BaseProcessor.
+
+        Parameters
+        ----------
+        config : ProcessorConfig
+            Configuration settings for the alignment engine.
+        feedback : Any, optional
+            Optional feedback handler for the processing status.
+        """
         self.feedback = feedback
         self.logger = Logger(feedback)
         self.config = config
@@ -66,78 +94,117 @@ class BaseProcessor(ABC):
     def process(
         self,
         *,
-        correction_distance,
+        correction_distance: float,
         reference_data: AlignerFeatureCollection,
         input_geometry: BaseGeometry,
-        mitre_limit,
-        relevant_distance,
+        mitre_limit: float,
+        relevant_distance: float,
         thematic_data: AlignerFeatureCollection,
-        id_thematic
+        id_thematic: ThematicId,
     ) -> ProcessResult:
         """
-        method to align a geometry to the reference layer
+        Abstract method to align a single geometry to the reference layer.
 
-        Returns:
-            ProcessResult : A dict containing the resulting geometries:
+        Parameters
+        ----------
+        correction_distance : float
+            Small buffer distance used to filter out geometric noise.
+        reference_data : AlignerFeatureCollection
+            The collection of reference geometries (the 'target').
+        input_geometry : BaseGeometry
+            The thematic geometry to be aligned.
+        mitre_limit : float
+            The mitre limit used for buffering operations.
+        relevant_distance : float
+            The maximum distance within which alignment should occur.
+        thematic_data : AlignerFeatureCollection
+            The full thematic collection for context.
+        id_thematic : Any
+            The unique identifier of the feature being processed.
 
-            *   result (BaseGeometry): The resulting output geometry
-            *   result_diff (BaseGeometry): The resulting difference output geometry
-            *   result_diff_plus (BaseGeometry): The resulting positive difference
-                output geometry
-            *   result_diff_min (BaseGeometry): The resulting negative difference output
-                geometry
-            *   relevant_intersection (BaseGeometry): The relevant_intersection
-            *   relevant_difference (BaseGeometry): The relevant_difference
-            *   remark (str): remarks collected when processing the geometry
+        Returns
+        -------
+        ProcessResult
+            A dictionary containing the resulting geometry and difference metrics.
         """
-        # Processing based on thematic geom_type and reference_geom_type
         pass
 
     def _postprocess_preresult(
         self,
-        geom_preresult,
-        geom_thematic,
-        relevant_intersection,
-        relevant_diff,
-        relevant_distance,
-        reference_union,
-        mitre_limit,
-        correction_distance,
+        geom_preresult: BaseGeometry,
+        geom_thematic: BaseGeometry,
+        relevant_intersection: BaseGeometry,
+        relevant_diff: BaseGeometry,
+        relevant_distance: float,
+        reference_union: BaseGeometry,
+        mitre_limit: float,
+        correction_distance: float,
     ) -> ProcessResult:
         """
-        Postprocess the preresulting geometry with the following actions to create the final result
-        *Corrections for areas that differ more than the relevant distance
-        *slivers
-        *Inner holes (donuts) /multipolygons
-        *validity
-        *Circles (Polsby-Popper)
-        *Null/Empty-values
+        Refines the initial alignment result through a cleaning pipeline.
 
-        Args:
-            geom_preresult (BaseGeometry): The preresulting geometry to postprocess
-            geom_thematic (BaseGeometry): The input geometry
+        This method applies a series of geometric corrections to ensure the output
+        is valid, free of slivers, and respects the specified tolerances.
 
-        Returns:
-            ProcessResult: A dictionary containing the resulting output geometries:
+        Parameters
+        ----------
+        geom_preresult : BaseGeometry
+            The raw geometry result from the alignment engine.
+        geom_thematic : BaseGeometry
+            The original input geometry.
+        relevant_intersection : BaseGeometry
+            The intersection part relevant to the alignment.
+        relevant_diff : BaseGeometry
+            The difference part relevant to the alignment.
+        relevant_distance : float
+            The maximum search distance used.
+        reference_union : BaseGeometry
+            The union of all reference features for clipping/context.
+        mitre_limit : float
+            Limit for sharp corners in buffering.
+        correction_distance : float
+            Small distance for noise reduction.
 
-            *   result (BaseGeometry): The resulting output geometry
-            *   result_diff (BaseGeometry): The resulting difference output geometry
-            *   result_diff_plus (BaseGeometry): The resulting positive difference
-                output geometry
-            *   result_diff_min (BaseGeometry): The resulting negative difference output
-                geometry
-            *   remark (str): Remark when processing the geometry
+        Returns
+        -------
+        ProcessResult
+            A dictionary containing the cleaned 'result' and its differences
+            compared to the original input.
+
+        Notes
+        -----
+        The post-processing pipeline performs the following steps:
+        1. **Empty Check**: Returns empty collection if result is null.
+        2. **Type Validation**: Ensures geometry type remains consistent.
+        3. **Stability Checks**: Reverts to original if it's a circle or unchanged.
+        4. **Noise Filtering**: Removes slivers and gaps smaller than `correction_distance`.
+        5. **Hole Filling**: Cleans up internal 'donuts' within the geometry.
+        6. **Diff Calculation**: Generates `result_diff_plus` and `result_diff_min`.
+
+
+
+        ```{mermaid}
+        graph TD
+            Pre[Pre-result] --> Valid{Is Valid?}
+            Valid -- No --> Empty[Return Empty]
+            Valid -- Yes --> Circle{Is Circle?}
+            Circle -- Yes --> Orig[Return Original]
+            Circle -- No --> Clean[Sliver & Gap Removal]
+            Clean --> Diff[Calculate Differences]
+            Diff --> Final[ProcessResult]
+        ```
         """
         remarks = []
         geom_thematic = make_valid(geom_thematic)
         if geom_preresult is None or geom_preresult.is_empty:
-            geom_preresult =GeometryCollection()
+            geom_preresult = GeometryCollection()
             remark = ProcessRemark.RESULT_EMPTY_RETURNED
             remarks.append(remark)
             self.logger.feedback_warning(remark)
+
         if to_multi(geom_preresult).geom_type != to_multi(geom_thematic).geom_type:
-            geom_preresult =GeometryCollection()
-            remark=ProcessRemark.CHANGED_GEOMETRYTYPE_EMPTY_RETURNED
+            geom_preresult = GeometryCollection()
+            remark = ProcessRemark.CHANGED_GEOMETRYTYPE_EMPTY_RETURNED
             remarks.append(remark)
             self.logger.feedback_warning(remark)
 
@@ -168,7 +235,7 @@ class BaseProcessor(ABC):
                     "properties": {REMARK_FIELD_NAME: remarks},
                 }
             )
-        # Process array
+
         buffer_distance = relevant_distance / 2
         result = []
         geom_thematic_for_add_delete = geom_thematic
@@ -180,9 +247,6 @@ class BaseProcessor(ABC):
             geom_preresult = safe_intersection(geom_preresult, reference_union)
 
         if not (geom_thematic is None or geom_thematic.is_empty):
-            # Correction for circles
-            # calculate ratio to see if it is a circle, and keep the original geometry
-            #  if a circle: (Polsby-Popper score)
             if (
                 get_shape_index(geom_thematic.area, geom_thematic.length)
                 > self.config.threshold_circle_ratio
@@ -191,10 +255,12 @@ class BaseProcessor(ABC):
                 remarks.append(remark)
                 self.logger.feedback_debug(remark)
                 return unary_union_result_dict(
-                    {"result": geom_thematic, "properties": {REMARK_FIELD_NAME: remarks}}
+                    {
+                        "result": geom_thematic,
+                        "properties": {REMARK_FIELD_NAME: remarks},
+                    }
                 )
 
-            # Correction for unchanged geometries
             if geometric_equality(
                 geom_preresult,
                 geom_thematic,
@@ -205,16 +271,16 @@ class BaseProcessor(ABC):
                 remarks.append(remark)
                 self.logger.feedback_debug(remark)
                 return unary_union_result_dict(
-                    {"result": geom_thematic, "properties": {REMARK_FIELD_NAME: remarks}}
+                    {
+                        "result": geom_thematic,
+                        "properties": {REMARK_FIELD_NAME: remarks},
+                    }
                 )
 
-        # Corrections for areas that differ more than the relevant distance
         geom_thematic_dissolved = buffer_pos(
             buffer_neg(
                 buffer_pos(
-                    geom_preresult,
-                    correction_distance,
-                    mitre_limit=mitre_limit,
+                    geom_preresult, correction_distance, mitre_limit=mitre_limit
                 ),
                 2 * correction_distance,
                 mitre_limit=mitre_limit,
@@ -222,22 +288,20 @@ class BaseProcessor(ABC):
             correction_distance,
             mitre_limit=mitre_limit,
         )
-        # geom_symdiff = self._safe_symmetric_difference(geom_thematic,
-        # geom_thematic_dissolved)
+
         geom_diff_add = safe_difference(
             geom_thematic_for_add_delete, geom_thematic_dissolved
         )
         geom_diff_delete = safe_difference(
             geom_thematic_dissolved, geom_thematic_for_add_delete
         )
+
         geom_diff_removed = safe_difference(
             geom_thematic_dissolved,
             safe_intersection(
                 geom_diff_delete,
                 buffer_neg_pos(
-                    geom_diff_delete,
-                    buffer_distance,
-                    mitre_limit=mitre_limit,
+                    geom_diff_delete, buffer_distance, mitre_limit=mitre_limit
                 ),
             ),
         )
@@ -245,13 +309,10 @@ class BaseProcessor(ABC):
             geom_diff_removed,
             safe_intersection(
                 geom_diff_add,
-                buffer_neg_pos(
-                    geom_diff_add,
-                    buffer_distance,
-                    mitre_limit=mitre_limit,
-                ),
+                buffer_neg_pos(geom_diff_add, buffer_distance, mitre_limit=mitre_limit),
             ),
         )
+
         geom_thematic_preresult = buffer_pos(
             buffer_neg(
                 buffer_pos(
@@ -265,12 +326,11 @@ class BaseProcessor(ABC):
             correction_distance,
             mitre_limit=mitre_limit,
         )
-        # Correction for Inner holes(donuts) / multipolygons
-        # fill and remove gaps
-        # #269 improvement: when relevant_distance very big (fe 100m) it could happen that parts of multipolygon-results will be removed unintentionally because part smaller than negative buffer
+
         geom_thematic_cleaned_holes = fill_and_remove_gaps(
             geom_thematic_preresult, buffer_distance
         )
+
         geom_thematic_result = buffer_pos(
             buffer_neg(
                 buffer_pos(
@@ -286,21 +346,15 @@ class BaseProcessor(ABC):
         )
         geom_thematic_result = make_valid(remove_repeated_points(geom_thematic_result))
 
-        # Correction for empty preresults
         if geom_thematic_result.is_empty or geom_thematic_result is None:
             geom_thematic_result = GeometryCollection()
             remark = ProcessRemark.RESULT_EMPTY_RETURNED
             remarks.append(remark)
             self.logger.feedback_warning(remark)
 
-        # group all initial multipolygons into a new resulting dictionary
         result.append(geom_thematic_result)
-
-        # create all resulting geometries
         geom_thematic_result = safe_unary_union(result)
 
-        # negative and positive buffer is added to the difference-calculations, to
-        # remove 'very small' differences (smaller than the correction distance)
         geom_result_diff = buffer_pos(
             buffer_neg(
                 safe_symmetric_difference(geom_thematic_result, geom_thematic),
@@ -312,10 +366,7 @@ class BaseProcessor(ABC):
         )
         geom_result_diff_plus = buffer_pos(
             buffer_neg(
-                safe_difference(
-                    geom_thematic_result,
-                    geom_thematic,
-                ),
+                safe_difference(geom_thematic_result, geom_thematic),
                 correction_distance,
                 mitre_limit=mitre_limit,
             ),
@@ -324,10 +375,7 @@ class BaseProcessor(ABC):
         )
         geom_result_diff_min = buffer_pos(
             buffer_neg(
-                safe_difference(
-                    geom_thematic,
-                    geom_thematic_result,
-                ),
+                safe_difference(geom_thematic, geom_thematic_result),
                 correction_distance,
                 mitre_limit=mitre_limit,
             ),
@@ -349,28 +397,50 @@ class BaseProcessor(ABC):
 
     def _get_connection_line(
         self,
-        thematic_points,
-        thematic_difference,
-        point,
-        reference_intersection,
-        reference_coords_intersection,
-        relevant_distance,
-    ):
-        # factor = 1.001
+        thematic_points: GeometryCollection,
+        thematic_difference: BaseGeometry,
+        point: BaseGeometry,
+        reference_intersection: BaseGeometry,
+        reference_coords_intersection: BaseGeometry,
+        relevant_distance: float,
+    ) -> LineString:
+        """
+        Creates a connection line between thematic points and reference intersections.
 
+        Parameters
+        ----------
+        thematic_points : GeometryCollection
+            Points extracted from the thematic geometry.
+        thematic_difference : BaseGeometry
+            The calculated difference area.
+        point : BaseGeometry
+            The specific point being analyzed.
+        reference_intersection : BaseGeometry
+            The intersection with the reference data.
+        reference_coords_intersection : BaseGeometry
+            Coordinate points from the reference intersection.
+        relevant_distance : float
+            Threshold distance for snapping.
+
+        Returns
+        -------
+        LineString
+            A line connecting the geometries, or an empty LineString if invalid.
+        """
         closest_points = heapq.nsmallest(
             2, thematic_points.geoms, key=lambda p: point.distance(p)
         )
         points = [closest_points[0], point, closest_points[-1]]
         line_theme = LineString(points)
+
         dist_1 = closest_points[0].distance(thematic_difference)
         dist_2 = closest_points[-1].distance(thematic_difference)
+
+        line_theme_furthest_point = point
         if dist_1 > dist_2:
             line_theme_furthest_point = closest_points[0]
         elif dist_1 < dist_2:
             line_theme_furthest_point = closest_points[-1]
-        else:
-            line_theme_furthest_point = point
 
         if (
             not reference_coords_intersection is None
@@ -379,7 +449,6 @@ class BaseProcessor(ABC):
             line_ref = shortest_line(
                 line_theme_furthest_point, reference_coords_intersection
             )
-
             if line_ref.length > relevant_distance * 1.5:
                 line_ref = shortest_line(
                     line_theme_furthest_point, reference_intersection
@@ -387,20 +456,11 @@ class BaseProcessor(ABC):
         else:
             line_ref = shortest_line(line_theme_furthest_point, reference_intersection)
 
-        # connection_line = scale(connection_line, factor, factor)
-        # line_theme = scale(line_theme, factor, factor)
-        # line_ref= scale(line_ref, factor, factor)
         connection_line = safe_unary_union([line_theme, line_ref])
-        # To scale or not to scale, that's the question.
-        # When vertices are used it is possibly not necessary to scale because we use the vertices of the segmentized input_geometry, so no problem with floating point-intersections.
-        # When we do not use vertices it could be necessary (due to floating point error) to make sure lines are intersecting so they are split on these intersecting points
 
         if (
             round(connection_line.length, RELEVANT_DISTANCE_DECIMALS)
             > relevant_distance * self.config.partial_snap_max_segment_length * 2
-            # * factor
-            # * factor
-            # * 4  # There could be a better way to exclude invalid connection-lines?
         ):
             return LineString()
 
@@ -408,19 +468,37 @@ class BaseProcessor(ABC):
 
     def _create_virtual_reference(
         self,
-        geometry,
-        relevant_distance,
-        reference_union,
-        correction_distance,
-        mitre_limit,
-        use_outer_boundary=False,
-    ):
+        geometry: BaseGeometry,
+        relevant_distance: float,
+        reference_union: BaseGeometry,
+        correction_distance: float,
+        mitre_limit: float,
+        use_outer_boundary: bool = False,
+    ) -> BaseGeometry:
         """
-        Functions that creates a 'virtual reference polygon' for areas that are not covered by reference-polygons.
-        :param geometry:
-        :param relevant_distance:
-        :param use_outer_boundary: when outer is True, the outer boundary is used, inner is not used
-        :return:
+        Creates a 'virtual reference polygon' for areas not covered by reference data.
+
+        Useful for 'Onbekend Terrein' (Open Domain) strategies.
+
+        Parameters
+        ----------
+        geometry : BaseGeometry
+            The thematic geometry.
+        relevant_distance : float
+            Maximum alignment distance.
+        reference_union : BaseGeometry
+            Union of all actual reference features.
+        correction_distance : float
+            Small buffer for noise reduction.
+        mitre_limit : float
+            Mitre limit for buffering.
+        use_outer_boundary : bool, optional
+            If True, considers the outer boundary for the virtual polygon.
+
+        Returns
+        -------
+        BaseGeometry
+            The generated virtual reference geometry.
         """
         buffer_distance = relevant_distance / 2
         geom_thematic_buffered = make_valid(
@@ -436,60 +514,67 @@ class BaseProcessor(ABC):
         )
         virtual_reference = safe_difference(
             geom_thematic_buffered, clip_ref_thematic_buffered
-        )  # Both OD-parts are SNAPPED added
-        if (
-            use_outer_boundary
-        ):  # when outer is True, the outer boundary is used, inner is not used
+        )
+
+        if use_outer_boundary:
             geom_1 = safe_difference(geometry, virtual_reference)
             geom_2 = buffer_neg_pos(geom_1, buffer_distance)
             geom_3 = safe_intersection(geom_2, geometry)
             virtual_reference = safe_unary_union([geom_3, virtual_reference])
+
         return virtual_reference
 
     @staticmethod
-    def _add_multi_polygons_from_geom_to_array(geom: BaseGeometry, array):
+    def _add_multi_polygons_from_geom_to_array(
+        geom: BaseGeometry, array: List[BaseGeometry]
+    ) -> List[BaseGeometry]:
         """
-        Append valid polygons and multipolygons extracted from a given geometry to an
-        existing array.
+        Extracts polygons from a geometry and appends them to an array.
 
-        Args:
-            geom (BaseGeometry): The input geometry to process.
-            array (list): An existing list to store valid polygons and multipolygons.
+        Parameters
+        ----------
+        geom : BaseGeometry
+            Input geometry (could be a GeometryCollection).
+        array : List[BaseGeometry]
+            Target list to append polygons to.
 
-        Returns:
-            list: A list containing valid polygons and multipolygons extracted from the
-                input geometry.
+        Returns
+        -------
+        List[BaseGeometry]
+            The updated list containing extracted polygons.
         """
-        if geom.is_empty or geom is None:
-            # If the input geometry is empty or None, do nothing.
-            pass
-        else:
-            # Create a GeometryCollection from the input geometry.
-            geometry_collection = GeometryCollection(geom)  # noqa
+        if not (geom.is_empty or geom is None):
+            geometry_collection = GeometryCollection(geom)
             for g in geometry_collection.geoms:
-                # Ensure each sub-geometry is valid.
                 g = make_valid(g)
                 if str(g.geom_type) in ["Polygon", "MultiPolygon"]:
-                    # Append valid polygons and multipolygons to the array.
                     array.append(g)
         return array
 
     @staticmethod
-    def _calculate_inner_outer(input_geometry, relevant_distance):
+    def _calculate_inner_outer(
+        input_geometry: BaseGeometry, relevant_distance: float
+    ) -> tuple:
         """
-        calculate the inner and outer of a polygon for performance gain when using dieussaert_algorithm
-        :param input_geometry:
-        :param relevant_distance:
-        :return:
+        Splits a polygon into inner and outer zones for optimized processing.
+
+        Parameters
+        ----------
+        input_geometry : BaseGeometry
+            The geometry to split.
+        relevant_distance : float
+            The distance used to define the 'outer' shell.
+
+        Returns
+        -------
+        tuple
+            A tuple of (inner_geometry, outer_geometry).
         """
         input_geometry = safe_unary_union(get_parts(input_geometry))
-        input_geometry_inner = buffer_neg(
-            input_geometry, relevant_distance
-        )  # inner part of the input that must be always available
+        input_geometry_inner = buffer_neg(input_geometry, relevant_distance)
         input_geometry_double_inner = buffer_neg(
             input_geometry, 2 * relevant_distance + MAX_OUTER_BUFFER
-        )  # inner part of the input that must be always available
-        # do the calculation only for the outer border of the geometry. The inner part is added afterward
+        )
         input_geometry_outer = safe_difference(
             input_geometry, input_geometry_double_inner
         )
@@ -497,22 +582,87 @@ class BaseProcessor(ABC):
 
 
 class SnapGeometryProcessor(BaseProcessor):
+    """
+    Processor that aligns geometries by snapping them to the reference data.
+
+    This processor uses the snapping algorithm to pull the vertices of the
+    thematic geometry towards the nearest components of the reference data
+    within a specified distance.
+
+    Attributes
+    ----------
+    process_id : ProcessorID
+        The unique identifier for this processor (ProcessorID.SNAP).
+    """
+
     process_id = ProcessorID.SNAP
 
     def process(
         self,
         *,
-        correction_distance,
+        correction_distance: float,
         reference_data: AlignerFeatureCollection,
         input_geometry: BaseGeometry,
-        mitre_limit,
-        ref_intersections_geoms,
-        relevant_distance,
-        snap_strategy,
-        **kwargs,
+        mitre_limit: float,
+        ref_intersections_geoms: List[BaseGeometry],
+        relevant_distance: float,
+        snap_strategy: SnapStrategy,
+        **kwargs: Any,
     ) -> ProcessResult:
+        """
+        Aligns the input geometry by snapping its vertices to the reference geometries.
+
+        The process considers the Open Domain (OD) strategy to determine how
+        areas not covered by reference features should be handled (e.g.,
+        ignored, kept as-is, or used as a virtual snapping target).
+
+        Parameters
+        ----------
+        correction_distance : float
+            Distance used for cleaning geometric noise.
+        reference_data : AlignerFeatureCollection
+            The collection of reference geometries.
+        input_geometry : BaseGeometry
+            The thematic geometry to be snapped.
+        mitre_limit : float
+            Mitre limit for buffering operations.
+        ref_intersections_geoms : List[BaseGeometry]
+            A list of reference geometries that intersect with the input.
+        relevant_distance : float
+            The maximum distance within which snapping occurs.
+        snap_strategy : SnapStrategy
+            The specific snapping logic to apply (e.g., to points, lines, or both).
+        **kwargs : Any
+            Additional arguments passed to the processor.
+
+        Returns
+        -------
+        ProcessResult
+            A dictionary containing the snapped result and difference metrics.
+
+        Notes
+        -----
+        The snapping logic is influenced by the `od_strategy` (Open Domain):
+
+
+
+        ```{mermaid}
+        graph TD
+            In[Input Geometry] --> OD{OD Strategy?}
+            OD -- EXCLUDE --> Snap[Snap to Real Refs]
+            OD -- AS_IS --> Keep[Keep OD part as-is]
+            OD -- OTHER --> Virtual[Create Virtual Ref]
+            Virtual --> SnapAll[Snap to Real + Virtual Refs]
+            Keep --> Merge[Merge snapped & as-is parts]
+            Snap --> Post[Post-process Result]
+            SnapAll --> Post
+            Merge --> Post
+        ```
+        """
         snapped = []
         virtual_reference = Polygon()
+
+        # Handle Open Domain (OD) / Onbekend Terrein logic
         if self.config.od_strategy != OpenDomainStrategy.EXCLUDE:
             virtual_reference = self._create_virtual_reference(
                 input_geometry,
@@ -522,13 +672,18 @@ class SnapGeometryProcessor(BaseProcessor):
                 mitre_limit,
                 False,
             )
+
         if self.config.od_strategy == OpenDomainStrategy.EXCLUDE:
             pass
         elif self.config.od_strategy == OpenDomainStrategy.AS_IS:
+            # Intersection with virtual reference is kept as original (no snapping)
             geom_od = safe_intersection(input_geometry, virtual_reference)
             snapped.append(geom_od)
         else:
+            # Virtual reference is added to the list of snap targets
             ref_intersections_geoms.append(virtual_reference)
+
+        # Execute the core snapping algorithm
         ref_geometrycollection = GeometryCollection(ref_intersections_geoms)
         snapped_geom = snap_geometry_to_reference(
             input_geometry,
@@ -538,34 +693,81 @@ class SnapGeometryProcessor(BaseProcessor):
             relevant_distance,
         )
         snapped.append(snapped_geom)
+
+        # Merge parts and clean the result
         geom_preresult = safe_unary_union(snapped)
+
         result_dict = self._postprocess_preresult(
             geom_preresult,
             input_geometry,
-            GeometryCollection(),
-            GeometryCollection(),
+            GeometryCollection(),  # Relevant intersection is handled internally by snap
+            GeometryCollection(),  # Relevant diff is handled internally by snap
             relevant_distance,
             reference_data.union,
             mitre_limit,
             correction_distance,
         )
+
         return result_dict
 
-
 class DieussaertGeometryProcessor(BaseProcessor):
+    """
+    Processor implementing the Dieussaert area-based alignment algorithm.
+
+    Unlike vertex snapping, this processor evaluates the overlap between thematic
+    geometries and reference polygons. It decides per reference feature whether
+    to include it fully, partially, or exclude it based on area-based thresholds.
+
+    Attributes
+    ----------
+    process_id : ProcessorID
+        The unique identifier for this processor (ProcessorID.DIEUSSAERT).
+    """
+
     process_id = ProcessorID.DIEUSSAERT
 
     def process(
         self,
         *,
-        input_geometry,
-        reference_data,
-        relevant_distance,
-        mitre_limit,
-        correction_distance,
-        **kwargs,
+        input_geometry: BaseGeometry,
+        reference_data: AlignerFeatureCollection,
+        relevant_distance: float,
+        mitre_limit: float,
+        correction_distance: float,
+        **kwargs: Any,
     ) -> ProcessResult:
-        if not self.config.multi_as_single_modus or input_geometry is None or input_geometry.is_empty or len(to_multi(input_geometry).geoms)==1:
+        """
+        Coordinates the alignment process for single or multi-geometries.
+
+        If `multi_as_single_modus` is disabled, MultiPolygons are processed
+        piecewise and merged afterward to ensure stability.
+
+        Parameters
+        ----------
+        input_geometry : BaseGeometry
+            The thematic geometry to align.
+        reference_data : AlignerFeatureCollection
+            The reference (target) dataset.
+        relevant_distance : float
+            The distance threshold for alignment decisions.
+        mitre_limit : float
+            Mitre limit for buffering operations.
+        correction_distance : float
+            Distance used for noise and sliver removal.
+        **kwargs : Any
+            Additional processor arguments.
+
+        Returns
+        -------
+        ProcessResult
+            The merged or single result of the alignment process.
+        """
+        if (
+            not self.config.multi_as_single_modus
+            or input_geometry is None
+            or input_geometry.is_empty
+            or len(to_multi(input_geometry).geoms) == 1
+        ):
             return self._process(
                 input_geometry=input_geometry,
                 relevant_distance=relevant_distance,
@@ -574,66 +776,100 @@ class DieussaertGeometryProcessor(BaseProcessor):
                 correction_distance=correction_distance,
             )
         else:
-            input_geometry=to_multi(input_geometry)
-            list_with_process_results=[]
+            input_geometry = to_multi(input_geometry)
+            list_with_process_results = []
             for input_geom_single in input_geometry.geoms:
                 process_result = self._process(
-                input_geometry=input_geom_single,
-                relevant_distance=relevant_distance,
-                mitre_limit=mitre_limit,
-                reference_data=reference_data,
-                correction_distance=correction_distance,
+                    input_geometry=input_geom_single,
+                    relevant_distance=relevant_distance,
+                    mitre_limit=mitre_limit,
+                    reference_data=reference_data,
+                    correction_distance=correction_distance,
                 )
                 list_with_process_results.append(process_result)
             return self._merge_process_results(list_with_process_results)
 
     def _merge_process_results(
-        self,list_process_results: list[ProcessResult]
-    ):
+        self, list_process_results: list[ProcessResult]
+    ) -> ProcessResult:
+        """
+        Merges multiple ProcessResult objects into a single result.
+
+        This is used when a MultiPolygon is processed as individual components.
+        It performs a unary union on all geometric keys and aggregates remarks.
+
+        Parameters
+        ----------
+        list_process_results : list[ProcessResult]
+            List of individual results to merge.
+
+        Returns
+        -------
+        ProcessResult
+            A single aggregated ProcessResult.
+        """
         if len(list_process_results) == 1:
             return list_process_results[0]
-        merged_process_result=ProcessResult() #list_process_results[0]
+
+        merged_process_result = ProcessResult()
         for process_result in list_process_results:
             for key in process_result:
-                value = process_result[key]  # noqa
+                value = process_result[key]
                 if key == "properties":
                     if key in merged_process_result:
-                        existing_remarks: list = merged_process_result[key][
+                        existing_remarks = merged_process_result[key][
                             REMARK_FIELD_NAME
-                        ]  # noqa
+                        ]
                     else:
-                        merged_process_result[key]={}
-                        existing_remarks: list = []
+                        merged_process_result[key] = {}
+                        existing_remarks = []
 
                     existing_remarks.extend(value[REMARK_FIELD_NAME])
-                    merged_process_result[key][
-                        REMARK_FIELD_NAME
-                    ] = existing_remarks
+                    merged_process_result[key][REMARK_FIELD_NAME] = existing_remarks
                     continue
                 if isinstance(value, BaseGeometry):
                     geom = value
                     if geom.is_empty or geom is None:
                         continue
                     if key in merged_process_result:
-                        existing: BaseGeometry = merged_process_result[
-                            key
-                        ]  # noqa
+                        existing = merged_process_result[key]
                     else:
-                        existing: BaseGeometry = GeometryCollection()
-                    merged_process_result[key] = safe_unary_union(
-                        [existing, geom]
-                    )  # noqa
+                        existing = GeometryCollection()
+                    merged_process_result[key] = safe_unary_union([existing, geom])
         return merged_process_result
 
     def _process(
         self,
         *,
-        input_geometry,
-        reference_data,
-        relevant_distance,
-        mitre_limit,
-        correction_distance,
+        input_geometry: BaseGeometry,
+        reference_data: AlignerFeatureCollection,
+        relevant_distance: float,
+        mitre_limit: float,
+        correction_distance: float,
     ) -> ProcessResult:
+        """
+        Internal core logic for the Dieussaert algorithm on a single geometry.
+
+        Notes
+        -----
+        The algorithm optimizes performance by splitting the input into an
+        'inner' and 'outer' zone. Only the 'outer' zone (near the boundaries)
+        is evaluated against reference data.
+
+
+
+        ```{mermaid}
+        graph TD
+            Start[Input Geometry] --> Split[Split: Inner vs Outer]
+            Split --> Query[Spatial Query Reference Data]
+            Query --> OD[Process Open Domain]
+            Query --> Ref[Process Intersecting Refs]
+            OD --> Combine[Combine Results]
+            Ref --> Combine
+            Combine --> Post[Post-processing]
+            Post --> End[ProcessResult]
+        ```
+        """
 
         # CALCULATE INNER and OUTER INPUT GEOMETRY for performance optimisation on big geometries
         # combine all parts of the input geometry to one polygon
@@ -949,40 +1185,45 @@ class DieussaertGeometryProcessor(BaseProcessor):
         geom_intersection: BaseGeometry,
         geom_reference: BaseGeometry,
         input_geometry_inner: BaseGeometry,
-        is_open_domain,
-        buffer_distance,
-        mitre_limit,
-    ):
+        is_open_domain: bool,
+        buffer_distance: float,
+        mitre_limit: float,
+    ) -> tuple[BaseGeometry, BaseGeometry, BaseGeometry]:
         """
-        Calculates the geometry based on intersection and reference geometries.
+        Decides the resulting geometry for a specific intersection area.
 
-        Args:
-            geom_intersection (BaseGeometry): The intersection geometry.
-            geom_reference (BaseGeometry): The reference geometry.
-            is_open_domain (bool): A flag indicating whether it's a public domain
-                (area not covered with reference polygon).
-            buffer_distance (float): The buffer distance.
+        This is the heart of the area-based decision logic. It calculates the
+        percentage of overlap and applies thresholds for inclusion/exclusion.
 
-        Returns:
-            tuple: A tuple containing the resulting geometries:
+        Parameters
+        ----------
+        geom_intersection : BaseGeometry
+            The intersection between input and reference.
+        geom_reference : BaseGeometry
+            The specific reference feature being evaluated.
+        input_geometry_inner : BaseGeometry
+            The protected inner part of the input.
+        is_open_domain : bool
+            Whether this calculation is for an area without reference features.
+        buffer_distance : float
+            Buffer used to define "relevance".
+        mitre_limit : float
+            Mitre limit for buffering.
 
-            *   geom: BaseGeometry or None: The resulting geometry or None if conditions
-                are not met.
-            *   geom_relevant_intersection: BaseGeometry or None: The relevant
-                intersection.
-            *   geom_relevant_difference: BaseGeometry or None: The relevant difference.
+        Returns
+        -------
+        tuple
+            A tuple containing (result_geometry, relevant_intersection, relevant_difference).
 
-        Notes:
-            -   If the reference geometry area is 0, the overlap is set to 100%.
-            -   If the overlap is less than relevant_OVERLAP_PERCENTAGE or the
-                intersection area is less than relevant_OVERLAP_AREA, None is returned.
-            -   Otherwise, the relevant intersection and difference geometries are
-                calculated.
-            -   If both relevant intersection and difference are non-empty, the final
-                geometry is obtained by applying safe intersection and buffering.
-            -   If only relevant intersection is non-empty, the result is the reference
-                geometry.
-            -   If only relevant difference is non-empty, the result is None.
+        Notes
+        -----
+        Overlap criteria:
+        -   **Full Inclusion**: Overlap > `threshold_inclusion_percentage`.
+        -   **Full Exclusion**: Overlap < `threshold_exclusion_percentage`.
+        -   **Partial Alignment**: Calculated via negative/positive buffering
+            when overlap falls between thresholds.
+
+
         """
         od_overlap = 111  # define a specific value for defining overlap of OD
         if geom_reference.area == 0:
@@ -1133,39 +1374,104 @@ class DieussaertGeometryProcessor(BaseProcessor):
                 geom = geom_relevant_intersection  # (=empty geometry)
         return geom, geom_relevant_intersection, geom_relevant_difference
 
-
 class NetworkGeometryProcessor(BaseProcessor):
+    """
+    Processor that aligns geometries based on a linear network.
+
+    This processor decomposes polygons into their exterior and interior linear
+    rings and aligns these boundaries to the linear elements (lines and points)
+    found in the reference dataset.
+
+    Attributes
+    ----------
+    process_id : ProcessorID
+        The unique identifier for this processor (ProcessorID.NETWORK).
+    """
+
     process_id = ProcessorID.NETWORK
 
     def process(
         self,
         *,
-        input_geometry,
-        reference_data,
-        mitre_limit,
-        correction_distance,
+        input_geometry: BaseGeometry,
+        reference_data: AlignerFeatureCollection,
+        mitre_limit: float,
+        correction_distance: float,
         relevant_distance: float,
-        **kwargs,
+        **kwargs: Any,
     ) -> ProcessResult:
+        """
+        Aligns the boundaries of the input geometry to a reference network.
+
+        The process buffers the input to find relevant network elements,
+        processes exterior and interior rings separately, and reconstructs
+        the polygon after alignment.
+
+        Parameters
+        ----------
+        input_geometry : BaseGeometry
+            The thematic geometry (Polygon or MultiPolygon) to align.
+        reference_data : AlignerFeatureCollection
+            The reference dataset, specifically using its `elements` property.
+        mitre_limit : float
+            Mitre limit for buffering operations.
+        correction_distance : float
+            Distance used for cleaning and noise reduction.
+        relevant_distance : float
+            The maximum distance to search for network elements.
+        **kwargs : Any
+            Additional arguments passed to the processor.
+
+        Returns
+        -------
+        ProcessResult
+            A dictionary containing the reconstructed and cleaned polygon.
+
+        Notes
+        -----
+        The network processing follows a "deconstruct-align-reconstruct" flow:
+
+
+
+        ```{mermaid}
+        graph TD
+            In[Input Polygon] --> Decon[Deconstruct: Exterior & Interiors]
+            Decon --> Buff[Buffer Input to Find Network]
+            Buff --> Align[Align Segments to Network Elements]
+            Align --> Recon[Reconstruct Polygon Rings]
+            Recon --> Post[Post-processing & Sliver Removal]
+            Post --> End[Final ProcessResult]
+        ```
+        """
         input_geometry = to_multi(input_geometry)
+
+        # Determine the search area for relevant network elements
         input_geometry_buffered = buffer_pos(
             input_geometry,
             relevant_distance * self.config.buffer_multiplication_factor,
         )
+
+        # Fetch linear/point elements from reference that fall within the buffer
         reference = safe_unary_union(
             safe_intersection(reference_data.elements, input_geometry_buffered)
         )
+
         geom_processed_list = []
-        if isinstance(input_geometry, MultiPolygon):
-            for polygon in input_geometry.geoms:
+
+        if isinstance(input_geometry, (MultiPolygon, Polygon)):
+            # Cast to MultiPolygon for consistent iteration
+            for polygon in to_multi(input_geometry).geoms:
+                # 1. Process the outer boundary
                 exterior = polygon.exterior
-                interiors = polygon.interiors
                 exterior_processed = self._process_by_network(
                     exterior,
                     reference,
                     relevant_distance,
                     close_output=True,
                 )
+
+                # 2. Process all inner holes
+                interiors = polygon.interiors
                 interiors_processed = []
                 for i in interiors:
                     i_processed = self._process_by_network(
@@ -1175,9 +1481,12 @@ class NetworkGeometryProcessor(BaseProcessor):
                         close_output=True,
                     )
                     interiors_processed.append(i_processed)
+
+                # 3. Reconstruct the polygon
                 geom_processed = Polygon(exterior_processed, interiors_processed)
                 geom_processed_list.append(geom_processed)
         else:
+            # Handling for non-polygonal geometries (e.g. LineStrings)
             for geom in input_geometry.geoms:
                 geom_processed = self._process_by_network(
                     geom,
@@ -1186,7 +1495,11 @@ class NetworkGeometryProcessor(BaseProcessor):
                     close_output=False,
                 )
                 geom_processed_list.append(geom_processed)
+
+        # Merge all processed parts
         geom_processed = safe_unary_union(geom_processed_list)
+
+        # Standard cleaning pipeline
         return self._postprocess_preresult(
             geom_processed,
             input_geometry,
@@ -1415,37 +1728,119 @@ class AlignerGeometryProcessor(BaseProcessor):
             mitre_limit=mitre_limit,
             correction_distance=correction_distance,
         )
+
 class TopologyProcessor(BaseProcessor):
+    """
+    Processor that aligns geometries while preserving topological relationships.
+
+    Instead of processing features independently, the TopologyProcessor
+    decomposes thematic data into unique 'arcs' (shared boundaries). Each arc
+    is aligned once using network-based processing, ensuring that shared
+    boundaries remain perfectly snapped together in the final output.
+
+    Attributes
+    ----------
+    processor_id : ProcessorID
+        The unique identifier for this processor (ProcessorID.TOPOLOGY).
+    thematic_data : AlignerFeatureCollection, optional
+        Cached reference to the full thematic dataset used for topology building.
+    topo_thematic : dict, optional
+        The generated TopoJSON-like structure of the thematic data.
+    thematic_geometries_to_process : dict, optional
+        Mapping of arc IDs to their respective LineString geometries.
+    id_to_arcs : dict, optional
+        Mapping of feature IDs to the list of arc IDs that form their boundary.
+    wkb_to_id : dict, optional
+        Reverse index mapping geometry WKB strings to feature IDs.
+    """
+
     processor_id = ProcessorID.TOPOLOGY
 
-    def __init__(self,config,feedback):
-        super().__init__(config,feedback)
+    def __init__(self, config: ProcessorConfig, feedback: Any = None):
+        """
+        Initializes the TopologyProcessor with internal cache storage.
+        """
+        super().__init__(config, feedback)
         self.thematic_data = None
         self.topo_thematic = None
         self.thematic_geometries_to_process = None
         self.id_to_arcs = None
         self.wkb_to_id = None
+
     def process(
-        self,
-        *,
-        input_geometry,
-        reference_data,
-        mitre_limit,
-        correction_distance,
-        relevant_distance: float,
-        thematic_data,
-        **kwargs,
+            self,
+            *,
+            input_geometry: BaseGeometry,
+            reference_data: AlignerFeatureCollection,
+            mitre_limit: float,
+            correction_distance: float,
+            relevant_distance: float,
+            thematic_data: AlignerFeatureCollection,
+            **kwargs: Any,
     ) -> ProcessResult:
+        """
+        Aligns a geometry by processing its topological arcs.
+
+        This method identifies which unique arcs belong to the input geometry,
+        aligns those arcs using the `NetworkGeometryProcessor`, and then
+        reconstructs the final geometry.
+
+        Parameters
+        ----------
+        input_geometry : BaseGeometry
+            The specific thematic geometry to align.
+        reference_data : AlignerFeatureCollection
+            The reference dataset used for alignment.
+        mitre_limit : float
+            Mitre limit for buffering operations.
+        correction_distance : float
+            Distance used for cleaning and noise reduction.
+        relevant_distance : float
+            The maximum distance for alignment.
+        thematic_data : AlignerFeatureCollection
+            The full thematic collection required to build/query the topology.
+        **kwargs : Any
+            Additional arguments.
+
+        Returns
+        -------
+        ProcessResult
+            The reconstructed geometry where shared boundaries are consistently aligned.
+
+        Notes
+        -----
+        The topological workflow ensures "gapless" alignment:
+
+
+
+        ```{mermaid}
+        graph TD
+            In[Input Geometry] --> Cache{Cache Built?}
+            Cache -- No --> Build[Build Topology: Extract Arcs]
+            Build --> Cache
+            Cache -- Yes --> Map[Map Geometry to Arc IDs]
+            Map --> Loop[For each unique Arc]
+            Loop --> Net[Align Arc via NetworkProcessor]
+            Net --> Loop
+            Loop --> Dissolve[Reconstruct Polygon from Aligned Arcs]
+            Dissolve --> End[Final ProcessResult]
+        ```
+        """
         self._build_topo_cache(thematic_data)
-        id_thematic =self.wkb_to_id[input_geometry.wkb]
+
+        # Identify the feature ID via its WKB
+        id_thematic = self.wkb_to_id[input_geometry.wkb]
+
+        # Get all unique arcs that make up this feature
         arcs_to_process = flatten_iter(self.id_to_arcs[id_thematic])
 
-        processor = NetworkGeometryProcessor(config=self.config,feedback=self.feedback)
+        processor = NetworkGeometryProcessor(config=self.config, feedback=self.feedback)
         process_results = {}
 
+        # Align each arc individually (shared arcs are processed once per batch)
         for key in arcs_to_process:
-            key=abs(key)
-            geometry= self.thematic_geometries_to_process[key]
+            key = abs(key)
+            geometry = self.thematic_geometries_to_process[key]
             process_results[key] = {}
             process_results[key][relevant_distance] = processor.process(
                 correction_distance=correction_distance,
@@ -1454,25 +1849,44 @@ class TopologyProcessor(BaseProcessor):
                 input_geometry=geometry,
                 relevant_distance=relevant_distance,
             )
-        return _dissolve_topo(id_thematic,
-                                          process_results,
-                                          input_geometry,
-                                          self.thematic_geometries_to_process,
-                                          self.topo_thematic,
-                                          relevant_distance,
-                                          )
 
-    def _build_topo_cache(self, thematic_data):
-        """
-        returns the top information of thematic geometries
-        :return:
-        """
-        if self.thematic_data is None or thematic_data!=self.thematic_data:
+        # Reconstruct the original polygon structure using the new arc geometries
+        return _dissolve_topo(
+            id_thematic,
+            process_results,
+            input_geometry,
+            self.thematic_geometries_to_process,
+            self.topo_thematic,
+            relevant_distance,
+        )
 
-            self.thematic_geometries_to_process, self.topo_thematic= (
+    def _build_topo_cache(self, thematic_data: AlignerFeatureCollection):
+        """
+        Builds and caches the topological structure of the thematic data.
+
+        This is an expensive operation performed only once per dataset change.
+        It decomposes all features into a set of non-overlapping arcs.
+
+        Parameters
+        ----------
+        thematic_data : AlignerFeatureCollection
+            The dataset to analyze for shared boundaries.
+
+        Notes
+        -----
+        The cache consists of:
+        1. A TopoJSON-like structure (`topo_thematic`).
+        2. A mapping of arc IDs to LineStrings (`thematic_geometries_to_process`).
+        3. A reverse index for quick feature lookup.
+        """
+        if self.thematic_data is None or thematic_data != self.thematic_data:
+            self.thematic_geometries_to_process, self.topo_thematic = (
                 _generate_topo(thematic_data)
             )
-            self.wkb_to_id = build_reverse_index_wkb({key: feat.geometry for key, feat in thematic_data.features.items()})
+            self.wkb_to_id = build_reverse_index_wkb(
+                {key: feat.geometry for key, feat in thematic_data.features.items()}
+            )
             self.id_to_arcs = _topojson_id_to_arcs(self.topo_thematic)
+            self.thematic_data = thematic_data
 
         return
