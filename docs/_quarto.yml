@@ -69,19 +69,19 @@ quartodoc:
         - NetworkGeometryProcessor
         - SnapGeometryProcessor
         - TopologyProcessor
-#    - title: Enumerators
-#      package: brdr.enums
-#      desc: Enums used in the brdr package.
-#      contents:
-#        - FullReferenceStrategy
-#        - AlignerResultType
-#        - OpenDomainStrategy
-#        - DiffMetric
-#        - ProcessRemark
-#        - Evaluation
-#        - SnapStrategy
-#        - PredictionStrategy
-#        - ProcessorID
+    - title: Enumerators
+      package: brdr.enums
+      desc: Enums used in the brdr package.
+      contents:
+        - FullReferenceStrategy
+        - AlignerResultType
+        - OpenDomainStrategy
+        - DiffMetric
+        - ProcessRemark
+        - Evaluation
+        - SnapStrategy
+        - PredictionStrategy
+        - ProcessorID
     - title: Typings
       package: brdr.typings
       desc: Typings used in 'brdr'
