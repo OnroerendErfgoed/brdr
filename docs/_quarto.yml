@@ -48,25 +48,27 @@ quartodoc:
       contents:
         - AlignerFeatureCollection
         - AlignerFeature
-#    - title: Loaders
-#      package: brdr.loader
-#      desc: Loaders to load data
-#      contents:
-#        - Loader
-#        - DictLoader
-#        - GeoJsonLoader
-#        - GeoJsonFileLoader
-#        - GeoJsonUrlLoader
-#    - title: Processors
-#      package: brdr.processor
-#      desc: Processor algorithms
-#      contents:
-#        - BaseProcessor
-#        - AlignerGeometryProcessor
-#        - DieussaertGeometryProcessor
-#        - NetworkGeometryProcessor
-#        - SnapGeometryProcessor
-#        - TopologyProcessor
+    - title: Loaders
+      package: brdr.loader
+      desc: Loaders to load data
+      contents:
+        - Loader
+        - DictLoader
+        - GeoJsonLoader
+        - GeoJsonFileLoader
+        - GeoJsonUrlLoader
+        - OGCFeatureAPIReferenceLoader
+        - WFSReferenceLoader
+    - title: Processors
+      package: brdr.processor
+      desc: Processor algorithms
+      contents:
+        - BaseProcessor
+        - AlignerGeometryProcessor
+        - DieussaertGeometryProcessor
+        - NetworkGeometryProcessor
+        - SnapGeometryProcessor
+        - TopologyProcessor
 #    - title: Enumerators
 #      package: brdr.enums
 #      desc: Enums used in the brdr package.

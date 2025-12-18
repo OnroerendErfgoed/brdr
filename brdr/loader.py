@@ -10,7 +10,7 @@ import uuid
 import xml.etree.ElementTree as ET
 from abc import ABC
 from datetime import datetime
-from typing import Any, Optional, Dict, Union
+from typing import Any, Optional, Dict
 
 import requests
 from shapely import force_2d, make_valid
@@ -30,21 +30,34 @@ class Loader(ABC):
     The Loader handles the conversion of raw spatial data into an
     `AlignerFeatureCollection`, ensuring geometries are valid and 2D.
 
-    Attributes:
-        data_dict (Dict[ThematicId, BaseGeometry]): Mapping of IDs to geometries.
-        data_dict_properties (Dict[ThematicId, dict]): Mapping of IDs to property dictionaries.
-        data_dict_source (Dict[Any, str]): Metadata regarding the data source.
-        versiondate_info (Optional[Dict[Any, str]]): Configuration for parsing version dates.
-        is_reference (bool): Whether the loaded data serves as a reference layer.
+    Attributes
+    ----------
+    data_dict : Dict[ThematicId, BaseGeometry]
+        Mapping of unique IDs to their corresponding Shapely geometries.
+    data_dict_properties : Dict[ThematicId, dict]
+        Mapping of IDs to attribute dictionaries.
+    data_dict_source : Dict[Any, str]
+        Metadata regarding the data source (e.g., URL or file path).
+    versiondate_info : dict, optional
+        Configuration for parsing version dates, containing 'name' (field)
+        and 'format' (strptime pattern).
+    is_reference : bool
+        Whether the loaded data serves as a reference (target) layer.
+
+    Notes
+    -----
+    All subclasses must implement `load_data` or populate the internal
+    data dictionaries before calling the base `load_data` method.
     """
 
     def __init__(self, is_reference: bool):
         """
-        Initialize the base Loader.
+        Initializes the base Loader.
 
-        Args:
-            is_reference: Set to True if this data is a reference (target) layer
-                for alignment.
+        Parameters
+        ----------
+        is_reference : bool
+            Set to True if this data is a reference layer for alignment.
         """
         self.data_dict: dict[ThematicId, BaseGeometry] = {}
         self.data_dict_properties: dict[ThematicId, dict] = {}
@@ -56,13 +69,23 @@ class Loader(ABC):
         """
         Processes raw data into a validated AlignerFeatureCollection.
 
-        This method performs the following steps:
-        1. Forces geometries to 2D and fixes invalid geometries.
-        2. Extracts and formats version dates based on `versiondate_info`.
-        3. Wraps data into `AlignerFeature` objects with unique IDs.
+        This method performs geometric validation, version date extraction,
+        and wraps the data into AlignerFeature objects.
 
-        Returns:
-            A collection of processed features ready for alignment.
+        Returns
+        -------
+        AlignerFeatureCollection
+            A collection of processed and validated features.
+
+        Notes
+        -----
+        The processing pipeline follows these steps:
+
+
+
+        1. **Geometry Fix**: Forces 2D and applies `make_valid`.
+        2. **Metadata Enrichment**: Parses version dates if `versiondate_info` is set.
+        3. **Feature Creation**: Generates unique UUIDs and wraps features.
         """
         self.data_dict = {
             x: force_2d(make_valid(self.data_dict[x])) for x in self.data_dict
@@ -78,7 +101,6 @@ class Loader(ABC):
                             self.versiondate_info["format"],
                         )
                     except Exception:
-                        # Fallback: extract only the first 10 characters (YYYY-MM-DD)
                         date = datetime.strptime(
                             self.data_dict_properties[key][
                                 self.versiondate_info["name"]
@@ -106,9 +128,12 @@ class Loader(ABC):
             is_reference=self.is_reference,
         )
 
+
 class DictLoader(Loader):
     """
-    Loader that accepts data directly as Python dictionaries.
+    Loader that accepts data directly from Python dictionaries.
+
+    Useful for integrating with existing in-memory data structures.
     """
 
     def __init__(
@@ -119,11 +144,16 @@ class DictLoader(Loader):
             is_reference: bool = False,
     ):
         """
-        Args:
-            data_dict: Dictionary mapping IDs to Shapely geometries.
-            data_dict_properties: Metadata properties for each feature.
-            data_dict_source: Metadata about the source of the data.
-            is_reference: Whether this is a reference layer.
+        Parameters
+        ----------
+        data_dict : Dict[str, BaseGeometry]
+            Dictionary mapping IDs to Shapely geometries.
+        data_dict_properties : Dict[str, dict], optional
+            Metadata properties for each feature.
+        data_dict_source : Dict[str, str], optional
+            Metadata about the data origin.
+        is_reference : bool, optional
+            Whether this is a reference layer. Defaults to False.
         """
         super().__init__(is_reference=is_reference)
         self.data_dict = data_dict
@@ -138,6 +168,8 @@ class DictLoader(Loader):
 class GeoJsonLoader(Loader):
     """
     Base class for loaders dealing with GeoJSON-formatted data.
+
+    Processes a GeoJSON FeatureCollection into the internal dictionary format.
     """
 
     def __init__(
@@ -148,10 +180,14 @@ class GeoJsonLoader(Loader):
             is_reference: bool = False,
     ):
         """
-        Args:
-            id_property: The GeoJSON property to use as the unique identifier.
-            _input: A dictionary representing a GeoJSON FeatureCollection.
-            is_reference: Whether this is a reference layer.
+        Parameters
+        ----------
+        id_property : str, optional
+            The GeoJSON property key to use as the unique identifier.
+        _input : FeatureCollection, optional
+            A dictionary following the GeoJSON FeatureCollection spec.
+        is_reference : bool, optional
+            Whether this is a reference layer. Defaults to False.
         """
         super().__init__(is_reference=is_reference)
         self.id_property = id_property
@@ -163,23 +199,25 @@ class GeoJsonLoader(Loader):
         return super().load_data()
 
     def _load_geojson_data(self) -> None:
-        """
-        Internal method to convert GeoJSON input into internal dictionary formats.
-        """
+        """Internal method to convert GeoJSON input into internal dictionary formats."""
         self.data_dict, self.data_dict_properties = geojson_to_dicts(
             self.input, self.id_property
         )
 
 
 class GeoJsonFileLoader(GeoJsonLoader):
-    """Loads GeoJSON data from a local file."""
+    """Loads GeoJSON data from a local file system."""
 
     def __init__(self, path_to_file: str, id_property: str, is_reference: bool = False):
         """
-        Args:
-            path_to_file: System path to the .geojson file.
-            id_property: The GeoJSON property to use as the unique identifier.
-            is_reference: Whether this is a reference layer.
+        Parameters
+        ----------
+        path_to_file : str
+            Full system path to the `.geojson` file.
+        id_property : str
+            The GeoJSON property key to use as the identifier.
+        is_reference : bool, optional
+            Whether this is a reference layer. Defaults to False.
         """
         with open(path_to_file, "r") as f:
             _input = json.load(f)
@@ -191,14 +229,18 @@ class GeoJsonFileLoader(GeoJsonLoader):
 
 
 class GeoJsonUrlLoader(GeoJsonLoader):
-    """Loads GeoJSON data from a remote URL."""
+    """Loads GeoJSON data from a remote URL via HTTP GET."""
 
     def __init__(self, url: str, id_property: str, is_reference: bool = False):
         """
-        Args:
-            url: The URL pointing to a GeoJSON resource.
-            id_property: The GeoJSON property to use as the unique identifier.
-            is_reference: Whether this is a reference layer.
+        Parameters
+        ----------
+        url : str
+            The URL pointing to a GeoJSON resource.
+        id_property : str
+            The GeoJSON property key to use as the identifier.
+        is_reference : bool, optional
+            Whether this is a reference layer. Defaults to False.
         """
         _input = requests.get(url).json()
         super().__init__(
@@ -212,7 +254,8 @@ class OGCFeatureAPIReferenceLoader(GeoJsonLoader):
     """
     Loader for OGC API - Features services.
 
-    Fetches data using spatial filters and supports partitioned downloads.
+    Fetches data using spatial filters (BBOX) and handles partitioning
+    of large datasets based on the thematic extent.
     """
 
     def __init__(
@@ -226,14 +269,23 @@ class OGCFeatureAPIReferenceLoader(GeoJsonLoader):
             is_reference: bool = False,
     ):
         """
-        Args:
-            url: Base URL of the OGC API service.
-            id_property: Property to use as unique identifier.
-            collection: The specific collection ID to fetch.
-            aligner: The Aligner instance for spatial context.
-            partition: Number of features per request.
-            limit: Maximum total features to download.
-            is_reference: Whether this is a reference layer.
+        Parameters
+        ----------
+        url : str
+            Base URL of the OGC API service.
+        id_property : str
+            Property to use as unique identifier.
+        collection : str
+            The specific collection ID to fetch from the service.
+        aligner : Aligner
+            The Aligner instance, used for CRS and spatial extent context.
+        partition : int, optional
+            Number of features to request per network call. Defaults to 1000.
+        limit : int, optional
+            Maximum total features to download. Defaults to DOWNLOAD_LIMIT.
+        is_reference : bool, optional
+            Whether this is a reference layer. Defaults to False.
+
         """
         super().__init__(is_reference=is_reference)
         self.aligner = aligner
@@ -246,12 +298,34 @@ class OGCFeatureAPIReferenceLoader(GeoJsonLoader):
 
     def load_data(self) -> AlignerFeatureCollection:
         """
-        Validates the OGC collection and CRS, then downloads data within
-        the aligner's spatial extent.
+        Validates the OGC service and downloads data within the thematic extent.
 
-        Raises:
-            ValueError: If thematic data is missing, collection is not found,
-                or CRS is unsupported.
+        Returns
+        -------
+        AlignerFeatureCollection
+            The downloaded and processed reference data.
+
+        Raises
+        ------
+        ValueError
+            If thematic data is missing, the collection is not found,
+            or the service does not support the Aligner's CRS.
+
+        Notes
+        -----
+
+        ```mermaid
+        graph LR
+        Thematic[Thematic Data Extent] --> Buffer[Apply MAX_REFERENCE_BUFFER]
+        Buffer --> Partition[Split into BBOX Partitions]
+        Partition --> Request[HTTP GetFeature/Items]
+        Request --> Merge[Merge Results into Collection]
+
+        subgraph Service[External OGC/WFS Service]
+        Request
+        end
+        ```
+        
         """
         if not self.aligner.thematic_data:
             raise ValueError("Thematic data not loaded")
@@ -291,7 +365,10 @@ class OGCFeatureAPIReferenceLoader(GeoJsonLoader):
 
 class WFSReferenceLoader(GeoJsonLoader):
     """
-    Loader for Web Feature Service (WFS) version 2.0.0.
+    Loader for OGC Web Feature Service (WFS) version 2.0.0.
+
+    Supports GetCapabilities parsing and GetFeature requests with spatial
+    filtering using the Aligner's extent.
     """
 
     def __init__(
@@ -305,14 +382,22 @@ class WFSReferenceLoader(GeoJsonLoader):
             is_reference: bool = False,
     ):
         """
-        Args:
-            url: Base URL of the WFS service.
-            id_property: Property to use as identifier.
-            typename: The layer/feature type name.
-            aligner: The Aligner instance for spatial context.
-            partition: Number of features per request.
-            limit: Maximum features to download.
-            is_reference: Whether this is a reference layer.
+        Parameters
+        ----------
+        url : str
+            Base URL of the WFS service.
+        id_property : str
+            Property to use as unique identifier.
+        typename : str
+            The layer/feature type name (e.g., 'ns:layer_name').
+        aligner : Aligner
+            The Aligner instance for spatial context.
+        partition : int, optional
+            Number of features per request. Defaults to 1000.
+        limit : int, optional
+            Maximum total features to download. Defaults to DOWNLOAD_LIMIT.
+        is_reference : bool, optional
+            Whether this is a reference layer. Defaults to False.
         """
         super().__init__(is_reference=is_reference)
         self.aligner = aligner
@@ -325,11 +410,18 @@ class WFSReferenceLoader(GeoJsonLoader):
 
     def load_data(self) -> AlignerFeatureCollection:
         """
-        Parses WFS capabilities, validates CRS, and downloads features via GetFeature.
+        Downloads features via GetFeature based on capabilities and extent.
 
-        Raises:
-            ValueError: If thematic data is missing, typename is not found,
-                or CRS is unsupported.
+        Returns
+        -------
+        AlignerFeatureCollection
+            The downloaded and processed reference data.
+
+        Raises
+        ------
+        ValueError
+            If thematic data is missing, typename is not found,
+            or the service does not support the Aligner's CRS.
         """
         if not self.aligner.thematic_data:
             raise ValueError("Thematic data not loaded")
@@ -348,8 +440,10 @@ class WFSReferenceLoader(GeoJsonLoader):
                 if default_crs is not None:
                     supported_crs.append(to_crs(default_crs.text))
                 for ocrs in feature_type.findall("{*}OtherCRS"):
-                    try: supported_crs.append(to_crs(ocrs.text))
-                    except: pass
+                    try:
+                        supported_crs.append(to_crs(ocrs.text))
+                    except:
+                        pass
                 break
 
         if not typename_exists:
@@ -377,6 +471,4 @@ class WFSReferenceLoader(GeoJsonLoader):
             crs=self.aligner.crs,
         )
         self.input = dict(collection)
-        self.data_dict_source[VERSION_DATE] = datetime.now().strftime(DATE_FORMAT)
-        self.aligner.logger.feedback_info(f"Downloaded from WFS: {self.url}")
-        return super().load_data()
+        self.data_dict_source[VERSION_DATE]
