@@ -12,8 +12,10 @@ website:
         icon: house-fill
       - text: Reference
         href: reference/index.qmd
-#      - text: Examples
-#        href: examples.qmd
+      - text: Examples
+        href: examples.qmd
+      - text: Q & A
+        href: qa.qmd
 
 lang: en
 
@@ -98,11 +100,11 @@ quartodoc:
         - name: loader.GRBSpecificDateParcelLoader
         - name: grb.update_featurecollection_to_actual_grb
         - name: enums.GRBType
-#    - title: OSM
-#      package: brdr.osm
-#      desc: OpenStreetMap (OSM) classes,methods, enumerators,...
-#      contents:
-#        - name: loader.OSMLoader
+    - title: OSM
+      package: brdr.osm
+      desc: OpenStreetMap (OSM) classes,methods, enumerators,...
+      contents:
+        - name: loader.OSMLoader
 
 
           
