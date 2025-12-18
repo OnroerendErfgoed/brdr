@@ -30,7 +30,7 @@ def _dissolve_topo(
     of the original features based on TopoJSON.
 
     The function modifies the arcs in the provided TopoJSON object based on the
-    processed geometries in dict_series and then converts the resulting TopoJSON
+    processed geometries process results and then converts the resulting TopoJSON
     feature back into a Shapely geometry. It also calculates the symmetric
     difference between the resulting geometry and the input geometry.
 
@@ -45,7 +45,7 @@ def _dissolve_topo(
         topo_thematic (TopoJSON object): The TopoJSON object containing the
                                          geometries and arcs to be processed.
         relevant_distance (float): The specific distance key used to retrieve the
-                                   result from dict_series.
+                                   result from process_results.
 
     Returns:
         dict: A dictionary containing the resulting dissolved geometry and

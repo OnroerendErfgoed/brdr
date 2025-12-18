@@ -86,8 +86,8 @@ class TestUtils(unittest.TestCase):
         for key in result.keys():
             self.assertTrue(key.isdigit())
 
-    def test_diffs_from_dict_series_complete(self):
-        """Tests diffs_from_dict_series with complete data."""
+    def test_diffs_from_process_results_complete(self):
+        """Tests diffs_from_process_results with complete data."""
         # Mock data
         geom_thematic = Polygon([(0, 0), (10, 0), (10, 10), (0, 10)])
         dict_processresult = {

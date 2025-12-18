@@ -8,7 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import wait
 from copy import deepcopy
 from datetime import datetime
-from typing import Iterable, Dict, Any, Optional, List
+from typing import Iterable, Dict, Any, Optional, List, TYPE_CHECKING
 
 import numpy as np
 from shapely import make_valid
@@ -53,7 +53,7 @@ from brdr.enums import Evaluation
 from brdr.enums import FullReferenceStrategy
 from brdr.enums import ProcessRemark
 from brdr.feature_data import AlignerFeatureCollection
-from brdr.geometry_utils import buffer_neg, geometric_equality
+from brdr.geometry_utils import buffer_neg
 from brdr.geometry_utils import buffer_pos
 from brdr.geometry_utils import safe_difference
 from brdr.geometry_utils import safe_intersection
@@ -67,8 +67,6 @@ from brdr.typings import ProcessResult
 from brdr.typings import ThematicId
 from brdr.utils import (
     coverage_ratio,
-    recursive_stepwise_interval_check,
-    create_full_interpolated_dataset,
 )
 from brdr.utils import determine_stability
 from brdr.utils import get_geojsons_from_process_results
@@ -80,36 +78,61 @@ from brdr.utils import write_geojson
 
 
 ###################
+
+if TYPE_CHECKING:
+    from brdr.aligner import Aligner
+
+
 class AlignerResult:
     """
-    Stores the results from the alignment process for different themes and relevant distances.
+    Stores and processes the results from the alignment operation.
 
-    This class is responsible for storing, enriching, and filtering the
-    processed geometries and their associated metrics.
+    This class manages the lifecycle of alignment results, including enrichment with
+    geometric metrics (like area or length change), filtering by result type,
+    and exporting to GeoJSON format.
 
     Attributes
     ----------
-    metadata : Any | None
+    results : Dict[ThematicId, Dict[float, Optional[ProcessResult]]]
+        A nested dictionary where the outer key is the theme ID and the inner key
+        is the relevant distance used during processing.
+    metadata : Optional[Any]
         Optional metadata about the overall alignment operation.
-    results : dict[ThematicId, dict[float, ProcessResult | None]]
-        The raw processing results, structured by theme ID and relevant distance.
+
+    Notes
+    -----
+    The class acts as a post-processor. It takes the raw output from the geometric
+    engines and calculates semantic differences before exporting.
+
+    ```{mermaid}
+    graph TD
+        Raw[Raw Process Results] --> AR[AlignerResult]
+        AR --> |get_results| Enriched[Enriched with Area/Length Metrics]
+        Enriched --> |get_results_as_geojson| GeoJSON[GeoJSON FeatureCollection]
+        GeoJSON --> |save_results| Disk[Local .geojson files]
+    ```
+
+    Examples
+    --------
+    >>> # Initializing and saving results
+    >>> result_obj = AlignerResult(raw_results)
+    >>> result_obj.save_results(aligner, path="./output_folder")
     """
 
     metadata: Optional[Any] = None
 
     def __init__(
         self,
-        process_results: dict[ThematicId, dict[float, ProcessResult | None]],
+        process_results: Dict[ThematicId, Dict[float, Optional[ProcessResult]]],
     ):
         """
         Initializes an AlignerResult instance.
 
         Parameters
         ----------
-        process_results : dict[ThematicId, dict[float, ProcessResult | None]]
-            A nested dictionary containing the raw processing results.
-            The outer key is the theme ID, the inner key is the 'relevant distance'
-            used for the calculation.
+        process_results : Dict[ThematicId, Dict[float, Optional[ProcessResult]]]
+            A nested dictionary containing raw results.
+            Structure: `{theme_id: {distance: result_object}}`.
         """
         self.results = process_results
 
@@ -117,40 +140,41 @@ class AlignerResult:
         self,
         aligner: "Aligner",
         result_type: AlignerResultType = AlignerResultType.PROCESSRESULTS,
-    ) -> dict[ThematicId, dict[float, ProcessResult | None]]:
+    ) -> Dict[ThematicId, Dict[float, Optional[ProcessResult]]]:
         """
-        Retrieves the processing results, enriching them with geometric difference metrics,
-        and filtering them based on the requested result type.
+        Retrieves results enriched with geometric metrics and filtered by type.
 
-        This method mutates the 'properties' of the stored ProcessResult objects by
-        adding several calculated geometric difference metrics.
+        This method mutates the stored `ProcessResult` objects by adding calculated
+        difference metrics (e.g., symmetrical area change) to their properties.
 
         Parameters
         ----------
         aligner : Aligner
-            The 'Aligner' object containing the original geometries and comparison logic.
-        result_type : AlignerResultType, optional
-            The type of results to return. Options are:
-            - PROCESSRESULTS: All enriched results (default).
-            - PREDICTIONS: Only results containing a prediction score.
-            - EVALUATED_PREDICTIONS: Only results that have been evaluated.
+            The 'Aligner' object used to access thematic data and comparison logic.
+        result_type : AlignerResultType
+            Filters the results based on status. Defaults to PROCESSRESULTS.
 
         Returns
         -------
-        dict[ThematicId, dict[float, ProcessResult | None]]
-            The filtered and enriched dictionary of processing results.
+        Dict[ThematicId, Dict[float, Optional[ProcessResult]]]
+            A dictionary of filtered and enriched results.
 
         Raises
         ------
         ValueError
-            If an unknown `result_type` is provided.
+            If an unsupported `result_type` is provided.
         """
         for theme_id, results_dict in self.results.items():
-            original_geometry = aligner.thematic_data.features.get(theme_id).geometry
+            original_feature = aligner.thematic_data.features.get(theme_id)
+            if original_feature is None:
+                continue
+
+            original_geometry = original_feature.geometry
             nr_calculations = len(results_dict)
+
             try:
                 original_geometry_length = len(original_geometry.geoms)
-            except:
+            except (AttributeError, TypeError):
                 original_geometry_length = 1
 
             for relevant_distance, process_result in results_dict.items():
@@ -158,66 +182,35 @@ class AlignerResult:
                     continue
 
                 properties = process_result["properties"]
-                # Adding extra properties
                 properties[ID_THEME_FIELD_NAME] = theme_id
                 properties[NR_CALCULATION_FIELD_NAME] = nr_calculations
                 properties[RELEVANT_DISTANCE_FIELD_NAME] = relevant_distance
 
-                # --- Adding Geometric Difference Metrics ---
-                properties[SYMMETRICAL_AREA_CHANGE] = (
-                    get_geometry_difference_metrics_from_processresult(
-                        process_result,
-                        original_geometry,
-                        None,
-                        DIFF_METRIC.SYMMETRICAL_AREA_CHANGE,
-                    )
-                )
-                properties[SYMMETRICAL_AREA_PERCENTAGE_CHANGE] = (
-                    get_geometry_difference_metrics_from_processresult(
-                        process_result,
-                        original_geometry,
-                        None,
+                # Add Geometric Difference Metrics
+                metrics_to_calc = [
+                    (SYMMETRICAL_AREA_CHANGE, DIFF_METRIC.SYMMETRICAL_AREA_CHANGE),
+                    (
+                        SYMMETRICAL_AREA_PERCENTAGE_CHANGE,
                         DIFF_METRIC.SYMMETRICAL_AREA_PERCENTAGE_CHANGE,
-                    )
-                )
-                properties[AREA_CHANGE] = (
-                    get_geometry_difference_metrics_from_processresult(
-                        process_result,
-                        original_geometry,
-                        None,
-                        DIFF_METRIC.AREA_CHANGE,
-                    )
-                )
-                properties[AREA_PERCENTAGE_CHANGE] = (
-                    get_geometry_difference_metrics_from_processresult(
-                        process_result,
-                        original_geometry,
-                        None,
-                        DIFF_METRIC.AREA_PERCENTAGE_CHANGE,
-                    )
-                )
-                properties[LENGTH_CHANGE] = (
-                    get_geometry_difference_metrics_from_processresult(
-                        process_result,
-                        original_geometry,
-                        None,
-                        DIFF_METRIC.LENGTH_CHANGE,
-                    )
-                )
-                properties[LENGTH_PERCENTAGE_CHANGE] = (
-                    get_geometry_difference_metrics_from_processresult(
-                        process_result,
-                        original_geometry,
-                        None,
-                        DIFF_METRIC.LENGTH_PERCENTAGE_CHANGE,
-                    )
-                )
+                    ),
+                    (AREA_CHANGE, DIFF_METRIC.AREA_CHANGE),
+                    (AREA_PERCENTAGE_CHANGE, DIFF_METRIC.AREA_PERCENTAGE_CHANGE),
+                    (LENGTH_CHANGE, DIFF_METRIC.LENGTH_CHANGE),
+                    (LENGTH_PERCENTAGE_CHANGE, DIFF_METRIC.LENGTH_PERCENTAGE_CHANGE),
+                ]
 
-                # --- Checking for Geometry Count Change ---
+                for prop_key, metric_enum in metrics_to_calc:
+                    properties[prop_key] = (
+                        get_geometry_difference_metrics_from_processresult(
+                            process_result, original_geometry, None, metric_enum
+                        )
+                    )
+
+                # Check for Geometry Count Change
                 resulting_geom = process_result["result"]
                 try:
                     resulting_geometry_length = len(resulting_geom.geoms)
-                except:
+                except (AttributeError, TypeError):
                     resulting_geometry_length = 1
 
                 if original_geometry_length != resulting_geometry_length:
@@ -229,29 +222,25 @@ class AlignerResult:
         if result_type == AlignerResultType.PROCESSRESULTS:
             return self.results
         elif result_type == AlignerResultType.PREDICTIONS:
-            # return all theme ids with only the relevant distances where the ProcessResult has property PREDICTION_SCORE:
             return {
-                theme_id: {
-                    rd: process_result
-                    for rd, process_result in results_dict.items()
-                    if process_result is not None
-                    and PREDICTION_SCORE in process_result["properties"]
+                tid: {
+                    rd: res
+                    for rd, res in rd_dict.items()
+                    if res and PREDICTION_SCORE in res["properties"]
                 }
-                for theme_id, results_dict in self.results.items()
+                for tid, rd_dict in self.results.items()
             }
         elif result_type == AlignerResultType.EVALUATED_PREDICTIONS:
-            # return all theme ids with only the relevant distances where the ProcessResult has property EVALUATION_FIELD_NAME:
             return {
-                theme_id: {
-                    rd: process_result
-                    for rd, process_result in results_dict.items()
-                    if process_result is not None
-                    and EVALUATION_FIELD_NAME in process_result["properties"]
+                tid: {
+                    rd: res
+                    for rd, res in rd_dict.items()
+                    if res and EVALUATION_FIELD_NAME in res["properties"]
                 }
-                for theme_id, results_dict in self.results.items()
+                for tid, rd_dict in self.results.items()
             }
         else:
-            raise ValueError("Unknown result type: " + str(result_type))
+            raise ValueError(f"Unknown result type: {result_type}")
 
     def get_results_as_geojson(
         self,
@@ -261,59 +250,51 @@ class AlignerResult:
         attributes: bool = False,
     ) -> Dict[str, Any]:
         """
-        Returns the processing results as a GeoJSON FeatureCollection.
-
-        The GeoJSON contains the resulting geometries for all 'serial' relevant distances
-        within the selected result type, optionally enriched with original attributes and comparison formulas.
+        Converts the results into a GeoJSON FeatureCollection format.
 
         Parameters
         ----------
         aligner : Aligner
-            The 'Aligner' object, necessary to retrieve the CRS, ID fields, and comparison formulas.
-        result_type : AlignerResultType, optional
-            The type of results to export (default is PROCESSRESULTS).
-        formula : bool, optional
-            If True, the descriptive comparison formula is added as an attribute to the result.
-            Defaults to False.
-        attributes : bool, optional
-            If True, the original attributes/properties of the thematic objects are
-            added to the result. Defaults to False.
+            The 'Aligner' object providing CRS and thematic metadata.
+        result_type : AlignerResultType
+            The type of results to export. Defaults to PROCESSRESULTS.
+        formula : bool
+            If True, includes the descriptive comparison formula in properties.
+        attributes : bool
+            If True, includes original thematic attributes in the output.
 
         Returns
         -------
-        dict
+        Dict[str, Any]
             A dictionary representing a GeoJSON FeatureCollection.
 
         Raises
         ------
         ValueError
-            If the results are empty (`self.results` is None or empty).
+            If `self.results` is empty or None.
         """
-
-        if self.results is None or self.results == {}:
+        if not self.results:
             raise ValueError("Empty results: No calculated results to export.")
 
         results = self.get_results(aligner=aligner, result_type=result_type)
-        prop_dictionary: defaultdict[Any, dict[Any, dict]] = defaultdict(dict)
+        prop_dictionary = defaultdict(dict)
 
         for theme_id, results_dict in results.items():
-            prop_dictionary[theme_id] = {}
             for relevant_distance, process_result in results_dict.items():
                 if process_result is None:
                     continue
 
                 prop_dictionary[theme_id][relevant_distance] = {}
+                feature = aligner.thematic_data.features.get(theme_id)
 
-                # Adding original attributes
-                if attributes and theme_id in aligner.thematic_data.features.get(theme_id).properties:
-                    for attr, value in aligner.thematic_data.features.get(theme_id).properties.items():
-                        prop_dictionary[theme_id][relevant_distance][attr] = value
+                if attributes and feature and feature.properties:
+                    prop_dictionary[theme_id][relevant_distance].update(
+                        feature.properties
+                    )
 
-                # Adding formula
-                #TODO - check if metadata is exported correctly
                 if formula:
-                    result = process_result["result"]
-                    formula_result = aligner.compare_to_reference(result)
+                    result_geom = process_result["result"]
+                    formula_result = aligner.compare_to_reference(result_geom)
                     prop_dictionary[theme_id][relevant_distance][FORMULA_FIELD_NAME] = (
                         json.dumps(formula_result)
                     )
@@ -327,38 +308,35 @@ class AlignerResult:
 
     def save_results(
         self,
-        aligner,
-        path,
+        aligner: "Aligner",
+        path: str,
         result_type: AlignerResultType = AlignerResultType.PROCESSRESULTS,
-        formula=False,
-        attributes=False,
-    ):
+        formula: bool = False,
+        attributes: bool = False,
+    ) -> None:
         """
-        Exports analysis results (as geojson) to path.
+        Exports the results as multiple GeoJSON files to a directory.
 
-        This function exports 6 GeoJSON files containing the analysis results to the
-        specified `path`.
+        Creates separate files for original results, differences, and specific
+        area changes (added/removed).
 
-        Args:
-        path (str): The path to the directory where the GeoJSON files will be saved.
-        formula (bool, optional): Whether to include formula-related information
-            in the output. Defaults to True.
+        Parameters
+        ----------
+        aligner : Aligner
+            The 'Aligner' object for spatial context.
+        path : str
+            Target directory path where files will be created.
+        result_type : AlignerResultType
+            Type of results to export. Defaults to PROCESSRESULTS.
+        formula : bool
+            Whether to include alignment formulas in the output.
+        attributes : bool
+            Whether to include original feature attributes.
 
-        Details of exported files:
-        - result.geojson: Contains the original thematic data from `
-          self.dict_result`.
-        - result_diff.geojson: Contains the difference between the original
-          and predicted data from `self.dict_result_diff`.
-        - result_diff_plus.geojson: Contains results for areas that are
-          added (increased area).
-        - result_diff_min.geojson: Contains results for areas that are
-          removed (decreased area).
-        - result_relevant_intersection.geojson: Contains the areas with
-          relevant intersection that has to be included in the result.
-        - result_relevant_difference.geojson: Contains the areas with
-          relevant difference that has to be excluded from the result.
+        Notes
+        -----
+        The output files follow the naming convention: `{result_type}_{name}.geojson`.
         """
-
         fcs = self.get_results_as_geojson(
             aligner=aligner,
             result_type=result_type,
@@ -366,9 +344,8 @@ class AlignerResult:
             attributes=attributes,
         )
         for name, fc in fcs.items():
-            write_geojson(
-                os.path.join(path, result_type.value + "_" + name + ".geojson"), fc
-            )
+            file_name = f"{result_type.value}_{name}.geojson"
+            write_geojson(os.path.join(path, file_name), fc)
 
 
 def aligner_metadata_decorator(f):
@@ -425,6 +402,7 @@ def aligner_metadata_decorator(f):
         return response
 
     return inner_func
+
 
 class Aligner:
     """
@@ -557,6 +535,11 @@ class Aligner:
         Calculates the resulting dictionaries for thematic data based on a series of
             relevant distances.
 
+        ```mermaid
+        graph LR
+        A[Aligner] --> B[AlignerResult]
+        ```
+
         Args:
             thematic_data: the dictionary with the thematic geometries to 'predict'. Default is None, so all thematic geometries inside the aligner will be processed.
             relevant_distances (Iterable[float]): A series of relevant distances
@@ -665,7 +648,7 @@ class Aligner:
         2. **Calculate Difference Metrics:**
             - Analyzes the results from the distance series to compute difference
               metrics between thematic elements at each distance (using
-              `diffs_from_dict_series`).
+              `diffs_from_process_results`).
 
         3. **Identify Breakpoints and Zero-Streaks:**
             - For each thematic geometry, it identifies potential "breakpoints" where
@@ -695,7 +678,7 @@ class Aligner:
                 #False: Uses the logic to only calculate intermediate points and copy if equal, otherwise extra points are calculated. Until the full range is filled.
 
         Returns:
-            dict_series: A dictionary containing the resultset for all relevant distances for each thematic element.
+            process_results: A dictionary containing the resultset for all relevant distances for each thematic element.
             dict_predictions: A dictionary containing predicted interesting distances for each
             thematic element.
                 - Keys: Thematic element identifiers from `self.`.
@@ -1221,7 +1204,7 @@ class Aligner:
         Calculates a dictionary containing difference metrics for thematic elements based on a distance series.
 
         Parameters:
-        dict_series (dict): A dictionary where keys are thematic IDs and values are dictionaries mapping relevant distances to ProcessResult objects.
+        process_results (dict): A dictionary where keys are thematic IDs and values are dictionaries mapping relevant distances to ProcessResult objects.
          (dict): A dictionary where keys are thematic IDs and values are BaseGeometry objects representing the original geometries.
         diff_metric (DiffMetric, optional): The metric to use for calculating differences. Default is DiffMetric.CHANGES_AREA.
 

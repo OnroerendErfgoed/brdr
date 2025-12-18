@@ -37,17 +37,18 @@ quartodoc:
   css: reference/_styles-quartodoc.css
 
   sections:
+
     - title: Aligner
-      package: brdr.aligner
+      package: brdr
       desc: Aligner class of the brdr package.
       contents:
         # Functies: alleen deze twee
-        - Aligner.evaluate # voorbeeldfunctie
+        - aligner.Aligner.process # voorbeeldfunctie
+        - feature_data.AlignerFeatureCollection
 
         # Klasse: alleen de gewenste methoden
-        - name: Aligner
+        - name: aligner.Aligner
           members:
-            - process
             - predict
             - evaluate
 
@@ -68,9 +69,22 @@ quartodoc:
         - GeoJsonFileLoader
         - GeoJsonUrlLoader
     - title: GRB
-      package: brdr.grb
+      package: brdr.be.grb.loader
       desc: GRB specific loaders
-        - grb.GRBActualLoader
-        - grb.GRBFiscalParcelLoader
-        - grb.GRBSpecificDateParcelLoader
+      contents:
+        - GRBActualLoader
+        - GRBFiscalParcelLoader
+        - GRBSpecificDateParcelLoader
+    - title: Enumerators
+      package: brdr.enums
+      desc: Enums used in the brdr package.
+      contents:
+        - FullReferenceStrategy
+        - OpenDomainStrategy
+    - title: Typings
+      package: brdr.typings
+      desc: Typings used in 'brdr'
+      contents:
+        - ProcessResult
+
           

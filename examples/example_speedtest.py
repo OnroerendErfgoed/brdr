@@ -69,7 +69,7 @@ def main():
     print("Stdv: " + str(statistics.stdev(times)))
 
 
-# #BEFORE REFACTORING dict_series
+# #BEFORE REFACTORING process_results
 # duration: [25.652311, 27.894154, 19.641618, 19.929254, 44.754033, 25.218422, 23.167992, 18.649832, 22.899336, 52.108296]
 # Min: 18.649832
 # Max: 52.108296
