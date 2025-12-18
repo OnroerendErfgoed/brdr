@@ -8,7 +8,13 @@ from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import wait
 from copy import deepcopy
 from datetime import datetime
-from typing import Iterable, Dict, Any, Optional, List, TYPE_CHECKING, Union
+from typing import Any
+from typing import Dict
+from typing import Iterable
+from typing import List
+from typing import Optional
+from typing import TYPE_CHECKING
+from typing import Union
 
 import numpy as np
 from shapely import make_valid
@@ -16,16 +22,11 @@ from shapely import to_geojson
 from shapely.geometry.base import BaseGeometry
 
 from brdr import __version__
-from brdr.configs import ProcessorConfig, AlignerConfig
-from brdr.constants import (
-    DATE_FORMAT,
-    SYMMETRICAL_AREA_CHANGE,
-    SYMMETRICAL_AREA_PERCENTAGE_CHANGE,
-    AREA_CHANGE,
-    AREA_PERCENTAGE_CHANGE,
-    LENGTH_CHANGE,
-    LENGTH_PERCENTAGE_CHANGE,
-)
+from brdr.configs import AlignerConfig
+from brdr.configs import ProcessorConfig
+from brdr.constants import AREA_CHANGE
+from brdr.constants import AREA_PERCENTAGE_CHANGE
+from brdr.constants import DATE_FORMAT
 from brdr.constants import DEFAULT_CRS
 from brdr.constants import DIFF_AREA_FIELD_NAME
 from brdr.constants import DIFF_METRIC
@@ -37,6 +38,8 @@ from brdr.constants import FULL_ACTUAL_FIELD_NAME
 from brdr.constants import FULL_BASE_FIELD_NAME
 from brdr.constants import ID_THEME_FIELD_NAME
 from brdr.constants import LAST_VERSION_DATE
+from brdr.constants import LENGTH_CHANGE
+from brdr.constants import LENGTH_PERCENTAGE_CHANGE
 from brdr.constants import NR_CALCULATION_FIELD_NAME
 from brdr.constants import OD_ALIKE_FIELD_NAME
 from brdr.constants import PREDICTION_COUNT
@@ -45,6 +48,8 @@ from brdr.constants import RELEVANT_DISTANCE_DECIMALS
 from brdr.constants import RELEVANT_DISTANCE_FIELD_NAME
 from brdr.constants import REMARK_FIELD_NAME
 from brdr.constants import STABILITY
+from brdr.constants import SYMMETRICAL_AREA_CHANGE
+from brdr.constants import SYMMETRICAL_AREA_PERCENTAGE_CHANGE
 from brdr.constants import VERSION_DATE
 from brdr.constants import ZERO_STREAK
 from brdr.enums import AlignerResultType
@@ -63,6 +68,7 @@ from brdr.loader import Loader
 from brdr.logger import Logger
 from brdr.processor import AlignerGeometryProcessor
 from brdr.processor import BaseProcessor
+from brdr.typings import Formula
 from brdr.typings import ProcessResult
 from brdr.typings import ThematicId
 from brdr.utils import (
@@ -293,7 +299,7 @@ class AlignerResult:
 
                 if formula:
                     result_geom = process_result["result"]
-                    formula_result = aligner.compare_to_reference(result_geom)
+                    formula_result = process_result.get("formula") or aligner.compare_to_reference(result_geom)
                     prop_dictionary[theme_id][relevant_distance][FORMULA_FIELD_NAME] = (
                         json.dumps(formula_result)
                     )
@@ -347,10 +353,21 @@ class AlignerResult:
             write_geojson(os.path.join(path, file_name), fc)
 
 
+def _get_observations_from_formula(formula: Formula) -> List[Dict]:
+    observations = []
+    return []  # TODO
+
+
 def aligner_metadata_decorator(f):
     def inner_func(aligner, *args, **kwargs):
         assert isinstance(aligner, Aligner)
-        response = f(aligner, *args, **kwargs)
+        response: AlignerResult = f(aligner, *args, **kwargs)
+        if aligner.add_formula:
+            for thematic_id, rd_res in response.results.items():
+                for rd, res in rd_res.items():
+                    if res["result"]:
+                        formula = aligner.compare_to_reference(res["result"])
+                        res["formula"] = formula
         if aligner.log_metadata:
             # generate uuid for actuation
             actuation_id = "brdrid:actuations/" + uuid.uuid4().hex
@@ -376,8 +393,9 @@ def aligner_metadata_decorator(f):
             ]:
                 thematic_feature = aligner.thematic_data.features[thematic_id]
                 feature_of_interest_id = thematic_feature.brdr_id  # TODO
-                result_hash = hashlib.sha256(result["result"].wkt.encode()).hexdigest()
-                result["metadata"] = {
+                result_hash = hashlib.sha1(result["result"].wkt.encode()).hexdigest()
+                result["metadata"] = {}
+                result["metadata"]["actuation"] = {
                     "id": actuation_id,
                     "type": "sosa:Actuation",
                     "reference_geometries": reference_geometries,
@@ -397,6 +415,10 @@ def aligner_metadata_decorator(f):
                         ],
                     },
                 }
+                if formula := result["formula"]:
+                    result["metadata"]["observations"] = _get_observations_from_formula(
+                        formula
+                    )
 
         return response
 
@@ -417,6 +439,8 @@ class Aligner:
         Instance for logging feedback and information.
     log_metadata : bool
         If True, metadata about the actuation is logged in the results.
+    add_formula: bool
+        If True, process result formulas will be computed by default.
     processor : BaseProcessor or AlignerGeometryProcessor
         The geometric processor used for alignment calculations.
     correction_distance : float
@@ -493,6 +517,7 @@ class Aligner:
         self.config = config
         self.logger = Logger(feedback)
         self.log_metadata = config.log_metadata
+        self.add_formula = config.add_formula
         self.processor = (
             processor
             if processor
@@ -1074,6 +1099,7 @@ class Aligner:
                         id_theme=theme_id,
                         geom_predicted=dict_predictions_results[dist]["result"],
                         base_formula_field=base_formula_field,
+                        formula=dict_predictions_results[dist].get("formula")
                     )
                     props.update(process_results_evaluated_predictions[theme_id][dist]["properties"])
 
@@ -1461,7 +1487,7 @@ class Aligner:
         return diffs
 
     def _evaluate(
-        self, id_theme, geom_predicted, base_formula_field=FORMULA_FIELD_NAME
+        self, id_theme, geom_predicted, base_formula_field=FORMULA_FIELD_NAME, formula=None
     ):
         """
         function that evaluates a predicted geometry and returns a properties-dictionary
@@ -1477,7 +1503,7 @@ class Aligner:
             DIFF_PERCENTAGE_FIELD_NAME: None,
             DIFF_AREA_FIELD_NAME: None,
         }
-        actual_formula = self.compare_to_reference(geom_predicted)
+        actual_formula = formula or self.compare_to_reference(geom_predicted)
         if actual_formula is None or geom_predicted is None or geom_predicted.is_empty:
             properties[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
             properties[FULL_ACTUAL_FIELD_NAME] = False

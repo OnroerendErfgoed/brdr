@@ -55,3 +55,4 @@ class AlignerConfig:
     mitre_limit: float = 10
     max_workers: int = None
     log_metadata: bool = True
+    add_formula: bool = False
