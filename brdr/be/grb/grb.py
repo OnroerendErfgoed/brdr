@@ -13,7 +13,8 @@ from brdr.constants import (
     LAST_VERSION_DATE,
     DATE_FORMAT,
     FORMULA_FIELD_NAME,
-    BASE_FORMULA_FIELD_NAME, DEFAULT_CRS,
+    BASE_FORMULA_FIELD_NAME,
+    DEFAULT_CRS,
 )
 from brdr.enums import FullReferenceStrategy, AlignerResultType
 from brdr.loader import GeoJsonLoader
@@ -101,11 +102,11 @@ def update_featurecollection_to_actual_grb(
     logger = Logger(feedback)
 
     # Initiate a Aligner to reference thematic features to the actual borders
-    aligner_config= AlignerConfig()
-    aligner_config.max_workers=max_workers
-    aligner = Aligner(crs=crs,feedback=feedback, config=aligner_config)
+    aligner_config = AlignerConfig()
+    aligner_config.max_workers = max_workers
+    aligner = Aligner(crs=crs, feedback=feedback, config=aligner_config)
     aligner.load_thematic_data(
-        GeoJsonLoader(_input=featurecollection,id_property=id_theme_fieldname)
+        GeoJsonLoader(_input=featurecollection, id_property=id_theme_fieldname)
     )
     aligner.load_reference_data(
         GRBActualLoader(grb_type=grb_type, partition=1000, aligner=aligner)
@@ -119,7 +120,7 @@ def update_featurecollection_to_actual_grb(
         / 100
     ]
 
-    for id_theme,feature in aligner.thematic_data.features.items():
+    for id_theme, feature in aligner.thematic_data.features.items():
         try:
             if not base_formula_field is None:
                 base_formula_string = feature.properties[base_formula_field]
@@ -156,7 +157,9 @@ def update_featurecollection_to_actual_grb(
     if last_version_date is not None:
         datetime_start = last_version_date
         datetime_end = datetime.now().date()
-        thematic_geometries = {key: feat.geometry for key, feat in aligner.thematic_data.features.items()}
+        thematic_geometries = {
+            key: feat.geometry for key, feat in aligner.thematic_data.features.items()
+        }
 
         affected, unaffected = get_affected_by_grb_change(
             thematic_geometries=thematic_geometries,
@@ -190,7 +193,9 @@ def update_featurecollection_to_actual_grb(
         multi_to_best_prediction=multi_to_best_prediction,
     )
 
-    return aligner_result.get_results_as_geojson(aligner=aligner,result_type=AlignerResultType.EVALUATED_PREDICTIONS,
+    return aligner_result.get_results_as_geojson(
+        aligner=aligner,
+        result_type=AlignerResultType.EVALUATED_PREDICTIONS,
         formula=True,
         attributes=attributes,
     )

@@ -89,6 +89,7 @@ class DiffMetric(str, Enum):
     REFERENCE_USAGE : str
         The extent of reference boundaries utilized (m or m²).
     """
+
     AREA_CHANGE = "AREA_CHANGE"
     AREA_PERCENTAGE_CHANGE = "AREA_PERCENTAGE_CHANGE"
     SYMMETRICAL_AREA_CHANGE = "SYMMETRICAL_AREA_CHANGE"
@@ -98,6 +99,7 @@ class DiffMetric(str, Enum):
     LENGTH_REMOVED = "LENGTH_REMOVED"
     TOTAL_DISTANCE = "TOTAL_DISTANCE"
     REFERENCE_USAGE = "REFERENCE_USAGE"
+
 
 class ProcessRemark(str, Enum):
     """
@@ -122,6 +124,7 @@ class ProcessRemark(str, Enum):
     NOT_EVALUATED_ORIGINAL_RETURNED : str
         Evaluation criteria not met.
     """
+
     RESULT_UNCHANGED = "resulting geometry equal to original geometry"
     INPUT_CIRCLE = "circle detected: original_geometry_returned"
     RESULT_EMPTY_RETURNED = "resulting geometry empty: empty geometry returned"
@@ -143,6 +146,7 @@ class Evaluation(str, Enum):
     These values help in deciding whether a change can be accepted automatically
     or requires manual review.
     """
+
     EQUALITY_EQUAL_FORMULA_FULL_1 = "equality_equal_formula_full_1"
     EQUALITY_EQUAL_FORMULA_2 = "equality_equal_formula_2"
     EQUALITY_FULL_3 = "equality_full_3"

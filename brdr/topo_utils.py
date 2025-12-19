@@ -21,10 +21,10 @@ def _dissolve_topo(
     thematic_id,
     process_results,
     input_geometry,
-    thematic_geometries_to_process:Dict[Any,BaseGeometry],
+    thematic_geometries_to_process: Dict[Any, BaseGeometry],
     topo_thematic,
     relevant_distance,
-)->ProcessResult:
+) -> ProcessResult:
     """
     Dissolves a processed dictionary of LineStrings (Arcs) into a geometry collection
     of the original features based on TopoJSON.
@@ -119,28 +119,24 @@ def _dissolve_topo(
         if feature["id"] == thematic_id:
             # Convert the GeoJSON geometry structure to a Shapely geometry
             result = geojson_geometry_to_shapely(feature["geometry"])
-            break # Found the geometry, exit the loop
+            break  # Found the geometry, exit the loop
 
     # Calculate differences between the result and the input geometry
     # Difference (result - input_geometry)
-    result_diff_plus = make_valid(
-        safe_difference(result, input_geometry)
-    )
+    result_diff_plus = make_valid(safe_difference(result, input_geometry))
     # Difference (input_geometry - result)
-    result_diff_min = make_valid(
-        safe_difference(input_geometry, result)
-    )
+    result_diff_min = make_valid(safe_difference(input_geometry, result))
     # Symmetric difference (union of the two differences)
     result_diff = safe_unary_union([result_diff_plus, result_diff_min])
 
     # Construct the final result dictionary
-    process_result: ProcessResult= {
+    process_result: ProcessResult = {
         "result": result,
         "result_diff": result_diff,
         "result_diff_plus": result_diff_plus,
         "result_diff_min": result_diff_min,
-        "result_relevant_intersection": GeometryCollection(), # Placeholder
-        "result_relevant_diff": GeometryCollection(),         # Placeholder
+        "result_relevant_intersection": GeometryCollection(),  # Placeholder
+        "result_relevant_diff": GeometryCollection(),  # Placeholder
         "properties": {REMARK_FIELD_NAME: []},
     }
 
@@ -172,8 +168,8 @@ def _generate_topo(thematic_data):
 
     # Generate the TopoJSON structure from the input geometries.
     # prequantize=False is used to prevent coordinate quantization.
-    thematic_geometries: Dict[Any,BaseGeometry]={}
-    for key,feat in thematic_data.features.items():
+    thematic_geometries: Dict[Any, BaseGeometry] = {}
+    for key, feat in thematic_data.features.items():
         thematic_geometries[key] = feat.geometry
     topo_thematic = topojson.Topology(thematic_geometries, prequantize=False)
 

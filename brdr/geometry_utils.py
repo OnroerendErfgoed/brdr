@@ -1,6 +1,5 @@
 import logging
 import math
-from collections import Counter
 from itertools import combinations
 from itertools import islice
 from math import inf
@@ -1352,22 +1351,21 @@ def find_best_circle_path(directed_graph, geom_to_process):
             best_cycle_line = cycle_line
     return best_cycle_line
 
-
-# def find_circle_path(directed_graph):
-#     # Vind alle eenvoudige cycli
-#     cycles = list(nx.simple_cycles(directed_graph))
-#
-#     # Bepaal de langste cyclus op basis van gewichten
-#     def cycle_weight(cycle):
-#         weight = 0
-#         for i in range(len(cycle)):
-#             u = cycle[i]
-#             v = cycle[(i + 1) % len(cycle)]
-#             if directed_graph.has_edge(u, v):
-#                 weight += directed_graph[u][v]["weight"]
-#             else:
-#                 return -1  # ongeldig pad
-#         return weight
+    # def find_circle_path(directed_graph):
+    #     # Vind alle eenvoudige cycli
+    #     cycles = list(nx.simple_cycles(directed_graph))
+    #
+    #     # Bepaal de langste cyclus op basis van gewichten
+    #     def cycle_weight(cycle):
+    #         weight = 0
+    #         for i in range(len(cycle)):
+    #             u = cycle[i]
+    #             v = cycle[(i + 1) % len(cycle)]
+    #             if directed_graph.has_edge(u, v):
+    #                 weight += directed_graph[u][v]["weight"]
+    #             else:
+    #                 return -1  # ongeldig pad
+    #         return weight
 
     # Selecteer de langste cyclus
     longest_cycle = max(cycles, key=cycle_weight)

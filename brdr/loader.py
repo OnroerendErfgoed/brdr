@@ -16,7 +16,12 @@ import requests
 from shapely import force_2d, make_valid
 from shapely.geometry.base import BaseGeometry
 
-from brdr.constants import DATE_FORMAT, DOWNLOAD_LIMIT, MAX_REFERENCE_BUFFER, VERSION_DATE
+from brdr.constants import (
+    DATE_FORMAT,
+    DOWNLOAD_LIMIT,
+    MAX_REFERENCE_BUFFER,
+    VERSION_DATE,
+)
 from brdr.feature_data import AlignerFeature, AlignerFeatureCollection
 from brdr.geometry_utils import buffer_pos, from_crs, to_crs
 from brdr.typings import FeatureCollection, ThematicId
@@ -137,11 +142,11 @@ class DictLoader(Loader):
     """
 
     def __init__(
-            self,
-            data_dict: Dict[str, BaseGeometry],
-            data_dict_properties: Dict[str, dict] = {},
-            data_dict_source: Dict[str, str] = {},
-            is_reference: bool = False,
+        self,
+        data_dict: Dict[str, BaseGeometry],
+        data_dict_properties: Dict[str, dict] = {},
+        data_dict_source: Dict[str, str] = {},
+        is_reference: bool = False,
     ):
         """
         Parameters
@@ -173,11 +178,11 @@ class GeoJsonLoader(Loader):
     """
 
     def __init__(
-            self,
-            *,
-            id_property: Optional[str] = None,
-            _input: Optional[FeatureCollection] = None,
-            is_reference: bool = False,
+        self,
+        *,
+        id_property: Optional[str] = None,
+        _input: Optional[FeatureCollection] = None,
+        is_reference: bool = False,
     ):
         """
         Parameters
@@ -259,14 +264,14 @@ class OGCFeatureAPIReferenceLoader(GeoJsonLoader):
     """
 
     def __init__(
-            self,
-            url: str,
-            id_property: str,
-            collection: str,
-            aligner: Any,
-            partition: int = 1000,
-            limit: int = DOWNLOAD_LIMIT,
-            is_reference: bool = False,
+        self,
+        url: str,
+        id_property: str,
+        collection: str,
+        aligner: Any,
+        partition: int = 1000,
+        limit: int = DOWNLOAD_LIMIT,
+        is_reference: bool = False,
     ):
         """
         Parameters
@@ -325,7 +330,7 @@ class OGCFeatureAPIReferenceLoader(GeoJsonLoader):
         Request
         end
         ```
-        
+
         """
         if not self.aligner.thematic_data:
             raise ValueError("Thematic data not loaded")
@@ -372,14 +377,14 @@ class WFSReferenceLoader(GeoJsonLoader):
     """
 
     def __init__(
-            self,
-            url: str,
-            id_property: str,
-            typename: str,
-            aligner: Any,
-            partition: int = 1000,
-            limit: int = DOWNLOAD_LIMIT,
-            is_reference: bool = False,
+        self,
+        url: str,
+        id_property: str,
+        typename: str,
+        aligner: Any,
+        partition: int = 1000,
+        limit: int = DOWNLOAD_LIMIT,
+        is_reference: bool = False,
     ):
         """
         Parameters

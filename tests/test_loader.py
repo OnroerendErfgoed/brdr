@@ -4,7 +4,6 @@ from brdr.aligner import Aligner
 from brdr.be.grb.enums import GRBType
 from brdr.be.grb.loader import GRBActualLoader
 from brdr.be.oe.loader import OnroerendErfgoedLoader
-
 from brdr.loader import (
     GeoJsonUrlLoader,
     GeoJsonLoader,

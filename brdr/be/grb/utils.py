@@ -74,8 +74,8 @@ def is_grb_changed(
 
 
 def get_affected_by_grb_change(
-    thematic_geometries:Dict[Any,BaseGeometry],
-        *,
+    thematic_geometries: Dict[Any, BaseGeometry],
+    *,
     grb_type=GRBType.ADP,
     date_start=date.today(),
     date_end=date.today(),
@@ -120,7 +120,9 @@ def get_affected_by_grb_change(
     else:
         # Temporal filter on VERDATUM
         if geometry_thematic_union is None:
-            geometry_thematic_union = safe_unary_union(list(thematic_geometries.values()))
+            geometry_thematic_union = safe_unary_union(
+                list(thematic_geometries.values())
+            )
         coll_changed_grb, name_reference_id = get_collection_grb_actual(
             buffer_pos(geometry_thematic_union, GRB_MAX_REFERENCE_BUFFER),
             grb_type=grb_type,
@@ -164,7 +166,7 @@ def get_affected_by_grb_change(
             if key in thematic_intersections:
                 affected.append(key)
             else:
-                 unaffected.append(key)
+                unaffected.append(key)
     return affected, unaffected
 
 

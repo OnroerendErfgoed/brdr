@@ -63,7 +63,9 @@ class TestExamples(unittest.TestCase):
 
         process_result = aligner.process(relevant_distances=series)
         dict_diffs = aligner.get_difference_metrics_for_thematic_data(
-            process_result.results, aligner.thematic_data, DiffMetric.SYMMETRICAL_AREA_CHANGE
+            process_result.results,
+            aligner.thematic_data,
+            DiffMetric.SYMMETRICAL_AREA_CHANGE,
         )
 
         dict_diffs = dict_diffs["input_id"]

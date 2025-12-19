@@ -1,8 +1,6 @@
 import logging
 
-import requests
 from shapely import box
-from shapely.geometry import shape
 
 from brdr.be.oe.enums import OEType
 from brdr.constants import DOWNLOAD_LIMIT, DEFAULT_CRS

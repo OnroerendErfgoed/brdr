@@ -103,12 +103,13 @@ class AlignerFeatureCollection:
     >>> # Get a union of all geometries
     >>> total_area = collection.union.area
     """
+
     def __init__(
         self,
         features: dict[ThematicId, AlignerFeature],
         source: dict[str, str] = None,
         id_fieldname: str = None,
-            crs: CRS = None,
+        crs: CRS = None,
         is_reference: bool = False,
     ):
         """
@@ -142,7 +143,7 @@ class AlignerFeatureCollection:
         return self.features[key]
 
     @property
-    def id_fieldname(self)->str:
+    def id_fieldname(self) -> str:
         """
         The field name used as the primary identifier.
 
@@ -160,7 +161,7 @@ class AlignerFeatureCollection:
         return self._id_fieldname
 
     @property
-    def union(self)-> BaseGeometry:
+    def union(self) -> BaseGeometry:
         """
         The unary union of all feature geometries in the collection.
 
@@ -281,7 +282,7 @@ class AlignerFeatureCollection:
             self._tree = STRtree(geoms)
         return self._tree
 
-    def to_geojson(self,geom_attributes=False):
+    def to_geojson(self, geom_attributes=False):
         """
         Converts the collection into a GeoJSON FeatureCollection format.
 
@@ -300,7 +301,9 @@ class AlignerFeatureCollection:
         for key, feat in self.features.items():
             properties = feat.properties
             properties[self.id_fieldname] = key
-            features.append(_feature_from_geom(feat.geometry, key, properties, geom_attributes))
+            features.append(
+                _feature_from_geom(feat.geometry, key, properties, geom_attributes)
+            )
         crs_geojson = None
         if self.crs is not None:
             crs_geojson = {"type": "name", "properties": {"name": from_crs(self.crs)}}

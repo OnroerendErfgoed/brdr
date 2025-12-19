@@ -68,7 +68,6 @@ from brdr.loader import Loader
 from brdr.logger import Logger
 from brdr.processor import AlignerGeometryProcessor
 from brdr.processor import BaseProcessor
-from brdr.typings import Formula
 from brdr.typings import ProcessResult
 from brdr.typings import ThematicId
 from brdr.utils import (
@@ -364,8 +363,9 @@ def _get_observations_from_formula(processResult: ProcessResult) -> List[Dict]:
             "id": f"metadata:{uuid.uuid4().hex}",
             "type": "sosa:Observation",
             "resultTime": observation_time,
-            "procedure": actuation_metadata["procedure"]
-        } for item in formula.items()
+            "procedure": actuation_metadata["procedure"],
+        }
+        for item in formula.items()
     ]  # TODO
 
 
@@ -426,9 +426,11 @@ def aligner_metadata_decorator(f):
                         ],
                     },
                 }
-                #TODO is formula apart nodig? nakijken, want momenteel is dit een empty geometrycollection
+                # TODO is formula apart nodig? nakijken, want momenteel is dit een empty geometrycollection
                 if result["formula"]:
-                    result["metadata"]["observations"] = _get_observations_from_formula(result)
+                    result["metadata"]["observations"] = _get_observations_from_formula(
+                        result
+                    )
 
         return response
 

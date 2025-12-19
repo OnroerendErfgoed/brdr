@@ -5,8 +5,7 @@ from brdr.aligner import Aligner
 from brdr.be.grb.enums import GRBType
 from brdr.be.grb.loader import GRBActualLoader
 from brdr.be.oe.loader import OnroerendErfgoedLoader
-from brdr.configs import AlignerConfig, ProcessorConfig
-
+from brdr.configs import ProcessorConfig
 from brdr.loader import DictLoader
 from brdr.loader import GeoJsonLoader
 from brdr.processor import AlignerGeometryProcessor

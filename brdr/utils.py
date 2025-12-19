@@ -166,7 +166,11 @@ def multi_to_singles(dict_geoms):
 
 def flatten_iter(lst):
     while any(isinstance(i, list) for i in lst):
-        lst = [item for sublist in lst for item in (sublist if isinstance(sublist, list) else [sublist])]
+        lst = [
+            item
+            for sublist in lst
+            for item in (sublist if isinstance(sublist, list) else [sublist])
+        ]
     return lst
 
 
@@ -328,7 +332,9 @@ def get_geometry_difference_metrics_from_processresults(
     return diffs
 
 
-def get_geometry_difference_metrics_from_processresult(processresult, geom_thematic, reference_union, diff_metric):
+def get_geometry_difference_metrics_from_processresult(
+    processresult, geom_thematic, reference_union, diff_metric
+):
     result = processresult.get("result")
     result_diff = processresult.get("result_diff")
     result_diff_min = processresult.get("result_diff_min")
@@ -340,20 +346,20 @@ def get_geometry_difference_metrics_from_processresult(processresult, geom_thema
         diff = result_diff.area
     elif diff_metric == DiffMetric.SYMMETRICAL_AREA_PERCENTAGE_CHANGE:
         diff = result_diff.area
-        if original.area !=0:
+        if original.area != 0:
             diff = diff * 100 / original.area
     elif diff_metric == DiffMetric.AREA_CHANGE:
         diff = result.area - original.area
     elif diff_metric == DiffMetric.AREA_PERCENTAGE_CHANGE:
         diff = result.area - original.area
-        if original.area !=0:
+        if original.area != 0:
             diff = diff * 100 / original.area
     elif diff_metric == DiffMetric.LENGTH_CHANGE:
         diff = result.length - original.length
     elif diff_metric == DiffMetric.LENGTH_PERCENTAGE_CHANGE:
         diff = result.length - original.length
-        if original.length !=0:
-            diff=diff*100/original.length
+        if original.length != 0:
+            diff = diff * 100 / original.length
     elif diff_metric == DiffMetric.LENGTH_REMOVED:
         if not result_diff_min is None or result_diff_min.is_empty:
             diff = result_diff_min.length
@@ -516,9 +522,7 @@ def geojson_to_dicts(collection, id_property):
     if collection is None or "features" not in collection:
         return data_dict, data_dict_properties
     for f in collection["features"]:
-        key = f["properties"][
-            id_property
-        ]
+        key = f["properties"][id_property]
         geom = shape(f["geometry"])
         data_dict[key] = make_valid(geom)
         data_dict_properties[key] = f["properties"]
@@ -565,6 +569,7 @@ def get_collection_by_partition(
                 collection["features"].extend(coll["features"])
     return collection
 
+
 def build_reverse_index_wkb(d: dict):
     return {g.wkb: k for k, g in d.items()}
 
@@ -590,7 +595,7 @@ def is_brdr_formula(brdr_formula):
     return False
 
 
-def union_process_result(process_result:ProcessResult)->ProcessResult:
+def union_process_result(process_result: ProcessResult) -> ProcessResult:
     """
     Perform a unary union on all geometries within a ProcessResult object.
 
@@ -628,7 +633,7 @@ def union_process_result(process_result:ProcessResult)->ProcessResult:
     ProcessorConfig : Settings that define how these results are generated.
     """
     for key in ProcessResult.__annotations__:
-        if key in ["properties","metadata","formula"]:
+        if key in ["properties", "metadata", "formula"]:
             process_result[key] = process_result.get(key, {})  # noqa
             continue
         value = process_result.get(key, GeometryCollection())  # noqa

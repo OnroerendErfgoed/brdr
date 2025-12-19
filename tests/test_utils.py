@@ -2,12 +2,8 @@ import unittest
 
 import pytest
 import shapely
-from shapely import is_empty
 from shapely.geometry import Polygon
 
-
-from brdr.constants import MULTI_SINGLE_ID_SEPARATOR
-from brdr.typings import ProcessResult
 from brdr.utils import get_collection, get_geometry_difference_metrics_from_processresults
 from brdr.utils import multi_to_singles
 from brdr.utils import polygonize_reference_data

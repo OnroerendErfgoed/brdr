@@ -70,15 +70,16 @@ def mock_inventaris_responses(requests_mock):
         content_type="application/json",
     )
 
+
 @pytest.fixture
 def mock_be_cadastral_responses(requests_mock):
     with open(f"{here}/testdata/be_cadastral.xml", "r") as f:
-        body= f.read()
+        body = f.read()
     requests_mock.add(
         requests_mock.GET,
         multi_url_pattern(
             "https://ccff02.minfin.fgov.be/geoservices/arcgis/services/WMS/Cadastral_LayersWFS/MapServer/WFSServer?"
-    #SERVICE=WFS&REQUEST=GetFeature&VERSION=2.0.0&TYPENAMES=CL%3ACadastral_parcel&SRSNAME=http%3A%2F%2Fwww.opengis.net%2Fdef%2Fcrs%2FEPSG%2F0%2F3812&BBOX=672847.835033453%2C671446.8842659479%2C672933.7305729307%2C671548.5887240643%2Chttp%3A%2F%2Fwww.opengis.net%2Fdef%2Fcrs%2FEPSG%2F0%2F3812"
+            # SERVICE=WFS&REQUEST=GetFeature&VERSION=2.0.0&TYPENAMES=CL%3ACadastral_parcel&SRSNAME=http%3A%2F%2Fwww.opengis.net%2Fdef%2Fcrs%2FEPSG%2F0%2F3812&BBOX=672847.835033453%2C671446.8842659479%2C672933.7305729307%2C671548.5887240643%2Chttp%3A%2F%2Fwww.opengis.net%2Fdef%2Fcrs%2FEPSG%2F0%2F3812"
         ),
         body=body,
         status=200,
@@ -89,35 +90,38 @@ def mock_be_cadastral_responses(requests_mock):
 @pytest.fixture
 def mock_grb_wfs_capabilities_responses(requests_mock):
     with open(f"{here}/testdata/grb_wfs_capabilities.xml", "r") as f:
-        body= f.read()
+        body = f.read()
     requests_mock.add(
         requests_mock.GET,
         multi_url_pattern(
             "https://geo.api.vlaanderen.be/GRB/wfs?service=WFS&version=2.0.0&request=GetCapabilities"
-  ),
-        body=body,
-        status=200,
-        content_type="application/xml",
-    )
-@pytest.fixture
-def mock_grb_wfs_responses(requests_mock):
-    with open(f"{here}/testdata/grb_wfs_response.xml", "r") as f:
-        body= f.read()
-    requests_mock.add(
-        requests_mock.GET,
-        multi_url_pattern(
-            "https://geo.api.vlaanderen.be/GRB/wfs?SERVICE=WFS&REQUEST=GetFeature"
-  ),
+        ),
         body=body,
         status=200,
         content_type="application/xml",
     )
 
+
+@pytest.fixture
+def mock_grb_wfs_responses(requests_mock):
+    with open(f"{here}/testdata/grb_wfs_response.xml", "r") as f:
+        body = f.read()
+    requests_mock.add(
+        requests_mock.GET,
+        multi_url_pattern(
+            "https://geo.api.vlaanderen.be/GRB/wfs?SERVICE=WFS&REQUEST=GetFeature"
+        ),
+        body=body,
+        status=200,
+        content_type="application/xml",
+    )
+
+
 @pytest.fixture
 def mock_osm_responses(requests_mock):
     requests_mock.add(
         requests_mock.POST,
-            "https://overpass-api.de/api/interpreter",
+        "https://overpass-api.de/api/interpreter",
         json=osm_responses.osm_buildings,
         status=200,
         content_type="application/json",

@@ -710,6 +710,7 @@ class SnapGeometryProcessor(BaseProcessor):
 
         return result_dict
 
+
 class DieussaertGeometryProcessor(BaseProcessor):
     """
     Processor implementing the Dieussaert area-based alignment algorithm.
@@ -815,8 +816,8 @@ class DieussaertGeometryProcessor(BaseProcessor):
         for process_result in list_process_results:
             for key in process_result:
                 value = process_result[key]
-                if key in ["metadata","formula"]:
-                    #This will add the needed keys to the processResult. The values are filled afterwards
+                if key in ["metadata", "formula"]:
+                    # This will add the needed keys to the processResult. The values are filled afterwards
                     if key in merged_process_result:
                         continue
                     else:
@@ -824,9 +825,7 @@ class DieussaertGeometryProcessor(BaseProcessor):
                     continue
                 if key == "properties":
                     if key in merged_process_result:
-                        existing_remarks = merged_process_result[key][
-                            REMARK_FIELD_NAME
-                        ]
+                        existing_remarks = merged_process_result[key][REMARK_FIELD_NAME]
                     else:
                         merged_process_result[key] = {}
                         existing_remarks = []
@@ -844,7 +843,9 @@ class DieussaertGeometryProcessor(BaseProcessor):
                         existing = GeometryCollection()
                     merged_process_result[key] = safe_unary_union([existing, geom])
                 else:
-                    raise ValueError(f"Invalid element with key {str(key)} for ProcessResult")
+                    raise ValueError(
+                        f"Invalid element with key {str(key)} for ProcessResult"
+                    )
 
         return merged_process_result
 
@@ -1384,6 +1385,7 @@ class DieussaertGeometryProcessor(BaseProcessor):
                 geom = geom_relevant_intersection  # (=empty geometry)
         return geom, geom_relevant_intersection, geom_relevant_difference
 
+
 class NetworkGeometryProcessor(BaseProcessor):
     """
     Processor that aligns geometries based on a linear network.
@@ -1708,9 +1710,9 @@ class AlignerGeometryProcessor(BaseProcessor):
             if relevant_distance == 0:
                 remark = ProcessRemark.RESULT_UNCHANGED
                 self.logger.feedback_debug(remark)
-                remarks=[remark]
+                remarks = [remark]
                 process_result = ProcessResult()
-                process_result ["result"]=input_geometry
+                process_result["result"] = input_geometry
                 process_result["properties"] = {REMARK_FIELD_NAME: remarks}
                 return union_process_result(process_result)
 
@@ -1738,6 +1740,7 @@ class AlignerGeometryProcessor(BaseProcessor):
             mitre_limit=mitre_limit,
             correction_distance=correction_distance,
         )
+
 
 class TopologyProcessor(BaseProcessor):
     """
@@ -1778,15 +1781,15 @@ class TopologyProcessor(BaseProcessor):
         self.wkb_to_id = None
 
     def process(
-            self,
-            *,
-            input_geometry: BaseGeometry,
-            reference_data: AlignerFeatureCollection,
-            mitre_limit: float,
-            correction_distance: float,
-            relevant_distance: float,
-            thematic_data: AlignerFeatureCollection,
-            **kwargs: Any,
+        self,
+        *,
+        input_geometry: BaseGeometry,
+        reference_data: AlignerFeatureCollection,
+        mitre_limit: float,
+        correction_distance: float,
+        relevant_distance: float,
+        thematic_data: AlignerFeatureCollection,
+        **kwargs: Any,
     ) -> ProcessResult:
         """
         Aligns a geometry by processing its topological arcs.
@@ -1890,8 +1893,8 @@ class TopologyProcessor(BaseProcessor):
         3. A reverse index for quick feature lookup.
         """
         if self.thematic_data is None or thematic_data != self.thematic_data:
-            self.thematic_geometries_to_process, self.topo_thematic = (
-                _generate_topo(thematic_data)
+            self.thematic_geometries_to_process, self.topo_thematic = _generate_topo(
+                thematic_data
             )
             self.wkb_to_id = build_reverse_index_wkb(
                 {key: feat.geometry for key, feat in thematic_data.features.items()}
