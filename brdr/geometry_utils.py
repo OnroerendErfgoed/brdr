@@ -1367,14 +1367,14 @@ def find_best_circle_path(directed_graph, geom_to_process):
     #                 return -1  # ongeldig pad
     #         return weight
 
-    # Selecteer de langste cyclus
-    longest_cycle = max(cycles, key=cycle_weight)
-    # Zet de cyclus om naar een gesloten LineString
-    longest_cycle_coords = longest_cycle + [longest_cycle[0]]
-    longest_cycle_linestring = LineString(longest_cycle_coords)
-    if not isinstance(safe_unary_union(Polygon(longest_cycle_linestring)), Polygon):
-        longest_cycle_linestring = None
-    return longest_cycle_linestring
+    # # Selecteer de langste cyclus
+    # longest_cycle = max(cycles, key=cycle_weight)
+    # # Zet de cyclus om naar een gesloten LineString
+    # longest_cycle_coords = longest_cycle + [longest_cycle[0]]
+    # longest_cycle_linestring = LineString(longest_cycle_coords)
+    # if not isinstance(safe_unary_union(Polygon(longest_cycle_linestring)), Polygon):
+    #     longest_cycle_linestring = None
+    # return longest_cycle_linestring
 
 
 def longest_linestring_from_multilinestring(multilinestring):
