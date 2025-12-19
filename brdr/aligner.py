@@ -366,7 +366,7 @@ def _get_observations_from_formula(processResult: ProcessResult) -> List[Dict]:
             "procedure": actuation_metadata["procedure"],
         }
         for item in formula.items()
-    ]  # TODO
+    ]  # TODO emrys
 
 
 def aligner_metadata_decorator(f):
@@ -426,7 +426,6 @@ def aligner_metadata_decorator(f):
                         ],
                     },
                 }
-                # TODO is formula apart nodig? nakijken, want momenteel is dit een empty geometrycollection
                 if result["formula"]:
                     result["metadata"]["observations"] = _get_observations_from_formula(
                         result

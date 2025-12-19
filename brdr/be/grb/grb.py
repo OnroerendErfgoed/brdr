@@ -21,7 +21,7 @@ from brdr.loader import GeoJsonLoader
 from brdr.logger import Logger
 
 
-# TODO improve logic. Do first a quickscan on x meter to detect the not_changed ones, and afterwards a full calculation
+# TODO karel improve logic. Do first a quickscan on x meter to detect the not_changed ones, and afterwards a full calculation
 def update_featurecollection_to_actual_grb(
     featurecollection: Dict[str, Any],
     id_theme_fieldname: Optional[str] = None,

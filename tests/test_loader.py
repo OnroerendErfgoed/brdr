@@ -81,7 +81,7 @@ class TestExamples:
         aligner.load_thematic_data(loader)
 
         # Load reference data: The actual GRB-parcels
-        # TODO fix this test as the collection call is replaced by a mock response
+        # TODO Emrys fix this test as the collection call is replaced by a mock response - can you help with this?
 
         loader = OGCFeatureAPIReferenceLoader(
             url="https://geo.api.vlaanderen.be/GRB/ogc/features",
@@ -151,7 +151,7 @@ class TestExamples:
             partition=1000,
             aligner=aligner,
         )
-        # TODO check test in combination with mock
+        # TODO emrys - check test in combination with mock, can you help with his?
         assert True
         # aligner.load_reference_data(loader)
         #

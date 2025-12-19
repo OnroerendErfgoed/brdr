@@ -5,7 +5,7 @@ class TestOsm(unittest.TestCase):
     # @pytest.mark.usefixtures("mock_osm_responses")
     def test_osmloader(self):
         assert True
-        # TODO test fails
+        # TODO emrys - test fails, can you help with this?
 
         # aligner = Aligner()
         # thematic_dict = {

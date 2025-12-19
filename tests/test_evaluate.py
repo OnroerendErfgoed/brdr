@@ -316,7 +316,7 @@ class TestEvaluate(unittest.TestCase):
         process_results_evaluated = aligner_result.get_results(
             aligner=aligner, result_type=AlignerResultType.EVALUATED_PREDICTIONS
         )
-        # TODO review after metadata is refined. This should be 0 zero, but is filled with metadata so we temporary have put it to 1
+        # TODO karel review after metadata is refined. This should be 0 zero, but is filled with metadata so we temporary have put it to 1
         assert len(process_results_evaluated) == 1
 
     @pytest.mark.usefixtures("mock_grb_response2")
