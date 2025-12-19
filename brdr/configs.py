@@ -96,5 +96,7 @@ class AlignerConfig:
     correction_distance: float = 0.01
     diff_metric: DiffMetric = DIFF_METRIC
     mitre_limit: float = 10
-    max_workers: Optional[int] = None
+    max_workers: int = None
+    log_metadata: bool = True
+    add_formula: bool = False
     log_metadata: bool = True
