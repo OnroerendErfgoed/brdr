@@ -21,6 +21,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Scientific/Engineering :: GIS",
 ]
 dependencies = [
@@ -52,7 +53,7 @@ dev = [
     "geopandas>=1.1",
     "hatchling>=1.28.0",
     "matplotlib>=3.10.8",
-    "pillow>=11.0",
+    "pillow>=12.0",
     "mypy>=1.14",
     "pip-tools>=7.5",
     "types-requests>=2.32",
@@ -66,7 +67,7 @@ build-backend = "hatchling.build"
 packages = ["brdr"]
 
 [tool.black]
-target-version = ['py311', 'py312', 'py313']
+target-version = ['py311', 'py312', 'py313', 'py314']
 
 # Config for hatch environments
 [tool.hatch.envs.dev]
@@ -81,4 +82,4 @@ features = [
 ]
 
 [[tool.hatch.envs.hatch-test.matrix]]
-python = ['3.11', '3.12', '3.13']
+python = ['3.11', '3.12', '3.13', '3.14']
