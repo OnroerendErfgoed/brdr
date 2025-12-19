@@ -32,7 +32,7 @@ class TestOE:
         loader = OnroerendErfgoedLoader(objectids=[42549], oetype=OEType.EO)
         aligner = Aligner()
         aligner.load_thematic_data(loader)
-        assert len(aligner.thematic_data.features.keys())== 1
+        assert len(aligner.thematic_data.features.keys()) == 1
 
     def test_onroerenderfgoedloader_by_bbox(self, requests_mock):
         requests_mock.add(

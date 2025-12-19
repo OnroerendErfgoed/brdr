@@ -35,7 +35,6 @@ class TestAligner(unittest.TestCase):
         prediction_result = self.sample_aligner.predict(series)
         self.assertEqual(len(prediction_result.results), len(thematic_dict))
 
-
     def test_predictor_single_value(self):
         # Load thematic data & reference data
         thematic_dict = {"theme_id": from_wkt("POLYGON ((0 0, 0 9, 5 10, 10 0, 0 0))")}
@@ -76,7 +75,9 @@ class TestAligner(unittest.TestCase):
         # predict which relevant distances are interesting to propose as resulting geometry
         aligner_result = aligner.predict(relevant_distances=series)
 
-        process_results_predicted=aligner_result.get_results(aligner=aligner,result_type=AlignerResultType.PREDICTIONS)
+        process_results_predicted = aligner_result.get_results(
+            aligner=aligner, result_type=AlignerResultType.PREDICTIONS
+        )
         assert len(process_results_predicted["id1"]) >= 1
 
     @pytest.mark.usefixtures("callback_grb_response")
@@ -98,7 +99,9 @@ class TestAligner(unittest.TestCase):
         series = np.arange(0, 110, 10, dtype=int) / 100
         # predict which relevant distances are interesting to propose as resulting geometry
         aligner_result = aligner.predict(relevant_distances=series)
-        process_results_predicted=aligner_result.get_results(aligner=aligner,result_type=AlignerResultType.PREDICTIONS)
+        process_results_predicted = aligner_result.get_results(
+            aligner=aligner, result_type=AlignerResultType.PREDICTIONS
+        )
         assert len(process_results_predicted["id1"]) <= 1
 
     def test_predictor_point(self):

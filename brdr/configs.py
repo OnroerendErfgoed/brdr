@@ -93,6 +93,7 @@ class AlignerConfig:
         If True, detailed metadata about the alignment process will be
         recorded in the logs.
     """
+
     correction_distance: float = 0.01
     diff_metric: DiffMetric = DIFF_METRIC
     mitre_limit: float = 10
