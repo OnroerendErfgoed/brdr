@@ -111,8 +111,10 @@ pycodestyle==2.12.1
     # via flake8
 pyflakes==3.2.0
     # via flake8
-pyogrio==0.10.0
-    # via geopandas
+pyogrio==0.12.1
+    # via
+    #   brdr (pyproject.toml)
+    #   geopandas
 pyparsing==3.1.2
     # via matplotlib
 pyproj==3.7.2
