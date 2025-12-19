@@ -358,15 +358,99 @@ def _get_observations_from_formula(processResult: ProcessResult) -> List[Dict]:
     formula = processResult["formula"]
     actuation_metadata = processResult["metadata"]["actuation"]
     observation_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S%z")
-    return [
-        {
-            "id": f"metadata:{uuid.uuid4().hex}",
-            "type": "sosa:Observation",
-            "resultTime": observation_time,
-            "procedure": actuation_metadata["procedure"],
-        }
-        for item in formula.items()
-    ]  # TODO
+    sensor_uuid = uuid.uuid4().hex
+    result_id = actuation_metadata["result"]
+    observation_metadata = {
+        "type": "sosa:Observation",
+        "has_feature_of_interest": result_id,
+        "made_by_sensor": f"brdrid:sensors/{sensor_uuid}",
+        "result_time": observation_time,
+    }
+
+    def get_reference_from_actuation(ref_id):
+        for ref in actuation_metadata["reference_geometries"]:
+            if ref["id"] == ref_id:
+                return ref
+        raise ValueError("reference geometry not found in actuation metadata")
+
+    observations = []
+    for ref_id, observations_dict in formula["reference_features"].items():
+        reference = get_reference_from_actuation(ref_id)
+        if area:= observations_dict.get("area"):
+            observations.append(
+                {
+                    **observation_metadata,
+                    "id": f"brdrid/observations/{uuid.uuid4().hex}",
+                    "observed_property": "brdr:area_overlap",
+                    "result": {"value": area, "type": "float"},
+                    "used_procedure": "brdr:observation_procedure_area_overlap",
+                    "used": reference,
+                }
+            )
+        if percentage:= observations_dict.get("percentage"):
+            observations.append(
+                {
+                    **observation_metadata,
+                    "id": f"brdrid/observations/{uuid.uuid4().hex}",
+                    "observed_property": "brdr:area_overlap_percentage",
+                    "result": {"value": percentage, "type": "float"},
+                    "used_procedure": "brdr:observation_procedure_area_overlap_percentage",
+                    "used": reference,
+                }
+            )
+        if full:= observations_dict.get("full"):
+            observations.append(
+                {
+                    **observation_metadata,
+                    "id": f"brdrid/observations/{uuid.uuid4().hex}",
+                    "observed_property": "brdr:area_overlap_full",
+                    "result": {"value": full, "type": "boolean"},
+                    "used_procedure": "brdr:observation_procedure_area_overlap_full",
+                    "used": reference,
+                }
+            )
+
+    if area:= formula.get("area"):
+        observations.append(
+            {
+                **observation_metadata,
+                "id": f"brdrid/observations/{uuid.uuid4().hex}",
+                "observed_property": "brdr:area",
+                "result": {"value": area, "type": "float"},
+                "used_procedure": "brdr:observation_procedure_area",
+                "used": {
+                    "id": result_id,
+                    "type": f"geo:Geometry",
+                    "version_date": observation_time,
+                },
+            }
+        )
+    if area_od:= formula.get("area_od", {}).get("area"):
+        observations.append(
+            {
+                **observation_metadata,
+                "id": f"brdrid/observations/{uuid.uuid4().hex}",
+                "observed_property": "brdr:area_od",
+                "result": {"value": area_od, "type": "float"},
+                "used_procedure": "brdr:observation_procedure_area_od",
+                "used": {
+                    "id": result_id,
+                    "type": f"geo:Geometry",
+                    "version_date": observation_time,
+                },
+            }
+        )
+    if full:= formula.get("full"):
+        observations.append(
+            {
+                **observation_metadata,
+                "id": f"brdrid/observations/{uuid.uuid4().hex}",
+                "observed_property": "brdr:area_overlap_full",
+                "result": {"value": full, "type": "bool"},
+                "used_procedure": "brdr:observation_procedure_area_overlap_full",
+            }
+        )
+    assert len(observations) > 0
 
 
 def aligner_metadata_decorator(f):
@@ -388,9 +472,13 @@ def aligner_metadata_decorator(f):
             reference_features = reference_data.features.values()
             reference_geometries = [
                 {
-                    "id": feature.brdr_id,
-                    "type": feature.geometry.geom_type,
+                    "id": feature.id,
+                    "type": f"geo:{feature.geometry.geom_type}",
                     "version_date": reference_data.source.get(VERSION_DATE, ""),
+                    "identifier": {
+                        "id": feature.brdr_id,
+                        "type": "adms:Identifier",
+                    },
                 }
                 for feature in reference_features
             ]

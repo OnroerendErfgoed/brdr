@@ -48,13 +48,15 @@ class AlignerFeature:
     """
 
     def __init__(
-        self, brdr_id: str, geometry: BaseGeometry, properties: dict[str, Any]
+        self, id: str, brdr_id: str, geometry: BaseGeometry, properties: dict[str, Any]
     ):
         """
         Initializes an AlignerFeature instance.
 
         Parameters
         ----------
+        id: str
+            Source id for the feature.
         brdr_id : str
             Unique identifier for the feature.
         geometry : BaseGeometry
@@ -62,6 +64,7 @@ class AlignerFeature:
         properties : dict[str, Any]
             The attribute data associated with this feature.
         """
+        self.id = id,
         self.brdr_id = brdr_id
         self.geometry = geometry
         self.properties = properties

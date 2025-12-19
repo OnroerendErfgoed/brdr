@@ -121,6 +121,7 @@ class Loader(ABC):
 
         features = {
             key: AlignerFeature(
+                id=key,
                 brdr_id=uuid.uuid4().hex,
                 geometry=self.data_dict[key],
                 properties=self.data_dict_properties.get(key, {}),
