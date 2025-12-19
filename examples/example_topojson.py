@@ -7,7 +7,6 @@ from brdr.configs import ProcessorConfig
 from brdr.enums import AlignerResultType
 from brdr.loader import GeoJsonFileLoader
 from brdr.processor import TopologyProcessor
-from examples import plot_dict_diffs, show_map
 
 processor = TopologyProcessor(config=ProcessorConfig(),feedback=None)
 aligner = Aligner(crs="EPSG:31370", processor=processor,multi_as_single_modus=True)

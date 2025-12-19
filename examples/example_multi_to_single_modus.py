@@ -32,7 +32,9 @@ if __name__ == "__main__":
     aligner_results = aligner.process(relevant_distances=[relevant_distance])
     aligner_results.save_results(path="output/", aligner=aligner)
     print_brdr_formula(aligner_results.get_results(), aligner)
-    show_map(aligner_results.get_results(), aligner.dict_thematic, aligner.dict_reference)
+    show_map(
+        aligner_results.get_results(), aligner.dict_thematic, aligner.dict_reference
+    )
 
     # WITH "multi_as_single_modus"=True
     print("EXAMPLE with 'multi_as_single_modus'=True")
@@ -46,4 +48,6 @@ if __name__ == "__main__":
     aligner_results = aligner.process(relevant_distances=[relevant_distance])
     aligner_results.save_results(path="output/", aligner=aligner)
     print_brdr_formula(aligner_results.get_results(), aligner)
-    show_map(aligner_results.get_results(), aligner.dict_thematic, aligner.dict_reference)
+    show_map(
+        aligner_results.get_results(), aligner.dict_thematic, aligner.dict_reference
+    )

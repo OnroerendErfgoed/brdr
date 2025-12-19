@@ -65,14 +65,16 @@ if __name__ == "__main__":
     base_aligner.load_reference_data(
         GRBFiscalParcelLoader(year=base_year, aligner=base_aligner)
     )
-    aligner_result_base= base_aligner.process(relevant_distances=[2])
-    fcs = aligner_result_base.get_results_as_geojson(aligner=base_aligner,formula=True,attributes=True)
+    aligner_result_base = base_aligner.process(relevant_distances=[2])
+    fcs = aligner_result_base.get_results_as_geojson(
+        aligner=base_aligner, formula=True, attributes=True
+    )
     featurecollection_base_result = fcs["result"]
     print(featurecollection_base_result)
     # Update Featurecollection to actual version
     featurecollection = update_featurecollection_to_actual_grb(
         featurecollection_base_result,
-        #base_aligner.name_thematic_id,
+        # base_aligner.name_thematic_id,
         base_formula_field=FORMULA_FIELD_NAME,
         max_distance_for_actualisation=3,
     )
@@ -91,7 +93,7 @@ if __name__ == "__main__":
 
     featurecollection = update_featurecollection_to_actual_grb(
         featurecollection_base_result,
-        #base_aligner.name_thematic_id,
+        # base_aligner.name_thematic_id,
         base_formula_field=FORMULA_FIELD_NAME,
         max_distance_for_actualisation=0,
     )
@@ -110,7 +112,7 @@ if __name__ == "__main__":
 
     featurecollection = update_featurecollection_to_actual_grb(
         featurecollection_base_result,
-        #base_aligner.name_thematic_id,
+        # base_aligner.name_thematic_id,
         base_formula_field=None,
         max_distance_for_actualisation=3,
     )

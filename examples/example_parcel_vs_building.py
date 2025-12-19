@@ -37,19 +37,15 @@ if __name__ == "__main__":
 
     # Example how to use a series (for histogram)
     series = np.arange(0, 310, 10, dtype=int) / 100
-    x_aligner_result = aligner_x.process(
-        relevant_distances=series
-    )
-    x_results=x_aligner_result.get_results(aligner=aligner_x)
+    x_aligner_result = aligner_x.process(relevant_distances=series)
+    x_results = x_aligner_result.get_results(aligner=aligner_x)
     x_resulting_areas = aligner_x.get_difference_metrics_for_thematic_data(
         dict_processresults=x_results,
         thematic_data=aligner_x.dict_thematic,
     )
-    y_aligner_result = aligner_y.process(
-        relevant_distances=series
-    )
+    y_aligner_result = aligner_y.process(relevant_distances=series)
 
-    y_results=y_aligner_result.get_results(aligner=aligner_x)
+    y_results = y_aligner_result.get_results(aligner=aligner_x)
 
     y_resulting_areas = aligner_y.get_difference_metrics_for_thematic_data(
         dict_processresults=y_results, thematic_data=aligner_y.dict_thematic
@@ -61,12 +57,14 @@ if __name__ == "__main__":
         diffs_x = get_geometry_difference_metrics_from_processresults(
             dict_processresult=x_results[key],
             geom_thematic=aligner_x.dict_thematic[key],
-            reference_union=aligner_x._get_reference_union())
+            reference_union=aligner_x._get_reference_union(),
+        )
 
         diffs_y = get_geometry_difference_metrics_from_processresults(
             dict_processresult=y_results[key],
             geom_thematic=aligner_y.dict_thematic[key],
-            reference_union=aligner_y._get_reference_union())
+            reference_union=aligner_y._get_reference_union(),
+        )
 
         # dict_diff = {
         #     "x" + str(key): x_resulting_areas[key],

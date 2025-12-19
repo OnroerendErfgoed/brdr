@@ -4,7 +4,10 @@ import pytest
 import shapely
 from shapely.geometry import Polygon
 
-from brdr.utils import get_collection, get_geometry_difference_metrics_from_processresults
+from brdr.utils import (
+    get_collection,
+    get_geometry_difference_metrics_from_processresults,
+)
 from brdr.utils import multi_to_singles
 from brdr.utils import polygonize_reference_data
 
@@ -112,4 +115,3 @@ class TestUtils(unittest.TestCase):
         params = {"limit": limit, "crs": crs, "bbox-crs": crs, "bbox": bbox}
         collection = get_collection(url=ref_url, params=params)
         self.assertTrue("features" in collection.keys())
-

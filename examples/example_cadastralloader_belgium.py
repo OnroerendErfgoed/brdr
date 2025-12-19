@@ -26,13 +26,11 @@ if __name__ == "__main__":
     relevant_distance = 5
     aligner_result = aligner.process(relevant_distances=[relevant_distance])
     process_results = aligner_result.get_results(aligner=aligner)
-    #PRINT RESULTS IN WKT
+    # PRINT RESULTS IN WKT
     print("result: " + process_results[id][relevant_distance]["result"].wkt)
     print(
-        "added area: "
-        + process_results[id][relevant_distance]["result_diff_plus"].wkt
+        "added area: " + process_results[id][relevant_distance]["result_diff_plus"].wkt
     )
     print(
-        "removed area: "
-        + process_results[id][relevant_distance]["result_diff_min"].wkt
+        "removed area: " + process_results[id][relevant_distance]["result_diff_min"].wkt
     )

@@ -7,7 +7,7 @@ from brdr.osm.loader import OSMLoader
 
 
 class TestOsm(unittest.TestCase):
-    #@pytest.mark.usefixtures("mock_osm_responses")
+    # @pytest.mark.usefixtures("mock_osm_responses")
     def test_osmloader(self):
         aligner = Aligner()
         thematic_dict = {

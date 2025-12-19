@@ -81,7 +81,9 @@ if __name__ == "__main__":
         base_formula_field=name_formula,
         relevant_distances=np.arange(0, 310, 10, dtype=int) / 100,
     )
-    dict_evaluated.get_results(result_type=AlignerResultType.EVALUATED_PREDICTIONS,aligner=actual_aligner)
+    dict_evaluated.get_results(
+        result_type=AlignerResultType.EVALUATED_PREDICTIONS, aligner=actual_aligner
+    )
     # SHOW the EVALUATED results
     fc = dict_evaluated.get_results_as_geojson(
         formula=True, attributes=True, aligner=actual_aligner

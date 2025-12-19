@@ -15,7 +15,7 @@ from tests.testdata.responses import mercator_responses
 class TestExamples:
 
     @pytest.mark.usefixtures("callback_grb_response")
-    def test_example_131635(self,requests_mock):
+    def test_example_131635(self, requests_mock):
         requests_mock.add(
             requests_mock.GET,
             "https://www.mercator.vlaanderen.be/raadpleegdienstenmercatorpubliek/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAMES=ps%3Aps_aandobj&SRSNAME=http%3A%2F%2Fwww.opengis.net%2Fdef%2Fcrs%2FEPSG%2F0%2F31370&outputFormat=application%2Fjson&limit=10000&CQL_FILTER=aanduid_id+IN+%28131635%29",
@@ -53,10 +53,10 @@ class TestExamples:
         adp_data = adp_loader.load_data()
         gbg_data = gbg_loader.load_data()
         dict_ref = {}
-        for id,f in adp_data.features.items():
-            dict_ref[id]=f.geometry
-        for id,f in adp_data.features.items():
-            dict_ref[id]=f.geometry
+        for id, f in adp_data.features.items():
+            dict_ref[id] = f.geometry
+        for id, f in adp_data.features.items():
+            dict_ref[id] = f.geometry
 
         # make a polygonized version of the reference data with non-overlapping polygons
         aligner.load_reference_data(DictLoader(dict_ref))
@@ -181,11 +181,13 @@ class TestExamples:
         aligner0.load_thematic_data(
             GeoJsonLoader(_input=testdata, id_property="theme_identifier")
         )
-        dict_thematic = {key: feat.geometry for key, feat in aligner0.thematic_data.features.items()}
+        dict_thematic = {
+            key: feat.geometry for key, feat in aligner0.thematic_data.features.items()
+        }
 
         # gebruik de actuele adp-percelen adp= administratieve percelen
         config = ProcessorConfig()
-        config.multi_as_single_modus=True
+        config.multi_as_single_modus = True
         processor = AlignerGeometryProcessor(config=config)
         aligner = Aligner(processor=processor)
         aligner.load_thematic_data(DictLoader(dict_thematic))
@@ -196,9 +198,8 @@ class TestExamples:
         aligner_result = aligner.predict()
 
         assert len(aligner_result.results) > 0
-        fcs = aligner_result.get_results_as_geojson(aligner=aligner,formula=False)
+        fcs = aligner_result.get_results_as_geojson(aligner=aligner, formula=False)
         assert len(fcs) == 6
-
 
     @pytest.mark.usefixtures("callback_grb_response")
     def test_example_wanted_changes(self, requests_mock):
@@ -239,9 +240,8 @@ class TestExamples:
                 #     )
                 #     aligner.process(relevant_distance=st[0], od_strategy=4)
 
-
     @pytest.mark.usefixtures("callback_grb_response")
-    def test_example_predictor(self,requests_mock):
+    def test_example_predictor(self, requests_mock):
         requests_mock.add(
             requests_mock.GET,
             "https://www.mercator.vlaanderen.be/raadpleegdienstenmercatorpubliek/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAMES=ps%3Aps_aandobj&SRSNAME=http%3A%2F%2Fwww.opengis.net%2Fdef%2Fcrs%2FEPSG%2F0%2F31370&outputFormat=application%2Fjson&limit=10000&CQL_FILTER=aanduid_id+IN+%28131635%29",

@@ -16,7 +16,7 @@ from tests.testdata.responses import mercator_responses
 class TestExamples:
 
     @pytest.mark.usefixtures("callback_grb_response")
-    def test_load_data(self,requests_mock):
+    def test_load_data(self, requests_mock):
         requests_mock.add(
             requests_mock.GET,
             "https://www.mercator.vlaanderen.be/raadpleegdienstenmercatorpubliek/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAMES=ps%3Aps_aandobj&SRSNAME=http%3A%2F%2Fwww.opengis.net%2Fdef%2Fcrs%2FEPSG%2F0%2F31370&outputFormat=application%2Fjson&limit=10000&CQL_FILTER=aanduid_id+IN+%28131635%29",
@@ -30,9 +30,8 @@ class TestExamples:
             grb_type=GRBType.ADP, aligner=aligner, partition=1000
         )
 
-
-        aligner.thematic_data= thematic_loader.load_data()
-        aligner.reference_data= reference_loader.load_data()
+        aligner.thematic_data = thematic_loader.load_data()
+        aligner.reference_data = reference_loader.load_data()
         assert aligner.thematic_data is not None
         assert aligner.reference_data is not None
 
@@ -152,7 +151,7 @@ class TestExamples:
             partition=1000,
             aligner=aligner,
         )
-        #TODO check test in combination with mock
+        # TODO check test in combination with mock
         assert True
         # aligner.load_reference_data(loader)
         #

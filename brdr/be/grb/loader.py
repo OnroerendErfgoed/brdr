@@ -22,6 +22,7 @@ log = logging.getLogger(__name__)
 
 datetime_format_TZ = "%Y-%m-%dT%H:%M:%SZ"
 
+
 def check_crs(aligner: Any) -> None:
     """
     Validate if the Aligner's Coordinate Reference System is supported by GRB.

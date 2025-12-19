@@ -20,7 +20,7 @@ relevant_distance = 1
 aligner_result = aligner.process(
     relevant_distances=[relevant_distance],
 )
-process_results=aligner_result.get_results(aligner=aligner)
+process_results = aligner_result.get_results(aligner=aligner)
 # PRINT RESULTS IN WKT
 print("result: " + process_results["theme_id_1"][relevant_distance]["result"].wkt)
 print(
