@@ -19,7 +19,7 @@ def test_metadata():
     )
     result = aligner.process([1])
     assert True
-    #TODO this was failing ->repair
+    # TODO this was failing ->repair
 
     # assert result.results["theme_id_1"][1]["result"].wkt == (
     #     "POLYGON ((0 1, 0 10, 5 10, 9.500000000000004 1, 9.381966011250102 1, "
