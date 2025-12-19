@@ -99,4 +99,3 @@ class AlignerConfig:
     max_workers: int = None
     log_metadata: bool = True
     add_formula: bool = False
-    log_metadata: bool = True
