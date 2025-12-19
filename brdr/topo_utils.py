@@ -14,7 +14,7 @@ from brdr.geometry_utils import (
     longest_linestring_from_multilinestring,
 )
 from brdr.typings import ProcessResult
-from brdr.utils import geojson_geometry_to_shapely
+from brdr.utils import geojson_geometry_to_shapely, union_process_result
 
 
 def _dissolve_topo(
@@ -144,7 +144,7 @@ def _dissolve_topo(
         "properties": {REMARK_FIELD_NAME: []},
     }
 
-    return process_result
+    return union_process_result(process_result)
 
 
 def _generate_topo(thematic_data):

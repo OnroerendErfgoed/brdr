@@ -54,7 +54,7 @@ from brdr.utils import (
     build_reverse_index_wkb,
     flatten_iter,
 )
-from brdr.utils import unary_union_result_dict
+from brdr.utils import union_process_result
 
 
 class BaseProcessor(ABC):
@@ -224,7 +224,7 @@ class BaseProcessor(ABC):
                 buffer_pos(geom_preresult, correction_distance),
             )
             result_diff = safe_unary_union([result_diff_plus, result_diff_min])
-            return unary_union_result_dict(
+            return union_process_result(
                 {
                     "result": geom_preresult,
                     "result_diff": result_diff,
@@ -254,7 +254,7 @@ class BaseProcessor(ABC):
                 remark = ProcessRemark.INPUT_CIRCLE
                 remarks.append(remark)
                 self.logger.feedback_debug(remark)
-                return unary_union_result_dict(
+                return union_process_result(
                     {
                         "result": geom_thematic,
                         "properties": {REMARK_FIELD_NAME: remarks},
@@ -270,7 +270,7 @@ class BaseProcessor(ABC):
                 remark = ProcessRemark.RESULT_UNCHANGED
                 remarks.append(remark)
                 self.logger.feedback_debug(remark)
-                return unary_union_result_dict(
+                return union_process_result(
                     {
                         "result": geom_thematic,
                         "properties": {REMARK_FIELD_NAME: remarks},
@@ -383,7 +383,7 @@ class BaseProcessor(ABC):
             mitre_limit=mitre_limit,
         )
 
-        return unary_union_result_dict(
+        return union_process_result(
             {
                 "result": geom_thematic_result,
                 "result_diff": geom_result_diff,
@@ -815,6 +815,13 @@ class DieussaertGeometryProcessor(BaseProcessor):
         for process_result in list_process_results:
             for key in process_result:
                 value = process_result[key]
+                if key in ["metadata","formula"]:
+                    #This will add the needed keys to the processResult. The values are filled afterwards
+                    if key in merged_process_result:
+                        continue
+                    else:
+                        merged_process_result[key] = {}
+                    continue
                 if key == "properties":
                     if key in merged_process_result:
                         existing_remarks = merged_process_result[key][
@@ -836,6 +843,9 @@ class DieussaertGeometryProcessor(BaseProcessor):
                     else:
                         existing = GeometryCollection()
                     merged_process_result[key] = safe_unary_union([existing, geom])
+                else:
+                    raise ValueError(f"Invalid element with key {str(key)} for ProcessResult")
+
         return merged_process_result
 
     def _process(
@@ -1702,7 +1712,7 @@ class AlignerGeometryProcessor(BaseProcessor):
                 process_result = ProcessResult()
                 process_result ["result"]=input_geometry
                 process_result["properties"] = {REMARK_FIELD_NAME: remarks}
-                return unary_union_result_dict(process_result)
+                return union_process_result(process_result)
 
             try:
                 processor = DieussaertGeometryProcessor(

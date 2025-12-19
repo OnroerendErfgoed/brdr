@@ -1,8 +1,6 @@
-import copy
 import logging
 import math
 import os.path
-from typing import Callable, Any, Dict, List, Tuple
 
 import numpy as np
 import requests
@@ -29,7 +27,6 @@ from brdr.enums import DiffMetric
 from brdr.geometry_utils import buffer_neg
 from brdr.geometry_utils import buffer_pos
 from brdr.geometry_utils import from_crs
-from brdr.geometry_utils import geometric_equality
 from brdr.geometry_utils import get_bbox
 from brdr.geometry_utils import get_geoms_from_geometry
 from brdr.geometry_utils import get_partitions
@@ -118,7 +115,6 @@ def _feature_from_geom(
         properties[PERIMETER_ATTRIBUTE] = perimeter
         properties[SHAPE_INDEX_ATTRIBUTE] = get_shape_index(area, perimeter)
     return Feature(geometry=geom, id=feature_id, properties=properties)
-
 
 
 def write_geojson(path_to_file, geojson):
@@ -594,14 +590,53 @@ def is_brdr_formula(brdr_formula):
     return False
 
 
-def unary_union_result_dict(result_dict):
-    # make a unary union for each key value in the result dict
+def union_process_result(process_result:ProcessResult)->ProcessResult:
+    """
+    Perform a unary union on all geometries within a ProcessResult object.
+
+    This function iterates through all annotated geometric fields in the
+    ProcessResult, attempts to merge overlapping or adjacent geometries
+    into a single unified structure using a safe unary union operation,
+    and updates the result in place.
+
+    Parameters
+    ----------
+    process_result : ProcessResult
+        A dictionary-like or dataclass object containing geometric data
+        (typically resulting from a polygon processing operation).
+        The keys correspond to specific geometric categories or layers.
+
+    Returns
+    -------
+    ProcessResult
+        The updated ProcessResult object where each valid, non-empty
+        geometry has been replaced by its unioned representation.
+
+    Notes
+    -----
+    - Empty geometries or those that are not instances of `BaseGeometry`
+      are ignored.
+    - The function utilizes `safe_unary_union` to handle potential
+      topological inconsistencies or invalid geometries that might
+      cause a standard union to fail.
+    - Fields are accessed based on the type annotations of the
+      `ProcessResult` class.
+
+    See Also
+    --------
+    safe_unary_union : The underlying function used for geometric merging.
+    ProcessorConfig : Settings that define how these results are generated.
+    """
     for key in ProcessResult.__annotations__:
-        geom = result_dict.get(key, GeometryCollection())  # noqa
-        if isinstance(geom, BaseGeometry) and not geom.is_empty:
-            geom = safe_unary_union(geom)
-        result_dict[key] = geom  # noqa
-    return result_dict
+        if key in ["properties","metadata","formula"]:
+            process_result[key] = process_result.get(key, {})  # noqa
+            continue
+        value = process_result.get(key, GeometryCollection())  # noqa
+        if isinstance(value, BaseGeometry) and not value.is_empty:
+            value = safe_unary_union(value)
+        process_result[key] = value  # noqa
+
+    return process_result
 
 
 def get_relevant_polygons_from_geom(

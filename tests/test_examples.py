@@ -5,9 +5,11 @@ from brdr.aligner import Aligner
 from brdr.be.grb.enums import GRBType
 from brdr.be.grb.loader import GRBActualLoader
 from brdr.be.oe.loader import OnroerendErfgoedLoader
+from brdr.configs import AlignerConfig, ProcessorConfig
 
 from brdr.loader import DictLoader
 from brdr.loader import GeoJsonLoader
+from brdr.processor import AlignerGeometryProcessor
 from tests.testdata.responses import mercator_responses
 
 
@@ -67,7 +69,7 @@ class TestExamples:
 
     @pytest.mark.usefixtures("callback_grb_response")
     def test_example_multipolygon(self):
-        aligner0 = Aligner()
+
         testdata = {
             "type": "FeatureCollection",
             "name": "themelayer",
@@ -175,25 +177,27 @@ class TestExamples:
             ],
         }
 
+        aligner0 = Aligner()
         # Load thematic data
         aligner0.load_thematic_data(
             GeoJsonLoader(_input=testdata, id_property="theme_identifier")
         )
-        aligner0.multi_as_single_modus = True
         dict_thematic = {key: feat.geometry for key, feat in aligner0.thematic_data.features.items()}
-        aligner0.load_thematic_data(DictLoader(dict_thematic))
 
         # gebruik de actuele adp-percelen adp= administratieve percelen
-        aligner = Aligner()
+        config = ProcessorConfig()
+        config.multi_as_single_modus=True
+        processor = AlignerGeometryProcessor(config=config)
+        aligner = Aligner(processor=processor)
         aligner.load_thematic_data(DictLoader(dict_thematic))
         aligner.load_reference_data(
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         )
 
-        prediction_result = aligner.predict()
+        aligner_result = aligner.predict()
 
-        assert len(prediction_result.results) > 0
-        fcs = prediction_result.get_results_as_geojson(aligner=aligner,formula=True)
+        assert len(aligner_result.results) > 0
+        fcs = aligner_result.get_results_as_geojson(aligner=aligner,formula=False)
         assert len(fcs) == 6
 
 

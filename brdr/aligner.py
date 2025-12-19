@@ -79,7 +79,7 @@ from brdr.utils import get_geojsons_from_process_results
 from brdr.utils import get_geometry_difference_metrics_from_processresult
 from brdr.utils import get_geometry_difference_metrics_from_processresults
 from brdr.utils import is_brdr_formula
-from brdr.utils import unary_union_result_dict
+from brdr.utils import union_process_result
 from brdr.utils import write_geojson
 
 ###################
@@ -426,6 +426,7 @@ def aligner_metadata_decorator(f):
                         ],
                     },
                 }
+                #TODO is formula apart nodig? nakijken, want momenteel is dit een empty geometrycollection
                 if result["formula"]:
                     result["metadata"]["observations"] = _get_observations_from_formula(result)
 
@@ -1093,7 +1094,7 @@ class Aligner:
                     remarks.append(ProcessRemark.NO_PREDICTION_ORIGINAL_RETURNED)
                     props[REMARK_FIELD_NAME] = remarks
                     process_results_evaluated[theme_id][relevant_distance] = (
-                        unary_union_result_dict(
+                        union_process_result(
                             {
                                 "result": original_geometry,
                                 "properties": props,
@@ -1231,7 +1232,7 @@ class Aligner:
                         )
                         props[REMARK_FIELD_NAME] = remarks
                         process_results_evaluated[theme_id][relevant_distance] = (
-                            unary_union_result_dict(
+                            union_process_result(
                                 {
                                     "result": original_geometry,
                                     "properties": props,
@@ -1265,7 +1266,7 @@ class Aligner:
                     remarks.append(ProcessRemark.NO_PREDICTION_ORIGINAL_RETURNED)
                     props[REMARK_FIELD_NAME] = remarks
                     process_results_evaluated[theme_id][relevant_distance] = (
-                        unary_union_result_dict(
+                        union_process_result(
                             {
                                 "result": original_geometry,
                                 "properties": props,
@@ -1290,7 +1291,7 @@ class Aligner:
                 remarks.append(ProcessRemark.NOT_EVALUATED_ORIGINAL_RETURNED)
                 props[REMARK_FIELD_NAME] = remarks
                 process_results_evaluated[theme_id][relevant_distance] = (
-                    unary_union_result_dict(
+                    union_process_result(
                         {
                             "result": original_geometry,
                             "properties": props,

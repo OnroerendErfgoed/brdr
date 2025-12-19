@@ -287,7 +287,7 @@ class TestAligner(unittest.TestCase):
                 relevant_distances=[relevant_distance],
             )
             self.assertEqual(
-                len(aligner_result.results["theme_id_1"][relevant_distance]), 8
+                len(aligner_result.results["theme_id_1"][relevant_distance]), 9
             )
 
     def test_process_interior_ring(self):

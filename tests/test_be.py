@@ -41,4 +41,4 @@ class TestBe(unittest.TestCase):
         #     "removed area: "
         #     + process_results[id][relevant_distance]["result_diff_min"].wkt
         # )
-        assert len(process_results[id][relevant_distance])==8
+        assert len(process_results[id][relevant_distance])==9
