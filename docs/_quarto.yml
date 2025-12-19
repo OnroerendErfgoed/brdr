@@ -12,8 +12,10 @@ website:
         icon: house-fill
       - text: Reference
         href: reference/index.qmd
-#      - text: Examples
-#        href: examples.qmd
+      - text: Examples
+        href: examples.qmd
+      - text: Q & A
+        href: qa.qmd
 
 lang: en
 
@@ -31,8 +33,10 @@ format:
     toc-location: "right"
 
 quartodoc:
-  # the name used to import the package you want to create reference docs for
+  dir: reference  # Zorg dat dit expliciet is
+  render_interlinks: true
   package: brdr
+
   sidebar: reference/_sidebar.yml
   css: reference/_styles-quartodoc.css
   sections:
@@ -87,20 +91,26 @@ quartodoc:
       desc: Typings used in 'brdr'
       contents:
         - ProcessResult
-#    - title: GRB (Flanders-specific)
-#      package: brdr.be.grb
-#      desc: GRB (Flanders-specific) classes,methods, enumerators,...
-#      contents:
-#        - name: loader.GRBActualLoader
-#        - name: loader.GRBFiscalParcelLoader
-#        - name: loader.GRBSpecificDateParcelLoader
-#        - name: grb.update_featurecollection_to_actual_grb
-#        - name: enums.GRBType
-#    - title: OSM
-#      package: brdr.osm
-#      desc: OpenStreetMap (OSM) classes,methods, enumerators,...
-#      contents:
-#        - name: loader.OSMLoader
+    - title: Configs
+      package: brdr.configs
+      desc: Configs used in 'brdr' Aligner & Processor
+      contents:
+        - ProcessorConfig
+        - AlignerConfig
+    - title: GRB (Flanders-specific)
+      package: brdr.be.grb
+      desc: GRB (Flanders-specific) classes,methods, enumerators,...
+      contents:
+        - name: loader.GRBActualLoader
+        - name: loader.GRBFiscalParcelLoader
+        - name: loader.GRBSpecificDateParcelLoader
+        - name: grb.update_featurecollection_to_actual_grb
+        - name: enums.GRBType
+    - title: OSM
+      package: brdr.osm
+      desc: OpenStreetMap (OSM) classes,methods, enumerators,...
+      contents:
+        - name: loader.OSMLoader
 
 
           

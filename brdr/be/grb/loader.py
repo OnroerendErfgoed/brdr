@@ -24,38 +24,60 @@ datetime_format_TZ = "%Y-%m-%dT%H:%M:%SZ"
 
 def check_crs(aligner: Any) -> None:
     """
-    Validates if the Aligner's Coordinate Reference System is supported by GRB.
+    Validate if the Aligner's Coordinate Reference System is supported by GRB.
 
-    Args:
-        aligner: The aligner object containing the CRS to check.
+    The GRB (Grootschalig Referentie Bestand) service has specific CRS
+    requirements for spatial queries.
 
-    Raises:
-        ValueError: If the CRS used by the aligner is not in the supported GRB CRS list.
+    Parameters
+    ----------
+    aligner : Any
+        The aligner object containing the CRS property to validate.
+
+    Raises
+    ------
+    ValueError
+        If the CRS used by the aligner is not present in the
+        `GRB_SUPPORTED_CRS` list.
     """
     if not aligner.crs in (to_crs(element) for element in GRB_SUPPORTED_CRS):
         raise ValueError(
-            f"This GRB Loader only supports alignment in CRS '{GRB_SUPPORTED_CRS}' while CRS '{aligner.crs}' is used"
+            f"This GRB Loader only supports alignment in CRS '{GRB_SUPPORTED_CRS}' "
+            f"while CRS '{aligner.crs}' is used"
         )
 
 
 class GRBActualLoader(GeoJsonLoader):
     """
-    Loader for the most recent version of GRB (Grootschalig Referentie Bestand) datasets.
+    Loader for the most recent version of GRB (Grootschalig Referentie Bestand).
 
-    This loader fetches current thematic data (like buildings or roads) based on
-    the spatial extent of the provided aligner.
+    This loader fetches live thematic reference data (such as buildings,
+    parcels, or road edges) based on the spatial extent of the thematic
+    data currently held by the aligner.
+
+    Parameters
+    ----------
+    grb_type : GRBType
+        The specific type of GRB data to load (e.g., ADP, Gebouw).
+    aligner : Any
+        The aligner object providing the spatial context, logger, and CRS.
+    partition : int, optional
+        Number of features per request to handle large datasets,
+        by default 1000.
+
+    Attributes
+    ----------
+    aligner : Any
+        Reference to the parent aligner.
+    grb_type : GRBType
+        The requested GRB layer type.
+    part : int
+        The partitioning size for downloads.
+    versiondate_info : dict
+        Information about the versioning metadata format.
     """
 
     def __init__(self, grb_type: GRBType, aligner: Any, partition: int = 1000):
-        """
-        Initialize the GRB Actual Loader.
-
-        Args:
-            grb_type: The specific type of GRB data to load (e.g., ADP, Gebouw).
-            aligner: The aligner object providing the spatial context and CRS.
-            partition: Number of features per request to handle large datasets.
-                Defaults to 1000.
-        """
         super().__init__()
         self.aligner = aligner
         check_crs(self.aligner)
@@ -66,16 +88,21 @@ class GRBActualLoader(GeoJsonLoader):
 
     def load_data(self) -> Any:
         """
-        Downloads and processes the actual GRB data.
+        Download and process the actual GRB data from the web service.
 
-        Calculates a buffer around the thematic union of the aligner and
-        fetches the requested GRB features.
+        Calculates a search buffer around the union of thematic geometries
+        to ensure all relevant reference features are captured.
 
-        Returns:
-            The result of the parent GeoJsonLoader's load_data method.
+        Returns
+        -------
+        Any
+            The processed FeatureCollection from the parent GeoJsonLoader.
 
-        Raises:
-            ValueError: If thematic data has not been loaded into the aligner.
+        Raises
+        ------
+        ValueError
+            If thematic data has not been loaded into the aligner prior
+            to calling this method.
         """
         if not self.aligner.thematic_data:
             raise ValueError("Thematic data not loaded")
@@ -98,17 +125,21 @@ class GRBActualLoader(GeoJsonLoader):
 class GRBFiscalParcelLoader(GeoJsonLoader):
     """
     Loader for fiscal parcel data (Adpf) for a specific year.
+
+    This loader retrieves the cadastral situation as it was registered
+    for fiscal purposes at the start of a specific year.
+
+    Parameters
+    ----------
+    year : str
+        The fiscal year to retrieve parcels for (e.g., "2023").
+    aligner : Any
+        The aligner object providing spatial context and CRS.
+    partition : int, optional
+        Number of features per request, by default 1000.
     """
 
     def __init__(self, year: str, aligner: Any, partition: int = 1000):
-        """
-        Initialize the Fiscal Parcel Loader.
-
-        Args:
-            year: The fiscal year to retrieve parcels for.
-            aligner: The aligner object providing the spatial context.
-            partition: Number of features per request. Defaults to 1000.
-        """
         super().__init__(_input=None, id_property=GRB_PARCEL_ID)
         self.aligner = aligner
         check_crs(self.aligner)
@@ -122,13 +153,17 @@ class GRBFiscalParcelLoader(GeoJsonLoader):
 
     def load_data(self) -> Any:
         """
-        Downloads and processes fiscal parcel data for the specified year.
+        Download and process fiscal parcel data for the specified year.
 
-        Returns:
+        Returns
+        -------
+        Any
             The result of the parent GeoJsonLoader's load_data method.
 
-        Raises:
-            ValueError: If thematic data has not been loaded into the aligner.
+        Raises
+        ------
+        ValueError
+            If thematic data is missing from the aligner.
         """
         if not self.aligner.thematic_data:
             raise ValueError("Thematic data not loaded")
@@ -148,37 +183,48 @@ class GRBFiscalParcelLoader(GeoJsonLoader):
 
 class GRBSpecificDateParcelLoader(GeoJsonLoader):
     """
-    Experimental loader for GRB parcel situations on a specific historical date.
+    Loader for GRB parcel situations on a specific historical date.
 
-    Note:
-        This loader is intended for historical research and should be used with care.
+    This loader allows for high-precision historical reconstruction of parcel
+    boundaries as they existed on a specific day.
+
+    .. warning::
+       This loader is experimental and intended for historical research.
+       Data availability depends on the historical archives of the GRB provider.
+
+    Parameters
+    ----------
+    date : str
+        The historical date in the format defined by `DATE_FORMAT`.
+    aligner : Any
+        The aligner object providing spatial context.
+    partition : int, optional
+        Number of features per request, by default 1000.
+
+    Raises
+    ------
+    ValueError
+        - If the date format is invalid.
+        - If the date refers to the current or a future year.
     """
 
     def __init__(self, date: str, aligner: Any, partition: int = 1000):
-        """
-        Initialize the Specific Date Parcel Loader.
-
-        Args:
-            date: The historical date in the format defined by `DATE_FORMAT`.
-            aligner: The aligner object providing spatial context.
-            partition: Number of features per request. Defaults to 1000.
-
-        Raises:
-            ValueError: If the date is invalid or refers to the current year/future.
-        """
         logging.warning(
-            "Loader for GRB parcel-situation on specific date (experimental); Use it with care!!!"
+            "Loader for GRB parcel-situation on specific date (experimental); "
+            "Use it with care!!!"
         )
         try:
             date_obj = datetime.strptime(date, DATE_FORMAT).date()
             if date_obj.year >= datetime.now().year:
                 raise ValueError(
-                    "The GRBSpecificDateParcelLoader can only be used for dates prior to the current year."
+                    "The GRBSpecificDateParcelLoader can only be used for dates "
+                    "prior to the current year."
                 )
         except Exception:
             raise ValueError(
-                "No valid date, please provide a date in the format: " + DATE_FORMAT
+                f"No valid date, please provide a date in the format: {DATE_FORMAT}"
             )
+
         super().__init__(_input=None, id_property=GRB_PARCEL_ID)
         self.aligner = aligner
         check_crs(self.aligner)
@@ -190,13 +236,17 @@ class GRBSpecificDateParcelLoader(GeoJsonLoader):
 
     def load_data(self) -> Any:
         """
-        Downloads and processes parcel data for the specified historical date.
+        Download and process parcel data for the specified historical date.
 
-        Returns:
+        Returns
+        -------
+        Any
             The result of the parent GeoJsonLoader's load_data method.
 
-        Raises:
-            ValueError: If thematic data has not been loaded into the aligner.
+        Raises
+        ------
+        ValueError
+            If thematic data has not been loaded into the aligner.
         """
         if not self.aligner.thematic_data:
             raise ValueError("Thematic data not loaded")
