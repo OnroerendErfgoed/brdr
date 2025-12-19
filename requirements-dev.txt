@@ -1,4 +1,4 @@
-black==25.1.0
+black==25.12.0
     # via brdr (pyproject.toml)
 build==1.2.1
     # via pip-tools
@@ -137,6 +137,8 @@ python-dateutil==2.9.0.post0
     # via
     #   matplotlib
     #   pandas
+pytokens==0.3.0
+    # via black
 pytz==2024.1
     # via pandas
 pyyaml==6.0.1
