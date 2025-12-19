@@ -91,6 +91,12 @@ quartodoc:
       desc: Typings used in 'brdr'
       contents:
         - ProcessResult
+    - title: Configs
+      package: brdr.configs
+      desc: Configs used in 'brdr' Aligner & Processor
+      contents:
+        - ProcessorConfig
+        - AlignerConfig
     - title: GRB (Flanders-specific)
       package: brdr.be.grb
       desc: GRB (Flanders-specific) classes,methods, enumerators,...
