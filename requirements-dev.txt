@@ -1,4 +1,4 @@
-black==25.1.0
+black==25.12.0
     # via brdr (pyproject.toml)
 build==1.2.1
     # via pip-tools
@@ -111,8 +111,10 @@ pycodestyle==2.12.1
     # via flake8
 pyflakes==3.2.0
     # via flake8
-pyogrio==0.10.0
-    # via geopandas
+pyogrio==0.12.1
+    # via
+    #   brdr (pyproject.toml)
+    #   geopandas
 pyparsing==3.1.2
     # via matplotlib
 pyproj==3.7.2
@@ -137,6 +139,8 @@ python-dateutil==2.9.0.post0
     # via
     #   matplotlib
     #   pandas
+pytokens==0.3.0
+    # via black
 pytz==2024.1
     # via pandas
 pyyaml==6.0.1
