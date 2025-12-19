@@ -1,18 +1,10 @@
-import os
 from datetime import datetime
 
 import numpy as np
 
 from brdr.aligner import Aligner
-from brdr.be.grb.grb import update_featurecollection_to_actual_grb
 from brdr.be.grb.loader import GRBFiscalParcelLoader
 from brdr.be.oe.loader import OnroerendErfgoedLoader
-from brdr.constants import (
-    EVALUATION_FIELD_NAME,
-    RELEVANT_DISTANCE_FIELD_NAME,
-    FORMULA_FIELD_NAME,
-)
-from brdr.utils import write_geojson
 
 if __name__ == "__main__":
     """

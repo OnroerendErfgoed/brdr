@@ -8,8 +8,8 @@ from brdr.enums import AlignerResultType
 from brdr.loader import GeoJsonFileLoader
 from brdr.processor import TopologyProcessor
 
-processor = TopologyProcessor(config=ProcessorConfig(),feedback=None)
-aligner = Aligner(crs="EPSG:31370", processor=processor,multi_as_single_modus=True)
+processor = TopologyProcessor(config=ProcessorConfig(), feedback=None)
+aligner = Aligner(crs="EPSG:31370", processor=processor, multi_as_single_modus=True)
 loader = GeoJsonFileLoader(
     path_to_file="input/topo_parcels.geojson", id_property="CAPAKEY"
 )
@@ -23,7 +23,7 @@ aligner.load_reference_data(
 # aligner_result = aligner.process(
 #     relevant_distances=relevant_distances,
 # )
-#print(aligner_result)
+# print(aligner_result)
 
 # PREDICT
 # PREDICT the 'stable' relevant distances, for a series of relevant distances
@@ -32,7 +32,9 @@ relevant_distances = np.arange(0, 1010, 20, dtype=int) / 100
 aligner_result = aligner.predict(
     relevant_distances=relevant_distances,
 )
-process_results_predictions = aligner_result.get_results(aligner=aligner,result_type=AlignerResultType.PREDICTIONS)
+process_results_predictions = aligner_result.get_results(
+    aligner=aligner, result_type=AlignerResultType.PREDICTIONS
+)
 diffs = aligner.diffs_dict
 # SHOW results of the predictions
 fcs = aligner_result.get_results_as_geojson(aligner=aligner)

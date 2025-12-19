@@ -30,8 +30,8 @@ if __name__ == "__main__":
     alignerresults = aligner.predict(
         relevant_distances=series,
     )
-    dict_predictions = alignerresults.get_results(aligner=aligner,
-        result_type=AlignerResultType.PREDICTIONS
+    dict_predictions = alignerresults.get_results(
+        aligner=aligner, result_type=AlignerResultType.PREDICTIONS
     )
 
     # SHOW results of the predictions

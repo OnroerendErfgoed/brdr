@@ -23,10 +23,8 @@ if __name__ == "__main__":
     aligner.load_reference_data(loader)
     # EXECUTE THE ALIGNMENT
     relevant_distance = 5
-    aligner_result = aligner.process(
-        relevant_distances=[relevant_distance]
-    )
-    process_results=aligner_result.get_results(aligner=aligner)
+    aligner_result = aligner.process(relevant_distances=[relevant_distance])
+    process_results = aligner_result.get_results(aligner=aligner)
     # PRINT RESULTS IN WKT
     print("result: " + process_results[id][relevant_distance]["result"].wkt)
     print(

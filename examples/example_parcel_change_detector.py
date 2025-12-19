@@ -46,7 +46,7 @@ base_aligner = Aligner()
 print("start loading OE-objects")
 # Load the thematic data to evaluate
 loader = OnroerendErfgoedLoader(bbox=bbox, partition=0)
-#loader = OnroerendErfgoedLoader(objectids= [276,120380])
+# loader = OnroerendErfgoedLoader(objectids= [276,120380])
 base_aligner.load_thematic_data(loader)
 
 # Exclude objects bigger than specified area
@@ -85,11 +85,11 @@ featurecollection_base_result = processresults["result"]
 
 # Update Featurecollection to actual version
 starttime = datetime.now()
-print (starttime)
+print(starttime)
 print("Actualise base objects")
 fcs = update_featurecollection_to_actual_grb(
     featurecollection_base_result,
-    #base_aligner.name_thematic_id,
+    # base_aligner.name_thematic_id,
     base_formula_field=FORMULA_FIELD_NAME,
     max_distance_for_actualisation=max_distance_for_actualisation,
 )
@@ -139,5 +139,5 @@ print(
 )
 endtime = datetime.now()
 seconds = (endtime - starttime).total_seconds()
-print (endtime)
+print(endtime)
 print("duration of actualisation: " + str(seconds))
