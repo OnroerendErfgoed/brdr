@@ -71,7 +71,7 @@ series = np.arange(0, 210, 10, dtype=int) / 100
 base_process_result = base_aligner.process(relevant_distances=series)
 # get resulting aligned features on Adpfxxxx, with observation
 processresults = base_process_result.get_results_as_geojson(
-    aligner=base_aligner, observation=True
+    aligner=base_aligner, add_metadata=True
 )
 if len(processresults) == 0:
     print("empty processresults")

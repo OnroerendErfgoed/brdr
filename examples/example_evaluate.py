@@ -78,7 +78,7 @@ if __name__ == "__main__":
     # Use the EVALUATE-function
     dict_evaluated = actual_aligner.evaluate(
         dict_thematic=affected,
-        base_observation_field=name_observation,
+        metadata_field=name_observation,
         relevant_distances=np.arange(0, 310, 10, dtype=int) / 100,
     )
     dict_evaluated.get_results(
@@ -86,7 +86,7 @@ if __name__ == "__main__":
     )
     # SHOW the EVALUATED results
     fc = dict_evaluated.get_results_as_geojson(
-        observation=True, attributes=True, aligner=actual_aligner
+        add_metadata=True, add_original_attributes=True, aligner=actual_aligner
     )
     print(fc["result"])
 

@@ -302,7 +302,7 @@ class TestGrb:
         featurecollection = update_featurecollection_to_actual_grb(
             featurecollection_base_result,
             name_thematic_id,
-            base_observation_field="brdr_base_formula",
+            base_metadata_field="brdr_base_formula",
         )
         # Print results
         for feature in featurecollection["result"]["features"]:

@@ -1,6 +1,7 @@
 import hashlib
 import inspect
 import json
+import logging
 import os
 import uuid
 from collections import defaultdict
@@ -24,7 +25,7 @@ from shapely.geometry.base import BaseGeometry
 from brdr import __version__
 from brdr.configs import AlignerConfig
 from brdr.configs import ProcessorConfig
-from brdr.constants import AREA_CHANGE
+from brdr.constants import AREA_CHANGE, METADATA_FIELD_NAME, BASE_METADATA_FIELD_NAME
 from brdr.constants import AREA_PERCENTAGE_CHANGE
 from brdr.constants import DATE_FORMAT
 from brdr.constants import DEFAULT_CRS
@@ -32,7 +33,6 @@ from brdr.constants import DIFF_AREA_FIELD_NAME
 from brdr.constants import DIFF_PERCENTAGE_FIELD_NAME
 from brdr.constants import EQUAL_REFERENCE_FEATURES_FIELD_NAME
 from brdr.constants import EVALUATION_FIELD_NAME
-from brdr.constants import OBSERVATION_FIELD_NAME
 from brdr.constants import FULL_ACTUAL_FIELD_NAME
 from brdr.constants import FULL_BASE_FIELD_NAME
 from brdr.constants import ID_THEME_FIELD_NAME
@@ -67,7 +67,7 @@ from brdr.loader import Loader
 from brdr.logger import Logger
 from brdr.processor import AlignerGeometryProcessor
 from brdr.processor import BaseProcessor
-from brdr.typings import InputId
+from brdr.typings import InputId, Observation, ObservationReference
 from brdr.typings import ProcessResult
 from brdr.utils import (
     coverage_ratio,
@@ -249,8 +249,8 @@ class AlignerResult:
         self,
         aligner: "Aligner",
         result_type: AlignerResultType = AlignerResultType.PROCESSRESULTS,
-        observation: bool = False,
-        attributes: bool = False,
+        add_metadata: bool = False,
+        add_original_attributes: bool = False,
     ) -> Dict[str, Any]:
         """
         Converts the results into a GeoJSON FeatureCollection format.
@@ -261,9 +261,9 @@ class AlignerResult:
             The 'Aligner' object providing CRS and thematic metadata.
         result_type : AlignerResultType
             The type of results to export. Defaults to PROCESSRESULTS.
-        observation : bool
+        add_metadata : bool
             If True, includes the descriptive comparison observation in properties.
-        attributes : bool
+        add_original_attributes : bool
             If True, includes original thematic attributes in the output.
 
         Returns
@@ -290,18 +290,20 @@ class AlignerResult:
                 prop_dictionary[theme_id][relevant_distance] = {}
                 feature = aligner.thematic_data.features.get(theme_id)
 
-                if attributes and feature and feature.properties:
+                if add_original_attributes and feature and feature.properties:
                     prop_dictionary[theme_id][relevant_distance].update(
                         feature.properties
                     )
 
-                if observation:
-                    result_geom = process_result["result"]
-                    observation_result = process_result.get(
-                        "observation"
-                    ) or aligner.compare_to_reference(result_geom)
-                    prop_dictionary[theme_id][relevant_distance][OBSERVATION_FIELD_NAME] = (
-                        json.dumps(observation_result)
+                if add_metadata:
+                    metadata_result = process_result.get(
+                        "metadata"
+                    )
+                    if metadata_result is None:
+                        logging.debug("metadata not available")
+                        continue
+                    prop_dictionary[theme_id][relevant_distance][METADATA_FIELD_NAME] = (
+                        json.dumps(metadata_result)
                     )
 
         return get_geojsons_from_process_results(
@@ -316,8 +318,8 @@ class AlignerResult:
         aligner: "Aligner",
         path: str,
         result_type: AlignerResultType = AlignerResultType.PROCESSRESULTS,
-        observation: bool = False,
-        attributes: bool = False,
+        add_metadata: bool = False,
+        add_original_attributes: bool = False,
     ) -> None:
         """
         Exports the results as multiple GeoJSON files to a directory.
@@ -333,9 +335,9 @@ class AlignerResult:
             Target directory path where files will be created.
         result_type : AlignerResultType
             Type of results to export. Defaults to PROCESSRESULTS.
-        observation : bool
+        add_metadata : bool
             Whether to include alignment observations in the output.
-        attributes : bool
+        add_original_attributes : bool
             Whether to include original feature attributes.
 
         Notes
@@ -345,15 +347,40 @@ class AlignerResult:
         fcs = self.get_results_as_geojson(
             aligner=aligner,
             result_type=result_type,
-            observation=observation,
-            attributes=attributes,
+            add_metadata=add_metadata,
+            add_original_attributes=add_original_attributes,
         )
         for name, fc in fcs.items():
             file_name = f"{result_type.value}_{name}.geojson"
             write_geojson(os.path.join(path, file_name), fc)
 
 
-def _get_observations_from_brdr_observation(processResult: ProcessResult) -> List[Dict]:
+def _get_brdr_observation_from_metadata_observations(metadata: List[Dict]) -> Dict:
+    # TODO: Karel take the observations from the metadata
+    observation_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S%z")
+    sensor_uuid = uuid.uuid4().hex
+    observation_metadata = {
+        "type": "sosa:Observation",
+        "has_feature_of_interest": "123",
+        "made_by_sensor": f"brdrid:{sensor_uuid}",
+        "result_time": observation_time,
+    }
+    brdr_observation = Observation()
+    brdr_observation.alignment_date = None
+    brdr_observation.reference_source = None
+    brdr_observation.brdr_version = None
+    brdr_observation.full = None
+    brdr_observation.area = None
+    brdr_observation.reference_features = Dict[InputId, ObservationReference]
+    brdr_observation.reference_od = Dict
+
+    if not is_brdr_observation(brdr_observation):
+        raise ValueError("This is not a brdr observation")
+
+    return brdr_observation
+
+
+def _get_metadata_observations_from_process_result(processResult: ProcessResult) -> List[Dict]:
     observation = processResult["observation"]
     actuation_metadata = processResult["metadata"]["actuation"]
     observation_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S%z")
@@ -456,12 +483,11 @@ def aligner_metadata_decorator(f):
     def inner_func(aligner, *args, **kwargs):
         assert isinstance(aligner, Aligner)
         response: AlignerResult = f(aligner, *args, **kwargs)
-        if aligner.add_observation:
+        if aligner.add_observations:
             for thematic_id, rd_res in response.results.items():
                 for rd, res in rd_res.items():
                     if res["result"]:
-                        observation = aligner.compare_to_reference(res["result"])
-                        res["observation"] = observation
+                        res["observation"] = aligner.compare_to_reference(res["result"])
         if aligner.log_metadata:
             # generate uuid for actuation
             actuation_id = "brdrid:actuations/" + uuid.uuid4().hex
@@ -514,7 +540,7 @@ def aligner_metadata_decorator(f):
                     },
                 }
                 if result["observation"]:
-                    result["metadata"]["observations"] = _get_observations_from_brdr_observation(
+                    result["metadata"]["observations"] = _get_metadata_observations_from_process_result(
                         result
                     )
 
@@ -537,7 +563,7 @@ class Aligner:
         Instance for logging feedback and information.
     log_metadata : bool
         If True, metadata about the actuation is logged in the results.
-    add_observation: bool
+    add_observations: bool
         If True, process result observations will be computed by default.
     processor : BaseProcessor or AlignerGeometryProcessor
         The geometric processor used for alignment calculations.
@@ -615,7 +641,7 @@ class Aligner:
         self.config = config
         self.logger = Logger(feedback)
         self.log_metadata = config.log_metadata
-        self.add_observation = config.add_observation
+        self.add_observations = config.add_observations
         self.processor = (
             processor
             if processor
@@ -1049,7 +1075,7 @@ class Aligner:
         relevant_distances: Optional[Iterable[float]] = None,
         *,
         thematic_ids: Optional[List[InputId]] = None,
-        base_observation_field: str = OBSERVATION_FIELD_NAME,
+        metadata_field: str = METADATA_FIELD_NAME,
         full_reference_strategy: FullReferenceStrategy = FullReferenceStrategy.NO_FULL_REFERENCE,
         max_predictions: int = -1,
         multi_to_best_prediction: bool = True,
@@ -1070,9 +1096,9 @@ class Aligner:
         thematic_ids : List[ThematicId], optional
             List of IDs to evaluate. If None, all loaded thematic features
             are processed. Features not in this list are marked as NOT_EVALUATED.
-        base_observation_field : str, optional
-            The field name containing the base comparison observation.
-            Defaults to observation_FIELD_NAME.
+        metadata_field : str, optional
+            The field name containing the metadata of the input geometry.
+            Defaults to METADATA_FIELD_NAME.
         full_reference_strategy : FullReferenceStrategy, optional
             Strategy to prioritize predictions based on their 'fullness'
             relative to reference data. Defaults to NO_FULL_REFERENCE.
@@ -1170,7 +1196,7 @@ class Aligner:
                     props = self._evaluate(
                         id_theme=theme_id,
                         geom_predicted=original_geometry,
-                        base_observation_field=base_observation_field,
+                        base_metadata_field=metadata_field,
                     )
                     props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
                     props[PREDICTION_COUNT] = 0
@@ -1203,7 +1229,7 @@ class Aligner:
                     props = self._evaluate(
                         id_theme=theme_id,
                         geom_predicted=dict_predictions_results[dist]["result"],
-                        base_observation_field=base_observation_field,
+                        base_metadata_field=metadata_field,
                         observation=dict_predictions_results[dist].get("observation"),
                     )
                     props.update(
@@ -1295,7 +1321,7 @@ class Aligner:
                         ):
                             predictions[0]["properties"][
                                 EVALUATION_FIELD_NAME
-                            ] = Evaluation.PREDICTION_UNIQUE_FULL
+                            ] = Evaluation.PREDICTION_UNIQUE_AND_FULL_REFERENCE
                         else:
                             predictions[0]["properties"][
                                 EVALUATION_FIELD_NAME
@@ -1342,7 +1368,7 @@ class Aligner:
                     props = self._evaluate(
                         id_theme=theme_id,
                         geom_predicted=original_geometry,
-                        base_observation_field=base_observation_field,
+                        base_metadata_field=metadata_field,
                     )
                     props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
                     props[PREDICTION_SCORE] = -1
@@ -1368,7 +1394,7 @@ class Aligner:
                 props = self._evaluate(
                     id_theme=theme_id,
                     geom_predicted=original_geometry,
-                    base_observation_field=base_observation_field,
+                    base_metadata_field=metadata_field,
                 )
                 props[EVALUATION_FIELD_NAME] = Evaluation.NOT_EVALUATED
                 props[PREDICTION_SCORE] = -1
@@ -1634,7 +1660,7 @@ class Aligner:
         self,
         id_theme,
         geom_predicted,
-        base_observation_field=OBSERVATION_FIELD_NAME,
+        base_metadata_field=METADATA_FIELD_NAME,
         observation=None,
     ):
         """
@@ -1642,7 +1668,7 @@ class Aligner:
         """
         threshold_od_percentage = 1
         properties = {
-            OBSERVATION_FIELD_NAME: "",
+            METADATA_FIELD_NAME: "",
             EVALUATION_FIELD_NAME: Evaluation.TO_CHECK_NO_PREDICTION,
             FULL_BASE_FIELD_NAME: None,
             FULL_ACTUAL_FIELD_NAME: None,
@@ -1651,75 +1677,76 @@ class Aligner:
             DIFF_PERCENTAGE_FIELD_NAME: None,
             DIFF_AREA_FIELD_NAME: None,
         }
-        actual_observation = observation or self.compare_to_reference(geom_predicted)
-        if actual_observation is None or geom_predicted is None or geom_predicted.is_empty:
+        actual_brdr_observation = observation or self.compare_to_reference(geom_predicted)
+        if actual_brdr_observation is None or geom_predicted is None or geom_predicted.is_empty:
             properties[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
             properties[FULL_ACTUAL_FIELD_NAME] = False
             return properties
-        properties[FULL_ACTUAL_FIELD_NAME] = actual_observation["full"]
-        properties[OBSERVATION_FIELD_NAME] = json.dumps(actual_observation)
+        properties[FULL_ACTUAL_FIELD_NAME] = actual_brdr_observation["full"]
+        properties[METADATA_FIELD_NAME] = json.dumps(actual_brdr_observation)
 
         try:
-            base_observation = json.loads(
-                self.thematic_data.features.get(id_theme).properties[base_observation_field]
+            base_metadata = json.loads(
+                self.thematic_data.features.get(id_theme).properties[base_metadata_field]
             )
+            base_brdr_observation = _get_brdr_observation_from_metadata_observations(base_metadata)
         except:
-            base_observation = None
+            base_brdr_observation = None
 
-        if not is_brdr_observation(base_observation):
+        if not is_brdr_observation(base_brdr_observation):
             properties[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
             return properties
-        properties[FULL_BASE_FIELD_NAME] = base_observation["full"]
+        properties[FULL_BASE_FIELD_NAME] = base_brdr_observation["full"]
         od_alike = False
         if (
-            base_observation["reference_od"] is None
-            and actual_observation["reference_od"] is None
+            base_brdr_observation["reference_od"] is None
+            and actual_brdr_observation["reference_od"] is None
         ):
             od_alike = True
         elif (
-            base_observation["reference_od"] is None
-            or actual_observation["reference_od"] is None
+            base_brdr_observation["reference_od"] is None
+            or actual_brdr_observation["reference_od"] is None
         ):
             od_alike = False
         elif (
             abs(
-                base_observation["reference_od"]["area"]
-                - actual_observation["reference_od"]["area"]
+                base_brdr_observation["reference_od"]["area"]
+                - actual_brdr_observation["reference_od"]["area"]
             )
             * 100
-            / base_observation["reference_od"]["area"]
+            / base_brdr_observation["reference_od"]["area"]
         ) < threshold_od_percentage:
             od_alike = True
         properties[OD_ALIKE_FIELD_NAME] = od_alike
 
         equal_reference_features = False
         if (
-            base_observation["reference_features"].keys()
-            == actual_observation["reference_features"].keys()
+            base_brdr_observation["reference_features"].keys()
+            == actual_brdr_observation["reference_features"].keys()
         ):
             equal_reference_features = True
             max_diff_area_reference_feature = 0
             max_diff_percentage_reference_feature = 0
-            for key in base_observation["reference_features"].keys():
+            for key in base_brdr_observation["reference_features"].keys():
                 if (
-                    base_observation["reference_features"][key]["full"]
-                    != actual_observation["reference_features"][key]["full"]
+                    base_brdr_observation["reference_features"][key]["full"]
+                    != actual_brdr_observation["reference_features"][key]["full"]
                 ):
                     equal_reference_features = False
 
                 diff_area_reference_feature = abs(
-                    base_observation["reference_features"][key]["area"]
-                    - actual_observation["reference_features"][key]["area"]
+                    base_brdr_observation["reference_features"][key]["area"]
+                    - actual_brdr_observation["reference_features"][key]["area"]
                 )
-                area = base_observation["reference_features"][key]["area"]
+                area = base_brdr_observation["reference_features"][key]["area"]
                 if area > 0:
                     diff_percentage_reference_feature = (
                         abs(
-                            base_observation["reference_features"][key]["area"]
-                            - actual_observation["reference_features"][key]["area"]
+                            base_brdr_observation["reference_features"][key]["area"]
+                            - actual_brdr_observation["reference_features"][key]["area"]
                         )
                         * 100
-                        / base_observation["reference_features"][key]["area"]
+                        / base_brdr_observation["reference_features"][key]["area"]
                     )
                 else:
                     diff_percentage_reference_feature = 0
@@ -1741,29 +1768,20 @@ class Aligner:
         if (
             equal_reference_features
             and od_alike
-            and base_observation["full"]
-            and actual_observation["full"]
+            and base_brdr_observation["full"]
+            and actual_brdr_observation["full"]
         ):  # observation is the same, and both geometries are 'full'
-            properties[EVALUATION_FIELD_NAME] = Evaluation.EQUALITY_EQUAL_OBSERVATION_FULL_1
+            properties[EVALUATION_FIELD_NAME] = Evaluation.EQUALITY_BY_ID_AND_FULL_REFERENCE
         elif (
             equal_reference_features
             and od_alike
-            and base_observation["full"] == actual_observation["full"]
+            and base_brdr_observation["full"] == actual_brdr_observation["full"]
         ):  # observation is the same,  both geometries are not 'full'
-            properties[EVALUATION_FIELD_NAME] = Evaluation.EQUALITY_EQUAL_OBSERVATION_2
+            properties[EVALUATION_FIELD_NAME] = Evaluation.EQUALITY_BY_ID
         elif (
-            base_observation["full"] and actual_observation["full"] and od_alike
+            base_brdr_observation["full"] and actual_brdr_observation["full"] and od_alike
         ):  # observation not the same but geometries are full
-            properties[EVALUATION_FIELD_NAME] = Evaluation.EQUALITY_FULL_3
-        # At this moment these are all the check to get a positive EVALUATION. We have to see in future if we add some extra positive EVALUATIONS.
-        # fe.
-        # * on not-full parcels (comparing all parcels?)
-        # * evaluating the outer ring (#102)
-        # * ...
-        # elif base_observation["full"] == actual_observation["full"] and od_alike:
-        #    properties[EVALUATION_FIELD_NAME] = Evaluation.EQUALITY_NON_FULL
-        # elif geom_predicted.area >10000: #evaluate only the outer ring
-        # pass
+            properties[EVALUATION_FIELD_NAME] = Evaluation.EQUALITY_BY_FULL_REFERENCE
         else:
             properties[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
         return properties

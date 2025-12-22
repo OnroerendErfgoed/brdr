@@ -506,7 +506,7 @@ class TestAligner(unittest.TestCase):
         self.sample_aligner.load_reference_data(DictLoader({"ref_id_1": aligned_shape}))
         process_result = self.sample_aligner.process([1])
         fcs = process_result.get_results_as_geojson(
-            aligner=self.sample_aligner, observation=True, attributes=True
+            aligner=self.sample_aligner, add_metadata=True, add_original_attributes=True
         )
         assert fcs["result"]["features"][0]["properties"][AREA_ATTRIBUTE] > 0
         assert fcs["result_diff"]["features"][0]["properties"][AREA_ATTRIBUTE] == 0

@@ -35,7 +35,7 @@ if __name__ == "__main__":
     )
 
     # SHOW results of the predictions
-    fcs = alignerresults.get_results_as_geojson(observation=False, aligner=aligner)
+    fcs = alignerresults.get_results_as_geojson(add_metadata=False, aligner=aligner)
     if fcs is None or "result" not in fcs:
         print("empty predictions")
     else:

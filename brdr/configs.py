@@ -102,4 +102,4 @@ class AlignerConfig:
     mitre_limit: float = 10
     max_workers: int = None
     log_metadata: bool = True
-    add_observation: bool = False
+    add_observations: bool = True

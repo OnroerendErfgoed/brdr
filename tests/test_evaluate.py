@@ -175,7 +175,7 @@ class TestEvaluate(unittest.TestCase):
             process_results_evaluated["theme_id_1"][3.5]["properties"][
                 EVALUATION_FIELD_NAME
             ]
-            == Evaluation.PREDICTION_UNIQUE_FULL
+            == Evaluation.PREDICTION_UNIQUE_AND_FULL_REFERENCE
         )
 
     @pytest.mark.usefixtures("mock_grb_response2")
@@ -548,7 +548,7 @@ class TestEvaluate(unittest.TestCase):
             process_results_evaluated[1][list(process_results_evaluated[1].keys())[0]][
                 "properties"
             ][EVALUATION_FIELD_NAME]
-            == Evaluation.PREDICTION_UNIQUE_FULL
+            == Evaluation.PREDICTION_UNIQUE_AND_FULL_REFERENCE
         )
         assert (
             process_results_evaluated[2][list(process_results_evaluated[2].keys())[0]][

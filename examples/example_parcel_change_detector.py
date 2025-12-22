@@ -7,8 +7,7 @@ from brdr.be.grb.loader import GRBFiscalParcelLoader
 from brdr.be.oe.loader import OnroerendErfgoedLoader
 from brdr.constants import (
     EVALUATION_FIELD_NAME,
-    RELEVANT_DISTANCE_FIELD_NAME,
-    OBSERVATION_FIELD_NAME,
+    RELEVANT_DISTANCE_FIELD_NAME
 )
 from brdr.utils import write_geojson
 
@@ -76,7 +75,7 @@ starttime = datetime.now()
 base_process_result = base_aligner.process(relevant_distances=[base_correction])
 # get resulting aligned features on Adpfxxxx, with observation
 processresults = base_process_result.get_results_as_geojson(
-    aligner=base_aligner, observation=True
+    aligner=base_aligner, add_metadata=True
 )
 if len(processresults) == 0:
     print("empty processresults")
@@ -90,7 +89,7 @@ print("Actualise base objects")
 fcs = update_featurecollection_to_actual_grb(
     featurecollection_base_result,
     # base_aligner.name_thematic_id,
-    base_observation_field=OBSERVATION_FIELD_NAME,
+    base_metadata_field=OBSERVATION_FIELD_NAME,
     max_distance_for_actualisation=max_distance_for_actualisation,
 )
 

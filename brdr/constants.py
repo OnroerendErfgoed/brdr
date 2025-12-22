@@ -1,6 +1,5 @@
 # Download-settings: when extracting features by URL
 # Limit used when extracting features by URL, using the feature API (f.e. from GRB)
-from brdr.enums import DiffMetric
 
 DOWNLOAD_LIMIT: int = 10000
 
@@ -16,6 +15,8 @@ BASE_OBSERVATION_FIELD_NAME = (
 ID_THEME_FIELD_NAME = PREFIX_FIELDNAME + "id"
 ID_REFERENCE_FIELD_NAME = PREFIX_FIELDNAME + "ref_id"
 OBSERVATION_FIELD_NAME = PREFIX_FIELDNAME + "observation"
+BASE_METADATA_FIELD_NAME = PREFIX_FIELDNAME + "metadata_base" #fieldname to write the base metadata of the input geometrie
+METADATA_FIELD_NAME = PREFIX_FIELDNAME + "metadata"
 EVALUATION_FIELD_NAME = PREFIX_FIELDNAME + "evaluation"
 STABILITY = PREFIX_FIELDNAME + "stability"
 ZERO_STREAK = PREFIX_FIELDNAME + "zero_streak"

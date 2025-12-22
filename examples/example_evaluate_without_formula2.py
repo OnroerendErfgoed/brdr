@@ -28,7 +28,7 @@ if __name__ == "__main__":
     # Use the EVALUATE-function
     dict_evaluated = actual_aligner.evaluate(
         ids_to_evaluate=None,
-        base_observation_field=None,
+        metadata_field=None,
         full_reference_strategy=FullReferenceStrategy.PREFER_FULL_REFERENCE,
         relevant_distances=relevant_distances,
     )

@@ -147,11 +147,11 @@ class Evaluation(str, Enum):
     or requires manual review.
     """
 
-    EQUALITY_EQUAL_OBSERVATION_FULL_1 = "equality_equal_observation_full_1"
-    EQUALITY_EQUAL_OBSERVATION_2 = "equality_equal_observation_2"
-    EQUALITY_FULL_3 = "equality_full_3"
+    EQUALITY_BY_ID_AND_FULL_REFERENCE = "equality_by_id_and_full_reference"
+    EQUALITY_BY_ID = "equality_by_id"
+    EQUALITY_BY_FULL_REFERENCE = "equality_by_full_reference"
     PREDICTION_UNIQUE = "prediction_unique"
-    PREDICTION_UNIQUE_FULL = "prediction_unique_full"
+    PREDICTION_UNIQUE_AND_FULL_REFERENCE = "prediction_unique_full"
     TO_CHECK_PREDICTION_FULL = "to_check_prediction_full"
     TO_CHECK_PREDICTION_MULTI = "to_check_prediction_multi"
     TO_CHECK_PREDICTION_MULTI_FULL = "to_check_prediction_multi_full"

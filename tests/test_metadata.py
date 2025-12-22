@@ -8,7 +8,7 @@ from brdr.loader import DictLoader
 def test_metadata():
     config = AlignerConfig(
         log_metadata=True,
-        add_observation=True,
+        add_observations=True,
     )
     aligner = Aligner(config=config)
     aligner.load_thematic_data(

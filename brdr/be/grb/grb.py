@@ -12,9 +12,9 @@ from brdr.configs import AlignerConfig
 from brdr.constants import (
     LAST_VERSION_DATE,
     DATE_FORMAT,
-    OBSERVATION_FIELD_NAME,
     BASE_OBSERVATION_FIELD_NAME,
     DEFAULT_CRS,
+    METADATA_FIELD_NAME,
 )
 from brdr.enums import FullReferenceStrategy, AlignerResultType
 from brdr.loader import GeoJsonLoader
@@ -25,7 +25,7 @@ from brdr.logger import Logger
 def update_featurecollection_to_actual_grb(
     featurecollection: Dict[str, Any],
     id_theme_fieldname: Optional[str] = None,
-    base_observation_field: str = OBSERVATION_FIELD_NAME,
+    base_metadata_field: str = METADATA_FIELD_NAME,
     grb_type: GRBType = GRBType.ADP,
     max_distance_for_actualisation: float = 2.0,
     max_predictions: int = -1,
@@ -50,7 +50,7 @@ def update_featurecollection_to_actual_grb(
         The thematic data as a GeoJSON-like dictionary.
     id_theme_fieldname : str, optional
         The property field name containing the unique ID for each feature.
-    base_observation_field : str, default OBSERVATION_FIELD_NAME
+    base_metadata_field : str, default OBSERVATION_FIELD_NAME
         Name of the attribute field that stores the existing alignment observation
         (JSON string). This is used to determine the last version date.
     grb_type : GRBType, default GRBType.ADP
@@ -122,8 +122,8 @@ def update_featurecollection_to_actual_grb(
 
     for id_theme, feature in aligner.thematic_data.features.items():
         try:
-            if not base_observation_field is None:
-                base_observation_string = feature.properties[base_observation_field]
+            if not base_metadata_field is None:
+                base_observation_string = feature.properties[base_metadata_field]
                 base_observation = json.loads(base_observation_string)
 
                 logger.feedback_debug("observation: " + str(base_observation))
@@ -186,7 +186,7 @@ def update_featurecollection_to_actual_grb(
     # EXECUTE evaluation
     aligner_result = aligner.evaluate(
         thematic_ids=affected,
-        base_observation_field=BASE_OBSERVATION_FIELD_NAME,
+        metadata_field=BASE_OBSERVATION_FIELD_NAME,
         max_predictions=max_predictions,
         relevant_distances=relevant_distances,
         full_reference_strategy=full_reference_strategy,
@@ -196,6 +196,6 @@ def update_featurecollection_to_actual_grb(
     return aligner_result.get_results_as_geojson(
         aligner=aligner,
         result_type=AlignerResultType.EVALUATED_PREDICTIONS,
-        observation=True,
-        attributes=attributes,
+        add_metadata=True,
+        add_original_attributes=attributes,
     )
