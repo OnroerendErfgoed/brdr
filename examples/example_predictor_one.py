@@ -29,7 +29,7 @@ if __name__ == "__main__":
     )
     dict_series = alignerresults.get_results()
     # SHOW results of the predictions
-    fcs_all = alignerresults.get_results_as_geojson(formula=False, aligner=aligner)
+    fcs_all = alignerresults.get_results_as_geojson(observation=False, aligner=aligner)
 
     if fcs_all is None or "result" not in fcs_all:
         print("no calculations")

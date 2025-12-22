@@ -49,8 +49,8 @@ class ProcessResult(TypedDict, total=False):
         Calculated metrics and feature attributes.
     metadata : Dict[Any, Any]
         Dictionary containing execution metadata.
-    formula : Dict[Any, Any]
-        Dictionary containing the alignment formula details.
+    observation : Dict[Any, Any]
+        Dictionary containing the alignment observation details.
 
     Notes
     -----
@@ -81,23 +81,23 @@ class ProcessResult(TypedDict, total=False):
     result_relevant_diff: BaseGeometry
     properties: Dict[str, Any]
     metadata: Dict[Any, Any]
-    formula: Dict[Any, Any]
+    observation: Dict[Any, Any]
 
 
 InputId = Union[str, int]
 
 
-class FormulaReference(TypedDict, total=False):
+class ObservationReference(TypedDict, total=False):
     area: int
     full: bool
     percentage: int
 
 
-class Formula(TypedDict, total=False):
+class Observation(TypedDict, total=False):
     alignment_date: str
     brdr_version: str
     reference_source: str
     full: bool
     area: int
-    reference_features: Dict[InputId, FormulaReference]
+    reference_features: Dict[InputId, ObservationReference]
     reference_od: Dict

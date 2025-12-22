@@ -32,7 +32,7 @@ from brdr.constants import DIFF_AREA_FIELD_NAME
 from brdr.constants import DIFF_PERCENTAGE_FIELD_NAME
 from brdr.constants import EQUAL_REFERENCE_FEATURES_FIELD_NAME
 from brdr.constants import EVALUATION_FIELD_NAME
-from brdr.constants import FORMULA_FIELD_NAME
+from brdr.constants import OBSERVATION_FIELD_NAME
 from brdr.constants import FULL_ACTUAL_FIELD_NAME
 from brdr.constants import FULL_BASE_FIELD_NAME
 from brdr.constants import ID_THEME_FIELD_NAME
@@ -76,7 +76,7 @@ from brdr.utils import determine_stability
 from brdr.utils import get_geojsons_from_process_results
 from brdr.utils import get_geometry_difference_metrics_from_processresult
 from brdr.utils import get_geometry_difference_metrics_from_processresults
-from brdr.utils import is_brdr_formula
+from brdr.utils import is_brdr_observation
 from brdr.utils import union_process_result
 from brdr.utils import write_geojson
 
@@ -249,7 +249,7 @@ class AlignerResult:
         self,
         aligner: "Aligner",
         result_type: AlignerResultType = AlignerResultType.PROCESSRESULTS,
-        formula: bool = False,
+        observation: bool = False,
         attributes: bool = False,
     ) -> Dict[str, Any]:
         """
@@ -261,8 +261,8 @@ class AlignerResult:
             The 'Aligner' object providing CRS and thematic metadata.
         result_type : AlignerResultType
             The type of results to export. Defaults to PROCESSRESULTS.
-        formula : bool
-            If True, includes the descriptive comparison formula in properties.
+        observation : bool
+            If True, includes the descriptive comparison observation in properties.
         attributes : bool
             If True, includes original thematic attributes in the output.
 
@@ -295,13 +295,13 @@ class AlignerResult:
                         feature.properties
                     )
 
-                if formula:
+                if observation:
                     result_geom = process_result["result"]
-                    formula_result = process_result.get(
-                        "formula"
+                    observation_result = process_result.get(
+                        "observation"
                     ) or aligner.compare_to_reference(result_geom)
-                    prop_dictionary[theme_id][relevant_distance][FORMULA_FIELD_NAME] = (
-                        json.dumps(formula_result)
+                    prop_dictionary[theme_id][relevant_distance][OBSERVATION_FIELD_NAME] = (
+                        json.dumps(observation_result)
                     )
 
         return get_geojsons_from_process_results(
@@ -316,7 +316,7 @@ class AlignerResult:
         aligner: "Aligner",
         path: str,
         result_type: AlignerResultType = AlignerResultType.PROCESSRESULTS,
-        formula: bool = False,
+        observation: bool = False,
         attributes: bool = False,
     ) -> None:
         """
@@ -333,8 +333,8 @@ class AlignerResult:
             Target directory path where files will be created.
         result_type : AlignerResultType
             Type of results to export. Defaults to PROCESSRESULTS.
-        formula : bool
-            Whether to include alignment formulas in the output.
+        observation : bool
+            Whether to include alignment observations in the output.
         attributes : bool
             Whether to include original feature attributes.
 
@@ -345,7 +345,7 @@ class AlignerResult:
         fcs = self.get_results_as_geojson(
             aligner=aligner,
             result_type=result_type,
-            formula=formula,
+            observation=observation,
             attributes=attributes,
         )
         for name, fc in fcs.items():
@@ -353,8 +353,8 @@ class AlignerResult:
             write_geojson(os.path.join(path, file_name), fc)
 
 
-def _get_observations_from_formula(processResult: ProcessResult) -> List[Dict]:
-    formula = processResult["formula"]
+def _get_observations_from_brdr_observation(processResult: ProcessResult) -> List[Dict]:
+    observation = processResult["observation"]
     actuation_metadata = processResult["metadata"]["actuation"]
     observation_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S%z")
     sensor_uuid = uuid.uuid4().hex
@@ -373,7 +373,7 @@ def _get_observations_from_formula(processResult: ProcessResult) -> List[Dict]:
         raise ValueError("reference geometry not found in actuation metadata")
 
     observations = []
-    for ref_id, observations_dict in formula["reference_features"].items():
+    for ref_id, observations_dict in observation["reference_features"].items():
         reference = get_reference_from_actuation(ref_id)
         if area:= observations_dict.get("area"):
             observations.append(
@@ -409,7 +409,7 @@ def _get_observations_from_formula(processResult: ProcessResult) -> List[Dict]:
                 }
             )
 
-    if area:= formula.get("area"):
+    if area:= observation.get("area"):
         observations.append(
             {
                 **observation_metadata,
@@ -424,7 +424,7 @@ def _get_observations_from_formula(processResult: ProcessResult) -> List[Dict]:
                 },
             }
         )
-    if area_od:= formula.get("area_od", {}).get("area"):
+    if area_od:= observation.get("area_od", {}).get("area"):
         observations.append(
             {
                 **observation_metadata,
@@ -439,7 +439,7 @@ def _get_observations_from_formula(processResult: ProcessResult) -> List[Dict]:
                 },
             }
         )
-    if full:= formula.get("full"):
+    if full:= observation.get("full"):
         observations.append(
             {
                 **observation_metadata,
@@ -456,12 +456,12 @@ def aligner_metadata_decorator(f):
     def inner_func(aligner, *args, **kwargs):
         assert isinstance(aligner, Aligner)
         response: AlignerResult = f(aligner, *args, **kwargs)
-        if aligner.add_formula:
+        if aligner.add_observation:
             for thematic_id, rd_res in response.results.items():
                 for rd, res in rd_res.items():
                     if res["result"]:
-                        formula = aligner.compare_to_reference(res["result"])
-                        res["formula"] = formula
+                        observation = aligner.compare_to_reference(res["result"])
+                        res["observation"] = observation
         if aligner.log_metadata:
             # generate uuid for actuation
             actuation_id = "brdrid:actuations/" + uuid.uuid4().hex
@@ -513,8 +513,8 @@ def aligner_metadata_decorator(f):
                         ],
                     },
                 }
-                if result["formula"]:
-                    result["metadata"]["observations"] = _get_observations_from_formula(
+                if result["observation"]:
+                    result["metadata"]["observations"] = _get_observations_from_brdr_observation(
                         result
                     )
 
@@ -537,8 +537,8 @@ class Aligner:
         Instance for logging feedback and information.
     log_metadata : bool
         If True, metadata about the actuation is logged in the results.
-    add_formula: bool
-        If True, process result formulas will be computed by default.
+    add_observation: bool
+        If True, process result observations will be computed by default.
     processor : BaseProcessor or AlignerGeometryProcessor
         The geometric processor used for alignment calculations.
     correction_distance : float
@@ -615,7 +615,7 @@ class Aligner:
         self.config = config
         self.logger = Logger(feedback)
         self.log_metadata = config.log_metadata
-        self.add_formula = config.add_formula
+        self.add_observation = config.add_observation
         self.processor = (
             processor
             if processor
@@ -1049,13 +1049,13 @@ class Aligner:
         relevant_distances: Optional[Iterable[float]] = None,
         *,
         thematic_ids: Optional[List[InputId]] = None,
-        base_formula_field: str = FORMULA_FIELD_NAME,
+        base_observation_field: str = OBSERVATION_FIELD_NAME,
         full_reference_strategy: FullReferenceStrategy = FullReferenceStrategy.NO_FULL_REFERENCE,
         max_predictions: int = -1,
         multi_to_best_prediction: bool = True,
     ) -> AlignerResult:
         """
-        Evaluates input geometries against predictions using formula matching
+        Evaluates input geometries against predictions using observation matching
         and selection strategies.
 
         This method identifies the best candidate geometries for alignment by
@@ -1070,9 +1070,9 @@ class Aligner:
         thematic_ids : List[ThematicId], optional
             List of IDs to evaluate. If None, all loaded thematic features
             are processed. Features not in this list are marked as NOT_EVALUATED.
-        base_formula_field : str, optional
-            The field name containing the base comparison formula.
-            Defaults to FORMULA_FIELD_NAME.
+        base_observation_field : str, optional
+            The field name containing the base comparison observation.
+            Defaults to observation_FIELD_NAME.
         full_reference_strategy : FullReferenceStrategy, optional
             Strategy to prioritize predictions based on their 'fullness'
             relative to reference data. Defaults to NO_FULL_REFERENCE.
@@ -1098,7 +1098,7 @@ class Aligner:
         Notes
         -----
         The evaluation logic follows a specific priority tree:
-        1. **Formula Match**: If a prediction matches the base formula exactly,
+        1. **observation Match**: If a prediction matches the base observation exactly,
            it is prioritized (score 100).
         2. **Fullness**: If a strategy is set, 'full' predictions get a score boost.
         3. **Scoring**: Candidates are ranked by their prediction score.
@@ -1109,7 +1109,7 @@ class Aligner:
         ```{mermaid}
         graph TD
             Start[Start Evaluation] --> Pred[Generate Predictions]
-            Pred --> Match{Formula Match?}
+            Pred --> Match{observation Match?}
             Match -- Yes --> HighScore[Prioritize & Score 100]
             Match -- No --> Full{Full Reference?}
             Full -- Yes --> Strategy[Apply Fullness Strategy]
@@ -1170,7 +1170,7 @@ class Aligner:
                     props = self._evaluate(
                         id_theme=theme_id,
                         geom_predicted=original_geometry,
-                        base_formula_field=base_formula_field,
+                        base_observation_field=base_observation_field,
                     )
                     props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
                     props[PREDICTION_COUNT] = 0
@@ -1198,13 +1198,13 @@ class Aligner:
                 scores = []
                 distances = []
                 predictions = []
-                formula_match = False
+                observation_match = False
                 for dist in sorted(dict_predictions_results.keys()):
                     props = self._evaluate(
                         id_theme=theme_id,
                         geom_predicted=dict_predictions_results[dist]["result"],
-                        base_formula_field=base_formula_field,
-                        formula=dict_predictions_results[dist].get("formula"),
+                        base_observation_field=base_observation_field,
+                        observation=dict_predictions_results[dist].get("observation"),
                     )
                     props.update(
                         process_results_evaluated_predictions[theme_id][dist][
@@ -1238,8 +1238,8 @@ class Aligner:
                         props[EVALUATION_FIELD_NAME]
                         != Evaluation.TO_CHECK_NO_PREDICTION
                     ):
-                        # this prediction has a equality based on formula so the rest is not checked anymore
-                        formula_match = True
+                        # this prediction has a equality based on observation so the rest is not checked anymore
+                        observation_match = True
                         props[PREDICTION_SCORE] = 100
                         scores = []
                         distances = []
@@ -1285,9 +1285,9 @@ class Aligner:
                 )
                 len_best_ix = len(best_ix)
 
-                if not formula_match:
+                if not observation_match:
                     # if there is only one prediction left,  evaluation is set to PREDICTION_UNIQUE_FULL
-                    if len_best_ix == 1 and not formula_match:
+                    if len_best_ix == 1 and not observation_match:
                         props = predictions[0]["properties"]
                         if (
                             FULL_ACTUAL_FIELD_NAME in props
@@ -1306,7 +1306,7 @@ class Aligner:
                         len_best_ix > 1
                         and max_predictions == 1
                         and not multi_to_best_prediction
-                        and not formula_match
+                        and not observation_match
                     ):
                         relevant_distance = round(0, RELEVANT_DISTANCE_DECIMALS)
                         props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_ORIGINAL
@@ -1342,7 +1342,7 @@ class Aligner:
                     props = self._evaluate(
                         id_theme=theme_id,
                         geom_predicted=original_geometry,
-                        base_formula_field=base_formula_field,
+                        base_observation_field=base_observation_field,
                     )
                     props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
                     props[PREDICTION_SCORE] = -1
@@ -1368,7 +1368,7 @@ class Aligner:
                 props = self._evaluate(
                     id_theme=theme_id,
                     geom_predicted=original_geometry,
-                    base_formula_field=base_formula_field,
+                    base_observation_field=base_observation_field,
                 )
                 props[EVALUATION_FIELD_NAME] = Evaluation.NOT_EVALUATED
                 props[PREDICTION_SCORE] = -1
@@ -1392,7 +1392,7 @@ class Aligner:
         self, geometry: BaseGeometry, with_geom: bool = False
     ) -> Dict[str, Any]:
         """
-        Calculates formula-related information based on the input geometry.
+        Calculates observation-related information based on the input geometry.
 
         This method performs a spatial analysis to determine how much of the input
         geometry is covered by reference features and identifies which specific
@@ -1442,7 +1442,7 @@ class Aligner:
             Intersect --> Stats[Compute Area & %]
             In --> Diff[Difference with Union of Refs]
             Diff --> OD[Identify Unknown Area / OD]
-            Stats --> Dict[Final Formula Dictionary]
+            Stats --> Dict[Final observation Dictionary]
             OD --> Dict
         ```
 
@@ -1452,7 +1452,7 @@ class Aligner:
         >>> print(info["full"])
         >>> print(info["reference_features"].keys())  # IDs of intersected refs
         """
-        dict_formula = {
+        dict_observation = {
             "alignment_date": datetime.now().strftime(DATE_FORMAT),
             "brdr_version": str(__version__),
             "reference_source": self.reference_data.source,
@@ -1511,23 +1511,23 @@ class Aligner:
                 if with_geom:
                     geom = geom_intersection
 
-            dict_formula["reference_features"][key_ref] = {
+            dict_observation["reference_features"][key_ref] = {
                 "full": full,
                 "area": area,
                 "percentage": perc,
             }
             if version_date is not None:
-                dict_formula["reference_features"][key_ref][VERSION_DATE] = (
+                dict_observation["reference_features"][key_ref][VERSION_DATE] = (
                     version_date.strftime(DATE_FORMAT)
                 )
             if with_geom:
-                dict_formula["reference_features"][key_ref]["geometry"] = to_geojson(
+                dict_observation["reference_features"][key_ref]["geometry"] = to_geojson(
                     geom
                 )
 
-        dict_formula["full"] = full_total
+        dict_observation["full"] = full_total
         if last_version_date is not None:
-            dict_formula[LAST_VERSION_DATE] = last_version_date.strftime(DATE_FORMAT)
+            dict_observation[LAST_VERSION_DATE] = last_version_date.strftime(DATE_FORMAT)
         geom_od = buffer_pos(
             buffer_neg(
                 safe_difference(geometry, safe_unary_union(intersected)),
@@ -1540,11 +1540,11 @@ class Aligner:
         if geom_od is not None:
             area_od = round(geom_od.area, 2)
             if area_od > 0:
-                dict_formula["reference_od"] = {"area": area_od}
+                dict_observation["reference_od"] = {"area": area_od}
                 if with_geom:
-                    dict_formula["reference_od"]["geometry"] = to_geojson(geom_od)
-        self.logger.feedback_debug(str(dict_formula))
-        return dict_formula
+                    dict_observation["reference_od"]["geometry"] = to_geojson(geom_od)
+        self.logger.feedback_debug(str(dict_observation))
+        return dict_observation
 
     def get_difference_metrics_for_thematic_data(
         self,
@@ -1634,15 +1634,15 @@ class Aligner:
         self,
         id_theme,
         geom_predicted,
-        base_formula_field=FORMULA_FIELD_NAME,
-        formula=None,
+        base_observation_field=OBSERVATION_FIELD_NAME,
+        observation=None,
     ):
         """
         function that evaluates a predicted geometry and returns a properties-dictionary
         """
         threshold_od_percentage = 1
         properties = {
-            FORMULA_FIELD_NAME: "",
+            OBSERVATION_FIELD_NAME: "",
             EVALUATION_FIELD_NAME: Evaluation.TO_CHECK_NO_PREDICTION,
             FULL_BASE_FIELD_NAME: None,
             FULL_ACTUAL_FIELD_NAME: None,
@@ -1651,75 +1651,75 @@ class Aligner:
             DIFF_PERCENTAGE_FIELD_NAME: None,
             DIFF_AREA_FIELD_NAME: None,
         }
-        actual_formula = formula or self.compare_to_reference(geom_predicted)
-        if actual_formula is None or geom_predicted is None or geom_predicted.is_empty:
+        actual_observation = observation or self.compare_to_reference(geom_predicted)
+        if actual_observation is None or geom_predicted is None or geom_predicted.is_empty:
             properties[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
             properties[FULL_ACTUAL_FIELD_NAME] = False
             return properties
-        properties[FULL_ACTUAL_FIELD_NAME] = actual_formula["full"]
-        properties[FORMULA_FIELD_NAME] = json.dumps(actual_formula)
+        properties[FULL_ACTUAL_FIELD_NAME] = actual_observation["full"]
+        properties[OBSERVATION_FIELD_NAME] = json.dumps(actual_observation)
 
         try:
-            base_formula = json.loads(
-                self.thematic_data.features.get(id_theme).properties[base_formula_field]
+            base_observation = json.loads(
+                self.thematic_data.features.get(id_theme).properties[base_observation_field]
             )
         except:
-            base_formula = None
+            base_observation = None
 
-        if not is_brdr_formula(base_formula):
+        if not is_brdr_observation(base_observation):
             properties[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
             return properties
-        properties[FULL_BASE_FIELD_NAME] = base_formula["full"]
+        properties[FULL_BASE_FIELD_NAME] = base_observation["full"]
         od_alike = False
         if (
-            base_formula["reference_od"] is None
-            and actual_formula["reference_od"] is None
+            base_observation["reference_od"] is None
+            and actual_observation["reference_od"] is None
         ):
             od_alike = True
         elif (
-            base_formula["reference_od"] is None
-            or actual_formula["reference_od"] is None
+            base_observation["reference_od"] is None
+            or actual_observation["reference_od"] is None
         ):
             od_alike = False
         elif (
             abs(
-                base_formula["reference_od"]["area"]
-                - actual_formula["reference_od"]["area"]
+                base_observation["reference_od"]["area"]
+                - actual_observation["reference_od"]["area"]
             )
             * 100
-            / base_formula["reference_od"]["area"]
+            / base_observation["reference_od"]["area"]
         ) < threshold_od_percentage:
             od_alike = True
         properties[OD_ALIKE_FIELD_NAME] = od_alike
 
         equal_reference_features = False
         if (
-            base_formula["reference_features"].keys()
-            == actual_formula["reference_features"].keys()
+            base_observation["reference_features"].keys()
+            == actual_observation["reference_features"].keys()
         ):
             equal_reference_features = True
             max_diff_area_reference_feature = 0
             max_diff_percentage_reference_feature = 0
-            for key in base_formula["reference_features"].keys():
+            for key in base_observation["reference_features"].keys():
                 if (
-                    base_formula["reference_features"][key]["full"]
-                    != actual_formula["reference_features"][key]["full"]
+                    base_observation["reference_features"][key]["full"]
+                    != actual_observation["reference_features"][key]["full"]
                 ):
                     equal_reference_features = False
 
                 diff_area_reference_feature = abs(
-                    base_formula["reference_features"][key]["area"]
-                    - actual_formula["reference_features"][key]["area"]
+                    base_observation["reference_features"][key]["area"]
+                    - actual_observation["reference_features"][key]["area"]
                 )
-                area = base_formula["reference_features"][key]["area"]
+                area = base_observation["reference_features"][key]["area"]
                 if area > 0:
                     diff_percentage_reference_feature = (
                         abs(
-                            base_formula["reference_features"][key]["area"]
-                            - actual_formula["reference_features"][key]["area"]
+                            base_observation["reference_features"][key]["area"]
+                            - actual_observation["reference_features"][key]["area"]
                         )
                         * 100
-                        / base_formula["reference_features"][key]["area"]
+                        / base_observation["reference_features"][key]["area"]
                     )
                 else:
                     diff_percentage_reference_feature = 0
@@ -1741,26 +1741,26 @@ class Aligner:
         if (
             equal_reference_features
             and od_alike
-            and base_formula["full"]
-            and actual_formula["full"]
-        ):  # formula is the same, and both geometries are 'full'
-            properties[EVALUATION_FIELD_NAME] = Evaluation.EQUALITY_EQUAL_FORMULA_FULL_1
+            and base_observation["full"]
+            and actual_observation["full"]
+        ):  # observation is the same, and both geometries are 'full'
+            properties[EVALUATION_FIELD_NAME] = Evaluation.EQUALITY_EQUAL_OBSERVATION_FULL_1
         elif (
             equal_reference_features
             and od_alike
-            and base_formula["full"] == actual_formula["full"]
-        ):  # formula is the same,  both geometries are not 'full'
-            properties[EVALUATION_FIELD_NAME] = Evaluation.EQUALITY_EQUAL_FORMULA_2
+            and base_observation["full"] == actual_observation["full"]
+        ):  # observation is the same,  both geometries are not 'full'
+            properties[EVALUATION_FIELD_NAME] = Evaluation.EQUALITY_EQUAL_OBSERVATION_2
         elif (
-            base_formula["full"] and actual_formula["full"] and od_alike
-        ):  # formula not the same but geometries are full
+            base_observation["full"] and actual_observation["full"] and od_alike
+        ):  # observation not the same but geometries are full
             properties[EVALUATION_FIELD_NAME] = Evaluation.EQUALITY_FULL_3
         # At this moment these are all the check to get a positive EVALUATION. We have to see in future if we add some extra positive EVALUATIONS.
         # fe.
         # * on not-full parcels (comparing all parcels?)
         # * evaluating the outer ring (#102)
         # * ...
-        # elif base_formula["full"] == actual_formula["full"] and od_alike:
+        # elif base_observation["full"] == actual_observation["full"] and od_alike:
         #    properties[EVALUATION_FIELD_NAME] = Evaluation.EQUALITY_NON_FULL
         # elif geom_predicted.area >10000: #evaluate only the outer ring
         # pass

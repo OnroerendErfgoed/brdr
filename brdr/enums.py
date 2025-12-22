@@ -147,8 +147,8 @@ class Evaluation(str, Enum):
     or requires manual review.
     """
 
-    EQUALITY_EQUAL_FORMULA_FULL_1 = "equality_equal_formula_full_1"
-    EQUALITY_EQUAL_FORMULA_2 = "equality_equal_formula_2"
+    EQUALITY_EQUAL_OBSERVATION_FULL_1 = "equality_equal_observation_full_1"
+    EQUALITY_EQUAL_OBSERVATION_2 = "equality_equal_observation_2"
     EQUALITY_FULL_3 = "equality_full_3"
     PREDICTION_UNIQUE = "prediction_unique"
     PREDICTION_UNIQUE_FULL = "prediction_unique_full"

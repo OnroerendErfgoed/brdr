@@ -12,8 +12,8 @@ from brdr.configs import AlignerConfig
 from brdr.constants import (
     LAST_VERSION_DATE,
     DATE_FORMAT,
-    FORMULA_FIELD_NAME,
-    BASE_FORMULA_FIELD_NAME,
+    OBSERVATION_FIELD_NAME,
+    BASE_OBSERVATION_FIELD_NAME,
     DEFAULT_CRS,
 )
 from brdr.enums import FullReferenceStrategy, AlignerResultType
@@ -25,7 +25,7 @@ from brdr.logger import Logger
 def update_featurecollection_to_actual_grb(
     featurecollection: Dict[str, Any],
     id_theme_fieldname: Optional[str] = None,
-    base_formula_field: str = FORMULA_FIELD_NAME,
+    base_observation_field: str = OBSERVATION_FIELD_NAME,
     grb_type: GRBType = GRBType.ADP,
     max_distance_for_actualisation: float = 2.0,
     max_predictions: int = -1,
@@ -50,8 +50,8 @@ def update_featurecollection_to_actual_grb(
         The thematic data as a GeoJSON-like dictionary.
     id_theme_fieldname : str, optional
         The property field name containing the unique ID for each feature.
-    base_formula_field : str, default FORMULA_FIELD_NAME
-        Name of the attribute field that stores the existing alignment formula
+    base_observation_field : str, default OBSERVATION_FIELD_NAME
+        Name of the attribute field that stores the existing alignment observation
         (JSON string). This is used to determine the last version date.
     grb_type : GRBType, default GRBType.ADP
         The type of GRB reference data to align against.
@@ -77,7 +77,7 @@ def update_featurecollection_to_actual_grb(
     -------
     Dict[str, Any]
         A GeoJSON-like dictionary containing the evaluated predictions and
-        updated alignment formulas.
+        updated alignment observations.
 
     Notes
     -----
@@ -85,7 +85,7 @@ def update_featurecollection_to_actual_grb(
 
     1. **Initialization**: Loads thematic data and the actual GRB reference data.
     2. **Temporal Analysis**: Extracts the `last_version_date` from the features'
-       formulas to determine the relevant GRB change-window.
+       observations to determine the relevant GRB change-window.
     3. **Spatial Filtering**: Uses `get_affected_by_grb_change` to isolate only
        those geometries where the underlying GRB has actually changed.
     4. **Alignment**: Executes the `Aligner.evaluate` logic only on 'affected'
@@ -122,34 +122,34 @@ def update_featurecollection_to_actual_grb(
 
     for id_theme, feature in aligner.thematic_data.features.items():
         try:
-            if not base_formula_field is None:
-                base_formula_string = feature.properties[base_formula_field]
-                base_formula = json.loads(base_formula_string)
+            if not base_observation_field is None:
+                base_observation_string = feature.properties[base_observation_field]
+                base_observation = json.loads(base_observation_string)
 
-                logger.feedback_debug("formula: " + str(base_formula))
+                logger.feedback_debug("observation: " + str(base_observation))
                 try:
                     logger.feedback_debug(str(feature.properties))
                     if (
-                        LAST_VERSION_DATE in base_formula
-                        and base_formula[LAST_VERSION_DATE] is not None
-                        and base_formula[LAST_VERSION_DATE] != ""
+                        LAST_VERSION_DATE in base_observation
+                        and base_observation[LAST_VERSION_DATE] is not None
+                        and base_observation[LAST_VERSION_DATE] != ""
                     ):
-                        str_lvd = base_formula[LAST_VERSION_DATE]
+                        str_lvd = base_observation[LAST_VERSION_DATE]
                         lvd = datetime.strptime(str_lvd, DATE_FORMAT).date()
                         if last_version_date is None or lvd < last_version_date:
                             last_version_date = lvd
                 except Exception:
                     logger.feedback_info(
-                        f"Problem with {LAST_VERSION_DATE}. No brdr_formula (- json-attribute-field) loaded for id {id_theme}"
+                        f"Problem with {LAST_VERSION_DATE}. No brdr_observation (- json-attribute-field) loaded for id {id_theme}"
                     )
             else:
                 logger.feedback_info(
-                    f"No brdr_formula (- json-attribute-field) loaded for id {str(id_theme)}"
+                    f"No brdr_observation (- json-attribute-field) loaded for id {str(id_theme)}"
                 )
                 last_version_date = None
         except:
             logger.feedback_info(
-                f"No brdr_formula (- json-attribute-field) loaded for id {str(id_theme)}"
+                f"No brdr_observation (- json-attribute-field) loaded for id {str(id_theme)}"
             )
             last_version_date = None
 
@@ -186,7 +186,7 @@ def update_featurecollection_to_actual_grb(
     # EXECUTE evaluation
     aligner_result = aligner.evaluate(
         thematic_ids=affected,
-        base_formula_field=BASE_FORMULA_FIELD_NAME,
+        base_observation_field=BASE_OBSERVATION_FIELD_NAME,
         max_predictions=max_predictions,
         relevant_distances=relevant_distances,
         full_reference_strategy=full_reference_strategy,
@@ -196,6 +196,6 @@ def update_featurecollection_to_actual_grb(
     return aligner_result.get_results_as_geojson(
         aligner=aligner,
         result_type=AlignerResultType.EVALUATED_PREDICTIONS,
-        formula=True,
+        observation=True,
         attributes=attributes,
     )

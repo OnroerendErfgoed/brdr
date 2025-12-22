@@ -86,7 +86,7 @@ if __name__ == "__main__":
     )
     # SHOW the EVALUATED results
     fc = dict_evaluated.get_results_as_geojson(
-        formula=True, attributes=True, aligner=actual_aligner
+        observation=True, attributes=True, aligner=actual_aligner
     )
     print(fc["result"])
 

@@ -540,15 +540,15 @@ def build_reverse_index_wkb(d: dict):
     return {g.wkb: k for k, g in d.items()}
 
 
-def is_brdr_formula(brdr_formula):
+def is_brdr_observation(brdr_observation):
     """
-    returns true if the value has the correct structure of a base_formula, otherwise False
-    :param brdr_formula:
+    returns true if the value has the correct structure of a base_observation, otherwise False
+    :param brdr_observation:
     :return:
     """
-    if brdr_formula is None or not isinstance(brdr_formula, dict):
+    if brdr_observation is None or not isinstance(brdr_observation, dict):
         return False
-    if brdr_formula.keys() >= {
+    if brdr_observation.keys() >= {
         "alignment_date",
         "brdr_version",
         "reference_source",
@@ -599,7 +599,7 @@ def union_process_result(process_result: ProcessResult) -> ProcessResult:
     ProcessorConfig : Settings that define how these results are generated.
     """
     for key in ProcessResult.__annotations__:
-        if key in ["properties", "metadata", "formula"]:
+        if key in ["properties", "metadata", "observation"]:
             process_result[key] = process_result.get(key, {})  # noqa
             continue
         value = process_result.get(key, GeometryCollection())  # noqa

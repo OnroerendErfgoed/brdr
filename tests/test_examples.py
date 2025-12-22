@@ -198,7 +198,7 @@ class TestExamples:
         aligner_result = aligner.predict()
 
         assert len(aligner_result.results) > 0
-        fcs = aligner_result.get_results_as_geojson(aligner=aligner, formula=False)
+        fcs = aligner_result.get_results_as_geojson(aligner=aligner, observation=False)
         assert len(fcs) == 6
 
     @pytest.mark.usefixtures("callback_grb_response")
