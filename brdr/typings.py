@@ -84,7 +84,7 @@ class ProcessResult(TypedDict, total=False):
     formula: Dict[Any, Any]
 
 
-ThematicId = Union[str, int]
+InputId = Union[str, int]
 
 
 class FormulaReference(TypedDict, total=False):
@@ -99,5 +99,5 @@ class Formula(TypedDict, total=False):
     reference_source: str
     full: bool
     area: int
-    reference_features: Dict[ThematicId, FormulaReference]
+    reference_features: Dict[InputId, FormulaReference]
     reference_od: Dict

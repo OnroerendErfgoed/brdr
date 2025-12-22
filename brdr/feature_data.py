@@ -10,7 +10,7 @@ from shapely.geometry.base import BaseGeometry
 from brdr.constants import ID_REFERENCE_FIELD_NAME, ID_THEME_FIELD_NAME
 from brdr.geometry_utils import extract_points_lines_from_geometry, from_crs
 from brdr.geometry_utils import safe_unary_union
-from brdr.typings import ThematicId
+from brdr.typings import InputId
 from brdr.utils import _feature_from_geom
 
 
@@ -23,6 +23,8 @@ class AlignerFeature:
 
     Attributes
     ----------
+    data_id: ThematicId
+        Source id for the feature.
     brdr_id : str
         The unique identifier for this feature (ThematicId).
     geometry : BaseGeometry
@@ -48,15 +50,15 @@ class AlignerFeature:
     """
 
     def __init__(
-        self, id: str, brdr_id: str, geometry: BaseGeometry, properties: dict[str, Any]
+        self, data_id: InputId, brdr_id: str, geometry: BaseGeometry, properties: dict[str, Any]
     ):
         """
         Initializes an AlignerFeature instance.
 
         Parameters
         ----------
-        id: str
-            Source id for the feature.
+        data_id: ThematicId
+            Initial Id of the inputdata (thematic/reference geometries).
         brdr_id : str
             Unique identifier for the feature.
         geometry : BaseGeometry
@@ -64,7 +66,7 @@ class AlignerFeature:
         properties : dict[str, Any]
             The attribute data associated with this feature.
         """
-        self.id = id,
+        self.data_id = data_id
         self.brdr_id = brdr_id
         self.geometry = geometry
         self.properties = properties
@@ -109,7 +111,7 @@ class AlignerFeatureCollection:
 
     def __init__(
         self,
-        features: dict[ThematicId, AlignerFeature],
+        features: dict[InputId, AlignerFeature],
         source: dict[str, str] = None,
         id_fieldname: str = None,
         crs: CRS = None,
@@ -125,7 +127,7 @@ class AlignerFeatureCollection:
         source : dict[str, str], optional
             Source metadata.
         id_fieldname : str, optional
-            The name of the identifier field. If None, it defaults to
+            The name of the identifier field of the geometry. If None, it defaults to
             standard constants based on `is_reference`.
         crs : CRS, optional
             The coordinate system of the features.
@@ -142,7 +144,7 @@ class AlignerFeatureCollection:
         self._elements = None
         self._items = None
 
-    def __getitem__(self, key: ThematicId):
+    def __getitem__(self, key: InputId):
         return self.features[key]
 
     @property

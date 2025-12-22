@@ -69,7 +69,7 @@ from brdr.logger import Logger
 from brdr.processor import AlignerGeometryProcessor
 from brdr.processor import BaseProcessor
 from brdr.typings import ProcessResult
-from brdr.typings import ThematicId
+from brdr.typings import InputId
 from brdr.utils import (
     coverage_ratio,
 )
@@ -127,7 +127,7 @@ class AlignerResult:
 
     def __init__(
         self,
-        process_results: Dict[ThematicId, Dict[float, Optional[ProcessResult]]],
+        process_results: Dict[InputId, Dict[float, Optional[ProcessResult]]],
     ):
         """
         Initializes an AlignerResult instance.
@@ -144,7 +144,7 @@ class AlignerResult:
         self,
         aligner: "Aligner",
         result_type: AlignerResultType = AlignerResultType.PROCESSRESULTS,
-    ) -> Dict[ThematicId, Dict[float, Optional[ProcessResult]]]:
+    ) -> Dict[InputId, Dict[float, Optional[ProcessResult]]]:
         """
         Retrieves results enriched with geometric metrics and filtered by type.
 
@@ -472,7 +472,7 @@ def aligner_metadata_decorator(f):
             reference_features = reference_data.features.values()
             reference_geometries = [
                 {
-                    "id": feature.id,
+                    "id": feature.data_id,
                     "type": f"geo:{feature.geometry.geom_type}",
                     "version_date": reference_data.source.get(VERSION_DATE, ""),
                     "identifier": {
@@ -706,7 +706,7 @@ class Aligner:
         self,
         relevant_distances: Iterable[float] = None,
         *,
-        thematic_ids: List[ThematicId] = None,
+        thematic_ids: List[InputId] = None,
         max_workers: int = None,
     ) -> AlignerResult:
         """
@@ -775,7 +775,7 @@ class Aligner:
 
         self.logger.feedback_debug("Process series" + str(relevant_distances))
 
-        process_results: dict[ThematicId, dict[float, ProcessResult | None]] = {}
+        process_results: dict[InputId, dict[float, ProcessResult | None]] = {}
         futures = {}
 
         def process_geom_for_rd(geometry, relevant_distance):
@@ -831,7 +831,7 @@ class Aligner:
         self,
         relevant_distances: Optional[Union[List[float], np.ndarray]] = None,
         *,
-        thematic_ids: Optional[List[ThematicId]] = None,
+        thematic_ids: Optional[List[InputId]] = None,
         diff_metric: Optional[DIFF_METRIC] = None,
     ) -> AlignerResult:
         """
@@ -1049,7 +1049,7 @@ class Aligner:
         self,
         relevant_distances: Optional[Iterable[float]] = None,
         *,
-        thematic_ids: Optional[List[ThematicId]] = None,
+        thematic_ids: Optional[List[InputId]] = None,
         base_formula_field: str = FORMULA_FIELD_NAME,
         full_reference_strategy: FullReferenceStrategy = FullReferenceStrategy.NO_FULL_REFERENCE,
         max_predictions: int = -1,
@@ -1550,11 +1550,11 @@ class Aligner:
     def get_difference_metrics_for_thematic_data(
         self,
         dict_processresults: Dict[
-            ThematicId, Dict[float, Optional[ProcessResult]]
+            InputId, Dict[float, Optional[ProcessResult]]
         ] = None,
         thematic_data: AlignerFeatureCollection = None,
         diff_metric: DiffMetric = DiffMetric.SYMMETRICAL_AREA_CHANGE,
-    ) -> Dict[ThematicId, Dict[float, float]]:
+    ) -> Dict[InputId, Dict[float, float]]:
         """
         Calculates difference metrics for thematic elements across a series of distances.
 

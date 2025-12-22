@@ -24,7 +24,7 @@ from brdr.constants import (
 )
 from brdr.feature_data import AlignerFeature, AlignerFeatureCollection
 from brdr.geometry_utils import buffer_pos, from_crs, to_crs
-from brdr.typings import FeatureCollection, ThematicId
+from brdr.typings import FeatureCollection, InputId
 from brdr.utils import geojson_to_dicts, get_collection_by_partition
 
 
@@ -64,8 +64,8 @@ class Loader(ABC):
         is_reference : bool
             Set to True if this data is a reference layer for alignment.
         """
-        self.data_dict: dict[ThematicId, BaseGeometry] = {}
-        self.data_dict_properties: dict[ThematicId, dict] = {}
+        self.data_dict: dict[InputId, BaseGeometry] = {}
+        self.data_dict_properties: dict[InputId, dict] = {}
         self.data_dict_source: dict[Any, str] = {}
         self.versiondate_info: Optional[dict[Any, str]] = None
         self.is_reference = is_reference
@@ -121,7 +121,7 @@ class Loader(ABC):
 
         features = {
             key: AlignerFeature(
-                id=key,
+                data_id=key,
                 brdr_id=uuid.uuid4().hex,
                 geometry=self.data_dict[key],
                 properties=self.data_dict_properties.get(key, {}),

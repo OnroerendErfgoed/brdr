@@ -48,7 +48,7 @@ from brdr.geometry_utils import snap_geometry_to_reference
 from brdr.geometry_utils import to_multi
 from brdr.logger import Logger
 from brdr.topo_utils import _dissolve_topo, _generate_topo, _topojson_id_to_arcs
-from brdr.typings import ProcessResult, ThematicId
+from brdr.typings import ProcessResult, InputId
 from brdr.utils import (
     get_relevant_polygons_from_geom,
     build_reverse_index_wkb,
@@ -100,7 +100,7 @@ class BaseProcessor(ABC):
         mitre_limit: float,
         relevant_distance: float,
         thematic_data: AlignerFeatureCollection,
-        id_thematic: ThematicId,
+        id_thematic: InputId,
     ) -> ProcessResult:
         """
         Abstract method to align a single geometry to the reference layer.
