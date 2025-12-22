@@ -3,7 +3,7 @@ from brdr.be.grb.enums import GRBType
 from brdr.be.grb.loader import GRBActualLoader
 from brdr.be.oe.loader import OnroerendErfgoedLoader, OEType
 from brdr.enums import AlignerResultType
-from examples import print_brdr_formula
+from examples import print_brdr_observation
 from examples import show_map
 
 if __name__ == "__main__":
@@ -22,15 +22,15 @@ if __name__ == "__main__":
     dict_results = aligner.process(relevant_distance=2)
 
     # GET/SHOW results
-    aligner.save_results("output/", formula=True)
+    aligner.save_results("output/", observation=True)
     show_map(dict_results, aligner.dict_thematic, aligner.dict_reference)
-    print_brdr_formula(dict_results, aligner)
+    print_brdr_observation(dict_results, aligner)
 
     dict_predictions_evaluated = aligner.evaluate()
 
     # SHOW results of the predictions
     fcs = aligner.get_results_as_geojson(
-        resulttype=AlignerResultType.EVALUATED_PREDICTIONS, formula=False
+        resulttype=AlignerResultType.EVALUATED_PREDICTIONS, observation=False
     )
     print(fcs["result"])
     for key in dict_predictions_evaluated:

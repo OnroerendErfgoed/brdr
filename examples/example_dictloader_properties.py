@@ -40,6 +40,6 @@ if __name__ == "__main__":
         "removed area: " + process_result[id][relevant_distance]["result_diff_min"].wkt
     )
     fcs = aligner.get_results_as_geojson(
-        resulttype=AlignerResultType.PROCESSRESULTS, formula=True, attributes=True
+        resulttype=AlignerResultType.PROCESSRESULTS, observation=True, attributes=True
     )
     print(fcs["result"])

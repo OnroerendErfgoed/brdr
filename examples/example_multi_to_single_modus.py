@@ -4,7 +4,7 @@ from brdr.be.grb.loader import GRBActualLoader
 from brdr.be.oe.enums import OEType
 from brdr.be.oe.loader import OnroerendErfgoedLoader
 from brdr.enums import OpenDomainStrategy
-from examples import print_brdr_formula
+from examples import print_brdr_observation
 from examples import show_map
 
 if __name__ == "__main__":
@@ -31,7 +31,7 @@ if __name__ == "__main__":
     )
     aligner_results = aligner.process(relevant_distances=[relevant_distance])
     aligner_results.save_results(path="output/", aligner=aligner)
-    print_brdr_formula(aligner_results.get_results(), aligner)
+    print_brdr_observation(aligner_results.get_results(), aligner)
     show_map(
         aligner_results.get_results(), aligner.dict_thematic, aligner.dict_reference
     )
@@ -47,7 +47,7 @@ if __name__ == "__main__":
     )
     aligner_results = aligner.process(relevant_distances=[relevant_distance])
     aligner_results.save_results(path="output/", aligner=aligner)
-    print_brdr_formula(aligner_results.get_results(), aligner)
+    print_brdr_observation(aligner_results.get_results(), aligner)
     show_map(
         aligner_results.get_results(), aligner.dict_thematic, aligner.dict_reference
     )

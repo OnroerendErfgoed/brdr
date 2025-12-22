@@ -10,7 +10,7 @@ from brdr.loader import GeoJsonFileLoader
 # Press the green button in the gutter to run the script.
 if __name__ == "__main__":
     """
-    EXAMPLE of the 'evaluate()-function of 'brdr': This function evaluates thematic objects with a former brdr_formula and compares them with an actual formula; and adds evaluation-properties to the result
+    EXAMPLE of the 'evaluate()-function of 'brdr': This function evaluates thematic objects with a former brdr_observation and compares them with an actual observation; and adds evaluation-properties to the result
     """
 
     # Start an aligner to align thematic objects on the actual parcels
@@ -24,7 +24,7 @@ if __name__ == "__main__":
     # Use the EVALUATE-function
     dict_evaluated = actual_aligner.evaluate(
         ids_to_evaluate=None,
-        base_formula_field=None,
+        base_observation_field=None,
         full_reference_strategy=FullReferenceStrategy.PREFER_FULL_REFERENCE,
         relevant_distances=np.arange(0, 310, 10, dtype=int) / 100,
     )
@@ -32,7 +32,7 @@ if __name__ == "__main__":
     # SHOW the EVALUATED results
     fc = actual_aligner.get_results_as_geojson(
         resulttype=AlignerResultType.EVALUATED_PREDICTIONS,
-        formula=True,
+        observation=True,
         attributes=True,
     )
     print(fc["result"])

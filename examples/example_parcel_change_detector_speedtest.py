@@ -13,7 +13,7 @@ if __name__ == "__main__":
     # * it can be used to do a first alignment of the original features
     #       (in this case, based on parcel version adpF2022 (1st January 2022)
     # * it can be used to do a new alignment on the actual version of the parcels adp
-    # * it can be used to convert the geometries to a formula, to compare and
+    # * it can be used to convert the geometries to a observation, to compare and
     #       evaluate if equality is detected after alignement
     """
 counter_excluded = 0
@@ -30,7 +30,7 @@ base_correction = 2
 # geometries bigger than this, will be excluded
 excluded_area = 500
 # max_distance_for_actualisation  of relevant distance that is used to check if we can auto-align the geometries
-# to the actual reference-polygons to get an 'equal' formula
+# to the actual reference-polygons to get an 'equal' observation
 max_distance_for_actualisation = 2
 # BASE
 # =====
@@ -69,7 +69,7 @@ print("Process base objects")
 starttime = datetime.now()
 series = np.arange(0, 210, 10, dtype=int) / 100
 base_process_result = base_aligner.process(relevant_distances=series)
-# get resulting aligned features on Adpfxxxx, with formula
+# get resulting aligned features on Adpfxxxx, with observation
 processresults = base_process_result.get_results_as_geojson(
     aligner=base_aligner, observation=True
 )

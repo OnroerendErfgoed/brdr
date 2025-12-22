@@ -53,7 +53,7 @@ def main():
 
         # Example how to use the Aligner
         aligner.process(relevant_distance=relevant_distance, od_strategy=od_strategy)
-        # fcs = aligner.get_results_as_geojson(formula=True)
+        # fcs = aligner.get_results_as_geojson(observation=True)
         endtime = datetime.now()
         seconds = (endtime - starttime).total_seconds()
         times.append(seconds)

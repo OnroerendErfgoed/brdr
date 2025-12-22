@@ -18,7 +18,7 @@ from brdr.loader import DictLoader, GeoJsonFileLoader
 # Press the green button in the gutter to run the script.
 if __name__ == "__main__":
     """
-    EXAMPLE of the 'evaluate()-function of 'brdr': This function evaluates thematic objects with a former brdr_formula and compares them with an actual formula; and adds evaluation-properties to the result
+    EXAMPLE of the 'evaluate()-function of 'brdr': This function evaluates thematic objects with a former brdr_observation and compares them with an actual observation; and adds evaluation-properties to the result
     """
     # initiate a base Aligner, to align thematic objects on an older version of the parcels (year 2022)
     base_aligner = Aligner()
@@ -26,7 +26,7 @@ if __name__ == "__main__":
     loader = GeoJsonFileLoader("input/themelayer.geojson", "theme_identifier")
     base_aligner.load_thematic_data(loader)
     base_year = "2022"
-    name_formula = "base_formula"
+    name_observation = "base_observation"
     # Load reference data
     base_aligner.load_reference_data(
         GRBFiscalParcelLoader(year=base_year, aligner=base_aligner)
@@ -35,19 +35,19 @@ if __name__ == "__main__":
     # Align the thematic object on the parcelborders of 2022, to simulate a base-situation
     base_process_result = base_aligner.process(relevant_distances=[relevant_distance])
 
-    # Collect the base-situation (base-geometries and the brdr_formula from that moment
-    thematic_dict_formula = {}
+    # Collect the base-situation (base-geometries and the brdr_observation from that moment
+    thematic_dict_observation = {}
     thematic_dict_result = {}
     base_results = base_process_result.results
     for key in base_results:
         thematic_dict_result[key] = base_results[key][relevant_distance]["result"]
-        thematic_dict_formula[key] = {
-            name_formula: json.dumps(
+        thematic_dict_observation[key] = {
+            name_observation: json.dumps(
                 base_aligner.compare_to_reference(thematic_dict_result[key])
             )
         }
         print(key + ": " + thematic_dict_result[key].wkt)
-        print(key + ": " + str(thematic_dict_formula[key]))
+        print(key + ": " + str(thematic_dict_observation[key]))
 
     # (OPTIONAL) Check for changes in the period 2022-now of the reference-parcels (GRB/Flanders-specific function)
     affected, unaffected = get_affected_by_grb_change(
@@ -65,10 +65,10 @@ if __name__ == "__main__":
 
     # Start an aligner to align thematic objects on the actual parcels
     actual_aligner = Aligner()
-    # Load the thematic objects (aligned on 2022) and also give the brdr_formula from 2022 as property
+    # Load the thematic objects (aligned on 2022) and also give the brdr_observation from 2022 as property
     actual_aligner.load_thematic_data(
         DictLoader(
-            data_dict=thematic_dict_result, data_dict_properties=thematic_dict_formula
+            data_dict=thematic_dict_result, data_dict_properties=thematic_dict_observation
         )
     )
     # Load reference data; the actual parcels
@@ -78,7 +78,7 @@ if __name__ == "__main__":
     # Use the EVALUATE-function
     dict_evaluated = actual_aligner.evaluate(
         dict_thematic=affected,
-        base_formula_field=name_formula,
+        base_observation_field=name_observation,
         relevant_distances=np.arange(0, 310, 10, dtype=int) / 100,
     )
     dict_evaluated.get_results(

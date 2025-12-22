@@ -4,7 +4,7 @@ from brdr.be.grb.loader import GRBActualLoader
 from brdr.enums import OpenDomainStrategy
 from brdr.geometry_utils import geom_from_wkt
 from brdr.loader import DictLoader, GeoJsonFileLoader
-from examples import print_brdr_formula, show_map
+from examples import print_brdr_observation, show_map
 
 aligner = Aligner(max_workers=None)
 od_strategy = OpenDomainStrategy.SNAP_ALL_SIDE
@@ -33,4 +33,4 @@ dict_results = aligner.process(
 # show results
 aligner.save_results("output/")
 show_map(dict_results, aligner.dict_thematic, aligner.dict_reference)
-print_brdr_formula(dict_results, aligner)
+print_brdr_observation(dict_results, aligner)

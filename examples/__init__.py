@@ -232,7 +232,7 @@ def animated_map(
     print("✅ GIF succesvol opgeslagen")
 
 
-def print_brdr_formula(dict_results, aligner):
+def print_brdr_observation(dict_results, aligner):
     for theme_id, dist_results in dict_results.items():
         for rel_dist, processresults in dist_results.items():
             print(

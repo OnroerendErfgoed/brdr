@@ -1,6 +1,6 @@
 from brdr.aligner import Aligner
 from brdr.loader import GeoJsonLoader, WFSReferenceLoader
-from examples import show_map, print_brdr_formula
+from examples import show_map, print_brdr_observation
 
 if __name__ == "__main__":
     """
@@ -63,4 +63,4 @@ if __name__ == "__main__":
     # show results
     aligner.save_results("output/")
     show_map(dict_results, aligner.dict_thematic, aligner.dict_reference)
-    print_brdr_formula(dict_results, aligner)
+    print_brdr_observation(dict_results, aligner)
