@@ -33,7 +33,7 @@ format:
     toc-location: "right"
 
 quartodoc:
-  dir: reference  # Zorg dat dit expliciet is
+  dir: reference  # Make sure it is explicit
   render_interlinks: true
   package: brdr
 
@@ -105,6 +105,8 @@ quartodoc:
         - name: loader.GRBFiscalParcelLoader
         - name: loader.GRBSpecificDateParcelLoader
         - name: grb.update_featurecollection_to_actual_grb
+        - name: utils.is_grb_changed
+        - name: utils.get_affected_and_unaffected_ids_by_grb_change
         - name: enums.GRBType
     - title: OSM
       package: brdr.osm

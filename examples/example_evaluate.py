@@ -6,7 +6,7 @@ import numpy as np
 from brdr.aligner import Aligner
 from brdr.be.grb.enums import GRBType
 from brdr.be.grb.loader import GRBActualLoader, GRBFiscalParcelLoader
-from brdr.be.grb.utils import get_affected_by_grb_change
+from brdr.be.grb.utils import get_affected_and_unaffected_ids_by_grb_change
 from brdr.constants import (
     EVALUATION_FIELD_NAME,
     PREDICTION_SCORE,
@@ -50,7 +50,7 @@ if __name__ == "__main__":
         print(key + ": " + str(thematic_dict_observation[key]))
 
     # (OPTIONAL) Check for changes in the period 2022-now of the reference-parcels (GRB/Flanders-specific function)
-    affected, unaffected = get_affected_by_grb_change(
+    affected, unaffected = get_affected_and_unaffected_ids_by_grb_change(
         thematic_geometries=thematic_dict_result,
         grb_type=GRBType.ADP,
         date_start=date(2022, 1, 1),

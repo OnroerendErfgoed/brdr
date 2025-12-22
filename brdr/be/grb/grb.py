@@ -7,7 +7,7 @@ import numpy as np
 from brdr.aligner import Aligner
 from brdr.be.grb.enums import GRBType
 from brdr.be.grb.loader import GRBActualLoader
-from brdr.be.grb.utils import get_affected_by_grb_change
+from brdr.be.grb.utils import get_affected_and_unaffected_ids_by_grb_change
 from brdr.configs import AlignerConfig
 from brdr.constants import (
     LAST_VERSION_DATE,
@@ -161,7 +161,7 @@ def update_featurecollection_to_actual_grb(
             key: feat.geometry for key, feat in aligner.thematic_data.features.items()
         }
 
-        affected, unaffected = get_affected_by_grb_change(
+        affected, unaffected = get_affected_and_unaffected_ids_by_grb_change(
             thematic_geometries=thematic_geometries,
             grb_type=grb_type,
             date_start=datetime_start,

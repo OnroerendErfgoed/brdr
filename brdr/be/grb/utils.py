@@ -73,7 +73,7 @@ def is_grb_changed(
     return False
 
 
-def get_affected_by_grb_change(
+def get_affected_and_unaffected_ids_by_grb_change(
     thematic_geometries: Dict[Any, BaseGeometry],
     *,
     grb_type=GRBType.ADP,
@@ -95,13 +95,13 @@ def get_affected_by_grb_change(
         date_end: end-date to check changes in GRB
         one_by_one: parameter to choose the methodology to check changes:
             * True: Every thematic geometry is checked individually (loop)
-            * False: All GRB-parcels intersecting the thematic dictionary is checked
+            * False: All GRB-parcels intersecting the thematic dictionary are checked
                 at once
         border_distance: Distance that can be used to only check the 'border' of  the
             geometry, so 'big' geometries with internal parcel-updates are not affected
             (Default:0, indicating that the full geometry is checked fot GRB-changes)
     Returns:
-        dictionary of affected geometries
+        Tuple of lists of affected and unaffected IDs
 
     """
 
@@ -118,7 +118,7 @@ def get_affected_by_grb_change(
                 unaffected.append(key)
         return affected, unaffected
     else:
-        # Temporal filter on VERDATUM
+        # Temporal filter on VERSIONDATE
         if geometry_thematic_union is None:
             geometry_thematic_union = safe_unary_union(
                 list(thematic_geometries.values())

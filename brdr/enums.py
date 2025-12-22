@@ -145,6 +145,33 @@ class Evaluation(str, Enum):
 
     These values help in deciding whether a change can be accepted automatically
     or requires manual review.
+
+    Attributes
+    ----------
+    EQUALITY_BY_ID_AND_FULL_REFERENCE : str
+        Match confirmed by both unique identifier and complete reference data.
+    EQUALITY_BY_ID : str
+        Match confirmed via unique identifier only.
+    EQUALITY_BY_FULL_REFERENCE : str
+        Match confirmed via complete reference data comparison.
+    PREDICTION_UNIQUE : str
+        A single high-confidence prediction was found.
+    PREDICTION_UNIQUE_AND_FULL_REFERENCE : str
+        A unique prediction that also matches the full reference.
+    TO_CHECK_PREDICTION_FULL : str
+        Requires review; prediction exists with full reference but lacks certainty.
+    TO_CHECK_PREDICTION_MULTI : str
+        Requires review; multiple conflicting predictions were found.
+    TO_CHECK_PREDICTION_MULTI_FULL : str
+        Requires review; multiple predictions found alongside full reference data.
+    TO_CHECK_ORIGINAL : str
+        Requires review against the original source data.
+    TO_CHECK_NO_PREDICTION : str
+        Requires review because no valid prediction could be generated.
+    NOT_EVALUATED : str
+        The alignment has not yet been processed or evaluated.
+    NO_CHANGE : str
+        Evaluation complete; no changes were detected or required.
     """
 
     EQUALITY_BY_ID_AND_FULL_REFERENCE = "equality_by_id_and_full_reference"
