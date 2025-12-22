@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from brdr.constants import DIFF_METRIC
 from brdr.enums import OpenDomainStrategy, DiffMetric, SnapStrategy
 
 
@@ -16,6 +15,8 @@ class ProcessorConfig:
         Modus to handle multipolygons. If True, input multipolygons are split into
         single polygons for processing and merged back afterward. If False,
         multipolygons are processed as a single unit.
+    max_outer_buffer: int, default 50
+        Value that is used to calculate the boundary of a thematic geometry wherefor the calculation has to be done. (inner part is added)
     od_strategy : OpenDomainStrategy, default OpenDomainStrategy.SNAP_ALL_SIDE
         The strategy used to determine how to handle information outside the
         reference polygons (Open Domain).
@@ -38,22 +39,24 @@ class ProcessorConfig:
         Threshold to exclude circular geometries based on the Polsby-Popper
         algorithm (where 1.0 is a perfect circle).
     snap_strategy : SnapStrategy, default SnapStrategy.PREFER_VERTICES
-        The primary strategy used for snapping geometry vertices to the reference.
+        The primary strategy used for snapping geometry vertices to the reference. When alignment is done by 'SnapGeometryProcessor', This strategy will be applied
     snap_max_segment_length : int, default 2
-        The maximum segment length allowed during the snapping process.
+        The maximum segment length allowed during the snapping process. When alignment is done by 'SnapGeometryProcessor', the input geometry (line, lineair ring,...) will be split up by default in parts of max X meter
+
     partial_snapping : bool, default False
         Whether to allow snapping of individual segments rather than the
         entire geometry.
     partial_snap_strategy : SnapStrategy, default SnapStrategy.PREFER_VERTICES
-        The strategy used specifically for partial snapping operations.
+        The strategy used specifically for partial snapping operations. When snapping of partial geometries (geom_x) is executed, This strategy will be applied.
     partial_snap_max_segment_length : int, default 2
-        The maximum segment length allowed during partial snapping.
+        The maximum segment length allowed during partial snapping. When real snapping of vertices is used, the input geometry will be split up by default in parts of max X meter
     area_limit : int, optional
         Maximum area for processing. If a polygon exceeds this limit, it may
         be skipped or simplified.
     """
 
     multi_as_single_modus: bool = True
+    max_outer_buffer: int = 50
     od_strategy: OpenDomainStrategy = OpenDomainStrategy.SNAP_ALL_SIDE
     threshold_overlap_percentage: int = 50
     threshold_exclusion_area: int = 0
@@ -79,7 +82,7 @@ class AlignerConfig:
     correction_distance : float, default 0.01
         The maximum distance allowed for moving vertices during the
         alignment/correction phase.
-    diff_metric : DiffMetric, default DIFF_METRIC
+    diff_metric : DiffMetric, default DiffMetric.SYMMETRICAL_AREA_CHANGE
         The metric used to calculate the difference or distance between
         the input geometry and the reference.
     mitre_limit : float, default 10
@@ -95,7 +98,7 @@ class AlignerConfig:
     """
 
     correction_distance: float = 0.01
-    diff_metric: DiffMetric = DIFF_METRIC
+    diff_metric: DiffMetric = DiffMetric.SYMMETRICAL_AREA_CHANGE
     mitre_limit: float = 10
     max_workers: int = None
     log_metadata: bool = True

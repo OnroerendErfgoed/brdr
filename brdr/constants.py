@@ -1,31 +1,11 @@
 # Download-settings: when extracting features by URL
 # Limit used when extracting features by URL, using the feature API (f.e. from GRB)
-from brdr.enums import SnapStrategy, DiffMetric
+from brdr.enums import DiffMetric
 
 DOWNLOAD_LIMIT: int = 10000
 
-# value that is used to calculate the boundary of a thematic geometry wherefor the calculation has to be done. (inner part is added)
-MAX_OUTER_BUFFER = 50
-
-# SNAP_CONSTANTS: constants for snapping when 'brdr'-algorithm is not used. So full geometry will be snapped
-SNAP_SRATEGY = (
-    SnapStrategy.PREFER_VERTICES
-)  # when alignment is done by 'snap_geometry_to_reference', This strategy will be applied
-SNAP_MAX_SEGMENT_LENGTH = 2  # when alignment is done by 'snap_geometry_to_reference', the input geometry (line, lineair ring,...) will be split up by default in parts of max X meter
-
-DIFF_METRIC = (
-    DiffMetric.SYMMETRICAL_AREA_CHANGE
-)  # Measurement technique for determining stability in the results ='predictions'
-# PARTIAL SNAPPING CONSTANTS: snapping-constants when 'brdr' is used, and snapping-function is used inside the 'brdr'-implementation
-PARTIAL_SNAPPING = False
-PARTIAL_SNAP_STRATEGY = (
-    SnapStrategy.PREFER_VERTICES
-)  # when snapping of partial geometries (geom_x) is executed, This strategy will be applied
-PARTIAL_SNAP_MAX_SEGMENT_LENGTH = 2  # when real snapping of vertices is used, the input geometry will be split up by default in parts of max X meter
-
 # default CRS:
 DEFAULT_CRS = "EPSG:31370"  # BelgianLambert72
-
 
 RELEVANT_DISTANCE_DECIMALS = 2
 

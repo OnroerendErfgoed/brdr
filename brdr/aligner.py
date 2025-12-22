@@ -29,7 +29,6 @@ from brdr.constants import AREA_PERCENTAGE_CHANGE
 from brdr.constants import DATE_FORMAT
 from brdr.constants import DEFAULT_CRS
 from brdr.constants import DIFF_AREA_FIELD_NAME
-from brdr.constants import DIFF_METRIC
 from brdr.constants import DIFF_PERCENTAGE_FIELD_NAME
 from brdr.constants import EQUAL_REFERENCE_FEATURES_FIELD_NAME
 from brdr.constants import EVALUATION_FIELD_NAME
@@ -192,15 +191,15 @@ class AlignerResult:
 
                 # Add Geometric Difference Metrics
                 metrics_to_calc = [
-                    (SYMMETRICAL_AREA_CHANGE, DIFF_METRIC.SYMMETRICAL_AREA_CHANGE),
+                    (SYMMETRICAL_AREA_CHANGE, DiffMetric.SYMMETRICAL_AREA_CHANGE),
                     (
                         SYMMETRICAL_AREA_PERCENTAGE_CHANGE,
-                        DIFF_METRIC.SYMMETRICAL_AREA_PERCENTAGE_CHANGE,
+                        DiffMetric.SYMMETRICAL_AREA_PERCENTAGE_CHANGE,
                     ),
-                    (AREA_CHANGE, DIFF_METRIC.AREA_CHANGE),
-                    (AREA_PERCENTAGE_CHANGE, DIFF_METRIC.AREA_PERCENTAGE_CHANGE),
-                    (LENGTH_CHANGE, DIFF_METRIC.LENGTH_CHANGE),
-                    (LENGTH_PERCENTAGE_CHANGE, DIFF_METRIC.LENGTH_PERCENTAGE_CHANGE),
+                    (AREA_CHANGE, DiffMetric.AREA_CHANGE),
+                    (AREA_PERCENTAGE_CHANGE, DiffMetric.AREA_PERCENTAGE_CHANGE),
+                    (LENGTH_CHANGE, DiffMetric.LENGTH_CHANGE),
+                    (LENGTH_PERCENTAGE_CHANGE, DiffMetric.LENGTH_PERCENTAGE_CHANGE),
                 ]
 
                 for prop_key, metric_enum in metrics_to_calc:
@@ -832,7 +831,7 @@ class Aligner:
         relevant_distances: Optional[Union[List[float], np.ndarray]] = None,
         *,
         thematic_ids: Optional[List[InputId]] = None,
-        diff_metric: Optional[DIFF_METRIC] = None,
+        diff_metric: Optional[DiffMetric] = None,
     ) -> AlignerResult:
         """
         Predicts the 'most interesting' relevant distances for changes in thematic
@@ -851,7 +850,7 @@ class Aligner:
         thematic_ids : List[ThematicId], optional
             Specific thematic IDs to process. If None, all loaded thematic
             geometries are used.
-        diff_metric : DIFF_METRIC, optional
+        diff_metric : DiffMetric, optional
             The metric used to determine differences (e.g., area change).
             If None, the Aligner's default `diff_metric` is used.
 

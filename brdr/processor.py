@@ -21,7 +21,6 @@ from shapely.ops import nearest_points
 from shapely.ops import split
 
 from brdr.configs import ProcessorConfig
-from brdr.constants import MAX_OUTER_BUFFER
 from brdr.constants import RELEVANT_DISTANCE_DECIMALS
 from brdr.constants import REMARK_FIELD_NAME
 from brdr.enums import OpenDomainStrategy
@@ -553,7 +552,7 @@ class BaseProcessor(ABC):
 
     @staticmethod
     def _calculate_inner_outer(
-        input_geometry: BaseGeometry, relevant_distance: float
+        input_geometry: BaseGeometry, relevant_distance: float,max_outer_buffer: int
     ) -> tuple:
         """
         Splits a polygon into inner and outer zones for optimized processing.
@@ -564,6 +563,8 @@ class BaseProcessor(ABC):
             The geometry to split.
         relevant_distance : float
             The distance used to define the 'outer' shell.
+        max_outer_buffer : int
+            Value that is used to calculate the boundary of a thematic geometry wherefor the calculation has to be done. (inner part is added)
 
         Returns
         -------
@@ -573,7 +574,7 @@ class BaseProcessor(ABC):
         input_geometry = safe_unary_union(get_parts(input_geometry))
         input_geometry_inner = buffer_neg(input_geometry, relevant_distance)
         input_geometry_double_inner = buffer_neg(
-            input_geometry, 2 * relevant_distance + MAX_OUTER_BUFFER
+            input_geometry, 2 * relevant_distance + max_outer_buffer
         )
         input_geometry_outer = safe_difference(
             input_geometry, input_geometry_double_inner
@@ -882,10 +883,10 @@ class DieussaertGeometryProcessor(BaseProcessor):
         ```
         """
 
-        # CALCULATE INNER and OUTER INPUT GEOMETRY for performance optimisation on big geometries
+        # CALCULATE INNER and OUTER INPUT GEOMETRY for performance optimization on big geometries
         # combine all parts of the input geometry to one polygon
         input_geometry_inner, input_geometry_outer = self._calculate_inner_outer(
-            input_geometry, relevant_distance
+            input_geometry, relevant_distance,self.config.max_outer_buffer
         )
         # get a list of all ref_ids that are intersecting the thematic geometry; we take it bigger because we want to check if there are also reference geometries on a relevant distance.
         input_geometry_outer_buffered = buffer_pos(
