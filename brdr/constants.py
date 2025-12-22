@@ -26,8 +26,6 @@ PARTIAL_SNAP_MAX_SEGMENT_LENGTH = 2  # when real snapping of vertices is used, t
 # default CRS:
 DEFAULT_CRS = "EPSG:31370"  # BelgianLambert72
 
-# MULTI_SINGLE_ID_SEPARATOR #separator to split multipolygon_ids to single polygons
-MULTI_SINGLE_ID_SEPARATOR = "*$*"
 
 RELEVANT_DISTANCE_DECIMALS = 2
 

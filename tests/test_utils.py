@@ -8,7 +8,6 @@ from brdr.utils import (
     get_collection,
     get_geometry_difference_metrics_from_processresults,
 )
-from brdr.utils import multi_to_singles
 from brdr.utils import polygonize_reference_data
 
 
@@ -34,30 +33,6 @@ class TestUtils(unittest.TestCase):
     #     )
     #     assert len(breakpoints) != 0
     #     assert len(zerostreaks) == 0
-
-    def test_multipolygons_to_singles_empty_dict(self):
-        data = {}
-        result, dict_multi_as_single = multi_to_singles(data)
-        self.assertEqual(result, {})
-
-    def test_multipolygons_to_singles_with_point(self):
-        geometry1 = shapely.geometry.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
-        geometry2 = shapely.geometry.Point(0, 0)
-        data = {"test_id1": geometry1, "test_id2": geometry2}
-        result, dict_multi_as_single = multi_to_singles(data)
-        self.assertEqual(result, data)
-
-    def test_multipolygons_to_singles_single_polygon(self):
-        geometry = shapely.geometry.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
-        data = {"test_id": geometry}
-        result, dict_multi_as_single = multi_to_singles(data)
-        self.assertEqual(result, data)
-
-    def test_multipolygons_to_singles_multipolygon_single_poly(self):
-        geometry = shapely.geometry.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
-        data = {"test_id": shapely.geometry.MultiPolygon([geometry])}
-        result, dict_multi_as_single = multi_to_singles(data)
-        self.assertEqual(result, {"test_id": geometry})
 
     def test_polygonize_reference_data_no_overlap(self):
         """Tests polygonize_reference_data with non-overlapping polygons."""

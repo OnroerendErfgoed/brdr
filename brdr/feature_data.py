@@ -50,7 +50,11 @@ class AlignerFeature:
     """
 
     def __init__(
-        self, data_id: InputId, brdr_id: str, geometry: BaseGeometry, properties: dict[str, Any]
+        self,
+        data_id: InputId,
+        brdr_id: str,
+        geometry: BaseGeometry,
+        properties: dict[str, Any],
     ):
         """
         Initializes an AlignerFeature instance.

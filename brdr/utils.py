@@ -18,7 +18,6 @@ from shapely.geometry.base import BaseGeometry
 from brdr.constants import AREA_ATTRIBUTE
 from brdr.constants import DEFAULT_CRS
 from brdr.constants import DOWNLOAD_LIMIT
-from brdr.constants import MULTI_SINGLE_ID_SEPARATOR
 from brdr.constants import PERIMETER_ATTRIBUTE
 from brdr.constants import SHAPE_INDEX_ATTRIBUTE
 from brdr.constants import STABILITY
@@ -28,7 +27,6 @@ from brdr.geometry_utils import buffer_neg
 from brdr.geometry_utils import buffer_pos
 from brdr.geometry_utils import from_crs
 from brdr.geometry_utils import get_bbox
-from brdr.geometry_utils import get_geoms_from_geometry
 from brdr.geometry_utils import get_partitions
 from brdr.geometry_utils import get_shape_index
 from brdr.geometry_utils import safe_intersection
@@ -130,38 +128,6 @@ def write_geojson(path_to_file, geojson):
     with open(path_to_file, "w") as f:
         dump(geojson, f, default=str)
 
-
-def multi_to_singles(dict_geoms):
-    """
-    Convert a dictionary of Shapely (multi-)geometries to a dictionary containing only single geometries.
-
-    Args:
-        dict_geoms (dict): Dictionary of geometries.
-
-    Returns:
-        tuple: A tuple containing:
-            - dict: Dictionary of single geometries.
-            - dict: Dictionary mapping new keys to original keys.
-    """
-    resulting_dict_geoms = {}
-    dict_multi_as_single = {}
-    for key, geom in dict_geoms.items():
-        if geom is None or geom.is_empty:
-            resulting_dict_geoms[key] = geom
-            continue
-
-        geometries = list(get_geoms_from_geometry(geom))
-        if len(geometries) == 1:
-            resulting_dict_geoms[key] = geometries[0]
-            continue
-
-        i = 0
-        for g in geometries:
-            new_key = str(key) + MULTI_SINGLE_ID_SEPARATOR + str(i)
-            dict_multi_as_single[new_key] = key
-            resulting_dict_geoms[new_key] = g
-            i = i + 1
-    return resulting_dict_geoms, dict_multi_as_single
 
 
 def flatten_iter(lst):

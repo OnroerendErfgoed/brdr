@@ -68,8 +68,8 @@ from brdr.loader import Loader
 from brdr.logger import Logger
 from brdr.processor import AlignerGeometryProcessor
 from brdr.processor import BaseProcessor
-from brdr.typings import ProcessResult
 from brdr.typings import InputId
+from brdr.typings import ProcessResult
 from brdr.utils import (
     coverage_ratio,
 )
