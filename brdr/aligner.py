@@ -475,7 +475,7 @@ def aligner_metadata_decorator(f):
                         res["observation"] = aligner.compare_to_reference(res["result"])
         if aligner.log_metadata:
             # generate uuid for actuation
-            actuation_id = "brdrid:actuations/" + uuid.uuid4().hex
+            actuation_id = f"urn:uuid:{uuid.uuid4().hex}"
             processor_id = aligner.processor.processor_id.value
             processor_name = type(aligner.processor).__name__
             reference_data = aligner.reference_data
@@ -483,7 +483,7 @@ def aligner_metadata_decorator(f):
             reference_geometries = [
                 {
                     "id": feature.data_id,
-                    "type": f"geo:{feature.geometry.geom_type}",
+                    "type": "geo:Feature",
                     "version_date": reference_data.source.get(VERSION_DATE, ""),
                     "identifier": {
                         "id": feature.brdr_id,
