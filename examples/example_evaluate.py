@@ -76,23 +76,21 @@ if __name__ == "__main__":
         GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=actual_aligner)
     )
     # Use the EVALUATE-function
+    relevant_distances = np.arange(0, 310, 10, dtype=int) / 100
     dict_evaluated = actual_aligner.evaluate(
-        dict_thematic=affected,
+        thematic_ids=affected,
         metadata_field=name_observation,
-        relevant_distances=np.arange(0, 310, 10, dtype=int) / 100,
-    )
-    dict_evaluated.get_results(
-        result_type=AlignerResultType.EVALUATED_PREDICTIONS, aligner=actual_aligner
+        relevant_distances=relevant_distances,
     )
     # SHOW the EVALUATED results
     fc = dict_evaluated.get_results_as_geojson(
-        add_metadata=True, add_original_attributes=True, aligner=actual_aligner
+        result_type=AlignerResultType.EVALUATED_PREDICTIONS, add_metadata=True, add_original_attributes=True, aligner=actual_aligner
     )
     print(fc["result"])
 
     for feature in fc["result"]["features"]:
         print(
-            feature["properties"][actual_aligner.name_thematic_id]
+            feature["properties"][actual_aligner.thematic_data.id_fieldname]
             + ": "
             + feature["properties"][EVALUATION_FIELD_NAME]
             + " - score "

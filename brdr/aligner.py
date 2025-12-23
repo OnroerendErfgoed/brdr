@@ -25,7 +25,7 @@ from shapely.geometry.base import BaseGeometry
 from brdr import __version__
 from brdr.configs import AlignerConfig
 from brdr.configs import ProcessorConfig
-from brdr.constants import AREA_CHANGE, METADATA_FIELD_NAME, BASE_METADATA_FIELD_NAME
+from brdr.constants import AREA_CHANGE, METADATA_FIELD_NAME
 from brdr.constants import AREA_PERCENTAGE_CHANGE
 from brdr.constants import DATE_FORMAT
 from brdr.constants import DEFAULT_CRS
@@ -77,7 +77,6 @@ from brdr.utils import get_geojsons_from_process_results
 from brdr.utils import get_geometry_difference_metrics_from_processresult
 from brdr.utils import get_geometry_difference_metrics_from_processresults
 from brdr.utils import is_brdr_observation
-from brdr.utils import union_process_result
 from brdr.utils import write_geojson
 
 ###################
@@ -238,7 +237,7 @@ class AlignerResult:
                 tid: {
                     rd: res
                     for rd, res in rd_dict.items()
-                    if res and EVALUATION_FIELD_NAME in res["properties"]
+                    if res and EVALUATION_FIELD_NAME in res["properties"] and res["properties"][EVALUATION_FIELD_NAME]!=Evaluation.NOT_EVALUATED
                 }
                 for tid, rd_dict in self.results.items()
             }
@@ -296,9 +295,7 @@ class AlignerResult:
                     )
 
                 if add_metadata:
-                    metadata_result = process_result.get(
-                        "metadata"
-                    )
+                    metadata_result = process_result.get("metadata",None)
                     if metadata_result is None:
                         logging.debug("metadata not available")
                         continue
@@ -357,6 +354,7 @@ class AlignerResult:
 
 def _get_brdr_observation_from_metadata_observations(metadata: List[Dict]) -> Dict:
     # TODO: Karel take the observations from the metadata
+    # by rdf?
     observation_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S%z")
     sensor_uuid = uuid.uuid4().hex
     observation_metadata = {
@@ -476,8 +474,7 @@ def _get_metadata_observations_from_process_result(processResult: ProcessResult)
                 "used_procedure": "brdr:observation_procedure_area_overlap_full",
             }
         )
-    assert len(observations) > 0
-
+    return observations
 
 def aligner_metadata_decorator(f):
     def inner_func(aligner, *args, **kwargs):
@@ -1054,6 +1051,7 @@ class Aligner:
                 if rd not in relevant_distances:
                     del process_results[theme_id][rd]
                     continue
+
                 process_results[theme_id][rd]["properties"][STABILITY] = dict_stability[
                     rd
                 ][STABILITY]
@@ -1169,20 +1167,30 @@ class Aligner:
                 round(k, RELEVANT_DISTANCE_DECIMALS)
                 for k in np.arange(0, 310, 10, dtype=int) / 100
             ]
+        # Always add ZERO for evaluation so the original is calculated with metadata
+        relevant_distances = list(relevant_distances)
+        relevant_distances.append(round(0, RELEVANT_DISTANCE_DECIMALS))
+        relevant_distances=sorted(list(set(relevant_distances)))
 
         aligner_result = self.predict(
             thematic_ids=thematic_ids,
             relevant_distances=relevant_distances,
             diff_metric=self.diff_metric,
         )
-        process_results_evaluated = aligner_result.get_results(aligner=self)
-        process_results_evaluated_predictions = aligner_result.get_results(
+        process_results = aligner_result.get_results(aligner=self)
+        process_results_predictions = aligner_result.get_results(
             aligner=self, result_type=AlignerResultType.PREDICTIONS
         )
-        process_results_evaluated = deepcopy(process_results_evaluated)
+        process_results_temp_predictions= deepcopy(process_results_predictions)
+        process_results_evaluated = deepcopy(process_results)
 
-        for theme_id, feat in self.thematic_data.features.items():
-            original_geometry = feat.geometry
+        for theme_id in thematic_ids:
+            original_geometry = self.thematic_data.features[theme_id].geometry
+
+            # SET all features to 'Not evaluated'
+            for dist in process_results_evaluated[theme_id]:
+                process_results_evaluated[theme_id][dist]["properties"][EVALUATION_FIELD_NAME] = Evaluation.NOT_EVALUATED
+
             # Features are split up in 2 groups: TO_EVALUATE and NOT_TO_EVALUATE (original returned)
             # The evaluated features will be split up:
             #   *No prediction available
@@ -1190,14 +1198,21 @@ class Aligner:
 
             # PART 1: TO_EVALUATE
             if theme_id in thematic_ids:
-                if theme_id not in process_results_evaluated_predictions.keys():
+                if theme_id not in process_results_predictions.keys() or process_results_predictions[theme_id]=={}:
                     # No predictions available
                     relevant_distance = round(0, RELEVANT_DISTANCE_DECIMALS)
-                    props = self._evaluate(
+                    if relevant_distance in process_results_evaluated[theme_id]:
+                        props = deepcopy(process_results_evaluated[theme_id][relevant_distance][
+                            "properties"
+                        ])
+                    else:
+                        props={}
+                    props_evaluation = self._evaluate(
                         id_theme=theme_id,
                         geom_predicted=original_geometry,
                         base_metadata_field=metadata_field,
                     )
+                    props.update(props_evaluation)
                     props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
                     props[PREDICTION_COUNT] = 0
                     props[PREDICTION_SCORE] = -1
@@ -1207,18 +1222,12 @@ class Aligner:
                         remarks = []
                     remarks.append(ProcessRemark.NO_PREDICTION_ORIGINAL_RETURNED)
                     props[REMARK_FIELD_NAME] = remarks
-                    process_results_evaluated[theme_id][relevant_distance] = (
-                        union_process_result(
-                            {
-                                "result": original_geometry,
-                                "properties": props,
-                            }
-                        )
-                    )
+
+                    process_results_evaluated[theme_id][relevant_distance]["properties"].update(props)
                     continue
 
                 # When there are predictions available
-                dict_predictions_results = process_results_evaluated_predictions[
+                dict_predictions_results = process_results_predictions[
                     theme_id
                 ]
                 scores = []
@@ -1226,17 +1235,16 @@ class Aligner:
                 predictions = []
                 observation_match = False
                 for dist in sorted(dict_predictions_results.keys()):
-                    props = self._evaluate(
+                    props = deepcopy(process_results_evaluated[theme_id][dist][
+                        "properties"
+                    ])
+                    props_evaluation = self._evaluate(
                         id_theme=theme_id,
                         geom_predicted=dict_predictions_results[dist]["result"],
                         base_metadata_field=metadata_field,
                         observation=dict_predictions_results[dist].get("observation"),
                     )
-                    props.update(
-                        process_results_evaluated_predictions[theme_id][dist][
-                            "properties"
-                        ]
-                    )
+                    props.update(props_evaluation)
 
                     full = props[FULL_ACTUAL_FIELD_NAME]
                     if (
@@ -1272,11 +1280,11 @@ class Aligner:
                         predictions = []
                         scores.append(props[PREDICTION_SCORE])
                         distances.append(dist)
-                        process_results_evaluated_predictions[theme_id][dist][
+                        process_results_evaluated[theme_id][dist][
                             "properties"
                         ] = props
                         predictions.append(
-                            process_results_evaluated_predictions[theme_id][dist]
+                            process_results_evaluated[theme_id][dist]
                         )
                         continue
                     if full:
@@ -1298,11 +1306,11 @@ class Aligner:
 
                     scores.append(props[PREDICTION_SCORE])
                     distances.append(dist)
-                    process_results_evaluated_predictions[theme_id][dist][
+                    process_results_temp_predictions[theme_id][dist][
                         "properties"
                     ] = props
                     predictions.append(
-                        process_results_evaluated_predictions[theme_id][dist]
+                        process_results_temp_predictions[theme_id][dist]
                     )
 
                 # get max amount of best-scoring predictions
@@ -1345,14 +1353,7 @@ class Aligner:
                             ProcessRemark.MULTIPLE_PREDICTIONS_ORIGINAL_RETURNED
                         )
                         props[REMARK_FIELD_NAME] = remarks
-                        process_results_evaluated[theme_id][relevant_distance] = (
-                            union_process_result(
-                                {
-                                    "result": original_geometry,
-                                    "properties": props,
-                                }
-                            )
-                        )
+                        process_results_evaluated[theme_id][relevant_distance]["properties"].update(props)
                         continue
 
                 if max_predictions > 0 and len_best_ix > max_predictions:
@@ -1365,11 +1366,18 @@ class Aligner:
                 else:
                     # #when no evaluated predictions, the original is returned
                     relevant_distance = round(0, RELEVANT_DISTANCE_DECIMALS)
-                    props = self._evaluate(
+                    if relevant_distance in process_results_evaluated[theme_id]:
+                        props = deepcopy(process_results_evaluated[theme_id][relevant_distance][
+                            "properties"
+                        ])
+                    else:
+                        props={}
+                    props_evaluation = self._evaluate(
                         id_theme=theme_id,
                         geom_predicted=original_geometry,
                         base_metadata_field=metadata_field,
                     )
+                    props.update(props_evaluation)
                     props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
                     props[PREDICTION_SCORE] = -1
                     props[PREDICTION_COUNT] = 0
@@ -1379,23 +1387,23 @@ class Aligner:
                         remarks = []
                     remarks.append(ProcessRemark.NO_PREDICTION_ORIGINAL_RETURNED)
                     props[REMARK_FIELD_NAME] = remarks
-                    process_results_evaluated[theme_id][relevant_distance] = (
-                        union_process_result(
-                            {
-                                "result": original_geometry,
-                                "properties": props,
-                            }
-                        )
-                    )
+                    process_results_evaluated[theme_id][relevant_distance]["properties"].update(props)
             else:
                 # PART 2: NOT EVALUATED
                 relevant_distance = round(0, RELEVANT_DISTANCE_DECIMALS)
+                if relevant_distance in process_results_evaluated[theme_id]:
+                    props = deepcopy(process_results_evaluated[theme_id][relevant_distance][
+                        "properties"
+                    ])
+                else:
+                    props = {}
                 process_results_evaluated[theme_id] = {}
-                props = self._evaluate(
+                props_evaluation = self._evaluate(
                     id_theme=theme_id,
                     geom_predicted=original_geometry,
                     base_metadata_field=metadata_field,
                 )
+                props.update(props_evaluation)
                 props[EVALUATION_FIELD_NAME] = Evaluation.NOT_EVALUATED
                 props[PREDICTION_SCORE] = -1
                 if REMARK_FIELD_NAME in props:
@@ -1404,14 +1412,7 @@ class Aligner:
                     remarks = []
                 remarks.append(ProcessRemark.NOT_EVALUATED_ORIGINAL_RETURNED)
                 props[REMARK_FIELD_NAME] = remarks
-                process_results_evaluated[theme_id][relevant_distance] = (
-                    union_process_result(
-                        {
-                            "result": original_geometry,
-                            "properties": props,
-                        }
-                    )
-                )
+                process_results_evaluated[theme_id][relevant_distance]["properties"].update(props)
         return AlignerResult(process_results_evaluated)
 
     def compare_to_reference(
@@ -1668,7 +1669,7 @@ class Aligner:
         """
         threshold_od_percentage = 1
         properties = {
-            METADATA_FIELD_NAME: "",
+            #METADATA_FIELD_NAME: "",
             EVALUATION_FIELD_NAME: Evaluation.TO_CHECK_NO_PREDICTION,
             FULL_BASE_FIELD_NAME: None,
             FULL_ACTUAL_FIELD_NAME: None,
@@ -1683,7 +1684,6 @@ class Aligner:
             properties[FULL_ACTUAL_FIELD_NAME] = False
             return properties
         properties[FULL_ACTUAL_FIELD_NAME] = actual_brdr_observation["full"]
-        properties[METADATA_FIELD_NAME] = json.dumps(actual_brdr_observation)
 
         try:
             base_metadata = json.loads(

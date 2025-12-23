@@ -192,6 +192,9 @@ def update_featurecollection_to_actual_grb(
         full_reference_strategy=full_reference_strategy,
         multi_to_best_prediction=multi_to_best_prediction,
     )
+    #TODO improve
+    if len (aligner_result.results) == 0:
+        return None
 
     return aligner_result.get_results_as_geojson(
         aligner=aligner,
