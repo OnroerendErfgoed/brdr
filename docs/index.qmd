@@ -1,14 +1,6 @@
-
-## Automatische API Referentie
-Hieronder genereert quartodoc de details van de klassen:
-
-::: {.docstring}
-@brdr.aligner.Aligner
-:::
-
 # ``brdr``
 
-a Python library to assist in realigning (multi-)polygons (OGC Simple Features) to reference borders
+a Python library to assist in realigning geometries (OGC Simple Features) to reference borders
 
 <!-- badges: start -->
 
@@ -18,11 +10,10 @@ a Python library to assist in realigning (multi-)polygons (OGC Simple Features) 
 
 <!-- badges: end -->
 
-Quick links:
+## Quick links:
 
-- [Installation](#installation)
-- [Development](#development)
-- [Issues, questions, comments and contributions](#comments-and-contributions)
+- [API reference documentation](reference/index.qmd)
+- [Examples](examples.qmd)
 
 ## Description
 
@@ -48,40 +39,6 @@ The figure below shows:
 * The resulting geometry after alignment with ``brdr`` (green)
 
 ![](figures/example.png)
-
-### Functionalities
-
-``brdr`` provides a variety of functionalities in the Aligner-class to assist in aligning boundaries, including:
-
-* Loaders:
-    * aligner.load_thematic_data():Loading thematic data ((Multi-)Polygons) as a dictionary (DictLoader) or geojson (
-      GeoJsonFileLoader,GeoJsonUrlLoader)
-    * aligner.load_reference_data():Loading reference data ((Multi-)Polygons) as a dictionary (DictLoader) or geojson (
-      GeoJsonFileLoader,GeoJsonUrlLoader)
-
-* Processors:
-    * aligner.process(): Align thematic boundaries to reference boundaries with a specific relevant
-      distance or a range of relevant distances
-    * aligner.predictor(): Searches all 'stable' (=predicted) processresults in a range of relevant distances
-    * aligner.get_brdr_formula(): Calculating a descriptive formula of a thematic boundary based on a reference layer
-    * evaluate(): Compares & evaluates input geometries with another version and adds a EVALUATION_FIELD_NAME
-* Exporters:
-    * aligner.get_results_as_geojson(): Returns a collection of geojson-dictionaries with the processresults (resulting
-      geometry, differences,...): This can be used for all processresults or only the 'predicted' results
-    * aligner.get_input_as_geojson(): Returns a geojson-featurecollection from input-dictionaries (thematic or
-      reference)
-    * aligner.save_results(): Exports the resuling geojson-files to a specified path:This can be used for all
-      processresults or only the 'predicted' results
-
-Besides the generic functionalities, a range of Flanders-specific functionalities are provided:
-
-* Loaders:
-    * GRBActualLoader: Loading actual GRB (parcels, buildings)
-    * GRBFiscalParcelLoader: Loading fiscal GRB-parcels of a specific year
-* Processors:
-    * grb.get_geoms_affected_by_grb_change(): get thematic geometries that are possibly affected by GRB-changes during a
-      specific timespan
-    * grb.update_to_actual_grb(): aligns the boundaries of thematic features to the actual GRB-boundaries
 
 ### Possible application fields
 
@@ -125,7 +82,7 @@ The resulting figure shows:
 * the removed zone (red squares)
   <img src="figures/basic_example.png" width="100%" />
 
-More examples can be found in [Examples](https://github.com/OnroerendErfgoed/brdr/tree/main/examples)
+More examples can be found in [Examples](examples.qmd)
 
 ## Workflow
 
@@ -133,16 +90,11 @@ More examples can be found in [Examples](https://github.com/OnroerendErfgoed/brd
 
 To use ``brdr``, follow these steps:
 
-* Create a Aligner-class with specific parameters:
-    * relevant_distance (m) (default: 1): Distance-parameter used to decide which parts will be aligned, and which parts
-      remain unchanged.
-    * od_strategy (enum) (default: SNAP_SINGLE_SIDE): Strategy to align geodata that is not covered by reference-data
-    * threshold_overlap_percentage (%)(0-100) (default 50)
-    * crs: The Coordinate Reference System (CRS) (default: EPSG:31370 - Belgian Lambert72)
+* Create a Aligner-class
 * Load thematic data
 * Load reference data
-* Process (align) the thematic data
-* Results are returned:
+* Process (or predict or evaluate) the thematic data
+* Process results are returned:
     * Resulting geometry
     * Differences: parts that are 'different' from the original geometry (positive or negative)
     * Positive differences: parts that are added to the original geometry
