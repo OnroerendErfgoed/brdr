@@ -388,7 +388,6 @@ def _get_metadata_observations_from_process_result(processResult: ProcessResult)
     result_id = actuation_metadata["result"]
     observation_metadata = {
         "type": "sosa:Observation",
-        "has_feature_of_interest": result_id,
         "made_by_sensor": f"brdrid:sensors/{sensor_uuid}",
         "result_time": observation_time,
     }
@@ -406,33 +405,36 @@ def _get_metadata_observations_from_process_result(processResult: ProcessResult)
             observations.append(
                 {
                     **observation_metadata,
-                    "id": f"brdrid/observations/{uuid.uuid4().hex}",
-                    "observed_property": "brdr:area_overlap",
-                    "result": {"value": area, "type": "float"},
+                    "id": f"urn:uuid:{uuid.uuid4().hex}",
+                    "has_feature_of_interest": reference,
+                    "observed_property": "brdr:areaOverlap",
+                    "result": {"value": area, "type": "xsd:decimal"},
                     "used_procedure": "brdr:observation_procedure_area_overlap",
-                    "used": reference,
+                    "used": result_id,
                 }
             )
         if percentage:= observations_dict.get("percentage"):
             observations.append(
                 {
                     **observation_metadata,
-                    "id": f"brdrid/observations/{uuid.uuid4().hex}",
+                    "id": f"urn:uuid:{uuid.uuid4().hex}",
+                    "has_feature_of_interest": reference,
                     "observed_property": "brdr:area_overlap_percentage",
-                    "result": {"value": percentage, "type": "float"},
+                    "result": {"value": percentage, "type": "xsd:decimal"},
                     "used_procedure": "brdr:observation_procedure_area_overlap_percentage",
-                    "used": reference,
+                    "used": result_id,
                 }
             )
         if full:= observations_dict.get("full"):
             observations.append(
                 {
                     **observation_metadata,
-                    "id": f"brdrid/observations/{uuid.uuid4().hex}",
+                    "id": f"urn:uuid{uuid.uuid4().hex}",
+                    "has_feature_of_interest": reference,
                     "observed_property": "brdr:area_overlap_full",
                     "result": {"value": full, "type": "boolean"},
                     "used_procedure": "brdr:observation_procedure_area_overlap_full",
-                    "used": reference,
+                    "used": result_id,
                 }
             )
 
@@ -440,15 +442,11 @@ def _get_metadata_observations_from_process_result(processResult: ProcessResult)
         observations.append(
             {
                 **observation_metadata,
-                "id": f"brdrid/observations/{uuid.uuid4().hex}",
-                "observed_property": "brdr:area",
-                "result": {"value": area, "type": "float"},
+                "id": f"urn:uuid{uuid.uuid4().hex}",
+                "has_feature_of_interest": result_id,
+                "observed_property": "geo:hasArea",
+                "result": {"value": area, "type": "xsd:decimal"},
                 "used_procedure": "brdr:observation_procedure_area",
-                "used": {
-                    "id": result_id,
-                    "type": f"geo:Geometry",
-                    "version_date": observation_time,
-                },
             }
         )
     if area_od:= observation.get("area_od", {}).get("area"):
@@ -456,27 +454,14 @@ def _get_metadata_observations_from_process_result(processResult: ProcessResult)
             {
                 **observation_metadata,
                 "id": f"brdrid/observations/{uuid.uuid4().hex}",
-                "observed_property": "brdr:area_od",
-                "result": {"value": area_od, "type": "float"},
+                "has_feature_of_interest": result_id,
+                "observed_property": "brdr:areaOD",
+                "result": {"value": area_od, "type": "xsd:decimal"},
                 "used_procedure": "brdr:observation_procedure_area_od",
-                "used": {
-                    "id": result_id,
-                    "type": f"geo:Geometry",
-                    "version_date": observation_time,
-                },
+                "used": actuation_metadata["reference_geometries"],
             }
         )
-    if full:= observation.get("full"):
-        observations.append(
-            {
-                **observation_metadata,
-                "id": f"brdrid/observations/{uuid.uuid4().hex}",
-                "observed_property": "brdr:area_overlap_full",
-                "result": {"value": full, "type": "bool"},
-                "used_procedure": "brdr:observation_procedure_area_overlap_full",
-            }
-        )
-    assert len(observations) > 0
+    return observations
 
 
 def aligner_metadata_decorator(f):
