@@ -1064,8 +1064,6 @@ class Aligner:
             for rd, process_result in process_results[theme_id].items():
                 if PREDICTION_SCORE in process_result["properties"]:
                     process_result["properties"][PREDICTION_COUNT] = prediction_count
-
-        self.diffs_dict = diffs_dict
         return AlignerResult(process_results)
 
     def evaluate(
