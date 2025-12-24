@@ -64,19 +64,23 @@ if __name__ == "__main__":
     )
     # PROCESS a series of relevant distances
     relevant_distances = np.arange(0, 710, 10, dtype=int) / 100
-    dict_results = aligner.process(
+    aligner_result = aligner.process(
         relevant_distances=relevant_distances,
-        od_strategy=OpenDomainStrategy.SNAP_ALL_SIDE,
-        threshold_overlap_percentage=50,
     )
+    thematic_geometries = {
+        key: feat.geometry for key, feat in aligner.thematic_data.features.items()
+    }
+    reference_geometries = {
+        key: feat.geometry for key, feat in aligner.reference_data.features.items()
+    }
     # SHOW results: map and plotted changes
     now = datetime.now()  # current date and time
     date_time = now.strftime("%m_%d_%Y_%H_%M_%S")
     filename = "animation_" + str(date_time) + ".gif"
     animated_map(
-        dict_results,
-        aligner.dict_thematic,
-        aligner.dict_reference,
+        aligner_result.results,
+        thematic_geometries,
+        reference_geometries,
         relevant_distances[-1],
         25,
         150,

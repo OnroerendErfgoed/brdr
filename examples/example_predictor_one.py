@@ -1,6 +1,7 @@
 from brdr.aligner import Aligner
 from brdr.be.grb.enums import GRBType
 from brdr.be.grb.loader import GRBActualLoader
+from brdr.enums import AlignerResultType
 from brdr.loader import GeoJsonFileLoader
 from examples import show_map, plot_dict_diffs
 
@@ -12,7 +13,7 @@ if __name__ == "__main__":
     relevant distances of 'no-change')
     """
     # Initiate an Aligner
-    aligner = Aligner(max_workers=None)
+    aligner = Aligner()
     # Load thematic data & reference data
     loader = GeoJsonFileLoader("input/predictor_one.geojson", "theme_id")
 
@@ -24,21 +25,27 @@ if __name__ == "__main__":
     # PREDICT the 'stable' relevant distances, for a series of relevant distances
     series = [3]
     # predict which relevant distances are interesting to propose as resulting geometry
-    alignerresults = aligner.predict(
+    aligner_result = aligner.predict(
         relevant_distances=series,
     )
-    dict_series = alignerresults.get_results()
-    # SHOW results of the predictions
-    fcs_all = alignerresults.get_results_as_geojson(add_metadata=False, aligner=aligner)
+    dict_predictions = aligner_result.get_results(aligner=aligner,result_type=AlignerResultType.PREDICTIONS)
 
-    if fcs_all is None or "result" not in fcs_all:
-        print("no calculations")
+    # SHOW results of the predictions
+    fcs = aligner_result.get_results_as_geojson(add_metadata=False, aligner=aligner)
+    diffs_dict = aligner.get_difference_metrics_for_thematic_data(
+        dict_processresults=aligner_result.results, thematic_data=aligner.thematic_data
+    )
+    reference_geometries = {
+        key: feat.geometry for key, feat in aligner.reference_data.features.items()
+    }
+    if fcs is None or "result" not in fcs:
+        print("empty predictions")
     else:
-        print(fcs_all["result"])
-        for key in dict_series:
-            plot_dict_diffs({key: aligner.diffs_dict[key]})
+        print(fcs["result"])
+        for key in dict_predictions:
+            plot_dict_diffs({key: diffs_dict[key]})
             show_map(
-                {key: dict_series[key]},
-                {key: aligner.dict_thematic[key]},
-                aligner.dict_reference,
+                {key: dict_predictions[key]},
+                {key: aligner.thematic_data.features[key].geometry},
+                reference_geometries,
             )

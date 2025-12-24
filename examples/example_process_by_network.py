@@ -31,7 +31,8 @@ aligner = Aligner(
     crs="EPSG:31370",
 )
 # ADD A THEMATIC POLYGON TO THEMATIC DICTIONARY and LOAD into Aligner
-thematic_dict = {"theme_id_1": geom_from_wkt(wkt)}
+theme_id = "theme_id_1"
+thematic_dict = {theme_id: geom_from_wkt(wkt)}
 loader = DictLoader(thematic_dict)
 aligner.load_thematic_data(loader)
 # ADD A REFERENCE POLYGON TO REFERENCE DICTIONARY and LOAD into Aligner
@@ -40,21 +41,19 @@ loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
 aligner.load_reference_data(loader)
 # EXECUTE THE ALIGNMENT
 relevant_distance = 4
-process_result = aligner.process(
-    relevant_distance=relevant_distance,
-    od_strategy=OpenDomainStrategy.SNAP_ALL_SIDE,
-    threshold_overlap_percentage=50,
+aligner_result = aligner.process(
+    relevant_distances=[relevant_distance],
 )
 
 # PRINT RESULTS IN WKT
-print("result: " + process_result["theme_id_1"][relevant_distance]["result"].wkt)
+print("result: " + aligner_result.results[theme_id][relevant_distance]["result"].wkt)
 print(
     "added area: "
-    + process_result["theme_id_1"][relevant_distance]["result_diff_plus"].wkt
+    + aligner_result.results[theme_id][relevant_distance]["result_diff_plus"].wkt
 )
 print(
     "removed area: "
-    + process_result["theme_id_1"][relevant_distance]["result_diff_min"].wkt
+    + aligner_result.results[theme_id][relevant_distance]["result_diff_min"].wkt
 )
 print(datetime.now())
 # aligner.predictor()

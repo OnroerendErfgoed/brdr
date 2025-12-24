@@ -215,7 +215,7 @@ def animated_map(
         # Update grafiek
         plot_line.set_data(x_vals, y_vals)
         # f= int (frame)
-        marker_line.set_xdata(frame)
+        marker_line.set_xdata([frame])
 
         return plot_line, marker_line
 

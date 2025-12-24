@@ -15,7 +15,7 @@ if __name__ == "__main__":
     relevant distances of 'no-change')
     """
     # Initiate an Aligner
-    aligner = Aligner(max_workers=None)
+    aligner = Aligner()
     # Load thematic data & reference data
     loader = GeoJsonFileLoader("input/predictor_one.geojson", "theme_id")
 
@@ -27,23 +27,30 @@ if __name__ == "__main__":
     # PREDICT the 'stable' relevant distances, for a series of relevant distances
     series = np.arange(0, 310, 10, dtype=int) / 100
     # predict which relevant distances are interesting to propose as resulting geometry
-    alignerresults = aligner.predict(
+    aligner_result = aligner.predict(
         relevant_distances=series,
     )
-    dict_predictions = alignerresults.get_results(
+    dict_predictions = aligner_result.get_results(
         aligner=aligner, result_type=AlignerResultType.PREDICTIONS
     )
 
     # SHOW results of the predictions
-    fcs = alignerresults.get_results_as_geojson(add_metadata=False, aligner=aligner)
+    fcs = aligner_result.get_results_as_geojson(add_metadata=False, aligner=aligner)
+    diffs_dict = aligner.get_difference_metrics_for_thematic_data(
+    dict_processresults = aligner_result.results,
+    thematic_data = aligner.thematic_data
+    )
+    reference_geometries = {
+        key: feat.geometry for key, feat in aligner.reference_data.features.items()
+    }
     if fcs is None or "result" not in fcs:
         print("empty predictions")
     else:
         print(fcs["result"])
         for key in dict_predictions:
-            plot_dict_diffs({key: aligner.diffs_dict[key]})
+            plot_dict_diffs({key: diffs_dict[key]})
             show_map(
                 {key: dict_predictions[key]},
-                {key: aligner.dict_thematic[key]},
-                aligner.dict_reference,
+                {key: aligner.thematic_data.features[key].geometry},
+                reference_geometries,
             )

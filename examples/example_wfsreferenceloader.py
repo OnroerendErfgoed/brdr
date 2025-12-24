@@ -58,9 +58,15 @@ if __name__ == "__main__":
     aligner.load_reference_data(loader)
 
     # Example how to use the Aligner
-    dict_results = aligner.process(relevant_distance=3)
+    aligner_result = aligner.process(relevant_distances=[3])
 
     # show results
-    aligner.save_results("output/")
-    show_map(dict_results, aligner.dict_thematic, aligner.dict_reference)
-    print_brdr_observation(dict_results, aligner)
+    aligner_result.save_results(path="output/", aligner=aligner)
+    thematic_geometries = {
+        key: feat.geometry for key, feat in aligner.thematic_data.features.items()
+    }
+    reference_geometries = {
+        key: feat.geometry for key, feat in aligner.reference_data.features.items()
+    }
+    show_map(aligner_result.results, thematic_geometries, reference_geometries)
+    print_brdr_observation(aligner_result.results, aligner)

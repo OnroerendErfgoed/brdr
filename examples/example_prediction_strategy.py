@@ -89,7 +89,7 @@ thematic_json = {
 # 4001 will give a result, 4002 &4009 should also give the original geometry
 
 
-aligner = Aligner(relevant_distances=np.arange(0, 310, 10, dtype=int) / 100)
+aligner = Aligner()
 
 loader = GeoJsonLoader(_input=thematic_json, id_property="fid")
 aligner.load_thematic_data(loader)
@@ -98,8 +98,9 @@ loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
 aligner.load_reference_data(loader)
 
 # Use the EVALUATE-function
-dict_predictions_evaluated = aligner.evaluate(
+aligner_result = aligner.evaluate(
     max_predictions=1,
-    full_reference_strategy=FullReferenceStrategy.ONLY_FULL,
+    full_reference_strategy=FullReferenceStrategy.ONLY_FULL_REFERENCE,
     multi_to_best_prediction=True,
 )
+print (aligner_result)

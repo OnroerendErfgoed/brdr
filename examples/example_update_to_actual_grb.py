@@ -1,7 +1,7 @@
 from brdr.aligner import Aligner
 from brdr.be.grb.grb import update_featurecollection_to_actual_grb
 from brdr.be.grb.loader import GRBFiscalParcelLoader
-from brdr.constants import EVALUATION_FIELD_NAME
+from brdr.constants import EVALUATION_FIELD_NAME, OBSERVATION_FIELD_NAME
 from brdr.loader import GeoJsonLoader
 
 if __name__ == "__main__":
@@ -74,7 +74,7 @@ if __name__ == "__main__":
     # Update Featurecollection to actual version
     featurecollection = update_featurecollection_to_actual_grb(
         featurecollection_base_result,
-        # base_aligner.name_thematic_id,
+        id_theme_fieldname="ID",
         base_metadata_field=OBSERVATION_FIELD_NAME,
         max_distance_for_actualisation=3,
     )
@@ -93,7 +93,7 @@ if __name__ == "__main__":
 
     featurecollection = update_featurecollection_to_actual_grb(
         featurecollection_base_result,
-        # base_aligner.name_thematic_id,
+        id_theme_fieldname="ID",
         base_metadata_field=OBSERVATION_FIELD_NAME,
         max_distance_for_actualisation=0,
     )
@@ -112,8 +112,7 @@ if __name__ == "__main__":
 
     featurecollection = update_featurecollection_to_actual_grb(
         featurecollection_base_result,
-        # base_aligner.name_thematic_id,
-        base_metadata_field=None,
+        id_theme_fieldname="ID",
         max_distance_for_actualisation=3,
     )
     if len(featurecollection) == 0:
