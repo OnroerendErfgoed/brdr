@@ -592,11 +592,11 @@ class SnapGeometryProcessor(BaseProcessor):
 
     Attributes
     ----------
-    process_id : ProcessorID
+    processor_id : ProcessorID
         The unique identifier for this processor (ProcessorID.SNAP).
     """
 
-    process_id = ProcessorID.SNAP
+    processor_id = ProcessorID.SNAP
 
     def process(
         self,
@@ -722,11 +722,11 @@ class DieussaertGeometryProcessor(BaseProcessor):
 
     Attributes
     ----------
-    process_id : ProcessorID
+    processor_id : ProcessorID
         The unique identifier for this processor (ProcessorID.DIEUSSAERT).
     """
 
-    process_id = ProcessorID.DIEUSSAERT
+    processor_id = ProcessorID.DIEUSSAERT
 
     def process(
         self,
@@ -1397,11 +1397,11 @@ class NetworkGeometryProcessor(BaseProcessor):
 
     Attributes
     ----------
-    process_id : ProcessorID
+    processor_id : ProcessorID
         The unique identifier for this processor (ProcessorID.NETWORK).
     """
 
-    process_id = ProcessorID.NETWORK
+    processor_id = ProcessorID.NETWORK
 
     def process(
         self,
