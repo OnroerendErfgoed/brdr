@@ -348,7 +348,12 @@ class OGCFeatureAPIReferenceLoader(GeoJsonLoader):
         response = requests.get(collection_url)
         data = response.json()
 
-        supported_crs = {to_crs(crs) for crs in data.get("crs", [])}
+        supported_crs = []
+        for crs in data.get("crs", "0000"):
+            try:
+                supported_crs.append(to_crs(crs))
+            except:
+                pass
         if self.aligner.crs not in supported_crs:
             raise ValueError(f"Unsupported CRS. Supported: {supported_crs}")
 
@@ -431,7 +436,7 @@ class WFSReferenceLoader(GeoJsonLoader):
         """
         if not self.aligner.thematic_data:
             raise ValueError("Thematic data not loaded")
-
+        self.data_dict_source[VERSION_DATE] = datetime.now().strftime(DATE_FORMAT)
         params = {"service": "WFS", "version": "2.0.0", "request": "GetCapabilities"}
         response = requests.get(self.url, params=params)
         root = ET.fromstring(response.content)
@@ -476,5 +481,8 @@ class WFSReferenceLoader(GeoJsonLoader):
             partition=self.part,
             crs=self.aligner.crs,
         )
+
         self.input = dict(collection)
-        self.data_dict_source[VERSION_DATE]
+        self.aligner.logger.feedback_info(f"Downloaded from OGC WFS: {self.url}")
+        return super().load_data()
+

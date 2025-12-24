@@ -30,12 +30,14 @@ if __name__ == "__main__":
     aligner.load_reference_data(loader)
     # EXECUTE THE ALIGNMENT
     relevant_distance = 5
-    process_result = aligner.process(relevant_distance=relevant_distance)
+    aligner_result = aligner.process(relevant_distances=[relevant_distance])
     # PRINT RESULTS IN WKT
-    print("result: " + process_result[id][relevant_distance]["result"].wkt)
+    print("result: " + aligner_result.results[id][relevant_distance]["result"].wkt)
     print(
-        "added area: " + process_result[id][relevant_distance]["result_diff_plus"].wkt
+        "added area: "
+        + aligner_result.results[id][relevant_distance]["result_diff_plus"].wkt
     )
     print(
-        "removed area: " + process_result[id][relevant_distance]["result_diff_min"].wkt
+        "removed area: "
+        + aligner_result.results[id][relevant_distance]["result_diff_min"].wkt
     )

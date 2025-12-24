@@ -3,7 +3,11 @@ import numpy as np
 from brdr.aligner import Aligner
 from brdr.be.grb.enums import GRBType
 from brdr.be.grb.loader import GRBActualLoader
-from brdr.constants import EVALUATION_FIELD_NAME, PREDICTION_SCORE
+from brdr.constants import (
+    EVALUATION_FIELD_NAME,
+    PREDICTION_SCORE,
+    RELEVANT_DISTANCE_FIELD_NAME,
+)
 from brdr.enums import AlignerResultType, FullReferenceStrategy
 from brdr.loader import GeoJsonFileLoader
 
@@ -22,26 +26,24 @@ if __name__ == "__main__":
         GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=actual_aligner)
     )
     # Use the EVALUATE-function
-    dict_evaluated = actual_aligner.evaluate(
-        ids_to_evaluate=None,
+    aligner_result = actual_aligner.evaluate(
+        thematic_ids=None,
         metadata_field=None,
-        full_reference_strategy=FullReferenceStrategy.PREFER_FULL_REFERENCE,
-        relevant_distances=np.arange(0, 310, 10, dtype=int) / 100,
+        relevant_distances=None,
     )
-
     # SHOW the EVALUATED results
-    fc = actual_aligner.get_results_as_geojson(
-        resulttype=AlignerResultType.EVALUATED_PREDICTIONS,
-        observation=True,
-        attributes=True,
+    fc = aligner_result.get_results_as_geojson(
+        result_type=AlignerResultType.EVALUATED_PREDICTIONS, add_metadata=True, add_original_attributes=True, aligner=actual_aligner
     )
     print(fc["result"])
 
     for feature in fc["result"]["features"]:
         print(
-            feature["properties"][actual_aligner.name_thematic_id]
+            feature["properties"][actual_aligner.thematic_data.id_fieldname]
             + ": "
             + feature["properties"][EVALUATION_FIELD_NAME]
-            + " - "
+            + " - score "
             + str(feature["properties"][PREDICTION_SCORE])
+            + " - distance "
+            + str(feature["properties"][RELEVANT_DISTANCE_FIELD_NAME])
         )

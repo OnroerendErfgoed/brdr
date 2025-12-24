@@ -1,6 +1,7 @@
 from brdr.aligner import Aligner
 from brdr.be.grb.enums import GRBType
 from brdr.be.grb.loader import GRBActualLoader
+from brdr.enums import AlignerResultType
 from brdr.loader import GeoJsonLoader
 from examples import show_map, print_brdr_observation
 
@@ -53,9 +54,20 @@ if __name__ == "__main__":
     aligner.load_reference_data(loader)
 
     # Example how to use the Aligner
-    dict_results = aligner.process(relevant_distance=3)
+    rel_dist=5
+    aligner_result = aligner.process(relevant_distances=[rel_dist])
+    aligner_result.save_results(path="output/", aligner=aligner)
+    thematic_geometries = {
+        key: feat.geometry for key, feat in aligner.thematic_data.features.items()
+    }
+    reference_geometries = {
+        key: feat.geometry for key, feat in aligner.reference_data.features.items()
+    }
+    show_map(aligner_result.results, thematic_geometries, reference_geometries)
+    print_brdr_observation(aligner_result.results, aligner)
 
-    # show results
-    aligner.save_results("output/")
-    show_map(dict_results, aligner.dict_thematic, aligner.dict_reference)
-    print_brdr_observation(dict_results, aligner)
+    fcs = aligner_result.get_results_as_geojson(
+        result_type=AlignerResultType.PROCESSRESULTS, aligner=aligner
+    )
+    print(fcs["result"])
+

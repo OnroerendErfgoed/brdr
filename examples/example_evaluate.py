@@ -77,13 +77,13 @@ if __name__ == "__main__":
     )
     # Use the EVALUATE-function
     relevant_distances = np.arange(0, 310, 10, dtype=int) / 100
-    dict_evaluated = actual_aligner.evaluate(
+    aligner_result = actual_aligner.evaluate(
         thematic_ids=affected,
         metadata_field=name_observation,
         relevant_distances=relevant_distances,
     )
     # SHOW the EVALUATED results
-    fc = dict_evaluated.get_results_as_geojson(
+    fc = aligner_result.get_results_as_geojson(
         result_type=AlignerResultType.EVALUATED_PREDICTIONS, add_metadata=True, add_original_attributes=True, aligner=actual_aligner
     )
     print(fc["result"])

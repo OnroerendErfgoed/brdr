@@ -17,7 +17,7 @@ if __name__ == "__main__":
     loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
     aligner.load_reference_data(loader)
 
-    dict_processresults = aligner.process(relevant_distances=[3], max_workers=None)
-    print(dict_processresults["theme_id_1"][3]["result"])
-    aligner.predict()
-    aligner.save_results("output", AlignerResultType.PREDICTIONS)
+    aligner_result = aligner.process(relevant_distances=[3])
+    print(aligner_result.results["theme_id_1"][3]["result"])
+    aligner_result =aligner.predict()
+    aligner_result.save_results(path="output", result_type=AlignerResultType.PREDICTIONS,aligner=aligner)

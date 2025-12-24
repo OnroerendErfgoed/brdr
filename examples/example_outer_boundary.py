@@ -1,13 +1,17 @@
 from brdr.aligner import Aligner
 from brdr.be.grb.enums import GRBType
 from brdr.be.grb.loader import GRBActualLoader
+from brdr.configs import AlignerConfig, ProcessorConfig
 from brdr.enums import OpenDomainStrategy
 from brdr.geometry_utils import geom_from_wkt
 from brdr.loader import DictLoader, GeoJsonFileLoader
+from brdr.processor import DieussaertGeometryProcessor
 from examples import print_brdr_observation, show_map
+processor_config=ProcessorConfig()
+processor_config.od_strategy=OpenDomainStrategy.SNAP_ALL_SIDE
+processor=DieussaertGeometryProcessor(config=processor_config)
+aligner = Aligner(processor=processor)
 
-aligner = Aligner(max_workers=None)
-od_strategy = OpenDomainStrategy.SNAP_ALL_SIDE
 relevant_distance = 2
 grb_loader = True
 wkt = "Polygon ((174015.08694170592934825 179025.39916784031083807, 174040.71934808720834553 179031.93985084796440788, 174037.1838437587430235 178986.50862022733781487, 174030.64316075111855753 178982.97311589887249283, 174016.85469387014745735 179002.24161448894301429, 174021.62762471355381422 179005.77711881740833633, 174018.62244603436556645 179008.60552228015149012, 174015.08694170592934825 179025.39916784031083807))"
@@ -26,11 +30,20 @@ else:
     loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
 aligner.load_reference_data(loader)
 
-dict_results = aligner.process(
-    relevant_distance=relevant_distance, od_strategy=od_strategy
+aligner_result = aligner.process(
+    relevant_distances=[relevant_distance]
 )
 
 # show results
-aligner.save_results("output/")
-show_map(dict_results, aligner.dict_thematic, aligner.dict_reference)
-print_brdr_observation(dict_results, aligner)
+aligner_result.save_results(
+    aligner=aligner, path="output/", add_original_attributes=True, add_metadata=True
+)
+print_brdr_observation(aligner_result.get_results(aligner=aligner), aligner)
+
+thematic_geometries = {
+    key: feat.geometry for key, feat in aligner.thematic_data.features.items()
+}
+reference_geometries = {
+    key: feat.geometry for key, feat in aligner.reference_data.features.items()
+}
+show_map(aligner_result.results, thematic_geometries, reference_geometries)

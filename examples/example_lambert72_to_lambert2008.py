@@ -35,7 +35,7 @@ if __name__ == "__main__":
     aligner72.load_thematic_data(loader)
     print(
         "Number of OE-thematic features loaded into base-aligner: "
-        + str(len(aligner72.dict_thematic))
+        + str(len(aligner72.thematic_data.features))
     )
     aligner72.load_reference_data(
         GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner72)
@@ -43,29 +43,35 @@ if __name__ == "__main__":
     print("Reference-data loaded")
     #
     rd = 2
-    dict_processresults = aligner72.process(
-        relevant_distance=rd, od_strategy=OpenDomainStrategy.SNAP_ALL_SIDE
+    aligner_result72 = aligner72.process(
+        relevant_distances=[rd]
     )
     print("Processed")
     dict08 = {}
     # transform features (72-->2008)
-    for key, processresult in dict_processresults.items():
+    for key, processresult in aligner_result72.results.items():
         dict08[key] = transform_geom_31370_to_3812(processresult[rd]["result"])
 
     # Align to GRB (2008)
     aligner08 = Aligner(crs="EPSG:3812")
     loader = DictLoader(dict08)
-    # loader = GeoJsonLoader(id_property=id,_input=fcs)
     aligner08.load_thematic_data(loader)
     aligner08.load_reference_data(
         GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner08)
     )
     rd08 = 0.5
-    dict_processresults08 = aligner08.process(
-        relevant_distance=rd08, od_strategy=OpenDomainStrategy.SNAP_ALL_SIDE
+    aligner_result08 = aligner08.process(
+        relevant_distances=[rd08]
     )
-    for key, processresult in dict_processresults08.items():
+    for key, processresult in aligner_result08.results.items():
 
         print(processresult[rd08]["result"].wkt)
         print(processresult[rd08]["result_diff"].wkt)
-    show_map(dict_processresults08, aligner08.dict_thematic, aligner08.dict_reference)
+
+    thematic_geometries = {
+        key: feat.geometry for key, feat in aligner08.thematic_data.features.items()
+    }
+    reference_geometries = {
+        key: feat.geometry for key, feat in aligner08.reference_data.features.items()
+    }
+    show_map(aligner_result08.results, thematic_geometries, reference_geometries)

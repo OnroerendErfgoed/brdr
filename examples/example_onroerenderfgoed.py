@@ -10,7 +10,7 @@ if __name__ == "__main__":
     # EXAMPLE for a thematic Polygon from Onroerend Erfgoed (https://inventaris.onroerenderfgoed.be/aanduidingsobjecten/131635)
 
     # Initiate brdr
-    aligner = Aligner(max_workers=None)
+    aligner = Aligner()
     # Load thematic data from Onroerend Erfgoed
     loader = OnroerendErfgoedLoader(objectids=[5914, 121125], oetype=OEType.AO)
     aligner.load_thematic_data(loader)
@@ -19,23 +19,24 @@ if __name__ == "__main__":
     aligner.load_reference_data(loader)
 
     # PROCESS
-    dict_results = aligner.process(relevant_distance=2)
+    aligner_result = aligner.process(relevant_distances=[2])
 
     # GET/SHOW results
-    aligner.save_results("output/", observation=True)
-    show_map(dict_results, aligner.dict_thematic, aligner.dict_reference)
-    print_brdr_observation(dict_results, aligner)
+    aligner_result.save_results(aligner=aligner, path="output/", add_original_attributes=True,add_metadata=True)
+    print_brdr_observation(aligner_result.get_results(aligner=aligner), aligner)
 
-    dict_predictions_evaluated = aligner.evaluate()
+    thematic_geometries = {
+        key: feat.geometry for key, feat in aligner.thematic_data.features.items()
+    }
+    reference_geometries = {
+        key: feat.geometry for key, feat in aligner.reference_data.features.items()
+    }
+    show_map(aligner_result.results, thematic_geometries, reference_geometries)
+
+    aligner_result = aligner.evaluate()
 
     # SHOW results of the predictions
-    fcs = aligner.get_results_as_geojson(
-        resulttype=AlignerResultType.EVALUATED_PREDICTIONS, observation=False
+    fcs = aligner_result.get_results_as_geojson(
+        result_type=AlignerResultType.EVALUATED_PREDICTIONS, aligner=aligner
     )
     print(fcs["result"])
-    for key in dict_predictions_evaluated:
-        show_map(
-            {key: dict_predictions_evaluated[key]},
-            {key: aligner.dict_thematic[key]},
-            aligner.dict_reference,
-        )

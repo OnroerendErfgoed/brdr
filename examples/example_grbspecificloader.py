@@ -4,9 +4,10 @@ from shapely import from_wkt
 
 from brdr.aligner import Aligner
 from brdr.be.grb.loader import GRBSpecificDateParcelLoader
-from brdr.enums import AlignerInputType
+from brdr.enums import AlignerInputType, AlignerResultType
 from brdr.loader import DictLoader
 from brdr.utils import write_geojson
+from examples import show_map, print_brdr_observation
 
 if __name__ == "__main__":
     aligner = Aligner()
@@ -24,10 +25,20 @@ if __name__ == "__main__":
     loader = GRBSpecificDateParcelLoader(date=date, aligner=aligner)
     aligner.load_reference_data(loader)
 
-    # aligner.process()
-    # aligner.save_results(path = "output/")
+    # Example how to use the Aligner
+    rel_dist=5
+    aligner_result = aligner.process(relevant_distances=[rel_dist])
+    aligner_result.save_results(path="output/", aligner=aligner)
+    thematic_geometries = {
+        key: feat.geometry for key, feat in aligner.thematic_data.features.items()
+    }
+    reference_geometries = {
+        key: feat.geometry for key, feat in aligner.reference_data.features.items()
+    }
+    show_map(aligner_result.results, thematic_geometries, reference_geometries)
+    print_brdr_observation(aligner_result.results, aligner)
 
-    fc = aligner.get_input_as_geojson(
-        inputtype=AlignerInputType.REFERENCE,
+    fcs = aligner_result.get_results_as_geojson(
+        result_type=AlignerResultType.PROCESSRESULTS, aligner=aligner
     )
-    write_geojson(os.path.join("output/", "grb_adp_" + date + ".geojson"), fc)
+    print(fcs["result"])
