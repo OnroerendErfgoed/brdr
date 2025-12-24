@@ -331,24 +331,13 @@ class TestEvaluate(unittest.TestCase):
         aligner.load_reference_data(
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         )
-
-        aligner_result = aligner.evaluate(
-            relevant_distances=np.arange(10, 410, 10, dtype=int) / 100,
-            full_reference_strategy=FullReferenceStrategy.NO_FULL_REFERENCE,
-            max_predictions=1,
-            multi_to_best_prediction=False,
-        )
-        process_results_evaluated = aligner_result.get_results(
-            aligner=aligner, result_type=AlignerResultType.EVALUATED_PREDICTIONS
-        )
-        assert len(process_results_evaluated["theme_id_1"]) == 1
-        assert (
-            process_results_evaluated["theme_id_1"][0]["properties"][
-                EVALUATION_FIELD_NAME
-            ]
-            == Evaluation.TO_CHECK_ORIGINAL
-        )
-
+        with pytest.raises(ValueError):
+            aligner_result = aligner.evaluate(
+                relevant_distances=np.arange(10, 410, 10, dtype=int) / 100,
+                full_reference_strategy=FullReferenceStrategy.NO_FULL_REFERENCE,
+                max_predictions=1,
+                multi_to_best_prediction=False,
+            )
     @pytest.mark.usefixtures("callback_grb_response")
     def test_evaluate_line(self):
         # Load thematic data & reference data

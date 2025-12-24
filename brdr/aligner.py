@@ -1165,10 +1165,6 @@ class Aligner:
                 round(k, RELEVANT_DISTANCE_DECIMALS)
                 for k in np.arange(0, 310, 10, dtype=int) / 100
             ]
-        # Always add ZERO for evaluation so the original is calculated with metadata
-        relevant_distances = list(relevant_distances)
-        relevant_distances.append(round(0, RELEVANT_DISTANCE_DECIMALS))
-        relevant_distances=sorted(list(set(relevant_distances)))
 
         aligner_result = self.predict(
             thematic_ids=thematic_ids,
@@ -1182,12 +1178,21 @@ class Aligner:
         process_results_temp_predictions= deepcopy(process_results_predictions)
         process_results_evaluated = deepcopy(process_results)
 
-        for theme_id in thematic_ids:
-            original_geometry = self.thematic_data.features[theme_id].geometry
-
-            # SET all features to 'Not evaluated'
-            for dist in process_results_evaluated[theme_id]:
+        for theme_id,feat in self.thematic_data.features.items():
+            original_geometry = feat.geometry
+            if theme_id not in process_results_temp_predictions:
+                continue
+            # SET all features initially to 'Not evaluated'
+            prediction_score_available=True
+            for dist in process_results_temp_predictions[theme_id]:
                 process_results_evaluated[theme_id][dist]["properties"][EVALUATION_FIELD_NAME] = Evaluation.NOT_EVALUATED
+                if not PREDICTION_SCORE in process_results_evaluated[theme_id][dist]["properties"]:
+                    prediction_score_available = False
+            # thematic objects that do not have a prediction_score from predict() are not evaluated and returned as they are
+            if not prediction_score_available:
+                continue
+            if 0 not in relevant_distances:
+                raise ValueError("Evaluation cannot be executed when 0 is not available in the array of relevant distances")
 
             # Features are split up in 2 groups: TO_EVALUATE and NOT_TO_EVALUATE (original returned)
             # The evaluated features will be split up:
