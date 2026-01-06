@@ -470,13 +470,13 @@ def geojson_geometry_to_shapely(geojson_geometry):
     return shape(geojson_geometry)
 
 
-def geojson_to_dicts(collection, id_property):
+def geojson_to_dicts(collection, id_property=None):
     """
     Converts a GeoJSON collection into dictionaries of geometries and properties.
 
     Parameters:
     collection (dict): The GeoJSON collection to convert.
-    id_property (str): The property name to use as the key for the dictionaries.
+    id_property (str): The property name to use as the key for the dictionaries. if None, the feature-identifier 'id' is used when available.
 
     Returns:
     tuple: Two dictionaries:
@@ -488,7 +488,16 @@ def geojson_to_dicts(collection, id_property):
     if collection is None or "features" not in collection:
         return data_dict, data_dict_properties
     for f in collection["features"]:
-        key = f["properties"][id_property]
+        if not id_property:
+            if "id" in f:
+                key = f["id"]
+            else:
+                raise KeyError("Feature-identifier 'id' not found in GeoJson FeatureCollection. Please provide a Geojson with feature-identifiers or define id_property (name of attribute with unique ids) from the properties")
+        else:
+            if "properties" in f and id_property in f["properties"]:
+                key = f["properties"][id_property]
+            else:
+                raise KeyError(f"Identifier '{id_property}' not found in properties of GeoJson FeatureCollection")
         geom = shape(f["geometry"])
         data_dict[key] = make_valid(geom)
         data_dict_properties[key] = f["properties"]
