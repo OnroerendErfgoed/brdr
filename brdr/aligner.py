@@ -483,8 +483,7 @@ def aligner_metadata_decorator(f):
         if aligner.add_observations:
             for thematic_id, rd_res in response.results.items():
                 for rd, res in rd_res.items():
-                    if res["result"]:
-                        res["observation"] = aligner.compare_to_reference(res["result"])
+                    res["observation"] = aligner.compare_to_reference(res.get("result"))
         if aligner.log_metadata:
             # generate uuid for actuation
             actuation_id = "brdrid:actuations/" + uuid.uuid4().hex

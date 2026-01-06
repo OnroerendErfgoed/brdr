@@ -201,7 +201,7 @@ class BaseProcessor(ABC):
             remarks.append(remark)
             self.logger.feedback_warning(remark)
 
-        if to_multi(geom_preresult).geom_type != to_multi(geom_thematic).geom_type:
+        elif to_multi(geom_preresult).geom_type != to_multi(geom_thematic).geom_type:
             geom_preresult = GeometryCollection()
             remark = ProcessRemark.CHANGED_GEOMETRYTYPE_EMPTY_RETURNED
             remarks.append(remark)
@@ -836,8 +836,8 @@ class DieussaertGeometryProcessor(BaseProcessor):
                     continue
                 if isinstance(value, BaseGeometry):
                     geom = value
-                    if geom.is_empty or geom is None:
-                        continue
+                    if geom is None:
+                        geom = GeometryCollection()
                     if key in merged_process_result:
                         existing = merged_process_result[key]
                     else:

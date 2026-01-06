@@ -603,7 +603,7 @@ def union_process_result(process_result: ProcessResult) -> ProcessResult:
             process_result[key] = process_result.get(key, {})  # noqa
             continue
         value = process_result.get(key, GeometryCollection())  # noqa
-        if isinstance(value, BaseGeometry) and not value.is_empty:
+        if isinstance(value, BaseGeometry):
             value = safe_unary_union(value)
         process_result[key] = value  # noqa
 
