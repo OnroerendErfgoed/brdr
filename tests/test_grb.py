@@ -10,11 +10,9 @@ from brdr.be.grb.enums import GRBType
 from brdr.be.grb.grb import update_featurecollection_to_actual_grb
 from brdr.be.grb.loader import GRBActualLoader, GRBFiscalParcelLoader
 from brdr.be.grb.loader import GRBSpecificDateParcelLoader
-from brdr.be.grb.utils import get_affected_and_unaffected_ids_by_grb_change
+from brdr.be.grb.utils import get_affected_ids_by_grb_change
 from brdr.be.grb.utils import get_last_version_date
 from brdr.be.grb.utils import is_grb_changed
-from brdr.constants import EVALUATION_FIELD_NAME
-from brdr.enums import Evaluation
 from brdr.loader import DictLoader
 from tests.testdata.responses import grb_responses
 
@@ -113,7 +111,7 @@ class TestGrb:
         }
         aligner = Aligner()
         aligner.load_thematic_data(DictLoader(thematic_dict))
-        affected, unaffected = get_affected_and_unaffected_ids_by_grb_change(
+        affected = get_affected_ids_by_grb_change(
             thematic_geometries=thematic_dict,
             grb_type=GRBType.ADP,
             date_start=date(2025, 1, 1),
@@ -124,7 +122,7 @@ class TestGrb:
         affected_1 = len(affected)
         assert affected_1 > 0
 
-        affected, unaffected = get_affected_and_unaffected_ids_by_grb_change(
+        affected = get_affected_ids_by_grb_change(
             thematic_geometries=thematic_dict,
             grb_type=GRBType.ADP,
             date_start=date(2025, 1, 1),
@@ -148,7 +146,7 @@ class TestGrb:
         }
         aligner = Aligner()
         aligner.load_thematic_data(DictLoader(thematic_dict))
-        affected, unaffected = get_affected_and_unaffected_ids_by_grb_change(
+        affected = get_affected_ids_by_grb_change(
             thematic_geometries=thematic_dict,
             grb_type=GRBType.ADP,
             date_start=date.today() - timedelta(days=1),
@@ -157,7 +155,7 @@ class TestGrb:
         )
         assert len(affected) == 0
 
-        affected, unaffected = get_affected_and_unaffected_ids_by_grb_change(
+        affected = get_affected_ids_by_grb_change(
             thematic_geometries=thematic_dict,
             grb_type=GRBType.ADP,
             date_start=date.today() - timedelta(days=1000),
@@ -179,7 +177,7 @@ class TestGrb:
         }
         aligner2 = Aligner()
         aligner2.load_thematic_data(DictLoader(thematic_dict2))
-        affected, unaffected = get_affected_and_unaffected_ids_by_grb_change(
+        affected = get_affected_ids_by_grb_change(
             thematic_geometries=thematic_dict2,
             grb_type=GRBType.ADP,
             date_start=date.today() - timedelta(days=1000),
@@ -201,7 +199,7 @@ class TestGrb:
         }
         aligner = Aligner()
         aligner.load_thematic_data(DictLoader(thematic_dict))
-        affected, unaffected = get_affected_and_unaffected_ids_by_grb_change(
+        affected = get_affected_ids_by_grb_change(
             thematic_geometries=thematic_dict,
             grb_type=GRBType.ADP,
             date_start=date.today() - timedelta(days=1),
@@ -211,7 +209,7 @@ class TestGrb:
         assert len(affected) == 0
 
         callback_grb_response.update(grb_responses.grb_response4)
-        affected, unaffected = get_affected_and_unaffected_ids_by_grb_change(
+        affected = get_affected_ids_by_grb_change(
             thematic_geometries=thematic_dict,
             grb_type=GRBType.ADP,
             date_start=date.today() - timedelta(days=1000),

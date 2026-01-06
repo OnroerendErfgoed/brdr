@@ -73,7 +73,7 @@ def is_grb_changed(
     return False
 
 
-def get_affected_and_unaffected_ids_by_grb_change(
+def get_affected_ids_by_grb_change(
     thematic_geometries: Dict[Any, BaseGeometry],
     *,
     grb_type=GRBType.ADP,
@@ -83,9 +83,9 @@ def get_affected_and_unaffected_ids_by_grb_change(
     border_distance=0,
     geometry_thematic_union=None,
     crs=DEFAULT_CRS,
-):
+)->list:
     """
-    Get a list of affected and unaffected IDs by GRB-changes in a
+    Get a list of affected IDs by GRB-changes in a
     specific timespan
 
     Args:
@@ -101,12 +101,11 @@ def get_affected_and_unaffected_ids_by_grb_change(
             geometry, so 'big' geometries with internal parcel-updates are not affected
             (Default:0, indicating that the full geometry is checked fot GRB-changes)
     Returns:
-        Tuple of lists of affected and unaffected IDs
+        list of affected IDs
 
     """
 
     affected = []
-    unaffected = []
     if one_by_one:
         for key in thematic_geometries:
             geom = thematic_geometries[key]
@@ -114,9 +113,7 @@ def get_affected_and_unaffected_ids_by_grb_change(
                 geom, grb_type, date_start, date_end, border_distance=border_distance
             ):
                 affected.append(key)
-            else:
-                unaffected.append(key)
-        return affected, unaffected
+        return affected
     else:
         # Temporal filter on VERSIONDATE
         if geometry_thematic_union is None:
@@ -151,7 +148,7 @@ def get_affected_and_unaffected_ids_by_grb_change(
             logging.info(
                 f"No detected changes for thematic geometry in timespan (border distance: {str(border_distance)})"
             )
-            return [], list(thematic_geometries.keys())  # empty affected dict
+            return []
         logging.info(
             f"Changed parcels in timespan with border_distance {str(border_distance)}: {str(len(dict_changed_grb))}"
         )
@@ -165,9 +162,7 @@ def get_affected_and_unaffected_ids_by_grb_change(
         for key, geom in thematic_geometries.items():
             if key in thematic_intersections:
                 affected.append(key)
-            else:
-                unaffected.append(key)
-    return affected, unaffected
+    return affected
 
 
 def get_last_version_date(
