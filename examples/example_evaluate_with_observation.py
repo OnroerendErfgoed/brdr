@@ -26,7 +26,7 @@ if __name__ == "__main__":
     loader = GeoJsonFileLoader("input/themelayer.geojson", "theme_identifier")
     base_aligner.load_thematic_data(loader)
     base_year = "2022"
-    name_observation = "base_observation"
+    name_observation = "brdr_metadata"
     # Load reference data
     base_aligner.load_reference_data(
         GRBFiscalParcelLoader(year=base_year, aligner=base_aligner)
@@ -42,8 +42,7 @@ if __name__ == "__main__":
     for key in base_results:
         thematic_dict_result[key] = base_results[key][relevant_distance]["result"]
         thematic_dict_observation[key] = {
-            name_observation: json.dumps(
-                base_aligner.compare_to_reference(thematic_dict_result[key])
+            name_observation: json.dumps(base_results[key][relevant_distance]["metadata"]
             )
         }
         print(key + ": " + thematic_dict_result[key].wkt)

@@ -355,23 +355,16 @@ class AlignerResult:
 
 def _get_brdr_observation_from_metadata_observations(metadata: List[Dict]) -> Dict:
     # TODO: Karel take the observations from the metadata
-    # by rdf?
-    observation_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S%z")
-    sensor_uuid = uuid.uuid4().hex
-    observation_metadata = {
-        "type": "sosa:Observation",
-        "has_feature_of_interest": "123",
-        "made_by_sensor": f"brdrid:{sensor_uuid}",
-        "result_time": observation_time,
-    }
+
+    observations = metadata['observations']
     brdr_observation = Observation()
-    brdr_observation.alignment_date = None
-    brdr_observation.reference_source = None
-    brdr_observation.brdr_version = None
-    brdr_observation.full = None
-    brdr_observation.area = None
-    brdr_observation.reference_features = Dict[InputId, ObservationReference]
-    brdr_observation.reference_od = Dict
+    brdr_observation["alignment_date"] = None
+    brdr_observation["reference_source"] = None
+    brdr_observation["brdr_version"] = None
+    brdr_observation["full"] = observations[1]['result']['value']==100
+    brdr_observation["area"] = observations[0]['result']['value']
+    brdr_observation["reference_features"] = {}
+    brdr_observation["reference_od"] = {}
 
     if not is_brdr_observation(brdr_observation):
         raise ValueError("This is not a brdr observation")
@@ -513,7 +506,7 @@ def aligner_metadata_decorator(f):
                 for rd, res in rd_res.items()
             ]:
                 thematic_feature = aligner.thematic_data.features[thematic_id]
-                feature_of_interest_id = thematic_feature.brdr_id  # TODO
+                feature_of_interest_id = thematic_feature.brdr_id  # TODO (emrys?)
                 result_hash = hashlib.sha1(result["result"].wkt.encode()).hexdigest()
                 result["metadata"] = {}
                 result["metadata"]["actuation"] = {
