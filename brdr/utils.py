@@ -87,6 +87,14 @@ def get_geojsons_from_process_results(
     return geojsons
 
 
+def deep_merge(dict_a, dict_b):
+    for key, value in dict_b.items():
+        if key in dict_a and isinstance(dict_a[key], dict) and isinstance(value, dict):
+            deep_merge(dict_a[key], value)
+        else:
+            dict_a[key] = value
+    return dict_a
+
 def _feature_from_geom(
     geom: BaseGeometry,
     feature_id: str | int,

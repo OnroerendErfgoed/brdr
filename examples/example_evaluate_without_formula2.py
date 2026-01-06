@@ -30,12 +30,8 @@ if __name__ == "__main__":
         GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=actual_aligner)
     )
     # Use the EVALUATE-function
-    aligner_result = actual_aligner.evaluate(
-        thematic_ids=None,
-        metadata_field=None,
-        relevant_distances=None,
-        full_reference_strategy=FullReferenceStrategy.PREFER_FULL_REFERENCE
-    )
+    aligner_result = actual_aligner.evaluate(relevant_distances=None, thematic_ids=None, metadata_field=None,
+                                             full_reference_strategy=FullReferenceStrategy.PREFER_FULL_REFERENCE)
     # SHOW the EVALUATED results
     fc = aligner_result.get_results_as_geojson(
         result_type=AlignerResultType.EVALUATED_PREDICTIONS, add_metadata=True, add_original_attributes=True, aligner=actual_aligner

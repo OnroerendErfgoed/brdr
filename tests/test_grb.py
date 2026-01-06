@@ -13,6 +13,8 @@ from brdr.be.grb.loader import GRBSpecificDateParcelLoader
 from brdr.be.grb.utils import get_affected_ids_by_grb_change
 from brdr.be.grb.utils import get_last_version_date
 from brdr.be.grb.utils import is_grb_changed
+from brdr.constants import EVALUATION_FIELD_NAME
+from brdr.enums import Evaluation
 from brdr.loader import DictLoader
 from tests.testdata.responses import grb_responses
 
@@ -302,11 +304,10 @@ class TestGrb:
             name_thematic_id,
             base_metadata_field="brdr_base_formula",
         )
-        #TODO
-        assert featurecollections is None
+
         # # Print results
-        # for feature in featurecollections["result"]["features"]:
-        #     assert isinstance(feature["properties"][EVALUATION_FIELD_NAME], Evaluation)
+        for feature in featurecollections["result"]["features"]:
+            assert isinstance(feature["properties"][EVALUATION_FIELD_NAME], Evaluation)
 
     def test_wegbaan_reference(self, callback_grb_response):
         aligner = Aligner()

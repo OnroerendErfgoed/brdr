@@ -21,7 +21,6 @@ from brdr.loader import GeoJsonLoader
 from brdr.logger import Logger
 
 
-# TODO karel improve logic. Do first a quickscan on x meter to detect the not_changed ones, and afterwards a full calculation
 def update_featurecollection_to_actual_grb(
     featurecollection: Dict[str, Any],
     id_theme_fieldname: Optional[str] = None,
@@ -61,11 +60,12 @@ def update_featurecollection_to_actual_grb(
     max_predictions : int, default -1
         Maximum number of alignment predictions to return. -1 returns all.
     full_reference_strategy : FullReferenceStrategy, default NO_FULL_REFERENCE
-        Determines how strictly the result must follow the reference geometry.
-    multi_to_best_prediction : bool, default True
-        If True, merges multiple results into the single most likely prediction.
+        Determines the prediction score when evaluating predictions, so predictions that are based on full-reference-geometries can be preferred.
+    multi_to_best_prediction : bool, default True. Only useful when max_predictions=1
+        If True, the prediction with the best prediction score is returned when multiple predictions are found
+        If False, the original geometry is returned when multiple predictions are found
     feedback : Any, optional
-        Feedback object (e.g., QgsFeedback) for progress reporting and logging.
+        Feedback object (e.g., QgsFeedback) for progress reporting and logging (in QGIS).
     crs : str, default DEFAULT_CRS
         The Coordinate Reference System for processing.
     attributes : bool, default True
@@ -172,7 +172,7 @@ def update_featurecollection_to_actual_grb(
             crs=aligner.crs,
         )
         logger.feedback_info(
-            "Number of possible affected OE-thematic during timespan: "
+            "Number of possible affected thematic geometries during timespan: "
             + str(len(affected))
         )
         if len(affected) == 0:
@@ -182,18 +182,20 @@ def update_featurecollection_to_actual_grb(
     else:
         affected = list(aligner.thematic_data.features.keys())
 
+    aligner_result = aligner.process(thematic_ids=affected,relevant_distances=[max_distance_for_actualisation])
+    process_results = aligner_result.get_results(aligner=aligner)
+    affected_and_changeable = []
+    for k,v in process_results.items():
+        if v[max_distance_for_actualisation]["result_diff"].is_empty:
+            affected_and_changeable.append(k)
+
+
     # EXECUTE evaluation
-    aligner_result = aligner.evaluate(
-        thematic_ids=affected,
-        metadata_field=BASE_OBSERVATION_FIELD_NAME,
-        max_predictions=max_predictions,
-        relevant_distances=relevant_distances,
-        full_reference_strategy=full_reference_strategy,
-        multi_to_best_prediction=multi_to_best_prediction,
-    )
-    #TODO improve
-    if len (aligner_result.results) == 0:
-        return None
+    aligner_result = aligner.evaluate(relevant_distances=relevant_distances, thematic_ids=affected_and_changeable,
+                                      metadata_field=BASE_OBSERVATION_FIELD_NAME,
+                                      full_reference_strategy=full_reference_strategy, max_predictions=max_predictions,
+                                      multi_to_best_prediction=multi_to_best_prediction)
+
 
     return aligner_result.get_results_as_geojson(
         aligner=aligner,

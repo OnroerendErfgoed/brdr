@@ -97,9 +97,10 @@ def get_affected_ids_by_grb_change(
             * True: Every thematic geometry is checked individually (loop)
             * False: All GRB-parcels intersecting the thematic dictionary are checked
                 at once
+            (Default: False)
         border_distance: Distance that can be used to only check the 'border' of  the
             geometry, so 'big' geometries with internal parcel-updates are not affected
-            (Default:0, indicating that the full geometry is checked fot GRB-changes)
+            (Default:0, indicating that the full geometry is checked for GRB-changes)
     Returns:
         list of affected IDs
 
@@ -131,7 +132,6 @@ def get_affected_ids_by_grb_change(
         dict_changed_grb, dict_changed_grb_properties = geojson_to_dicts(
             coll_changed_grb, name_reference_id
         )
-        # if border_distance>0:
         geom_to_check = buffer_pos(
             create_donut(geometry_thematic_union, border_distance),
             GRB_MAX_REFERENCE_BUFFER,

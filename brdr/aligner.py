@@ -71,6 +71,7 @@ from brdr.typings import InputId, Observation, ObservationReference
 from brdr.typings import ProcessResult
 from brdr.utils import (
     coverage_ratio,
+    deep_merge,
 )
 from brdr.utils import determine_stability
 from brdr.utils import get_geojsons_from_process_results
@@ -237,7 +238,7 @@ class AlignerResult:
                 tid: {
                     rd: res
                     for rd, res in rd_dict.items()
-                    if res and EVALUATION_FIELD_NAME in res["properties"] and res["properties"][EVALUATION_FIELD_NAME]!=Evaluation.NOT_EVALUATED
+                    if res and EVALUATION_FIELD_NAME in res["properties"]# and res["properties"][EVALUATION_FIELD_NAME]!=Evaluation.NOT_EVALUATED
                 }
                 for tid, rd_dict in self.results.items()
             }
@@ -1145,11 +1146,7 @@ class Aligner:
         --------
         >>> aligner = Aligner()
         >>> # Evaluate with a limit of 1 best prediction per feature
-        >>> results = aligner.evaluate(
-        ...     thematic_ids=["id_01"],
-        ...     max_predictions=1,
-        ...     full_reference_strategy=FullReferenceStrategy.ONLY_FULL_REFERENCE
-        ... )
+        >>> results = aligner.evaluate(thematic_ids=["id_01"],full_reference_strategy=FullReferenceStrategy.ONLY_FULL_REFERENCE,max_predictions=1)
         """
 
         if thematic_ids is None:
@@ -1165,67 +1162,67 @@ class Aligner:
                 for k in np.arange(0, 310, 10, dtype=int) / 100
             ]
 
-        aligner_result = self.predict(
-            thematic_ids=thematic_ids,
-            relevant_distances=relevant_distances,
-            diff_metric=self.diff_metric,
+        if 0 not in relevant_distances:
+            raise ValueError(
+                "Evaluation cannot be executed when 0 is not available in the array of relevant distances"
+            )
+        # Calculate the ZERO-situation for all
+        aligner_result_zero = self.process(
+            relevant_distances=[0],
         )
+        process_results_zero = aligner_result_zero.get_results(aligner=self)
+
+        aligner_result = self.predict(
+                thematic_ids=thematic_ids,
+                relevant_distances=relevant_distances,
+                diff_metric=self.diff_metric,
+            )
         process_results = aligner_result.get_results(aligner=self)
         process_results_predictions = aligner_result.get_results(
             aligner=self, result_type=AlignerResultType.PREDICTIONS
         )
+        process_results = deep_merge(process_results_zero,process_results,)
         process_results_temp_predictions= deepcopy(process_results_predictions)
         process_results_evaluated = deepcopy(process_results)
 
         for theme_id,feat in self.thematic_data.features.items():
             original_geometry = feat.geometry
-            if theme_id not in process_results_temp_predictions:
-                continue
-            # SET all features initially to 'Not evaluated'
-            prediction_score_available=True
-            for dist in process_results_temp_predictions[theme_id]:
-                process_results_evaluated[theme_id][dist]["properties"][EVALUATION_FIELD_NAME] = Evaluation.NOT_EVALUATED
-                if not PREDICTION_SCORE in process_results_evaluated[theme_id][dist]["properties"]:
-                    prediction_score_available = False
-            # thematic objects that do not have a prediction_score from predict() are not evaluated and returned as they are
-            if not prediction_score_available:
-                continue
-            if 0 not in relevant_distances:
-                raise ValueError("Evaluation cannot be executed when 0 is not available in the array of relevant distances")
+            if theme_id not in thematic_ids:
+                # PART 1)NOT EVALUATED
+                process_results_evaluated = self._update_evaluation_with_original(metadata_field, original_geometry, process_results_evaluated, theme_id,Evaluation.NOT_EVALUATED)
 
             # Features are split up in 2 groups: TO_EVALUATE and NOT_TO_EVALUATE (original returned)
             # The evaluated features will be split up:
             #   *No prediction available
             #   *Predictions available
 
-            # PART 1: TO_EVALUATE
-            if theme_id in thematic_ids:
+            # PART 2: TO_EVALUATE
+            elif theme_id in thematic_ids:
+
                 if theme_id not in process_results_predictions.keys() or process_results_predictions[theme_id]=={}:
                     # No predictions available
-                    relevant_distance = round(0, RELEVANT_DISTANCE_DECIMALS)
-                    if relevant_distance in process_results_evaluated[theme_id]:
-                        props = deepcopy(process_results_evaluated[theme_id][relevant_distance][
-                            "properties"
-                        ])
-                    else:
-                        props={}
-                    props_evaluation = self._evaluate(
-                        id_theme=theme_id,
-                        geom_predicted=original_geometry,
-                        base_metadata_field=metadata_field,
+                    process_results_evaluated = self._update_evaluation_with_original(
+                        metadata_field,
+                        original_geometry,
+                        process_results_evaluated,
+                        theme_id,
+                        Evaluation.TO_CHECK_NO_PREDICTION,
                     )
-                    props.update(props_evaluation)
-                    props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
-                    props[PREDICTION_COUNT] = 0
-                    props[PREDICTION_SCORE] = -1
-                    if REMARK_FIELD_NAME in props:
-                        remarks = props[REMARK_FIELD_NAME]
-                    else:
-                        remarks = []
-                    remarks.append(ProcessRemark.NO_PREDICTION_ORIGINAL_RETURNED)
-                    props[REMARK_FIELD_NAME] = remarks
-
-                    process_results_evaluated[theme_id][relevant_distance]["properties"].update(props)
+                    continue
+                # Check if prediction_scores are available to do the evaluatrion
+                prediction_score_available=True
+                for dist in process_results_temp_predictions[theme_id]:
+                    if not PREDICTION_SCORE in process_results_evaluated[theme_id][dist]["properties"]:
+                        prediction_score_available = False
+                # thematic objects that do not have a prediction_score from predict() are not evaluated and returned as they are
+                if not prediction_score_available:
+                    process_results_evaluated = self._update_evaluation_with_original(
+                        metadata_field,
+                        original_geometry,
+                        process_results_evaluated,
+                        theme_id,
+                        Evaluation.NOT_EVALUATED,
+                    )
                     continue
 
                 # When there are predictions available
@@ -1367,55 +1364,40 @@ class Aligner:
                         process_results_evaluated[theme_id][distance] = prediction
                 else:
                     # #when no evaluated predictions, the original is returned
-                    relevant_distance = round(0, RELEVANT_DISTANCE_DECIMALS)
-                    if relevant_distance in process_results_evaluated[theme_id]:
-                        props = deepcopy(process_results_evaluated[theme_id][relevant_distance][
-                            "properties"
-                        ])
-                    else:
-                        props={}
-                    props_evaluation = self._evaluate(
-                        id_theme=theme_id,
-                        geom_predicted=original_geometry,
-                        base_metadata_field=metadata_field,
+                    process_results_evaluated = self._update_evaluation_with_original(
+                        metadata_field,
+                        original_geometry,
+                        process_results_evaluated,
+                        theme_id,
+                        Evaluation.TO_CHECK_NO_PREDICTION,
                     )
-                    props.update(props_evaluation)
-                    props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
-                    props[PREDICTION_SCORE] = -1
-                    props[PREDICTION_COUNT] = 0
-                    if REMARK_FIELD_NAME in props:
-                        remarks = props[REMARK_FIELD_NAME]
-                    else:
-                        remarks = []
-                    remarks.append(ProcessRemark.NO_PREDICTION_ORIGINAL_RETURNED)
-                    props[REMARK_FIELD_NAME] = remarks
-                    process_results_evaluated[theme_id][relevant_distance]["properties"].update(props)
-            else:
-                # PART 2: NOT EVALUATED
-                relevant_distance = round(0, RELEVANT_DISTANCE_DECIMALS)
-                if relevant_distance in process_results_evaluated[theme_id]:
-                    props = deepcopy(process_results_evaluated[theme_id][relevant_distance][
-                        "properties"
-                    ])
-                else:
-                    props = {}
-                process_results_evaluated[theme_id] = {}
-                props_evaluation = self._evaluate(
-                    id_theme=theme_id,
-                    geom_predicted=original_geometry,
-                    base_metadata_field=metadata_field,
-                )
-                props.update(props_evaluation)
-                props[EVALUATION_FIELD_NAME] = Evaluation.NOT_EVALUATED
-                props[PREDICTION_SCORE] = -1
-                if REMARK_FIELD_NAME in props:
-                    remarks = props[REMARK_FIELD_NAME]
-                else:
-                    remarks = []
-                remarks.append(ProcessRemark.NOT_EVALUATED_ORIGINAL_RETURNED)
-                props[REMARK_FIELD_NAME] = remarks
-                process_results_evaluated[theme_id][relevant_distance]["properties"].update(props)
+
         return AlignerResult(process_results_evaluated)
+
+    def _update_evaluation_with_original(self, metadata_field: str, original_geometry: BaseGeometry, process_results_evaluated,
+                                         theme_id: str | int, evaluation:Evaluation) -> Any:
+        relevant_distance = round(0, RELEVANT_DISTANCE_DECIMALS)
+        try:
+            props = deepcopy(process_results_evaluated[theme_id][relevant_distance][
+                                 "properties"])
+        except:
+            props = {}
+        props_evaluation = self._evaluate(
+            id_theme=theme_id,
+            geom_predicted=original_geometry,
+            base_metadata_field=metadata_field,
+        )
+        props.update(props_evaluation)
+        props[EVALUATION_FIELD_NAME] = evaluation
+        props[PREDICTION_SCORE] = -1
+        if REMARK_FIELD_NAME in props:
+            remarks = props[REMARK_FIELD_NAME]
+        else:
+            remarks = []
+        remarks.append(ProcessRemark.NOT_EVALUATED_ORIGINAL_RETURNED)
+        props[REMARK_FIELD_NAME] = remarks
+        process_results_evaluated[theme_id][relevant_distance]["properties"].update(props)
+        return process_results_evaluated
 
     def compare_to_reference(
         self, geometry: BaseGeometry, with_geom: bool = False
