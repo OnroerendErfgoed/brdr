@@ -67,7 +67,7 @@ from brdr.loader import Loader
 from brdr.logger import Logger
 from brdr.processor import AlignerGeometryProcessor
 from brdr.processor import BaseProcessor
-from brdr.typings import InputId, Observation, ObservationReference
+from brdr.typings import InputId
 from brdr.typings import ProcessResult
 from brdr.utils import (
     coverage_ratio,
@@ -352,26 +352,6 @@ class AlignerResult:
             file_name = f"{result_type.value}_{name}.geojson"
             write_geojson(os.path.join(path, file_name), fc)
 
-
-def _get_brdr_observation_from_metadata_observations(metadata: List[Dict]) -> Dict:
-    # TODO: Karel take the observations from the metadata
-
-    observations = metadata['observations']
-    brdr_observation = Observation()
-    brdr_observation["alignment_date"] = None
-    brdr_observation["reference_source"] = None
-    brdr_observation["brdr_version"] = None
-    brdr_observation["full"] = observations[1]['result']['value']==100
-    brdr_observation["area"] = observations[0]['result']['value']
-    brdr_observation["reference_features"] = {}
-    brdr_observation["reference_od"] = {}
-
-    if not is_brdr_observation(brdr_observation):
-        raise ValueError("This is not a brdr observation")
-
-    return brdr_observation
-
-
 def _get_metadata_observations_from_process_result(processResult: ProcessResult) -> List[Dict]:
     observation = processResult["observation"]
     actuation_metadata = processResult["metadata"]["actuation"]
@@ -469,6 +449,113 @@ def _get_metadata_observations_from_process_result(processResult: ProcessResult)
             }
         )
     return observations
+
+
+def _reverse_metadata_observations_to_brdr_observation(metadata: List[Dict]) -> Dict:
+    """
+    Reconstruct a BRDR observation dictionary from a list of Linked Data observations.
+
+    This function performs a reverse transformation by aggregating individual
+    SOSA-based observations back into a nested BRDR-structured dictionary.
+    It maps RDF-style 'observed_property' URIs back to their original JSON keys
+    and reconstructs the reference features and actuation metadata.
+
+    Parameters
+    ----------
+    metadata : List[Dict]
+        A list containing observation dictionaries. Expected to have a key
+        "observations" which holds a list of dictionaries following the
+        SOSA (Sensor, Observation, Sample, and Actuator) ontology.
+
+    Returns
+    -------
+    Dict
+        A dictionary representing the reconstructed BRDR observation,
+        including 'reference_features' and global observation metrics.
+
+    Raises
+    ------
+    ValueError
+        If the reconstructed dictionary does not pass the `is_brdr_observation`
+        validation check.
+
+    Notes
+    -----
+    The function handles the de-duplication of reference geometries by tracking
+    unique IDs in the 'used' field of the observations. It distinguishes
+    between root-level properties and reference-specific properties by
+    checking for the presence of a 'ref_id' that differs from the primary
+    result interest ID.
+    """
+    if not metadata or not "observations" in metadata:
+        return {}
+
+    observations = metadata["observations"]
+
+    # Initialize the base structure
+    res = {
+        "observation": {"reference_features": {}},
+        "metadata": {
+            "actuation": {
+                "result": observations[0].get("has_feature_of_interest"),
+                "reference_geometries": [],
+            }
+        },
+    }
+
+    obs_root = res["observation"]
+    actuation = res["metadata"]["actuation"]
+    seen_reference_ids = set()
+
+    for obs in observations:
+        prop = obs.get("observed_property")
+        result_val = obs.get("result", {}).get("value")
+        used = obs.get("used", {})
+        ref_id = used.get("id")
+
+        # 1. Restore global values (area, area_od, full at root level)
+        if prop == "brdr:area":
+            obs_root["area"] = result_val
+        elif prop == "brdr:area_od":
+            obs_root["area_od"] = {"area": result_val}
+        elif prop == "brdr:area_overlap_full" and not ref_id:
+            # If no reference ID, 'full' belongs to the root
+            obs_root["full"] = result_val
+
+        # 2. Restore reference-specific values (reference_features)
+        elif ref_id:
+            # Add reference to metadata if not seen before
+            if ref_id not in seen_reference_ids and ref_id != actuation["result"]:
+                actuation["reference_geometries"].append(used)
+                seen_reference_ids.add(ref_id)
+
+            # Initialize the dict for this specific reference in observations
+            if ref_id != actuation["result"]:
+                if ref_id not in obs_root["reference_features"]:
+                    obs_root["reference_features"][ref_id] = {}
+
+                target_ref = obs_root["reference_features"][ref_id]
+
+                if prop == "brdr:area_overlap":
+                    target_ref["area"] = result_val
+                elif prop == "brdr:area_overlap_percentage":
+                    target_ref["percentage"] = result_val
+                elif prop == "brdr:area_overlap_full":
+                    target_ref["full"] = result_val
+
+    # Finalize the result structure
+    result = res["observation"]
+    result["alignment_date"] = None
+    result["reference_source"] = None
+    result["brdr_version"] = None
+    result["reference_od"] = None
+
+    # Validation check
+    if not is_brdr_observation(result):
+        raise ValueError("The reconstructed object is not a valid brdr observation")
+
+    return result
+
 
 def aligner_metadata_decorator(f):
     def inner_func(aligner, *args, **kwargs):
@@ -1666,7 +1753,7 @@ class Aligner:
             base_metadata = json.loads(
                 self.thematic_data.features.get(id_theme).properties[base_metadata_field]
             )
-            base_brdr_observation = _get_brdr_observation_from_metadata_observations(base_metadata)
+            base_brdr_observation = _reverse_metadata_observations_to_brdr_observation(base_metadata)
         except:
             base_brdr_observation = None
 
