@@ -41,7 +41,7 @@ def test_metadata():
     #         "implementedBy": "AlignerGeometryProcessor",
     #         "ssn:hasInput": [
     #             {
-    #                 "id": "brdr:relevante_afstand",
+    #                 "id": "brdr:relevant_distance",
     #                 "input_value": {"type": "xsd:integer", "value": 1},
     #                 "type": "ssn:Input",
     #             }

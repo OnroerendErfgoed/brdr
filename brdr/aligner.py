@@ -609,7 +609,7 @@ def aligner_metadata_decorator(f):
                         "type": "sosa:Procedure",
                         "ssn:hasInput": [
                             {
-                                "id": "brdr:relevante_afstand",
+                                "id": "brdr:relevant_distance",
                                 "type": "ssn:Input",
                                 "input_value": {"type": "xsd:integer", "value": rd},
                             },
