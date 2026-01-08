@@ -1,6 +1,5 @@
-Animated GIF
 ---
-title: "Examples - Animation"
+title: "Animated GIF"
 description: "Example to create a animated GIF showing the principle of **brdr**"
 author: "Karel Dieussaert"
 date: "2026-01-07"
@@ -10,6 +9,7 @@ format:
     code-fold: true
 jupyter: python3
 ---
+# Animated GIF
 
 Example to create a animated GIF showing the principle of **brdr**. For every augmented relevant distance (~distance that adaptions are allowed), the resulting geometry is shown. In the graphic you can 'see' the moments where augmenting relevant distance does not give any change, so stable geometries are found.
 

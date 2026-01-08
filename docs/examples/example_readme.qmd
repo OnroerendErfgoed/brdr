@@ -1,4 +1,3 @@
-GET STARTED
 ---
 title: "Get Started"
 description: "Simple example to get started"
@@ -10,7 +9,7 @@ format:
     code-fold: true
 jupyter: python3
 ---
-
+# Get Started
 This example shows a basic example to 'Get Started'.
 
 ```{python}

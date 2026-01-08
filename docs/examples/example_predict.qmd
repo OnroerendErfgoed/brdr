@@ -1,4 +1,3 @@
-Prediction
 ---
 title: "Prediction"
 description: "Example of a simple prediction by using **brdr**"
@@ -10,7 +9,7 @@ format:
     code-fold: false
 jupyter: python3
 ---
-
+# Prediction
 This example shows a simple Prediction by using **brdr**
 
 ```{python}

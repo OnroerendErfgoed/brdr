@@ -1,7 +1,6 @@
-Example - DictLoader
 ---
-title: "Examples - Loader"
-description: "Loader example"
+title: "DictLoader"
+description: "example how a DictLoader is used to load a Dictionary of thematic data"
 author: "Karel Dieussaert"
 date: "2026-01-07"
 categories: [Loader]
@@ -10,7 +9,7 @@ format:
     code-fold: false
 jupyter: python3
 ---
-
+# DictLoader
 This example shows a basic Loader example of the Aligner
 
 ```{python}

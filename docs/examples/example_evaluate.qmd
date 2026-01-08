@@ -1,4 +1,3 @@
-Evaluation
 ---
 title: "Evaluation"
 description: "Example of a simple Evaluation by using **brdr**"
@@ -10,7 +9,7 @@ format:
     code-fold: false
 jupyter: python3
 ---
-
+# Evaluation
 This example shows a simple Evaluation by using **brdr**
 
 ```{python}
