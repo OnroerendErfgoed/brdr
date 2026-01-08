@@ -4,7 +4,7 @@ from brdr.aligner import Aligner
 from brdr.be.grb.enums import GRBType
 from brdr.be.grb.loader import GRBActualLoader
 from brdr.enums import AlignerResultType
-from brdr.loader import GeoJsonFileLoader
+from brdr.loader import GeoJsonFileLoader, GeoJsonLoader
 from examples import show_map, plot_dict_diffs
 
 # Press the green button in the gutter to run the script.
@@ -14,10 +14,41 @@ if __name__ == "__main__":
     geometries are interesting to look at (based on detection of breakpoints and
     relevant distances of 'no-change')
     """
+
+    input_geojson = {
+        "type": "FeatureCollection",
+        "name": "test_wanted_changes",
+        "crs": {"type": "name", "properties": {"name": "urn:ogc:def:crs:EPSG::31370"}},
+        "features": [
+            {
+                "type": "Feature",
+                "properties": {"id": 1, "theme_id": "1"},
+                "geometry": {
+                    "type": "MultiPolygon",
+                    "coordinates": [
+                        [
+                            [
+                                [161658.784979313611984, 196026.640970099717379],
+                                [161653.250003308057785, 196011.45697008818388],
+                                [161615.133042572706472, 196023.607370208803331],
+                                [161616.975955285131931, 196029.205066103488207],
+                                [161619.898451283574104, 196037.769162107259035],
+                                [161620.363155283033848, 196039.130890108644962],
+                                [161620.517940590012586, 196039.567879189708037],
+                                [161633.552001053554704, 196038.117011958122021],
+                                [161631.926488338969648, 196035.414327338279691],
+                                [161658.784979313611984, 196026.640970099717379],
+                            ]
+                        ]
+                    ],
+                },
+            }
+        ],
+    }
     # Initiate an Aligner
     aligner = Aligner()
     # Load thematic data & reference data
-    loader = GeoJsonFileLoader("input/predictor_one.geojson", "theme_id")
+    loader = GeoJsonLoader(_input=input_geojson, id_property="theme_id")
 
     aligner.load_thematic_data(loader)
     # Load reference data

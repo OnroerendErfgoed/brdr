@@ -1,0 +1,19 @@
+Example Loader
+---
+title: "Examples - Loader"
+description: "Loader example"
+author: "Karel Dieussaert"
+date: "2026-01-07"
+categories: [Python, Data, Loader]
+format:
+  html:
+    code-fold: false
+jupyter: python3
+---
+
+This example shows a basic Loader example of the Aligner
+
+```{python}
+#| fig-cap: "basic example"
+{{< include ../../examples/example_dictloader.py >}}
+```

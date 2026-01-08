@@ -1,0 +1,22 @@
+Example Loader
+---
+title: "Examples - Predict"
+description: "Predict example"
+author: "Karel Dieussaert"
+date: "2026-01-07"
+categories: [Python, Data, Loader, Prediction]
+format:
+  html:
+    code-fold: false
+jupyter: python3
+---
+
+This example shows a basic Prediction example of the Aligner
+
+```{python}
+#| label: fig-plots
+#| fig-cap:
+#|   - "Graphic"
+#|   - "Visual predictions"
+{{< include ../../examples/example_predictor.py >}}
+```
