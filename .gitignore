@@ -179,3 +179,5 @@ dev/brdr_for_qgis
 /experimental/
 /cache
 docs/_quarto_internal_scss_error.scss
+/examples/animation.gif
+docs/examples/animation.gif
