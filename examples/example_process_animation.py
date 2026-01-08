@@ -76,7 +76,8 @@ if __name__ == "__main__":
     # SHOW results: map and plotted changes
     now = datetime.now()  # current date and time
     date_time = now.strftime("%m_%d_%Y_%H_%M_%S")
-    filename = "animation_" + str(date_time) + ".gif"
+    #filename = "animation_" + str(date_time) + ".gif"
+    filename = "animation.gif"
     animated_map(
         aligner_result.results,
         thematic_geometries,

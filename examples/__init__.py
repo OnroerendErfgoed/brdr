@@ -195,7 +195,7 @@ def animated_map(
     # Updatefunctie voor animatie
     def update(frame, extra_data):
         # Bereken nieuwe grootte
-        print(str(frame))
+        #print(str(frame))
         ax1 = fig.axes[0]
         ax1.clear()
         _make_map(
@@ -229,7 +229,7 @@ def animated_map(
     # Opslaan als animated GIF
     ani.save(filename, writer=PillowWriter(fps=fps))
 
-    print("✅ GIF succesvol opgeslagen")
+    print("GIF created successfully")
 
 
 def print_brdr_observation(dict_results, aligner):
