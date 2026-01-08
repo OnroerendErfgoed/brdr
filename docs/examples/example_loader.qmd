@@ -1,10 +1,10 @@
-Example Loader
+Example - DictLoader
 ---
 title: "Examples - Loader"
 description: "Loader example"
 author: "Karel Dieussaert"
 date: "2026-01-07"
-categories: [Python, Data, Loader]
+categories: [Loader]
 format:
   html:
     code-fold: false

@@ -1,17 +1,17 @@
-Example README
+GET STARTED
 ---
-title: "Examples - Get Started"
-description: "Readme example"
+title: "Get Started"
+description: "Simple example to get started"
 author: "Karel Dieussaert"
 date: "2026-01-07"
-categories: [Python, Data]
+categories: [Process]
 format:
   html:
     code-fold: true
 jupyter: python3
 ---
 
-This example shows a basic README example of the Aligner
+This example shows a basic example to 'Get Started'.
 
 ```{python}
 #| fig-cap: "basic example"

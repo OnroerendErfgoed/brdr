@@ -1,17 +1,17 @@
-Example Loader
+Prediction
 ---
-title: "Examples - Predict"
-description: "Predict example"
+title: "Prediction"
+description: "Example of a simple prediction by using **brdr**"
 author: "Karel Dieussaert"
 date: "2026-01-07"
-categories: [Python, Data, Loader, Prediction]
+categories: [Prediction]
 format:
   html:
     code-fold: false
 jupyter: python3
 ---
 
-This example shows a basic Prediction example of the Aligner
+This example shows a simple Prediction by using **brdr**
 
 ```{python}
 #| label: fig-plots

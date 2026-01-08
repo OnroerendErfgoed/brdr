@@ -25,20 +25,23 @@ task in geographic data management to enhance data quality.
 * In the context of geographic data management, it is important to have accurate and consistent boundaries for a variety
   of applications such as calculating areas, analyzing spatial relationships, and visualizing and querying geographic
   information.
-* When creating geographic data, it is often more efficient to derive boundaries from existing reference data rather
-  than collecting new data in the field.
 * ``brdr`` can be used to align boundaries from new data to reference data, ensuring that the boundaries are accurate and
   consistent.
 
+
 ### Example
 
-The figure below shows:
+The animated gif below shows the main principle of 'brdr':
+* The visualizatuion on the left:
+  * the original thematic geometry (blue),
+  * A reference layer (yellow-black).
+  * The resulting geometry after alignment with ``brdr`` (green)**
+* The graphic on the right:
+  * X-as: Relevant distance (~distance that change is allowed), that increases
+  * Y-as: Change (%) of the resulting geometry
 
-* the original thematic geometry (blue),
-* A reference layer (yellow-black).
-* The resulting geometry after alignment with ``brdr`` (green)
-
-![](figures/example.png)
+**brdr** will 'detect' stable situations that result in one or more predictions.
+![](figures/animation.gif)
 
 ### Possible application fields
 
@@ -54,12 +57,6 @@ The figure below shows:
   alignment of geodata
 * ...
 
-### QGIS-script
-
-An implementation of ``brdr`` for QGIS can be found at [GitHub-brdrQ](https://github.com/OnroerendErfgoed/brdrQ/).
-This QGIS- script provides a User Interface to align thematic data to a reference layer, showing the results in the QGIS
-Table of Contents.
-
 ## Installation
 
 You can install the latest release of ``brdr`` from
@@ -69,42 +66,58 @@ You can install the latest release of ``brdr`` from
 ``` python
 pip install brdr
 ```
+## API reference
 
-## Basic example
+See  [API Reference](reference/index.qmd)
 
+## Code examples
 
-The resulting figure shows:
+See  [Examples](examples.qmd)
 
-* the reference polygon (yellow-black)
-* the original geometry (blue)
-* the resulting geometry (green line)
-* the added zone (green squares)
-* the removed zone (red squares)
-  <img src="figures/basic_example.png" width="100%" />
+## Scheme
 
-More examples can be found in [Examples](examples.qmd)
+```{mermaid}
+classDiagram
+    class Aligner {
+        +CRS crs
+        +Processor processor
+        +load_thematic_data(data)
+        +load_reference_data(data)
+        +process()
+        +predict()
+        +evaluate()
+    }
+
+    class Processor {
+        +process(geometry)
+    }
+
+    class AlignerResult {
+        +get_results()
+    }
+
+    Aligner "1" --* "1" Processor : uses
+    Aligner "1" --> "*" AlignerResult : generates
+```
 
 ## Workflow
 
-(see also Basic example)
-
-To use ``brdr``, follow these steps:
+To use ``brdr``, These are the minimal steps to execute:
 
 * Create a Aligner-class
-* Load thematic data
-* Load reference data
+  * Load thematic data
+  * Load reference data
 * Process (or predict or evaluate) the thematic data
-* Process results are returned:
+* ProcessResults are returned:
     * Resulting geometry
     * Differences: parts that are 'different' from the original geometry (positive or negative)
     * Positive differences: parts that are added to the original geometry
     * Negative differences: parts that are removed form the original geometry
-    * Relevant intersections: relevant intersecting parts of the reference geometries
-    * Relevant differences: relevant differences of the reference geometries
 
-## The ``brdr``-algorithm
+## The ``brdr``- processing algorithm
+When using **brdr** to make predictions, every original geometry is processed using the **brdr**-algorithm:
 
-The algorithm for alignment is based on 2 main principles:
+This algorithm is based on 2 main principles:
 
 * Principle of intentionality: Thematic boundaries can consciously or unconsciously deviate from the reference borders.
   The algorithm should keep notice of that.
@@ -135,9 +148,15 @@ The algorithm can be split into 3 main phases:
     * Clean-up slivers
     * Make the resulting geometry valid
 
-RESULT:
+* **RESULT**:
+  * A new resulting output geometry, aligned to the reference-polygons
 
-A new resulting output geometry, aligned to the reference-polygons
+A more in-depth description of the algorithm can be found in the following article (in dutch):
+
+- Dieussaert, K., Vanvinckenroye, M., Vermeyen, M., & Van Daele, K. (2024). Grenzen verleggen.
+  Automatische correcties van geografische afbakeningen op verschuivende
+  onderlagen *Onderzoeksrapporten Agentschap Onroerend Erfgoed*,
+  <https://doi.org/10.55465/SXCW6218>.
 
 ## Development
 
@@ -174,6 +193,12 @@ docker run --rm -p 80:80 --name grb_webservice grb_webservice
 example can be found at: http://localhost:80/docs#/default/actualiser_actualiser_post
 ```
 
+## brdr for QGIS: brdrQ
+
+An implementation of ``brdr`` for QGIS can be found at [GitHub-brdrQ](https://github.com/OnroerendErfgoed/brdrQ/).
+This QGIS- script provides a User Interface to align thematic data to a reference layer, showing the results in the QGIS
+Table of Contents.
+
 ## Motivation & citation
 
 A more in-depth description of the algorithm can be found in the following article (in dutch):
@@ -181,7 +206,7 @@ A more in-depth description of the algorithm can be found in the following artic
 - Dieussaert, K., Vanvinckenroye, M., Vermeyen, M., & Van Daele, K. (2024). Grenzen verleggen.
   Automatische correcties van geografische afbakeningen op verschuivende
   onderlagen *Onderzoeksrapporten Agentschap Onroerend Erfgoed*,
-    332. <https://doi.org/10.55465/SXCW6218>.
+  <https://doi.org/10.55465/SXCW6218>.
 
 ## Comments and contributions
 
@@ -210,17 +235,3 @@ and [Flanders Heritage Agency](https://www.onroerenderfgoed.be/flanders-heritage
 
 ![https://athumi.be/en/](figures/athumi_logo-250x84.png)
 ![https://www.onroerenderfgoed.be/flanders-heritage-agency](figures/Vlaanderen_is_erfgoed-250x97.png)
-
-```{mermaid}
-classDiagram
-    class Aligner {
-        +load_thematic_data()
-        +load_reference_data()
-        +process()
-    }
-    class AlignerResult {
-        +Dict steden
-        +render()
-    }
-    Aligner "1" --> "*" AlignerResult : generate
-```
