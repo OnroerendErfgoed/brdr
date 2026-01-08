@@ -1,48 +1,15 @@
 ---
-title: "Examples & Snippets"
-subtitle: "Practical scenarios for using the brdr engine"
-execute:
-  freeze: auto
-  echo: true
-  warning: false
-format:
-  html:
-    code-fold: show
-    code-summary: "Show code"
-    toc: true
+title: "Examples"
+listing:
+  contents: examples        # Map with examples
+  type: grid                # View: 'grid', 'default' or 'table'
+  sort: "date desc"         # Sort by date (newest first)
+  categories: true          # Show categories in sidebar
+  sort-ui: true             # User can sort
+  filter-ui: true           # Search alloweed
+  fields: [title, description, author, date, categories] # Fields from metadata
 ---
 
-# Getting Started with brdr
-
-This page provides practical examples of how to combine various loaders and processors within the `brdr` ecosystem.
-
-## 1. Basic Alignment (Dieussaert)
-
-In this scenario, we load a local GeoJSON file and align it with the most recent GRB (Flanders base map) data.
-
-::: {.panel-tabset}
-
-### Python Code
-```python
-from brdr.aligner import Aligner
-from brdr.loader import GeoJsonFileLoader
-from brdr.be.grb.enums import GRBType
-from brdr.be.grb.loader import GRBActualLoader
-
-# 1. Initialize the Aligner
-aligner = Aligner(crs="EPSG:31370")
-
-# 2. Load thematic data (the layer you want to change)
-aligner.load_thematic_data(GeoJsonFileLoader("parcels.geojson"))
-
-# 3. Load reference data (the master layer, e.g., GRB)
-aligner.load_reference_data(GRBActualLoader(GRBType.ADP, aligner))
-
-# 4. Execute the evaluation
-# We test different search distances (Relevant Distances)
-result = aligner.evaluate(relevant_distances=[0.5, 1.0, 2.0])
-
-# Access the results as a GeoJSON-like dictionary
-print(result.get_results_as_geojson().keys())
+Here you can find several examples how 'brdr' can be used:
 
 
