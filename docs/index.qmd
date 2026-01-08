@@ -193,10 +193,10 @@ docker run --rm -p 80:80 --name grb_webservice grb_webservice
 example can be found at: http://localhost:80/docs#/default/actualiser_actualiser_post
 ```
 
-## brdr for QGIS: brdrQ
+## brdr for QGIS: brdrQ-plugin
 
 An implementation of ``brdr`` for QGIS can be found at [GitHub-brdrQ](https://github.com/OnroerendErfgoed/brdrQ/).
-This QGIS- script provides a User Interface to align thematic data to a reference layer, showing the results in the QGIS
+This QGIS-plugin provides a User Interface to align thematic data to a reference layer, showing the results in the QGIS
 Table of Contents.
 
 ## Motivation & citation

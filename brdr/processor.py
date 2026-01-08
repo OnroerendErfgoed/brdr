@@ -763,6 +763,26 @@ class DieussaertGeometryProcessor(BaseProcessor):
         -------
         ProcessResult
             The merged or single result of the alignment process.
+
+        Notes
+        -----
+        The algorithm optimizes performance by splitting the input into an
+        'inner' and 'outer' zone. Only the 'outer' zone (near the boundaries)
+        is evaluated against reference data.
+
+
+
+        ```{mermaid}
+        graph TD
+            Start[Input Geometry] --> Split[Split: Inner vs Outer]
+            Split --> Query[Spatial Query Reference Data]
+            Query --> OD[Process Open Domain]
+            Query --> Ref[Process Intersecting Refs]
+            OD --> Combine[Combine Results]
+            Ref --> Combine
+            Combine --> Post[Post-processing]
+            Post --> End[ProcessResult]
+        ```
         """
         if (
             not self.config.multi_as_single_modus
@@ -861,26 +881,6 @@ class DieussaertGeometryProcessor(BaseProcessor):
     ) -> ProcessResult:
         """
         Internal core logic for the Dieussaert algorithm on a single geometry.
-
-        Notes
-        -----
-        The algorithm optimizes performance by splitting the input into an
-        'inner' and 'outer' zone. Only the 'outer' zone (near the boundaries)
-        is evaluated against reference data.
-
-
-
-        ```{mermaid}
-        graph TD
-            Start[Input Geometry] --> Split[Split: Inner vs Outer]
-            Split --> Query[Spatial Query Reference Data]
-            Query --> OD[Process Open Domain]
-            Query --> Ref[Process Intersecting Refs]
-            OD --> Combine[Combine Results]
-            Ref --> Combine
-            Combine --> Post[Post-processing]
-            Post --> End[ProcessResult]
-        ```
         """
 
         # CALCULATE INNER and OUTER INPUT GEOMETRY for performance optimization on big geometries
@@ -1683,6 +1683,18 @@ class NetworkGeometryProcessor(BaseProcessor):
 
 
 class AlignerGeometryProcessor(BaseProcessor):
+    """
+    Processor responsible for aligning thematic geometries to reference data.
+
+    This class identifies the geometry type and delegates the alignment logic
+    to specialized processors (Dieussaert or Network-based) while handling
+    validation and edge cases like area limits and zero-distance processing.
+
+    Attributes
+    ----------
+    processor_id : ProcessorID
+        Unique identifier for the aligner processor.
+    """
     processor_id = ProcessorID.ALIGNER
 
     def process(
@@ -1695,6 +1707,62 @@ class AlignerGeometryProcessor(BaseProcessor):
         relevant_distance: float = 1.0,
         **kwargs,
     ) -> ProcessResult:
+        """
+        Process and align a single geometry based on reference data.
+
+        The method validates the input geometry, checks against area constraints,
+        and selects the appropriate sub-processor (Dieussaert for polygons or
+        Network for linear/complex structures).
+
+        Parameters
+        ----------
+        correction_distance : float
+            The maximum distance a vertex can be moved during alignment.
+        reference_data : GeoDataFrame or list[BaseGeometry]
+            The target geometries to which the input_geometry should align.
+        input_geometry : BaseGeometry
+            The geometry to be processed. Supports Polygon, MultiPolygon,
+            and linear geometries.
+        mitre_limit : float
+            The limit used for miter joins to prevent sharp spikes in corners.
+        relevant_distance : float, default 1.0
+            The search radius used to find nearby reference geometries.
+            If set to 0, no processing is performed.
+        **kwargs : dict
+            Additional keyword arguments passed to sub-processors.
+
+        Returns
+        -------
+        ProcessResult
+            An object containing the aligned geometry and processing metadata
+            (e.g., remarks or error logs).
+
+        Raises
+        ------
+        ValueError
+            If the input_geometry is a GeometryCollection.
+            If the input_geometry exceeds the configured area_limit.
+
+        Notes
+        -----
+        The logic follows this decision flow:
+
+        ```{mermaid}
+        graph TD
+              A[Start Process] --> B{GeometryCollection?}
+              B -- Yes --> C[Raise ValueError]
+              B -- No --> D{Polygon/MultiPolygon?}
+              D -- No --> E[Network Processor]
+              D -- Yes --> F{Area > Limit?}
+              F -- Yes --> G[Raise ValueError]
+              F -- No --> H{RD == 0?}
+              H -- Yes --> I[Return Original]
+              H -- No --> J[Dieussaert Processor]
+              J -- Success --> K[Return Result]
+              J -- Fail --> E
+              E --> K
+        ```
+        """
 
         if isinstance(input_geometry, GeometryCollection):
             raise ValueError(
