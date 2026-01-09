@@ -7,7 +7,7 @@ from brdr.be.grb.enums import GRBType
 from brdr.be.grb.loader import GRBActualLoader
 from brdr.enums import OpenDomainStrategy
 from brdr.loader import GeoJsonLoader
-from examples import animated_map
+from brdr.viz import animated_map
 
 if __name__ == "__main__":
     # EXAMPLE to process a series of relevant distances

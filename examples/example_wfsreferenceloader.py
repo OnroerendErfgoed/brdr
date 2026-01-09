@@ -1,6 +1,6 @@
 from brdr.aligner import Aligner
 from brdr.loader import GeoJsonLoader, WFSReferenceLoader
-from examples import show_map, print_brdr_observation
+from brdr.viz import show_map, print_observation_of_aligner_results
 
 if __name__ == "__main__":
     """
@@ -69,4 +69,4 @@ if __name__ == "__main__":
         key: feat.geometry for key, feat in aligner.reference_data.features.items()
     }
     show_map(aligner_result.results, thematic_geometries, reference_geometries)
-    print_brdr_observation(aligner_result.results, aligner)
+    print_observation_of_aligner_results(aligner_result.results, aligner)

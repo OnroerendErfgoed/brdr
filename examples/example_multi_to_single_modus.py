@@ -5,8 +5,8 @@ from brdr.be.oe.enums import OEType
 from brdr.be.oe.loader import OnroerendErfgoedLoader
 from brdr.configs import AlignerConfig
 from brdr.enums import OpenDomainStrategy
-from examples import print_brdr_observation
-from examples import show_map
+from brdr.viz import print_observation_of_aligner_results
+from brdr.viz import show_map
 
 if __name__ == "__main__":
     """
@@ -34,7 +34,7 @@ if __name__ == "__main__":
     )
     aligner_result = aligner.process(relevant_distances=[relevant_distance])
     aligner_result.save_results(path="output/", aligner=aligner)
-    print_brdr_observation(aligner_result.get_results(aligner=aligner), aligner)
+    print_observation_of_aligner_results(aligner_result.get_results(aligner=aligner), aligner)
     thematic_geometries = {
         key: feat.geometry for key, feat in aligner.thematic_data.features.items()
     }
@@ -57,7 +57,7 @@ if __name__ == "__main__":
     aligner_result = aligner.process(relevant_distances=[relevant_distance])
     aligner_result.save_results(path="output/", aligner=aligner)
 
-    print_brdr_observation(aligner_result.get_results(aligner=aligner), aligner)
+    print_observation_of_aligner_results(aligner_result.get_results(aligner=aligner), aligner)
 
 
     thematic_geometries = {

@@ -6,7 +6,7 @@ from brdr.enums import OpenDomainStrategy
 from brdr.geometry_utils import geom_from_wkt
 from brdr.loader import DictLoader, GeoJsonFileLoader
 from brdr.processor import DieussaertGeometryProcessor
-from examples import print_brdr_observation, show_map
+from brdr.viz import print_observation_of_aligner_results, show_map
 processor_config=ProcessorConfig()
 processor_config.od_strategy=OpenDomainStrategy.SNAP_ALL_SIDE
 processor=DieussaertGeometryProcessor(config=processor_config)
@@ -38,7 +38,7 @@ aligner_result = aligner.process(
 aligner_result.save_results(
     aligner=aligner, path="output/", add_original_attributes=True, add_metadata=True
 )
-print_brdr_observation(aligner_result.get_results(aligner=aligner), aligner)
+print_observation_of_aligner_results(aligner_result.get_results(aligner=aligner), aligner)
 
 thematic_geometries = {
     key: feat.geometry for key, feat in aligner.thematic_data.features.items()

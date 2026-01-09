@@ -8,7 +8,7 @@ from brdr.be.oe.enums import OEType
 from brdr.be.oe.loader import OnroerendErfgoedLoader
 from brdr.enums import OpenDomainStrategy
 from brdr.loader import DictLoader
-from examples import show_map
+from brdr.viz import show_map
 
 
 def transform_geom_31370_to_3812(geom):

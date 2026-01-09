@@ -113,6 +113,14 @@ quartodoc:
       desc: OpenStreetMap (OSM) classes,methods, enumerators,...
       contents:
         - name: loader.OSMLoader
+    - title: Visualization-functions (optional by pip install brdr[viz])
+      package: brdr.viz
+      desc: OpenStreetMap (OSM) classes,methods, enumerators,...
+      contents:
+        - name: show_map
+        - name: plot_difference_by_relevant_distance
+        - name: animated_map
+        - name: print_observation_of_aligner_results
 
 
           

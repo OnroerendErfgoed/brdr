@@ -5,7 +5,7 @@ from brdr.be.grb.enums import GRBType
 from brdr.be.grb.loader import GRBActualLoader
 from brdr.loader import GeoJsonFileLoader
 from brdr.utils import get_geometry_difference_metrics_from_processresults
-from examples import plot_dict_diffs
+from brdr.viz import plot_difference_by_relevant_distance
 
 if __name__ == "__main__":
     """
@@ -73,4 +73,4 @@ if __name__ == "__main__":
             "x" + str(key): diffs_x,
             "y" + str(key): diffs_y,
         }
-        plot_dict_diffs(dict_diff)
+        plot_difference_by_relevant_distance(dict_diff)

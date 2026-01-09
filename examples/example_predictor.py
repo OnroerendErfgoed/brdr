@@ -5,7 +5,7 @@ from brdr.be.grb.enums import GRBType
 from brdr.be.grb.loader import GRBActualLoader
 from brdr.enums import AlignerResultType
 from brdr.loader import GeoJsonFileLoader, GeoJsonLoader
-from examples import show_map, plot_dict_diffs
+from brdr.viz import show_map, plot_difference_by_relevant_distance
 
 # Press the green button in the gutter to run the script.
 if __name__ == "__main__":
@@ -79,7 +79,7 @@ if __name__ == "__main__":
     else:
         print(fcs["result"])
         for key in dict_predictions:
-            plot_dict_diffs({key: diffs_dict[key]})
+            plot_difference_by_relevant_distance({key: diffs_dict[key]})
             show_map(
                 {key: dict_predictions[key]},
                 {key: aligner.thematic_data.features[key].geometry},

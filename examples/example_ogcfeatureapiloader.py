@@ -1,6 +1,6 @@
 from brdr.aligner import Aligner
 from brdr.loader import GeoJsonLoader, OGCFeatureAPIReferenceLoader
-from examples import show_map, print_brdr_observation
+from brdr.viz import show_map, print_observation_of_aligner_results
 
 if __name__ == "__main__":
     """
@@ -62,7 +62,7 @@ if __name__ == "__main__":
     # show results
     aligner_result.save_results(path="output/", aligner=aligner)
 
-    print_brdr_observation(aligner_result.get_results(aligner=aligner), aligner)
+    print_observation_of_aligner_results(aligner_result.get_results(aligner=aligner), aligner)
 
 
     thematic_geometries = {

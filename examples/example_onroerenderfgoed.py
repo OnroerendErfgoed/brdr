@@ -3,8 +3,8 @@ from brdr.be.grb.enums import GRBType
 from brdr.be.grb.loader import GRBActualLoader
 from brdr.be.oe.loader import OnroerendErfgoedLoader, OEType
 from brdr.enums import AlignerResultType
-from examples import print_brdr_observation
-from examples import show_map
+from brdr.viz import print_observation_of_aligner_results
+from brdr.viz import show_map
 
 if __name__ == "__main__":
     # EXAMPLE for a thematic Polygon from Onroerend Erfgoed (https://inventaris.onroerenderfgoed.be/aanduidingsobjecten/131635)
@@ -23,7 +23,7 @@ if __name__ == "__main__":
 
     # GET/SHOW results
     aligner_result.save_results(aligner=aligner, path="output/", add_original_attributes=True,add_metadata=True)
-    print_brdr_observation(aligner_result.get_results(aligner=aligner), aligner)
+    print_observation_of_aligner_results(aligner_result.get_results(aligner=aligner), aligner)
 
     thematic_geometries = {
         key: feat.geometry for key, feat in aligner.thematic_data.features.items()
