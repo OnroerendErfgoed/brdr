@@ -229,6 +229,9 @@ class GeoJsonFileLoader(GeoJsonLoader):
             _input = json.load(f)
         super().__init__(
             _input=_input,
+            self.path = path
+            self.data_dict_source["source"] = path
+            self.data_dict_source["source_url"] = f"file://{os.path.abspath(path)}"
             id_property=id_property,
             is_reference=is_reference,
         )
@@ -251,6 +254,8 @@ class GeoJsonUrlLoader(GeoJsonLoader):
         _input = requests.get(url).json()
         super().__init__(
             _input=_input,
+            self.data_dict_source['source'] = url
+            self.data_dict_source['source_url'] = url
             id_property=id_property,
             is_reference=is_reference,
         )
@@ -301,6 +306,7 @@ class OGCFeatureAPIReferenceLoader(GeoJsonLoader):
         self.limit = limit
         self.coll = collection
         self.data_dict_source["source"] = url
+        self.data_dict_source["source_url"] = url + '/' + collection
 
     def load_data(self) -> AlignerFeatureCollection:
         """
@@ -417,6 +423,7 @@ class WFSReferenceLoader(GeoJsonLoader):
         self.part = partition
         self.typename = typename
         self.data_dict_source["source"] = url
+        self.data_dict_source["source_url"] = url
         self.limit = limit
 
     def load_data(self) -> AlignerFeatureCollection:

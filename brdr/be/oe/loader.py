@@ -32,6 +32,7 @@ class OnroerendErfgoedLoader(GeoJsonLoader):
         self.part = partition
         self.crs = to_crs(crs)
         self.data_dict_source["source"] = "Onroerend Erfgoed"
+        self.data_dict_source["source_url"] = "https://inventaris.onroerenderfgoed.be/"
 
     def load_data(self):
         # geom_union = buffer_pos(self.aligner.get_thematic_union(), MAX_REFERENCE_BUFFER)

@@ -576,6 +576,7 @@ def aligner_metadata_decorator(f):
                 {
                     "id": feature.data_id,
                     "type": f"geo:{feature.geometry.geom_type}",
+                    "source": reference_data.source.get(source_ur, "")
                     "version_date": reference_data.source.get(VERSION_DATE, ""),
                     "identifier": {
                         "id": feature.brdr_id,

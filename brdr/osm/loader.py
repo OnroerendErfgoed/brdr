@@ -47,6 +47,9 @@ class OSMLoader(DictLoader):
         self.aligner = aligner
         self.osm_tags = osm_tags
         self.data_dict_source["source"] = "OSM"
+        # This is the overpass API used by default by osmnx. A more
+        # abstract reference might be preferable.
+        self.data_dict_source["source_url"] = "https://overpass-api.de/api"
         self.versiondate_info = {"name": VERSION_DATE, "format": DATE_FORMAT}
 
     def load_data(self) -> Any:

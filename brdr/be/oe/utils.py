@@ -39,10 +39,10 @@ def get_collection_oe_objects(
     """
     if oetype == OEType.AO:
         typename = "ps:ps_aandobj"
-        id_property = "aanduid_id"
+        id_property = "uri"
     elif oetype == OEType.EO:
         typename = "lu:lu_wet_erfgobj_pub"
-        id_property = "erfgoed_id"
+        id_property = "uri"
     else:
         logging.warning(
             "Undefined OE-type: " + str(oetype) + ": Empty collection returned"
