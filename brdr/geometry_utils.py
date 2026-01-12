@@ -1339,10 +1339,15 @@ def nearest_node(point, nodes):
 
 
 def find_best_circle_path(directed_graph, geom_to_process):
-    cycles = list(nx.simple_cycles(directed_graph))
+    cycles_generator = nx.simple_cycles(directed_graph)
     min_dist = inf
     best_cycle_line = None
-    for cycle in cycles:
+    max_amount = 1000
+
+    for i, cycle in enumerate(cycles_generator):
+        if i > max_amount:  #safetyleak
+            logging.warning(f"max cycles tested while searching for geometry: {max_amount}")
+            break
         cycle_coords = cycle + [cycle[0]]
         cycle_line = LineString(cycle_coords)
         vertex_distance = total_vertex_distance(cycle_line, geom_to_process)
@@ -1353,7 +1358,7 @@ def find_best_circle_path(directed_graph, geom_to_process):
 
     # def find_circle_path(directed_graph):
     #     # Vind alle eenvoudige cycli
-    #     cycles = list(nx.simple_cycles(directed_graph))
+    #     cycles_generator = nx.simple_cycles(directed_graph)
     #
     #     # Bepaal de langste cyclus op basis van gewichten
     #     def cycle_weight(cycle):
