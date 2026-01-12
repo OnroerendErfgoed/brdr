@@ -272,7 +272,7 @@ class OGCFeatureAPIReferenceLoader(GeoJsonLoader):
         aligner: Any,
         partition: int = 1000,
         limit: int = DOWNLOAD_LIMIT,
-        is_reference: bool = False,
+        is_reference: bool = True,
     ):
         """
         Parameters
@@ -290,7 +290,7 @@ class OGCFeatureAPIReferenceLoader(GeoJsonLoader):
         limit : int, optional
             Maximum total features to download. Defaults to DOWNLOAD_LIMIT.
         is_reference : bool, optional
-            Whether this is a reference layer. Defaults to False.
+            Whether this is a reference layer: True.
 
         """
         super().__init__(is_reference=is_reference)
@@ -390,7 +390,7 @@ class WFSReferenceLoader(GeoJsonLoader):
         aligner: Any,
         partition: int = 1000,
         limit: int = DOWNLOAD_LIMIT,
-        is_reference: bool = False,
+        is_reference: bool = True,
     ):
         """
         Parameters
@@ -408,7 +408,7 @@ class WFSReferenceLoader(GeoJsonLoader):
         limit : int, optional
             Maximum total features to download. Defaults to DOWNLOAD_LIMIT.
         is_reference : bool, optional
-            Whether this is a reference layer. Defaults to False.
+            Whether this is a reference layer: True.
         """
         super().__init__(is_reference=is_reference)
         self.aligner = aligner
