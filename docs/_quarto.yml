@@ -3,6 +3,8 @@ project:
   resources: figures
 
 website:
+  repo-url: https://github.com/OnroerendErfgoed/brdr
+  repo-actions: [ source, issue ]
   title: "BRDR - Aligning borders"
   navbar:
     logo: "static/logo.svg"
