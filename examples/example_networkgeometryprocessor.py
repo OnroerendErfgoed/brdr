@@ -22,7 +22,7 @@ aligner.load_thematic_data(loader)
 loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
 aligner.load_reference_data(loader)
 
-series = np.arange(0, 310, 25, dtype=int) / 100
+series = np.arange(0, 310, 10, dtype=int) / 100
 # predict which relevant distances are interesting to propose as resulting geometry
 aligner_result = aligner.predict(
     relevant_distances=series,

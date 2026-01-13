@@ -3,7 +3,7 @@ from abc import ABC
 from abc import abstractmethod
 from typing import List, Any
 
-from shapely import GeometryCollection
+from shapely import GeometryCollection, Point
 from shapely import LinearRing
 from shapely import MultiPoint
 from shapely import MultiPolygon
@@ -1624,8 +1624,7 @@ class NetworkGeometryProcessor(BaseProcessor):
         # add extra segments (connection lines between theme and reference)
         extra_segments = []
         for geom in thematic_difference.geoms:
-            p_start = Point(geom.coords[0])
-            p_end = Point(geom.coords[-1])
+            p_start, p_end = self._get_startpoint_endpoint_from_geom(geom)
             connection_line_start = self._get_connection_line(
                 thematic_points,
                 thematic_difference,
@@ -1680,6 +1679,15 @@ class NetworkGeometryProcessor(BaseProcessor):
         #     )
 
         return geom_processed
+
+    def _get_startpoint_endpoint_from_geom(self, geom) -> tuple[Point, Point]:
+        try:
+            p_start = Point(geom.coords[0])
+            p_end = Point(geom.coords[-1])
+        except NotImplementedError:
+            p_start = Point(geom.exterior.coords[0])
+            p_end = Point(geom.exterior.coords[-1])
+        return p_start, p_end
 
 
 class AlignerGeometryProcessor(BaseProcessor):

@@ -4,7 +4,9 @@ from math import ceil
 from pathlib import Path
 
 import geopandas as gpd
+from shapely.geometry import Point, LineString
 
+from brdr.constants import DEFAULT_CRS
 from brdr.typings import ProcessResult
 
 try:
@@ -12,6 +14,7 @@ try:
     from matplotlib.animation import FuncAnimation, PillowWriter
     from matplotlib.patches import Patch
     from PIL import Image
+
 
 except ImportError:
     raise ImportError(
@@ -445,3 +448,64 @@ def _processresult_to_dicts(process_results):
         results_relevant_intersection,
         results_relevant_diff,
     )
+
+
+def export_to_geopackage(G, output_filename="graph_output.gpkg",crs=DEFAULT_CRS):
+    """
+    Export a NetworkX graph to a GeoPackage file with separate layers for nodes and edges.
+
+    This function assumes that the node identifiers are tuples representing
+    coordinates (x, y).
+    All attributes attached to nodes and edges in the NetworkX graph are
+    preserved as columns in the resulting attribute tables.
+
+    Parameters
+    ----------
+    G : networkx.Graph
+        The NetworkX graph object to be exported. Nodes should be (x, y) tuples.
+    output_filename : str, optional
+        The path and name of the output GeoPackage file, by default "graph_output.gpkg".
+    crs : str, optional
+        Coordinate system
+
+    Returns
+    -------
+    None
+        The function saves the file to disk and prints a confirmation message.
+
+    Notes
+    -----
+    Example usage:
+    export_to_qgis(my_graph, "network.gpkg")
+    The output GeoPackage will contain two layers:
+    1. 'nodes': Point geometries representing the graph vertices.
+    2. 'edges': LineString geometries representing the connections.
+    """
+
+    # 1. Export Nodes
+    node_data = []
+    for node, data in G.nodes(data=True):
+        # We assume 'node' is a coordinate tuple (x, y)
+        node_data.append({
+            'node_id': str(node),
+            'geometry': Point(node),
+            **data
+        })
+    gdf_nodes = gpd.GeoDataFrame(node_data, crs=crs)
+
+    # 2. Export Edges
+    edge_data = []
+    for u, v, data in G.edges(data=True):
+        edge_data.append({
+            'u': str(u),
+            'v': str(v),
+            'geometry': LineString([u, v]),
+            **data
+        })
+    gdf_edges = gpd.GeoDataFrame(edge_data, crs=crs)
+
+    # 3. Save as layers in a single GeoPackage
+    gdf_nodes.to_file(output_filename, layer='nodes', driver="GPKG")
+    gdf_edges.to_file(output_filename, layer='edges', driver="GPKG")
+
+    print(f"Exported graph:  You can now add this to GIS software.")
