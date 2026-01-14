@@ -4,6 +4,8 @@ import os.path
 
 import numpy as np
 import requests
+import hashlib
+import json
 from geojson import Feature
 from geojson import FeatureCollection
 from geojson import dump
@@ -357,80 +359,117 @@ def get_geometry_difference_metrics_from_processresult(
     return diff
 
 
-def fetch_all_ogc_features(base_url, params=None, headers=None, max_pages=math.inf):
+def fetch_all_ogc_features(
+    base_url, params=None, headers=None, max_pages=math.inf, max_workers=None
+):
     """
-    Fetches all features from an OGC Feature API, regardless of the pagination mechanism.
+    Fetches all features from an OGC Feature API using parallel requests where possible.
 
-    Supports:
-    - Cursor-based pagination via 'next' links
-    - Offset-based pagination via 'startIndex'
-    - No pagination (all features in a single page)
+    If the API provides 'numberMatched', the function calculates all offsets and
+    fetches pages in parallel. If not, it falls back to sequential cursor-based
+    pagination via 'next' links.
 
-    :param base_url: URL of the /items endpoint of the OGC API
-    :param headers: Optional headers (e.g., Accept: application/json)
-    :return: A list of all features
+    Parameters
+    ----------
+    base_url : str
+        URL of the /items endpoint of the OGC API.
+    params : dict, optional
+        Query parameters for the API request. Default is None.
+    headers : dict, optional
+        Optional headers (e.g., Accept: application/json).
+    max_pages : int or math.inf, optional
+        Maximum number of pages to fetch. Default is math.inf.
+    max_workers : int, optional
+        Maximum number of concurrent threads for parallel fetching. Default is None.
+
+    Returns
+    -------
+    list
+        A list containing all features retrieved from the API.
     """
-
     if params is None:
         params = {}
     if headers is None:
         headers = {"Accept": "application/json"}
 
-    all_features = []
-    url = base_url
     limit = params.get("limit", DOWNLOAD_LIMIT)
-    start_index = 0
-    local_params = params.copy()
-    use_start_index = False
-    page = 0
 
-    while url and page <= max_pages:
-        LOGGER.debug("page:" + str(page) + "url: " + str(url))
-        # Add startIndex when using startIndex
-        if use_start_index:
-            local_params["startIndex"] = start_index
+    # 1. Initial request to determine total count and pagination type
+    response = requests.get(base_url, params=params, headers=headers)
+    response.raise_for_status()
+    data = response.json()
 
-        response = requests.get(url, params=local_params, headers=headers)
-        response.raise_for_status()
-        data = response.json()
+    all_features = list(data.get("features", []))
+    total_matched = data.get("numberMatched")
+    number_returned = data.get("numberReturned", len(data.get("features", [])))
 
-        # Add features
-        all_features.extend(data.get("features", []))
+    # Check for 'next' link for cursor-based fallback
+    next_link = next(
+        (link["href"] for link in data.get("links", []) if link["rel"] == "next"),
+        None,
+    )
 
-        # Search next-link
-        next_link = next(
-            (link["href"] for link in data.get("links", []) if link["rel"] == "next"),
-            None,
+    # 2. Parallel Path: If we know the total and it's more than one page
+    if total_matched and total_matched > number_returned and max_pages > 0:
+        LOGGER.info(
+            f"Total features: {total_matched}. Switching to parallel offset-based retrieval."
         )
 
-        if next_link:
-            # Cursor-based pagination
-            url = next_link
-            local_params = None  # next-url has all its parameters included
-        elif (
-            "numberMatched" in data
-            and "numberReturned" in data
-            and data["numberMatched"] == data["numberReturned"]
-        ):
-            break
-        elif "numberReturned" in data and "features" in data:
-            # limit not used and all features returned
-            if data["numberReturned"] > limit:
-                break
-            # Possibly offset-based pagination
-            if not use_start_index:
-                use_start_index = True
-                start_index = params.get("startIndex", 0)
-                local_params = params.copy()
-                local_params["count"] = limit
-            start_index += limit
-            if data["numberReturned"] <= limit:
-                break
-        else:
-            # No further pagination
-            break
+        # Calculate offsets
+        offsets = range(number_returned, total_matched, limit)
+        # Limit offsets by max_pages
+        offsets = list(offsets)[: int(max_pages)]
 
-        page += 1
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_offset = {}
+            for offset in offsets:
+                local_params = params.copy()
+                local_params["startIndex"] = offset
+                local_params["limit"] = limit
+                future_to_offset[
+                    executor.submit(
+                        requests.get, base_url, params=local_params, headers=headers
+                    )
+                ] = offset
+
+            for future in as_completed(future_to_offset):
+                try:
+                    resp = future.result()
+                    resp.raise_for_status()
+                    page_data = resp.json()
+                    all_features.extend(page_data.get("features", []))
+                except Exception as exc:
+                    LOGGER.error(
+                        f"Offset {future_to_offset[future]} generated an exception: {exc}"
+                    )
+
+        return all_features
+
+    # 3. Sequential Path: Fallback for Cursor-based pagination
+    elif next_link and max_pages > 0:
+        LOGGER.info(
+            "Parallel retrieval not possible (no total count). Falling back to sequential cursor pagination."
+        )
+        url = next_link
+        page = 1
+        while url and page <= max_pages:
+            LOGGER.debug(f"Fetching page {page}: {url}")
+            # For next_links, parameters are usually already in the URL
+            response = requests.get(url, headers=headers)
+            response.raise_for_status()
+            data = response.json()
+
+            all_features.extend(data.get("features", []))
+
+            url = next(
+                (
+                    link["href"]
+                    for link in data.get("links", [])
+                    if link["rel"] == "next"
+                ),
+                None,
+            )
+            page += 1
 
     return all_features
 
@@ -599,9 +638,46 @@ def get_collection_by_partition(
 
     # Re-attach all collected features to the template
     if collection:
-        collection["features"] = features_list
+        unique_features = deduplicate_features(features_list)
+        collection["features"] = unique_features
 
     return collection
+
+
+def deduplicate_features(features):
+    """
+    Removes duplicate features using ID or a content-based hash as fallback.
+
+    Parameters
+    ----------
+    features : list
+        List of GeoJSON-like feature dictionaries.
+
+    Returns
+    -------
+    list
+        Deduplicated list of features.
+    """
+    seen_hashes = set()
+    unique_features = []
+
+    for feat in features:
+        # 1. Try to get the official ID
+        feat_id = feat.get("id")
+
+        # 2. If no ID, create a hash of the content
+        if feat_id is None:
+            # We use a stable JSON string to represent the feature content
+            content = json.dumps(
+                {"g": feat.get("geometry"), "p": feat.get("properties")}, sort_keys=True
+            )
+            feat_id = hashlib.md5(content.encode()).hexdigest()
+
+        if feat_id not in seen_hashes:
+            unique_features.append(feat)
+            seen_hashes.add(feat_id)
+
+    return unique_features
 
 
 def build_reverse_index_wkb(d: dict):
