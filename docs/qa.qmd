@@ -25,6 +25,17 @@
 - Short answer: (Multi-)Points, (Multi-)LineStrings, and (Multi-)Polygons.
 - Long answer: **brdr** was initially started to align thematic (Multi-)Polygons to reference (Multi-)Polygons. Afterwards processors are added to also support (multi-)linestrings and (multi-)Points.
 
+## How to choose the best Processor for my data?
+
+- Short answer: AlignerGeometryProcessor (default) checks the type of your thematic & reference-data and uses the other Processors underneath. DieussaertGeometryProcessor is a quicker algoritm for aligning Polygons to Polygons. NetworkGeometryPorcessor can be used for all combinations of geometries (Points, Lines, Polygons), but has a longer calculation time.
+- Long answer: 
+  - AlignerGeometryProcessor (default) is a wrapper around DieussaertGeometryProcessor & NetworkGeometryProcessor. It checks the geometry-types and uses the DieussaertGeometryProcessor if possible, otherwise NetworkGeometryProcessor.
+  - DieussaertGeometryProcessor: It is a using an algorithm based on buffers, relevant intersections and relevant differences. This is a quick algorithm, but can only be used to align polygon-to-polygon. For most of these cases this is the best option, in some edge cases some detail of the polygon can be simplified.
+  - NetworkGeometryProcessor: It is using an algorithm based on graphs/networks. This is the most generic processor as this can be used for all point-line-polygon combinations. However he calculation is much slower than Dieussaertprocessor.
+  - TopologyProcessor: This is an experimental processor and is a special usage of the NetworkGeometryProcessor. The thematic input geometries are 'converted' to their topolgical arcs, and these arcs are aligned with the NetworkGeometryProcessor. Afterwards the arcs are re-combined to get a result that keeps a topological relation with its neighbours.
+  
+  Summary; if you have polygon-to-polygon, start with DieussaertProcessor and see if these results fits your goal. If not, try NetworkGeometryProcessor
+
 ## Does 'brdr' support 3D geometries ( & M/Z-coordinates)?
 
 - Short answer: No, it is currently 2D-only. (3D and M-Z values are not supported)

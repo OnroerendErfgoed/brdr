@@ -17,7 +17,7 @@ class OnroerendErfgoedLoader(GeoJsonLoader):
         oetype=OEType.AO,
         bbox=None,
         limit=DOWNLOAD_LIMIT,
-        partition=1000,
+        partition=-1,
         crs=DEFAULT_CRS,
     ):
         if (objectids is None and bbox is None) or (
@@ -34,7 +34,6 @@ class OnroerendErfgoedLoader(GeoJsonLoader):
         self.data_dict_source["source"] = "Onroerend Erfgoed"
 
     def load_data(self):
-        # geom_union = buffer_pos(self.aligner.get_thematic_union(), MAX_REFERENCE_BUFFER)
         collection, id_property = get_collection_oe_objects(
             oetype=self.oetype,
             objectids=self.objectids,

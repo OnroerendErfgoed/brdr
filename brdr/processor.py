@@ -3,7 +3,7 @@ from abc import ABC
 from abc import abstractmethod
 from typing import List, Any
 
-from shapely import GeometryCollection, Point
+from shapely import GeometryCollection
 from shapely import LinearRing
 from shapely import MultiPoint
 from shapely import MultiPolygon
@@ -28,7 +28,9 @@ from brdr.enums import ProcessRemark
 from brdr.enums import ProcessorID
 from brdr.enums import SnapStrategy
 from brdr.feature_data import AlignerFeatureCollection
-from brdr.geometry_utils import buffer_neg
+from brdr.geometry_utils import (
+    buffer_neg,
+)
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import buffer_pos
 from brdr.geometry_utils import fill_and_remove_gaps
@@ -42,7 +44,6 @@ from brdr.geometry_utils import safe_intersection
 from brdr.geometry_utils import safe_symmetric_difference
 from brdr.geometry_utils import safe_unary_union
 from brdr.geometry_utils import safe_union
-from brdr.geometry_utils import shortest_connections_between_geometries
 from brdr.geometry_utils import snap_geometry_to_reference
 from brdr.geometry_utils import to_multi
 from brdr.logger import Logger
@@ -1599,7 +1600,7 @@ class NetworkGeometryProcessor(BaseProcessor):
         splitter = safe_unary_union(reference_intersection)
         try:
             geom_to_process_splitted = split(geom_to_process_segmentized, splitter)
-        except GeometryTypeError:
+        except (GeometryTypeError,ValueError):
             geom_to_process_splitted = geom_to_process_segmentized
         thematic_points = MultiPoint(
             list(get_coords_from_geometry(geom_to_process_splitted))
@@ -1647,15 +1648,15 @@ class NetworkGeometryProcessor(BaseProcessor):
 
         # add extra segments (connection lines between reference_intersections)
         # #268 ?when passing OpenDomain, there is not always connection between the reference-parts. How to solve this?
-        extra_segments_ref_intersections = shortest_connections_between_geometries(
-            reference_intersection
-        )
-        # extra_segments_ref_intersections = get_connection_lines_to_nearest(
+        # extra_segments_ref_intersections = connection_lines_between_multilinestring(
         #     reference_intersection
         # )
-        segments.extend(
-            extra_segments_ref_intersections
-        )  # removed as we first will filter these lines
+        # # extra_segments_ref_intersections = get_connection_lines_to_nearest(
+        # #     reference_intersection
+        # # )
+        # segments.extend(
+        #     extra_segments_ref_intersections
+        # )  # removed as we first will filter these lines
 
         # Filter out lines that are not fully in relevant distance as these are no valid solution-paths
         # Mostly these lines will already be in the distance as both start en endpoint are in range (but not always fully)

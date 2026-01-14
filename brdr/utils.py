@@ -541,6 +541,7 @@ def get_collection_by_partition(
         params["bbox-crs"] = from_crs(crs)
         collection = get_collection(url=url, params=params)
     else:
+        #TODO: multithreading
         geoms = get_partitions(geometry, partition)
         for g in geoms:
             params["bbox"] = get_bbox(g)

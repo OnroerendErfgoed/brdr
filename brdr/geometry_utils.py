@@ -1157,6 +1157,47 @@ def get_geoms_from_geometry(geometry):
             geoms.update(get_geoms_from_geometry(geom))
     return geoms
 
+
+def connection_lines_between_multilinestring(multilinestring):
+    """
+    Verbindt losse segmenten in een MultiLineString met de kortste
+    mogelijke tussenstukken zodat alles verbonden is.
+    """
+    if multilinestring.is_empty or len(multilinestring.geoms) <= 1:
+        return []
+
+    segments = list(multilinestring.geoms)
+    connected_indices = {0}  # Start met het eerste segment
+    unconnected_indices = set(range(1, len(segments)))
+    connection_lines = []
+
+    # Blijf verbinden tot alles aan de 'boom' hangt
+    while unconnected_indices:
+        min_dist = float("inf")
+        best_connection = None
+        best_unconnected_idx = None
+
+        # Zoek de kortste verbinding tussen de reeds verbonden groep en de rest
+        for i in connected_indices:
+            for j in unconnected_indices:
+                # Bereken kortste punten tussen segment i en segment j
+                p1, p2 = nearest_points(segments[i], segments[j])
+                dist = p1.distance(p2)
+
+                if dist < min_dist:
+                    min_dist = dist
+                    best_connection = LineString([p1, p2])
+                    best_unconnected_idx = j
+
+        if best_connection:
+            if best_connection.length>0:
+                connection_lines.append(best_connection)
+            connected_indices.add(best_unconnected_idx)
+            unconnected_indices.remove(best_unconnected_idx)
+
+    return connection_lines
+
+
 def shortest_connections_between_geometries(geometry):
     """
     Voor elk element in een GeometryCollection, bepaal de kortste verbindingslijn
@@ -1340,10 +1381,62 @@ def graph_from_multilinestring(multilinestring):
             p2 = tuple(coords[i + 1])
             segment = LineString([p1, p2])
             graph.add_edge(p1, p2, weight=segment.length, geometry=segment)
-        #graph, added_edges = _connect_components_greedy(graph)
+        # graph, added_edges = _connect_components_greedy(graph)
     loops = list(nx.nodes_with_selfloops(graph))
     graph.remove_edges_from([(n, n) for n in loops])
+    graph = bridge_multiple_complex_gaps(graph, max_phys_dist=5, min_net_dist=10)
+
     return graph
+
+
+def bridge_multiple_complex_gaps(G, max_phys_dist=5, min_net_dist=50.0):
+    """
+    Robustly closes multiple gaps, even if they split the graph into
+    separate disconnected components.
+    """
+
+    # We blijven herhalen tot we geen gaten meer vinden die aan de criteria voldoen
+    while True:
+        endpoints = [n for n, d in G.degree() if d == 1]
+        best_gap = None
+        min_gap_dist = float("inf")
+
+        # We zoeken naar de 'veiligste' gap om eerst te dichten
+        for i, n1 in enumerate(endpoints):
+            for n2 in endpoints[i + 1 :]:
+                phys_dist = euclidean_distance(n1, n2)
+
+                if phys_dist < max_phys_dist:
+                    # Check of ze al verbonden zijn
+                    try:
+                        # In dezelfde component? Check netwerkafstand
+                        if nx.has_path(G, n1, n2):
+                            net_dist = nx.shortest_path_length(
+                                G, n1, n2, weight="weight"
+                            )
+                            is_valid_gap = net_dist > min_net_dist
+                        else:
+                            # NIET in dezelfde component: Altijd een valide gap!
+                            is_valid_gap = True
+                    except nx.NetworkXNoPath:
+                        is_valid_gap = True
+
+                    if is_valid_gap and phys_dist < min_gap_dist:
+                        min_gap_dist = phys_dist
+                        best_gap = (n1, n2)
+
+        if best_gap:
+            u, v = best_gap
+            G.add_edge(u, v, weight=min_gap_dist, type="bridge")
+            print(
+                f"Brug geplaatst tussen componenten/uiteinden: {u} - {v} ({min_gap_dist:.2f}m)"
+            )
+            # We herhalen de loop omdat de topologie nu veranderd is
+        else:
+            break  # Geen gaten meer gevonden
+
+    return G
+
 
 def euclidean_distance(p1, p2):
     return math.hypot(p1[0] - p2[0], p1[1] - p2[1])
@@ -1375,7 +1468,6 @@ def euclidean_distance(p1, p2):
 #             added_edges.append((best_pair[0], best_pair[1], min_dist))
 #
 #     return G, added_edges
-
 
 
 def prepare_network(segments):

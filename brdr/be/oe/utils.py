@@ -15,7 +15,7 @@ def get_collection_oe_objects(
     objectids=None,
     bbox=None,
     limit=DOWNLOAD_LIMIT,
-    partition=1000,
+    partition=-1,
     crs=DEFAULT_CRS,
 ):
     """
