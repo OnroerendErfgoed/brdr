@@ -606,9 +606,7 @@ class SnapGeometryProcessor(BaseProcessor):
         reference_data: AlignerFeatureCollection,
         input_geometry: BaseGeometry,
         mitre_limit: float,
-        ref_intersections_geoms: List[BaseGeometry],
         relevant_distance: float,
-        snap_strategy: SnapStrategy,
         **kwargs: Any,
     ) -> ProcessResult:
         """
@@ -628,12 +626,8 @@ class SnapGeometryProcessor(BaseProcessor):
             The thematic geometry to be snapped.
         mitre_limit : float
             Mitre limit for buffering operations.
-        ref_intersections_geoms : List[BaseGeometry]
-            A list of reference geometries that intersect with the input.
         relevant_distance : float
             The maximum distance within which snapping occurs.
-        snap_strategy : SnapStrategy
-            The specific snapping logic to apply (e.g., to points, lines, or both).
         **kwargs : Any
             Additional arguments passed to the processor.
 
@@ -663,8 +657,31 @@ class SnapGeometryProcessor(BaseProcessor):
         """
         snapped = []
         virtual_reference = Polygon()
+        snap_strategy = self.config.snap_strategy
 
-        # Handle Open Domain (OD) / Onbekend Terrein logic
+        # CALCULATE INNER and OUTER INPUT GEOMETRY for performance optimization on big geometries
+        # combine all parts of the input geometry to one polygon
+        input_geometry_inner, input_geometry_outer = self._calculate_inner_outer(
+            input_geometry, relevant_distance,self.config.max_outer_buffer
+        )
+        # get a list of all ref_ids that are intersecting the thematic geometry; we take it bigger because we want to check if there are also reference geometries on a relevant distance.
+        input_geometry_outer_buffered = buffer_pos(
+            input_geometry_outer,
+            relevant_distance * self.config.buffer_multiplication_factor,
+        )
+        ref_intersections = reference_data.items.take(
+            reference_data.tree.query(input_geometry_outer_buffered)
+        ).tolist()
+        ref_intersections = reference_data.items.take(
+            reference_data.tree.query(input_geometry_outer_buffered)
+        ).tolist()
+
+        ref_intersections_geoms = []
+        for key_ref in ref_intersections:
+            ref_geom = reference_data[key_ref].geometry
+            ref_intersections_geoms.append(ref_geom)
+
+        # Handle Open Domain (OD)logic
         if self.config.od_strategy != OpenDomainStrategy.EXCLUDE:
             virtual_reference = self._create_virtual_reference(
                 input_geometry,

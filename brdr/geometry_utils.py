@@ -559,6 +559,8 @@ def _snap_point_to_reference(
         geometry = MultiPoint([geometry])
 
     ref_border, ref_borders, ref_coords = _get_ref_objects(reference)
+    ref_vertices_objs = [Point(c) for c in ref_coords]
+    tree = STRtree(ref_vertices_objs) if ref_vertices_objs else None
 
     if len(ref_coords) == 0:
         snap_strategy = SnapStrategy.NO_PREFERENCE
@@ -570,7 +572,7 @@ def _snap_point_to_reference(
         for idx, coord in enumerate(coords):
             p = Point(coords[idx])
             p_snapped, bool_snapped, ref_vertices = _get_snapped_point(
-                p, ref_border, ref_coords, snap_strategy, tolerance
+                p, ref_border, tree,ref_vertices_objs, snap_strategy, tolerance
             )
             coordinates.append(p_snapped.coords[0])
 
@@ -673,28 +675,79 @@ def _get_ref_objects(reference):
 
 
 def _get_snapped_coordinates(
-    coords, ref_border, ref_borders, ref_coords, snap_strategy, tolerance
-):
+    coords: List[Tuple[float, float]],
+    ref_border: LineString,
+    ref_borders: List[LineString],
+    ref_coords: List[Tuple[float, float]],
+    snap_strategy: str,
+    tolerance: float
+) -> List[Tuple[float, float]]:
+    """
+    Snaps a sequence of coordinates to reference geometries using optimized spatial lookups.
+
+    This function iterates through vertices of a polyline and snaps them to a
+    reference border or specific vertices. It optimizes performance by using an
+    STRtree for nearest-neighbor lookups and pre-calculating buffers to avoid
+    redundant geometric operations within the loop.
+
+    Parameters
+    ----------
+    coords : list of tuple of float
+        The input coordinates (vertices) to be snapped.
+    ref_border : LineString
+        The primary reference line used for snapping.
+    ref_borders : list of LineString
+        A collection of reference borders used for sub-linestring interpolation.
+    ref_coords : list of tuple of float
+        A list of (x, y) coordinates representing reference vertices.
+    snap_strategy : str
+        The snapping strategy to employ (e.g., 'PREFER_VERTICES').
+    tolerance : float
+        The maximum distance allowed for a coordinate to be snapped.
+
+    Returns
+    -------
+    list of tuple of float
+        A list of snapped coordinates, including interpolated vertices where
+        snapping to a reference path was successful.
+    """
+    if not coords:
+        return []
+
     coordinates = []
-    for idx, coord in enumerate(coords):  # for each vertex in the first line
-        if idx == 0:
-            continue
-        p_start = Point(coords[idx - 1])
+
+    # 1. Pre-process references (Outside the loop!)
+    # Pre-buffering avoids thousands of expensive re-calculations inside the loop
+    ref_buffered_main = buffer_pos(ref_border, tolerance)
+    ref_coords_multipoint = MultiPoint(ref_coords)
+    ref_coords_buffered = buffer_pos(ref_coords_multipoint, tolerance)
+
+    # Initialize Spatial Index (STRtree) for log(N) vertex lookups
+    ref_vertices_objs = [Point(c) for c in ref_coords]
+    tree = STRtree(ref_vertices_objs) if ref_vertices_objs else None
+
+    # 2. Cache the snapped start point for the first iteration
+    p_start = Point(coords[0])
+    p_start_snapped, bool_start_snapped, ref_vertices_start = _get_snapped_point(
+        p_start, ref_border, tree, ref_vertices_objs, snap_strategy, tolerance
+    )
+
+    for idx in range(1, len(coords)):
         p_end = Point(coords[idx])
 
-        p_start_snapped, bool_start_snapped, ref_vertices_start = _get_snapped_point(
-            p_start, ref_border, ref_coords, snap_strategy, tolerance
-        )
+        # Only snap the end point (the start point is carried over from the previous iteration)
         p_end_snapped, bool_end_snapped, ref_vertices_end = _get_snapped_point(
-            p_end, ref_border, ref_coords, snap_strategy, tolerance
+            p_end, ref_border, tree, ref_vertices_objs, snap_strategy, tolerance
         )
 
         coordinates.append(p_start_snapped.coords[0])
 
         if not bool_start_snapped and not bool_end_snapped:
+            # No snapping required for either point, proceed normally
             coordinates.append(p_end_snapped.coords[0])
-            continue
+
         elif bool_start_snapped and bool_end_snapped:
+            # Both points snapped: retrieve the path along the reference borders
             coordinates.extend(
                 _get_sublinestring_coordinates(
                     p_end,
@@ -706,57 +759,67 @@ def _get_snapped_coordinates(
                 )
             )
             coordinates.append(p_end_snapped.coords[0])
-        elif bool_start_snapped != bool_end_snapped:
-            # determine_p_mid
-            line = LineString([p_start, p_end])
-            # print ("idx:" + str(idx))
-            # print (line.wkt)
-            if ref_vertices_start or ref_vertices_end:
-                ref_buffered = buffer_pos(MultiPoint(ref_coords), tolerance)
-            else:
-                ref_buffered = buffer_pos(ref_border, tolerance)
-            intersected_line = safe_intersection(line, ref_buffered)
-            if intersected_line.is_empty or intersected_line.geom_type != "LineString":
-                coordinates.append(p_end_snapped.coords[0])
-                continue
-            intersected_line_boundary_points = intersected_line.boundary.geoms
-            first = intersected_line_boundary_points[0]
-            last = intersected_line_boundary_points[-1]
-            if first == p_start:
-                p_mid = last
-                p_mid_snapped, bool_mid_snapped, ref_vertices_mid = _get_snapped_point(
-                    p_mid, ref_border, ref_coords, snap_strategy, tolerance
-                )
 
-                coordinates.extend(
-                    _get_sublinestring_coordinates(
-                        p_mid,
-                        p_mid_snapped,
-                        p_start,
-                        p_start_snapped,
-                        ref_borders,
-                        tolerance,
+        else:
+            # Mixed scenario: one point is snapped, the other is not
+            line = LineString([p_start, p_end])
+
+            # Select the appropriate pre-buffered geometry
+            curr_ref_buffered = (
+                ref_coords_buffered
+                if (ref_vertices_start or ref_vertices_end)
+                else ref_buffered_main
+            )
+            intersected_line = safe_intersection(line, curr_ref_buffered)
+
+            if (
+                not intersected_line.is_empty
+                and intersected_line.geom_type == "LineString"
+            ):
+                boundary = intersected_line.boundary.geoms
+                first, last = boundary[0], boundary[-1]
+
+                # Efficiently determine the midpoint for snapping
+                p_mid = last if first == p_start else first if last == p_end else None
+
+                if p_mid:
+                    p_mid_snapped, _, _ = _get_snapped_point(
+                        p_mid, ref_border, tree, ref_vertices_objs, snap_strategy, tolerance
                     )
-                )
-                coordinates.append(p_mid_snapped.coords[0])
-                coordinates.append(p_end_snapped.coords[0])
-            elif last == p_end:
-                p_mid = first
-                p_mid_snapped, bool_mid_snapped, ref_vertices_mid = _get_snapped_point(
-                    p_mid, ref_border, ref_coords, snap_strategy, tolerance
-                )
-                coordinates.append(p_mid_snapped.coords[0])
-                coordinates.extend(
-                    _get_sublinestring_coordinates(
-                        p_end,
-                        p_end_snapped,
-                        p_mid,
-                        p_mid_snapped,
-                        ref_borders,
-                        tolerance,
-                    )
-                )
-                coordinates.append(p_end_snapped.coords[0])
+
+                    if first == p_start:
+                        coordinates.extend(
+                            _get_sublinestring_coordinates(
+                                p_mid,
+                                p_mid_snapped,
+                                p_start,
+                                p_start_snapped,
+                                ref_borders,
+                                tolerance,
+                            )
+                        )
+                        coordinates.append(p_mid_snapped.coords[0])
+                    else:
+                        coordinates.append(p_mid_snapped.coords[0])
+                        coordinates.extend(
+                            _get_sublinestring_coordinates(
+                                p_end,
+                                p_end_snapped,
+                                p_mid,
+                                p_mid_snapped,
+                                ref_borders,
+                                tolerance,
+                            )
+                        )
+
+            coordinates.append(p_end_snapped.coords[0])
+
+        # 3. Prepare for next iteration: current 'end' becomes next 'start'
+        p_start = p_end
+        p_start_snapped = p_end_snapped
+        bool_start_snapped = bool_end_snapped
+        ref_vertices_start = ref_vertices_end
+
     return coordinates
 
 
@@ -839,46 +902,6 @@ def _get_line_substring(
         if line_substring.length > 3 * distance_start_end:
             line_substring = LineString([p_start_snapped, p_end_snapped])
     return line_substring
-
-
-def _snapped_point_by_snapstrategy(
-    p, p_nearest, p_nearest_vertices, snap_strategy, tolerance
-):
-    p_snapped = p
-    snapped = False
-    ref_vertices = False
-    if p_nearest is None:
-        return p_snapped, snapped, ref_vertices
-    if snap_strategy == SnapStrategy.NO_PREFERENCE:
-        if p.distance(p_nearest) <= tolerance:
-            p_snapped = p_nearest
-            snapped = True
-        else:
-            p_snapped = p
-    elif snap_strategy == SnapStrategy.ONLY_VERTICES:
-        if (
-            p_nearest_vertices is not None
-            and p.distance(p_nearest_vertices) <= tolerance
-        ):
-            p_snapped = p_nearest_vertices
-            snapped = True
-            ref_vertices = True
-        else:
-            p_snapped = p
-    elif snap_strategy == SnapStrategy.PREFER_VERTICES:
-        if (
-            p_nearest_vertices is not None
-            and p.distance(p_nearest_vertices) <= tolerance
-        ):
-            p_snapped = p_nearest_vertices
-            snapped = True
-            ref_vertices = True
-        elif p.distance(p_nearest) <= tolerance:
-            p_snapped = p_nearest
-            snapped = True
-        else:
-            p_snapped = p
-    return p_snapped, snapped, ref_vertices
 
 
 def closest_line(lines, point):
@@ -1603,62 +1626,122 @@ def get_vertex_node(graph, relevant_distance, input_node, point):
             input_node = node
     return input_node
 
+
 def _get_snapped_point(
     point: Point,
     ref_line: LineString,
-    ref_coords: List[Tuple[float, float]],
+    ref_coords_tree: STRtree,
+    ref_vertices_objs: List[Point],
     snap_strategy: str,
     tolerance: float,
-) -> Union[Point, None]:
+) -> Tuple[Point, bool, bool]:
     """
-    Determines the nearest point to the given `point` from either the reference line
-    or the set of reference coordinates (vertices), and returns the snapped point
-    based on the specified snapping strategy and tolerance.
+    Determines the nearest point to the input from a reference line or spatial tree.
 
-    The function prioritizes finding the closest feature (line or vertex) to the point.
+    This function optimizes the snapping process by using a pre-computed STRtree
+    for vertex lookups and compares distances between the nearest point on a
+    line versus the nearest vertex to determine the best snapping candidate.
 
-    Args:
-        point (Point): The point to be snapped.
-        ref_line (LineString): The reference line geometry to snap onto. Can be empty.
-        ref_coords (List[Tuple[float, float]]): A list of (x, y) coordinates representing
-                                                 reference vertices. Can be empty.
-        snap_strategy (str): The method used for snapping (e.g., 'nearest', 'vertex').
-        tolerance (float): The maximum distance allowed for snapping.
+    Parameters
+    ----------
+    point : Point
+        The source point to be snapped.
+    ref_line : LineString
+        The reference line geometry to snap onto.
+    ref_coords_tree : STRtree
+        A spatial index tree containing the reference vertices for fast lookup.
+    ref_vertices_objs : list of Point
+        The original list of Point objects used to build the STRtree,
+        required for index-based lookups in certain Shapely versions.
+    snap_strategy : str
+        The snapping logic to apply (e.g., 'PREFER_VERTICES', 'ONLY_VERTICES').
+    tolerance : float
+        The maximum distance allowed for a successful snap.
 
-    Returns:
-        Union[Point, None]: The calculated snapped Point, or None if snapping is not applied
-                            based on the strategy and tolerance (delegated to the internal function).
+    Returns
+    -------
+    p_snapped : Point
+        The resulting point (either the original, or the snapped location).
+    snapped : bool
+        True if the point was moved/snapped within the tolerance.
+    is_vertex : bool
+        True if the point was snapped specifically to a vertex.
     """
-    p1, p2 = None, None
-    p1_vertices, p2_vertices = None, None
-
-    # Initialize minimum distance to the reference line to infinity
-    distance_ref_line = inf
+    p_nearest_line = None
+    p_nearest_vertex = None
+    dist_line = float("inf")
+    dist_vertex = float("inf")
 
     # 1. Check proximity to the reference line
     if not ref_line.is_empty:
-        # p1 is the point on the line, p2 is the input point
-        p1, p2 = nearest_points(point, ref_line)
-        distance_ref_line = p2.distance(point)
+        # p_on_line is the projection of the point onto the line
+        p_on_line, _ = nearest_points(ref_line, point)
+        dist_line = p_on_line.distance(point)
+        p_nearest_line = p_on_line
 
-    # 2. Check proximity to the reference coordinates (vertices)
-    if len(ref_coords) != 0:
-        # Find the nearest point from the input point to the set of vertices
-        p1_vertices, p2_vertices = nearest_points(point, MultiPoint(ref_coords))
-        distance_ref_coords = p2_vertices.distance(point)
+    # 2. Check proximity to vertices using the STRtree index
+    if ref_coords_tree is not None:
+        result = ref_coords_tree.nearest(point)
 
-        # 3. Determine the overall nearest feature (line or vertex)
-        if distance_ref_coords < distance_ref_line:
-            # The nearest feature is a vertex
-            p1, p2 = p1_vertices, p2_vertices
+        # Handle index-based return (Shapely < 2.0 or specific configurations)
+        # vs object-based return (Shapely 2.0+)
+        if isinstance(result, (int, np.integer)):
+            p_nearest_vertex = ref_vertices_objs[result]
+        else:
+            p_nearest_vertex = result
 
-    # 4. Delegate the final snapping logic based on strategy and tolerance
-    # The internal function decides whether to snap and returns the final Point.
-    # We pass p2 (the nearest point found) and p2_vertices (the nearest vertex,
-    # which might be None if ref_coords was empty)
+        dist_vertex = p_nearest_vertex.distance(point)
+
+    # 3. Determine the closest candidate across both features
+    # Start with the line as the candidate, override if vertex is closer
+    p_final_nearest = p_nearest_line
+    if dist_vertex < dist_line:
+        p_final_nearest = p_nearest_vertex
+
+    # 4. Apply the snapping strategy rules
     return _snapped_point_by_snapstrategy(
-        point, p2, p2_vertices, snap_strategy, tolerance
+        point, p_final_nearest, p_nearest_vertex, snap_strategy, tolerance
     )
+
+
+def _snapped_point_by_snapstrategy(
+    p, p_nearest, p_nearest_vertices, snap_strategy, tolerance
+):
+    p_snapped = p
+    snapped = False
+    ref_vertices = False
+    if p_nearest is None:
+        return p_snapped, snapped, ref_vertices
+    if snap_strategy == SnapStrategy.NO_PREFERENCE:
+        if p.distance(p_nearest) <= tolerance:
+            p_snapped = p_nearest
+            snapped = True
+        else:
+            p_snapped = p
+    elif snap_strategy == SnapStrategy.ONLY_VERTICES:
+        if (
+            p_nearest_vertices is not None
+            and p.distance(p_nearest_vertices) <= tolerance
+        ):
+            p_snapped = p_nearest_vertices
+            snapped = True
+            ref_vertices = True
+        else:
+            p_snapped = p
+    elif snap_strategy == SnapStrategy.PREFER_VERTICES:
+        if (
+            p_nearest_vertices is not None
+            and p.distance(p_nearest_vertices) <= tolerance
+        ):
+            p_snapped = p_nearest_vertices
+            snapped = True
+            ref_vertices = True
+        elif p.distance(p_nearest) <= tolerance:
+            p_snapped = p_nearest
+            snapped = True
+        else:
+            p_snapped = p
+    return p_snapped, snapped, ref_vertices
 
 
 def extract_points_lines_from_geometry(geometry: ShapelyGeometry) -> GeometryCollection:
