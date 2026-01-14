@@ -14,7 +14,7 @@ from brdr.be.grb.loader import GRBActualLoader
 from brdr.configs import AlignerConfig
 from brdr.constants import RELEVANT_DISTANCE_DECIMALS, DEFAULT_CRS
 from brdr.enums import AlignerResultType
-from brdr.geometry_utils import buffer_neg, geom_to_wkt, safe_unary_union
+from brdr.geometry_utils import buffer_neg, geom_to_wkt, safe_unary_union, buffer_pos
 from brdr.loader import DictLoader
 from brdr.utils import geojson_geometry_to_shapely
 
@@ -67,6 +67,9 @@ def get_coverage_data(aligner, geom, percentages = [0, 1, 5, 10, 50, 90, 95, 99,
     return coverage_dict
 
 def get_false_positive_grb_parcels_dataframe(data, id_name, area_limit=inf, processor=None):
+    #TODO add logging of skipped & errored features
+    #write original geometry
+    #also write brdr with ALL_SIDE?
     rds = [
         round(k, RELEVANT_DISTANCE_DECIMALS)
         for k in np.arange(0, 510, 10, dtype=int) / 100
@@ -94,102 +97,122 @@ def get_false_positive_grb_parcels_dataframe(data, id_name, area_limit=inf, proc
         features = data['features']
     print(f"Nr of  features: {len(features)}")
     for f in features:
-        key = f["properties"][id_name]
-        geom = geojson_geometry_to_shapely(f["geometry"])
-        if geom.area > area_limit:
-            print(f"Feature {key} skipped based on area {geom.area} m²")
-            continue
-        print(key)
-        dict_theme = {key: geom}
+        try:
+            key = f["properties"][id_name]
+            geom = geojson_geometry_to_shapely(f["geometry"])
+            if geom.area > area_limit:
+                print(f"Feature {key} skipped based on area {geom.area} m²")
+                continue
+            print(key)
+            dict_theme = {key: geom}
 
-        aligner_config = AlignerConfig
-        aligner = Aligner(crs="EPSG:31370", processor=processor, config=aligner_config)
-        loader = DictLoader(dict_theme)
-        aligner.load_thematic_data(loader)
-        loader = GRBActualLoader(
-            grb_type=GRBType.ADP, partition=1000, aligner=aligner
-        )
-        aligner.load_reference_data(loader)
+            aligner_config = AlignerConfig
+            aligner = Aligner(crs="EPSG:31370", processor=processor, config=aligner_config)
+            loader = DictLoader(dict_theme)
+            aligner.load_thematic_data(loader)
+            #TODO: fix
+            if False:
+                loader = GRBActualLoader(
+                    grb_type=GRBType.ADP, partition=1000, aligner=aligner
+                )
+            else:
+                # Connection string naar jouw PostGIS database
+                conn_str = "postgresql://postgres:postgres@localhost:5432/athumi"
+                # SQL-query om geometrieën op te halen
 
+                wkt = buffer_pos(aligner.thematic_data.union, 10)
+                srid = 31370
 
-        # COVERAGE ANALYSIS
-        coverage_data = get_coverage_data(aligner, geom, percentages=[0, 1, 5, 10, 50, 90, 95, 99, 100])
-        parcel_coverage_counts = [coverage_data[b]["count"] for b in coverage_data.keys()]
-        dict_coverage_list[key] = parcel_coverage_counts
-        dict_coverage_range[key] = parcel_coverage_counts[0] - parcel_coverage_counts[-1]
-        dict_coverage_0[key] = parcel_coverage_counts[0]
-        dict_coverage_50[key] = parcel_coverage_counts[4]
+                sql = f"SELECT capakey,geom from adp where ST_Intersects( geom,ST_SetSRID(ST_GeomFromText('{wkt}'), {str(srid)}))"
 
-        # BUFFER ANALYSIS
-        buffer_data = get_buffer_data(aligner, geom, buffers=[0.1, 0.2, 0.5, 1, 2, 3, 4, 5])
-        parcel_buffer_counts = [len(buffer_data[b]["parcels"]) for b in buffer_data.keys()]
-        dict_buffer_list[key] = parcel_buffer_counts
-        dict_buffer_vip[key] = parcel_buffer_counts[1]
-        #parcels_vip = buffer_data.get(0.2)["parcels"]
-        dict_buffer_2[key] = parcel_buffer_counts[4]
-        dict_buffer_5[key] = parcel_buffer_counts[-1]
+                # Lees data rechtstreeks in een GeoDataFrame
+                gdf = gpd.read_postgis(sql, conn_str, geom_col="geom")
+                dict_reference = dict(zip(gdf["capakey"], gdf["geom"]))
+                loader = DictLoader(data_dict=dict_reference)
+                aligner.load_reference_data(loader)
 
-        # BRDR ANALYSIS
-        # This is done for every feature seperately
-        aligner_result = aligner.evaluate(
-            relevant_distances=rds,
-            max_predictions=1,
-            multi_to_best_prediction=True
-        )
-        dict_predictions_evaluated = aligner_result.get_results(aligner=aligner,
-                                                                result_type=AlignerResultType.EVALUATED_PREDICTIONS)
+            aligner.load_reference_data(loader)
 
-        # TODO? also make a list of all predictions?
-        for key, results in dict_predictions_evaluated.items():
-            # call the parcels, evaluate through brdr and merge them
-            rd = next(iter(results))
-            dict_prediction_rd[key] = rd
-            state = results[rd]["properties"]["brdr_evaluation"].value
-            dict_prediction_state[key] = state
-            score = results[rd]["properties"]["brdr_prediction_score"]
-            dict_prediction_score[key] = score
-            print(f"brdr correction: '{state}' with relevant distance {rd}  & score {str(score)} for ID {key}")
-            geom = results[rd]['result']
-            dict_prediction_wkt[key] = geom_to_wkt(geom)
-            brdr_parcels, parcel_100perc_list = get_parcel_lists(aligner, geom)
-            brdr_parcel_count = len(brdr_parcels)
-            dict_prediction[key] = brdr_parcel_count
-            # print (brdr_parcel_count)
+            # COVERAGE ANALYSIS
+            coverage_data = get_coverage_data(aligner, geom, percentages=[0, 1, 5, 10, 50, 90, 95, 99, 100])
+            parcel_coverage_counts = [coverage_data[b]["count"] for b in coverage_data.keys()]
+            dict_coverage_list[key] = parcel_coverage_counts
+            dict_coverage_range[key] = parcel_coverage_counts[0] - parcel_coverage_counts[-1]
+            dict_coverage_0[key] = parcel_coverage_counts[0]
+            dict_coverage_50[key] = parcel_coverage_counts[4]
 
-        fp_parcels = parcel_buffer_counts[1]
-        # En welke zijn dit dan? Deze mee oplijsten
-        if not (score is None or score == -1):
-            # vip-buffer minus brdr
-            fp_parcels = list(set(buffer_data[0.2]["parcels"]) - set(brdr_parcels) - set(coverage_data[100]["parcels"]))
-            # calculated_false_positives = parcel_buffer_counts[1] - brdr_parcel_count
-            s1, s2, s3 = set(buffer_data[2]["parcels"]), set(coverage_data[50]["parcels"]), set(brdr_parcels)
-            all_ids = s1 | s2 | s3
-            common_ids = s1 & s2 & s3
-        else:
-            # vip-buffer minus buffer_2
-            fp_parcels = list(
-                set(buffer_data[0.2]["parcels"]) - set(buffer_data[5]["parcels"]) - set(coverage_data[100]["parcels"]))
-            # calculated_false_positives = parcel_buffer_counts[1] -parcel_buffer_counts[-1]
-            s1, s2 = set(buffer_data[2]["parcels"]), set(coverage_data[50]["parcels"])
-            all_ids = s1 | s2
-            common_ids = s1 & s2
+            # BUFFER ANALYSIS
+            buffer_data = get_buffer_data(aligner, geom, buffers=[0.1, 0.2, 0.5, 1, 2, 3, 4, 5])
+            parcel_buffer_counts = [len(buffer_data[b]["parcels"]) for b in buffer_data.keys()]
+            dict_buffer_list[key] = parcel_buffer_counts
+            dict_buffer_vip[key] = parcel_buffer_counts[1]
+            # parcels_vip = buffer_data.get(0.2)["parcels"]
+            dict_buffer_2[key] = parcel_buffer_counts[4]
+            dict_buffer_5[key] = parcel_buffer_counts[-1]
 
-        doubt_parcels = list(all_ids - common_ids)
-        # fp_parcels = list(set(fp_parcels) | set(doubt_parcels)) #TODO or not?
-        fp_parcel_count = len(fp_parcels)
-        fp_geometry = safe_unary_union(
-            [aligner.reference_data.features[p].geometry for p in fp_parcels]
-        ).wkt
-        dict_fp[key] = fp_parcel_count
-        dict_fp_parcels[key] = fp_parcels
-        dict_fp_wkt[key] = fp_geometry
-        # search for ids where the different methods give another result
+            # BRDR ANALYSIS
+            # This is done for every feature seperately
+            aligner_result = aligner.evaluate(
+                relevant_distances=rds,
+                max_predictions=1,
+                multi_to_best_prediction=True
+            )
+            dict_predictions_evaluated = aligner_result.get_results(aligner=aligner,
+                                                                    result_type=AlignerResultType.EVALUATED_PREDICTIONS)
 
-        dict_doubt_parcels[key] = doubt_parcels
-        doubt_geometry = safe_unary_union(
-            [aligner.reference_data.features[p].geometry for p in doubt_parcels]
-        ).wkt
-        dict_doubt_wkt[key] = doubt_geometry
+            # TODO? also make a list of all predictions?
+            for key, results in dict_predictions_evaluated.items():
+                # call the parcels, evaluate through brdr and merge them
+                rd = next(iter(results))
+                dict_prediction_rd[key] = rd
+                state = results[rd]["properties"]["brdr_evaluation"].value
+                dict_prediction_state[key] = state
+                score = results[rd]["properties"]["brdr_prediction_score"]
+                dict_prediction_score[key] = score
+                print(f"brdr correction: '{state}' with relevant distance {rd}  & score {str(score)} for ID {key}")
+                geom = results[rd]['result']
+                dict_prediction_wkt[key] = geom_to_wkt(geom)
+                brdr_parcels, parcel_100perc_list = get_parcel_lists(aligner, geom)
+                brdr_parcel_count = len(brdr_parcels)
+                dict_prediction[key] = brdr_parcel_count
+                # print (brdr_parcel_count)
+
+            fp_parcels = parcel_buffer_counts[1]
+            # En welke zijn dit dan? Deze mee oplijsten
+            if not (score is None or score == -1):
+                # vip-buffer minus brdr
+                fp_parcels = list(set(buffer_data[0.2]["parcels"]) - set(brdr_parcels) - set(coverage_data[100]["parcels"]))
+                # calculated_false_positives = parcel_buffer_counts[1] - brdr_parcel_count
+                s1, s2, s3 = set(buffer_data[2]["parcels"]), set(coverage_data[50]["parcels"]), set(brdr_parcels)
+                all_ids = s1 | s2 | s3
+                common_ids = s1 & s2 & s3
+            else:
+                # vip-buffer minus buffer_2
+                fp_parcels = list(
+                    set(buffer_data[0.2]["parcels"]) - set(buffer_data[5]["parcels"]) - set(coverage_data[100]["parcels"]))
+                # calculated_false_positives = parcel_buffer_counts[1] -parcel_buffer_counts[-1]
+                s1, s2 = set(buffer_data[2]["parcels"]), set(coverage_data[50]["parcels"])
+                all_ids = s1 | s2
+                common_ids = s1 & s2
+
+            doubt_parcels = list(all_ids - common_ids)
+            # fp_parcels = list(set(fp_parcels) | set(doubt_parcels)) #TODO or not?
+            fp_parcel_count = len(fp_parcels)
+            fp_geometry = safe_unary_union(
+                [aligner.reference_data.features[p].geometry for p in fp_parcels]
+            ).wkt
+            dict_fp[key] = fp_parcel_count
+            dict_fp_parcels[key] = fp_parcels
+            dict_fp_wkt[key] = fp_geometry
+            # search for ids where the different methods give another result
+
+            dict_doubt_parcels[key] = doubt_parcels
+            doubt_geometry = safe_unary_union(
+                [aligner.reference_data.features[p].geometry for p in doubt_parcels]
+            ).wkt
+            dict_doubt_wkt[key] = doubt_geometry
+        except Exception as e:
+            print(f"Error: {e}")
 
     # Combine in dataframe
     df = pd.DataFrame(

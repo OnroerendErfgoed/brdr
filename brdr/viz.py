@@ -138,7 +138,8 @@ def show_map(
     num_rows = ceil(num_plots / num_cols)
 
     # Create figure with dynamic height
-    plt.figure(figsize=(12, 4 * num_rows))
+    #plt.figure(figsize=(12, 4 * num_rows))
+    fig, ax = plt.subplots(figsize=(12, 4 * num_rows))
 
     for i, dist in enumerate(distances):
         ax = plt.subplot(num_rows, num_cols, i + 1)
@@ -153,7 +154,6 @@ def show_map(
 
         ax.set_title(f"Relevant distance: {dist} m")
 
-    plt.tight_layout()
     plt.show()
 
 
@@ -364,7 +364,8 @@ def plot_difference_by_relevant_distance(
     adjusting the `relevant_distance` parameter impacts the final
     geometric outcome.
     """
-    plt.figure(figsize=(10, 6))
+    #plt.figure(figsize=(10, 6))
+    fig, ax = plt.subplots(figsize=(10, 6))
 
     for key, diffs in dict_differences.items():
         # Ensure values are sorted by x-value to prevent 'zig-zag' lines

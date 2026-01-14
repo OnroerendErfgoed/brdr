@@ -1368,6 +1368,7 @@ def longest_linestring_from_multilinestring(multilinestring):
     graph = graph_from_multilinestring(multilinestring)
 
 
+
     # Find all simple paths and keep the longest one
     longest_path = []
     max_length = 0
@@ -1393,7 +1394,7 @@ def longest_linestring_from_multilinestring(multilinestring):
     return LineString(longest_path)
 
 
-def graph_from_multilinestring(multilinestring):
+def graph_from_multilinestring(multilinestring,relevant_distance=10):
     if not isinstance(multilinestring, MultiLineString):
         raise TypeError("multilinstring expected")
     graph = nx.Graph()
@@ -1407,7 +1408,10 @@ def graph_from_multilinestring(multilinestring):
         # graph, added_edges = _connect_components_greedy(graph)
     loops = list(nx.nodes_with_selfloops(graph))
     graph.remove_edges_from([(n, n) for n in loops])
-    graph = bridge_multiple_complex_gaps(graph, max_phys_dist=5, min_net_dist=10)
+    removed_edges =remove_composite_edges(graph)
+    #export_to_geopackage(graph,"graph_before.gpkg")
+    graph = bridge_multiple_complex_gaps(graph, max_phys_dist=2*relevant_distance, min_net_dist=relevant_distance)
+    #export_to_geopackage(graph,"graph_after.gpkg")
 
     return graph
 
@@ -1418,28 +1422,28 @@ def bridge_multiple_complex_gaps(G, max_phys_dist=5, min_net_dist=50.0):
     separate disconnected components.
     """
 
-    # We blijven herhalen tot we geen gaten meer vinden die aan de criteria voldoen
+    #We keep repeating until we do not find any gaps anymore that match the criteria
     while True:
         endpoints = [n for n, d in G.degree() if d == 1]
         best_gap = None
         min_gap_dist = float("inf")
 
-        # We zoeken naar de 'veiligste' gap om eerst te dichten
+        #we search fot the 'safest' gap to close first
         for i, n1 in enumerate(endpoints):
             for n2 in endpoints[i + 1 :]:
                 phys_dist = euclidean_distance(n1, n2)
 
                 if phys_dist < max_phys_dist:
-                    # Check of ze al verbonden zijn
+                    # Check if they are connected
                     try:
-                        # In dezelfde component? Check netwerkafstand
+                        # In same component? Check network distance
                         if nx.has_path(G, n1, n2):
                             net_dist = nx.shortest_path_length(
                                 G, n1, n2, weight="weight"
                             )
                             is_valid_gap = net_dist > min_net_dist
                         else:
-                            # NIET in dezelfde component: Altijd een valide gap!
+                            # NOT in same component: always a valid gap
                             is_valid_gap = True
                     except nx.NetworkXNoPath:
                         is_valid_gap = True
@@ -1451,12 +1455,12 @@ def bridge_multiple_complex_gaps(G, max_phys_dist=5, min_net_dist=50.0):
         if best_gap:
             u, v = best_gap
             G.add_edge(u, v, weight=min_gap_dist, type="bridge")
-            print(
-                f"Brug geplaatst tussen componenten/uiteinden: {u} - {v} ({min_gap_dist:.2f}m)"
+            logging.debug(
+                f"Bridge added: {u} - {v} ({min_gap_dist:.2f}m)"
             )
-            # We herhalen de loop omdat de topologie nu veranderd is
+            # we repeat the loop because topology is changed
         else:
-            break  # Geen gaten meer gevonden
+            break  # No gaps found anymore
 
     return G
 
@@ -1561,6 +1565,53 @@ def total_vertex_distance(
     return total_distance / len_vertices
 
 
+def remove_composite_edges(G: nx.Graph) -> List[Tuple]:
+    """
+    Identifies and removes edges that are exact compositions of other edges.
+
+    An edge (u, v) is considered composite if there exists an alternative
+    path between u and v whose total weight is exactly equal to the weight
+    of the direct edge.
+
+    Parameters
+    ----------
+    G : nx.Graph
+        The undirected graph to be processed. This object is modified in-place.
+
+    Returns
+    -------
+    removed_edges : list of tuple
+        A list of edges (u, v) that were removed from the graph.
+    """
+    removed_edges = []
+
+    # Iterate over a static list of edges to avoid 'dictionary changed size' errors
+    for u, v in list(G.edges()):
+        # Get the weight of the current direct edge
+        direct_weight = G[u][v].get("weight", 1.0)
+
+        # Temporarily remove the edge to find alternative paths
+        G.remove_edge(u, v)
+
+        try:
+            # Find the shortest path using the remaining edges
+            alt_path_len = nx.shortest_path_length(G, u, v, weight="weight")
+
+            # If an alternative path exists with the EXACT same weight,
+            # the direct edge is a composition and remains removed.
+            if np.isclose(alt_path_len, direct_weight):
+                removed_edges.append((u, v))
+            else:
+                # Path is longer or shorter (shortcut), so we restore the edge
+                G.add_edge(u, v, weight=direct_weight)
+
+        except nx.NetworkXNoPath:
+            # No alternative route exists, restore the direct edge
+            G.add_edge(u, v, weight=direct_weight)
+
+    return removed_edges
+
+
 def find_best_path_in_network(
     geom_to_process, nw_multilinestring, snap_strategy, relevant_distance
 ):
@@ -1580,7 +1631,7 @@ def find_best_path_in_network(
     nw_multilinestring = insert_vertex(nw_multilinestring, end_point)
 
     # Create graph
-    graph = graph_from_multilinestring(nw_multilinestring)
+    graph = graph_from_multilinestring(nw_multilinestring,relevant_distance)
     # remove cycles
 
     start_node = nearest_node(start_point, graph.nodes)
