@@ -14,10 +14,9 @@ from brdr.be.grb.loader import GRBActualLoader
 from brdr.configs import AlignerConfig
 from brdr.constants import RELEVANT_DISTANCE_DECIMALS, DEFAULT_CRS
 from brdr.enums import AlignerResultType
-from brdr.geometry_utils import buffer_neg, buffer_pos, geom_to_wkt, safe_unary_union
+from brdr.geometry_utils import buffer_neg, geom_to_wkt, safe_unary_union
 from brdr.loader import DictLoader
 from brdr.utils import geojson_geometry_to_shapely
-from brdr.viz import plot_difference_by_relevant_distance, show_map
 
 FALSE_POSITIVE_WKT = "fp_wkt"
 DOUBT_WKT = "doubt_wkt"
@@ -120,6 +119,7 @@ def get_false_positive_grb_parcels_dataframe(data, id_name, area_limit=inf, proc
         dict_coverage_range[key] = parcel_coverage_counts[0] - parcel_coverage_counts[-1]
         dict_coverage_0[key] = parcel_coverage_counts[0]
         dict_coverage_50[key] = parcel_coverage_counts[4]
+
         # BUFFER ANALYSIS
         buffer_data = get_buffer_data(aligner, geom, buffers=[0.1, 0.2, 0.5, 1, 2, 3, 4, 5])
         parcel_buffer_counts = [len(buffer_data[b]["parcels"]) for b in buffer_data.keys()]
@@ -191,7 +191,7 @@ def get_false_positive_grb_parcels_dataframe(data, id_name, area_limit=inf, proc
         ).wkt
         dict_doubt_wkt[key] = doubt_geometry
 
-    # Combineer in een DataFrame
+    # Combine in dataframe
     df = pd.DataFrame(
         {
             "coverage_analysis": dict_coverage_list,
@@ -215,16 +215,9 @@ def get_false_positive_grb_parcels_dataframe(data, id_name, area_limit=inf, proc
         }
     )
 
-    # Zet index om naar kolom 'id'
+    # Set index to column 'id'
     df.reset_index(inplace=True)
     df.rename(columns={"index": id_name}, inplace=True)
-    # categoriseren:
-    # select the 100% parcels
-    # check if 0.0 is a stable evaluation, than keep that one
-    # #hoog potentieel (verschil tussen ori en 2m) - in detail te bekijken
-    # brdr beter als 0.2
-    # brdr geen resultaat binnen 2 m (rd 0.0)
-    # reeds correct (ori en 0.2 en 2m idem)
     return df
 
 
@@ -235,10 +228,6 @@ def get_folder_path(analysis_name):
     output_dir.mkdir(parents=True, exist_ok=True)
 
     return output_dir
-
-def write_fp_geojson (path,df):
-    pass
-
 
 def export_wkt_columns_to_geojson(df, wkt_columns, path):
     """
@@ -282,186 +271,225 @@ def export_wkt_columns_to_geojson(df, wkt_columns, path):
         gdf.to_file(final_destination, driver="GeoJSON")
         print(f"Successfully exported {col} to {final_destination}")
 
-#
 
-def write_stats_hist(path, column_name=FP_ESIMATION_COLUMN_NAME):
-    df = pd.read_csv(path / FP_ANALYSIS_CSV_NAME)
-    values = df[column_name].values
-    if len(values)==0:
-        print("empty stats")
-        return
+def export_stats(df, column_name, tolerance, path,filename="stats.txt"):
+    """
+    Calculates error statistics for a specific column and exports them to a text file.
 
-    # =============================
-    # 2. Calculate stats
-    # =============================
-    mean_error = np.mean(values)
-    max_error = np.max(values)
-    rms_error = np.sqrt(np.mean(values**2))
-    tolerance = 2  # count
-    within_tol = np.sum(values <= tolerance) / len(values) * 100
+    Parameters
+    ----------
+    df : pd.DataFrame
+        The DataFrame containing the data to analyze.
+    column_name : str
+        The name of the column used for statistics (e.g., 'error_distance').
+    tolerance : float
+        The threshold value to calculate the percentage of values within limits.
+    path : str or Path
+        The file path where the stats.txt will be saved.
 
+    Returns
+    -------
+    None
+    """
+    if column_name not in df.columns:
+        raise ValueError(f"Column '{column_name}' not found in DataFrame.")
+
+    # 1. Perform calculations
+    data = df[column_name].dropna()  # Exclude missing values for accuracy
+
+    mean_error = data.mean()
+    max_error = data.max()
+
+    # RMS Calculation: Square root of the mean of the squares
+    rms_error = np.sqrt(np.mean(data**2))
+
+    # Percentage within tolerance
+    within_tol_count = (data <= tolerance).sum()
+    within_tol_percent = (within_tol_count / len(data)) * 100 if len(data) > 0 else 0
+
+    # 2. Prepare stats dictionary
     stats = {
-        "Mean count (#)": mean_error,
-        "Max count (#)": max_error,
-        "RMS count (#)": rms_error,
-        f"% beneath threshold {tolerance}#": within_tol,
+        "Mean error": mean_error,
+        "Max error": max_error,
+        "RMS error": rms_error,
+        f"% beneath threshold ({tolerance})": within_tol_percent,
     }
 
-    # Print Stats
-    print("Stats false positives")
-    for k, v in stats.items():
-        print(f"{k}: {v:.3f}")
+    # 3. Write to file
+    file_path = Path(path /filename)
 
-    # =============================
-    # 4. Visualization
-    # =============================
-    # sns.set(style="whitegrid")
+    with open(file_path, "w", encoding="utf-8") as f:
+        f.write(f"Stats for column: {column_name}\n")
+        f.write("-" * 40 + "\n")
+        for k, v in stats.items():
+            # Format numbers to 3 decimal places
+            f.write(f"{k:<30}: {v:.3f}\n")
 
-    # Histogram
-    plt.figure(figsize=(8, 5))
+    print(f"Statistics for '{column_name}' written to: {file_path}")
 
-    custom_bins=20
-    # threshold=15
-    # max_val = 20
-    # # Maak bins: [0, 1, 2, 3, ..., threshold, max_val]
-    # custom_bins = list(range(threshold + 1))
-    # if max_val > threshold:
-    #     custom_bins.append(max_val)
-    # Gebruik een ingebouwde stijl voor een modernere look
-    plt.style.use("seaborn-v0_8-muted")  # Of 'ggplot'
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from pathlib import Path
 
-    # Maak een figure object aan voor meer controle
+
+def export_histogram(path, df, column_name, filename="histogram.png"):
+    """
+    Creates and saves a high-quality histogram from a DataFrame column.
+
+    Parameters
+    ----------
+    path : str or Path
+        Directory where the plot will be saved.
+    df : pd.DataFrame
+        The DataFrame containing the data.
+    column_name : str
+        The name of the column to plot.
+    filename : str, optional
+        The name of the resulting image file. Default is "histogram.png".
+
+    Returns
+    -------
+    None
+    """
+    if df is None or df.empty:
+        print("Warning: No data available to plot histogram.")
+        return
+
+    values = df[column_name].dropna().values
+    if len(values) == 0:
+        print("Warning: Column is empty. Skipping histogram.")
+        return
+
+    # Set modern style
+    plt.style.use("seaborn-v0_8-muted")
     fig, ax = plt.subplots(figsize=(10, 6))
 
-    bins = np.arange(min(values), max(values) + 1, 1)
+    # Define bins (integer steps)
+    bins = np.arange(int(min(values)), int(max(values)) + 2, 1)
 
-    # Teken het histogram
+    # Plot histogram
     ax.hist(
         values,
         bins=bins,
         color="royalblue",
-        edgecolor="white",  # Zorgt voor scheiding tussen staven
+        edgecolor="white",
         linewidth=1.2,
-        density=False,
         alpha=0.85,
-        label="Aantal objecten",
+        label="Object Count",
     )
 
-    # X-as instellingen
-    all_values = np.arange(int(min(values)), int(max(values)) + 1, step=2)
-    ax.set_xticks(all_values)
+    # X-axis configuration
+    ticks = np.arange(int(min(values)), int(max(values)) + 1, step=2)
+    ax.set_xticks(ticks)
 
-    # Voeg subtiele gridlijnen toe op de y-as
+    # Styling
     ax.yaxis.grid(True, linestyle="--", alpha=0.7)
-    ax.set_axisbelow(True)  # Zorgt dat grid achter de bars valt
-
-    # Titels en labels met betere font-instellingen
-    ax.set_title(
-        "Histogram - Estimated False Positives per Datasource-Object",
-        fontsize=14,
-        pad=15,
-        fontweight="bold",
-    )
-    ax.set_xlabel("Estimated # False Positives", fontsize=12)
+    ax.set_axisbelow(True)
+    ax.set_title(f"Histogram - {column_name}", fontsize=14, pad=15, fontweight="bold")
+    ax.set_xlabel("Value", fontsize=12)
     ax.set_ylabel("Count", fontsize=12)
 
-    # Verwijder de "spines" (kaderlijntjes) aan de boven- en rechterkant
+    # Remove top and right spines
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
 
-    # Legenda en layout
     ax.legend()
     plt.tight_layout()
 
-    plt.savefig(path/FP_HISTOGRAM_NAME, dpi=300
-    )  # Hogere DPI voor scherpere print
-    plt.show(block=False)
-    plt.pause(5)
-    plt.close("all")
+    save_path = Path(path) / filename
+    plt.savefig(save_path, dpi=300)
+    plt.close(fig)  # Close to free up memory
+    print(f"Histogram saved to: {save_path}")
 
-    # Boxplot
-    # Gebruik dezelfde stijl als je histogram voor consistentie
+
+def export_boxplot(path, df, column_name, filename="boxplot.png"):
+    """
+    Creates and saves a horizontal boxplot from a DataFrame column.
+
+    Parameters
+    ----------
+    path : str or Path
+        Directory where the plot will be saved.
+    df : pd.DataFrame
+        The DataFrame containing the data.
+    column_name : str
+        The name of the column to plot.
+    filename : str, optional
+        The name of the resulting image file. Default is "boxplot.png".
+
+    Returns
+    -------
+    None
+    """
+    if df is None or df.empty:
+        print("Warning: No data available to plot boxplot.")
+        return
+
+    values = df[column_name].dropna().values
+    if len(values) == 0:
+        print("Warning: Column is empty. Skipping boxplot.")
+        return
+
     plt.style.use("seaborn-v0_8-muted")
+    fig, ax = plt.subplots(figsize=(10, 4))
 
-    plt.figure(figsize=(10, 4))  # Breder voor een horizontale plot
-
-    # De boxplot aanmaken
-    # vert=False maakt hem horizontaal
-    # patch_artist=True zorgt dat we de box kunnen inkleuren
-    # notch=True (optioneel) geeft een inkeping bij de mediaan
-    result = plt.boxplot(
+    # Plot boxplot
+    result = ax.boxplot(
         values,
         vert=False,
         patch_artist=True,
         notch=False,
-        showmeans=True,  # Voegt een groen driehoekje toe voor het gemiddelde
+        showmeans=True,
+        meanprops={
+            "marker": "^",
+            "markerfacecolor": "green",
+            "markeredgecolor": "green",
+        },
         medianprops={"color": "black", "linewidth": 2},
-        flierprops={"markerfacecolor": "red", "marker": "o", "markersize": 5},
+        flierprops={
+            "markerfacecolor": "red",
+            "marker": "o",
+            "markersize": 5,
+            "alpha": 0.5,
+        },
     )
 
-    # De kleur van de box aanpassen (omdat patch_artist=True is)
+    # Coloring the box
     for patch in result["boxes"]:
         patch.set_facecolor("royalblue")
         patch.set_alpha(0.7)
 
-    # X-as instellingen (all_values komt uit je vorige code)
-    plt.xticks(all_values)
+    # X-axis configuration
+    ticks = np.arange(int(min(values)), int(max(values)) + 1, step=2)
+    ax.set_xticks(ticks)
 
-    # Titels
-    plt.title(
-        "Boxplot - Estimated False Positives per Datasource-Object",
-        fontsize=14,
-        fontweight="bold",
-        pad=15,
-    )
-    plt.xlabel("Estimated # False Positives", fontsize=12)
+    # Styling
+    ax.set_title(f"Boxplot - {column_name}", fontsize=14, fontweight="bold", pad=15)
+    ax.set_xlabel("Value", fontsize=12)
+    ax.set_yticks([])  # Hide Y-axis labels for a single box
 
-    # De Y-as labelen of weghalen als er maar één box is
-    plt.yticks([])
+    ax.grid(axis="x", linestyle="--", alpha=0.6)
+    ax.set_axisbelow(True)
 
-    # Grid toevoegen voor betere afleesbaarheid op de X-as
-    plt.grid(axis="x", linestyle="--", alpha=0.6)
-    plt.gca().set_axisbelow(True)
-
-    # Verwijder kaderlijnen
-    plt.gca().spines["top"].set_visible(False)
-    plt.gca().spines["right"].set_visible(False)
-    plt.gca().spines["left"].set_visible(False)
+    # Clean up spines
+    for spine in ["top", "right", "left"]:
+        ax.spines[spine].set_visible(False)
 
     plt.tight_layout()
-    plt.savefig(path / FP_BOXPLOT_NAME, dpi=300)
-    plt.show(block=False)
-    plt.pause(5)
-    plt.close("all")
 
-    print(
-        f"saved_graphs: {FP_HISTOGRAM_NAME}, {FP_BOXPLOT_NAME}"
-    )
-    plt.close("all")
+    save_path = Path(path) / filename
+    plt.savefig(save_path, dpi=300)
+    plt.close(fig)
+    print(f"Boxplot saved to: {save_path}")
 
-def show(aligner,aligner_result):
-    # SHOW results of the predictions
-    dict_predictions = aligner_result.get_results(
-        aligner=aligner, result_type=AlignerResultType.PREDICTIONS
-    )
-    fcs = aligner_result.get_results_as_geojson(add_metadata=False, aligner=aligner)
-    diffs_dict = aligner.get_difference_metrics_for_thematic_data(
-    dict_processresults = aligner_result.results,
-    thematic_data = aligner.thematic_data
-    )
-    reference_geometries = {
-        key: feat.geometry for key, feat in aligner.reference_data.features.items()
-    }
-    if fcs is None or "result" not in fcs:
-        print("empty predictions")
-    else:
-        print(fcs["result"])
-        for key in dict_predictions:
-            plot_difference_by_relevant_distance({key: diffs_dict[key]})
-            show_map(
-                {key: dict_predictions[key]},
-                {key: aligner.thematic_data.features[key].geometry},
-                reference_geometries,
-            )
-            plt.pause(5)
-            plt.close("all")
+def export_analysis_results(path,df=None, column_name=FP_ESIMATION_COLUMN_NAME, tolerance=2,wkt_columns=[BRDR_WKT, FALSE_POSITIVE_WKT, DOUBT_WKT]):
+    if df is None:
+        df = pd.read_csv(path / FP_ANALYSIS_CSV_NAME)
+    if df is None or df.empty:
+        print("Warning: No data available to plot histogram.")
+        return
+    export_stats(df=df, column_name=column_name, tolerance=tolerance, path=path)
+    export_wkt_columns_to_geojson(df=df, wkt_columns=wkt_columns, path=path)
+    export_boxplot(df=df, path=path, column_name=column_name)
+    export_histogram(df=df, path=path, column_name=column_name)

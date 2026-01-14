@@ -39,8 +39,8 @@ The figure below shows:
 * A reference layer (yellow-black).
 * The resulting geometry after alignment with `brdr` (green)
 
-![](docs/figures/example.png)
 
+<img src="docs/figures/example.png" width="50%">
 
 In the animated gif below you can see the core of 'brdr' in action:
 * The visualization on the left:
