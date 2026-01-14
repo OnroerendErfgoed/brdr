@@ -35,7 +35,7 @@ from brdr.geometry_utils import to_crs
 from brdr.geometry_utils import total_vertex_distance
 from brdr.logger import LOGGER
 from brdr.typings import ProcessResult
-
+from concurrent.futures import ThreadPoolExecutor, as_completed
 log = logging.getLogger(__name__)
 
 
@@ -135,7 +135,6 @@ def write_geojson(path_to_file, geojson):
     os.makedirs(parent, exist_ok=True)
     with open(path_to_file, "w") as f:
         dump(geojson, f, default=str)
-
 
 
 def flatten_iter(lst):
@@ -513,44 +512,95 @@ def geojson_to_dicts(collection, id_property=None):
 
 
 def get_collection_by_partition(
-    url,
-    params,
-    geometry,
-    partition=1000,
-    crs=DEFAULT_CRS,
+        url,
+        params,
+        geometry,
+        partition=1000,
+        crs=DEFAULT_CRS,
+        max_workers=None
 ):
     """
     Retrieves a collection of geographic data by partitioning the input geometry.
 
-    Parameters:
-    url (str): The base URL for the data source.
-    geometry (object): The geometric area to partition and retrieve data for. If None, retrieves data for the entire area.
-    partition (int, optional): The number of partitions to divide the geometry into. Default is 1000. If less than 1, no partitioning is done.
-    limit (int, optional): The maximum number of items to retrieve. Default is DOWNLOAD_LIMIT.
-    crs (str, optional): The coordinate reference system to use. Default is DEFAULT_CRS.
+    This function parallelizes data retrieval by splitting the geometry into
+    smaller parts and fetching each partition concurrently using threads.
 
-    Returns:
-    dict: A collection of geographic data, potentially partitioned by the input geometry.
+    Parameters
+    ----------
+    url : str
+        The base URL for the OGC API Features data source.
+    params : dict
+        The query parameters for the API request.
+    geometry : object
+        The geometric area (Shapely object) to partition and retrieve data for.
+        If None or empty, retrieves data for the entire area.
+    partition : int, optional
+        The number of partitions to divide the geometry into. Default is 1000.
+        If less than 1, no partitioning is performed.
+    crs : str, optional
+        The coordinate reference system to use. Default is DEFAULT_CRS.
+    max_workers : int, optional
+        The maximum number of concurrent threads to use for parallel requests.
+        Default is None.
+
+    Returns
+    -------
+    dict
+        A GeoJSON-like collection of geographic data containing merged features
+        from all partitions.
     """
+
     crs = to_crs(crs)
     collection = {}
+
     if geometry is None or geometry.is_empty:
-        collection = get_collection(url=url, params=params)
-    elif partition < 1:
-        params["bbox"] = get_bbox(geometry)
-        params["bbox-crs"] = from_crs(crs)
-        collection = get_collection(url=url, params=params)
-    else:
-        #TODO: multithreading
-        geoms = get_partitions(geometry, partition)
+        return get_collection(url=url, params=params)
+
+    if partition < 1:
+        local_params = params.copy()
+        local_params["bbox"] = get_bbox(geometry)
+        local_params["bbox-crs"] = from_crs(crs)
+        return get_collection(url=url, params=local_params)
+
+    # Prepare partitions
+    geoms = get_partitions(geometry, partition)
+    features_list = []
+
+    # Use ThreadPoolExecutor for parallel I/O-bound API requests
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        future_to_geom = {}
+
         for g in geoms:
-            params["bbox"] = get_bbox(g)
-            params["bbox-crs"] = from_crs(crs)
-            coll = get_collection(url=url, params=params)
-            if collection == {}:
-                collection = dict(coll)
-            elif "features" in collection and "features" in coll:
-                collection["features"].extend(coll["features"])
+            # Create a shallow copy of params to avoid race conditions
+            thread_params = params.copy()
+            thread_params["bbox"] = get_bbox(g)
+            thread_params["bbox-crs"] = from_crs(crs)
+
+            # Submit the request to the thread pool
+            future = executor.submit(get_collection, url=url, params=thread_params)
+            future_to_geom[future] = g
+
+        # Collect results as they complete
+        for future in as_completed(future_to_geom):
+            try:
+                coll = future.result()
+                if coll and "features" in coll:
+                    # If this is the first valid response, use it as the template for the collection
+                    if not collection:
+                        collection = dict(coll)
+                        collection["features"] = []
+
+                    features_list.extend(coll["features"])
+            except Exception as exc:
+                # Retrieve the specific geometry that caused the failure for debugging
+                geom_info = future_to_geom[future]
+                print(f"Partition request generated an exception: {exc}")
+                raise exc
+
+    # Re-attach all collected features to the template
+    if collection:
+        collection["features"] = features_list
+
     return collection
 
 
