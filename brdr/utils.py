@@ -4,6 +4,8 @@ import os.path
 
 import numpy as np
 import requests
+import hashlib
+import json
 from geojson import Feature
 from geojson import FeatureCollection
 from geojson import dump
@@ -37,6 +39,7 @@ from brdr.logger import LOGGER
 from brdr.typings import ProcessResult
 import hashlib
 import uuid
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 log = logging.getLogger(__name__)
 
@@ -137,7 +140,6 @@ def write_geojson(path_to_file, geojson):
     os.makedirs(parent, exist_ok=True)
     with open(path_to_file, "w") as f:
         dump(geojson, f, default=str)
-
 
 
 def flatten_iter(lst):
@@ -360,80 +362,117 @@ def get_geometry_difference_metrics_from_processresult(
     return diff
 
 
-def fetch_all_ogc_features(base_url, params=None, headers=None, max_pages=math.inf):
+def fetch_all_ogc_features(
+    base_url, params=None, headers=None, max_pages=math.inf, max_workers=None
+):
     """
-    Fetches all features from an OGC Feature API, regardless of the pagination mechanism.
+    Fetches all features from an OGC Feature API using parallel requests where possible.
 
-    Supports:
-    - Cursor-based pagination via 'next' links
-    - Offset-based pagination via 'startIndex'
-    - No pagination (all features in a single page)
+    If the API provides 'numberMatched', the function calculates all offsets and
+    fetches pages in parallel. If not, it falls back to sequential cursor-based
+    pagination via 'next' links.
 
-    :param base_url: URL of the /items endpoint of the OGC API
-    :param headers: Optional headers (e.g., Accept: application/json)
-    :return: A list of all features
+    Parameters
+    ----------
+    base_url : str
+        URL of the /items endpoint of the OGC API.
+    params : dict, optional
+        Query parameters for the API request. Default is None.
+    headers : dict, optional
+        Optional headers (e.g., Accept: application/json).
+    max_pages : int or math.inf, optional
+        Maximum number of pages to fetch. Default is math.inf.
+    max_workers : int, optional
+        Maximum number of concurrent threads for parallel fetching. Default is None.
+
+    Returns
+    -------
+    list
+        A list containing all features retrieved from the API.
     """
-
     if params is None:
         params = {}
     if headers is None:
         headers = {"Accept": "application/json"}
 
-    all_features = []
-    url = base_url
     limit = params.get("limit", DOWNLOAD_LIMIT)
-    start_index = 0
-    local_params = params.copy()
-    use_start_index = False
-    page = 0
 
-    while url and page <= max_pages:
-        LOGGER.debug("page:" + str(page) + "url: " + str(url))
-        # Add startIndex when using startIndex
-        if use_start_index:
-            local_params["startIndex"] = start_index
+    # 1. Initial request to determine total count and pagination type
+    response = requests.get(base_url, params=params, headers=headers)
+    response.raise_for_status()
+    data = response.json()
 
-        response = requests.get(url, params=local_params, headers=headers)
-        response.raise_for_status()
-        data = response.json()
+    all_features = list(data.get("features", []))
+    total_matched = data.get("numberMatched")
+    number_returned = data.get("numberReturned", len(data.get("features", [])))
 
-        # Add features
-        all_features.extend(data.get("features", []))
+    # Check for 'next' link for cursor-based fallback
+    next_link = next(
+        (link["href"] for link in data.get("links", []) if link["rel"] == "next"),
+        None,
+    )
 
-        # Search next-link
-        next_link = next(
-            (link["href"] for link in data.get("links", []) if link["rel"] == "next"),
-            None,
+    # 2. Parallel Path: If we know the total and it's more than one page
+    if total_matched and total_matched > number_returned and max_pages > 0:
+        LOGGER.info(
+            f"Total features: {total_matched}. Switching to parallel offset-based retrieval."
         )
 
-        if next_link:
-            # Cursor-based pagination
-            url = next_link
-            local_params = None  # next-url has all its parameters included
-        elif (
-            "numberMatched" in data
-            and "numberReturned" in data
-            and data["numberMatched"] == data["numberReturned"]
-        ):
-            break
-        elif "numberReturned" in data and "features" in data:
-            # limit not used and all features returned
-            if data["numberReturned"] > limit:
-                break
-            # Possibly offset-based pagination
-            if not use_start_index:
-                use_start_index = True
-                start_index = params.get("startIndex", 0)
-                local_params = params.copy()
-                local_params["count"] = limit
-            start_index += limit
-            if data["numberReturned"] <= limit:
-                break
-        else:
-            # No further pagination
-            break
+        # Calculate offsets
+        offsets = range(number_returned, total_matched, limit)
+        # Limit offsets by max_pages
+        offsets = list(offsets)[: int(max_pages)]
 
-        page += 1
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_offset = {}
+            for offset in offsets:
+                local_params = params.copy()
+                local_params["startIndex"] = offset
+                local_params["limit"] = limit
+                future_to_offset[
+                    executor.submit(
+                        requests.get, base_url, params=local_params, headers=headers
+                    )
+                ] = offset
+
+            for future in as_completed(future_to_offset):
+                try:
+                    resp = future.result()
+                    resp.raise_for_status()
+                    page_data = resp.json()
+                    all_features.extend(page_data.get("features", []))
+                except Exception as exc:
+                    LOGGER.error(
+                        f"Offset {future_to_offset[future]} generated an exception: {exc}"
+                    )
+
+        return all_features
+
+    # 3. Sequential Path: Fallback for Cursor-based pagination
+    elif next_link and max_pages > 0:
+        LOGGER.info(
+            "Parallel retrieval not possible (no total count). Falling back to sequential cursor pagination."
+        )
+        url = next_link
+        page = 1
+        while url and page <= max_pages:
+            LOGGER.debug(f"Fetching page {page}: {url}")
+            # For next_links, parameters are usually already in the URL
+            response = requests.get(url, headers=headers)
+            response.raise_for_status()
+            data = response.json()
+
+            all_features.extend(data.get("features", []))
+
+            url = next(
+                (
+                    link["href"]
+                    for link in data.get("links", [])
+                    if link["rel"] == "next"
+                ),
+                None,
+            )
+            page += 1
 
     return all_features
 
@@ -515,44 +554,133 @@ def geojson_to_dicts(collection, id_property=None):
 
 
 def get_collection_by_partition(
-    url,
-    params,
-    geometry,
-    partition=1000,
-    crs=DEFAULT_CRS,
+        url,
+        params,
+        geometry,
+        partition=1000,
+        crs=DEFAULT_CRS,
+        max_workers=None
 ):
     """
     Retrieves a collection of geographic data by partitioning the input geometry.
 
-    Parameters:
-    url (str): The base URL for the data source.
-    geometry (object): The geometric area to partition and retrieve data for. If None, retrieves data for the entire area.
-    partition (int, optional): The number of partitions to divide the geometry into. Default is 1000. If less than 1, no partitioning is done.
-    limit (int, optional): The maximum number of items to retrieve. Default is DOWNLOAD_LIMIT.
-    crs (str, optional): The coordinate reference system to use. Default is DEFAULT_CRS.
+    This function parallelizes data retrieval by splitting the geometry into
+    smaller parts and fetching each partition concurrently using threads.
 
-    Returns:
-    dict: A collection of geographic data, potentially partitioned by the input geometry.
+    Parameters
+    ----------
+    url : str
+        The base URL for the OGC API Features data source.
+    params : dict
+        The query parameters for the API request.
+    geometry : object
+        The geometric area (Shapely object) to partition and retrieve data for.
+        If None or empty, retrieves data for the entire area.
+    partition : int, optional
+        The number of partitions to divide the geometry into. Default is 1000.
+        If less than 1, no partitioning is performed.
+    crs : str, optional
+        The coordinate reference system to use. Default is DEFAULT_CRS.
+    max_workers : int, optional
+        The maximum number of concurrent threads to use for parallel requests.
+        Default is None.
+
+    Returns
+    -------
+    dict
+        A GeoJSON-like collection of geographic data containing merged features
+        from all partitions.
     """
+
     crs = to_crs(crs)
     collection = {}
+
     if geometry is None or geometry.is_empty:
-        collection = get_collection(url=url, params=params)
-    elif partition < 1:
-        params["bbox"] = get_bbox(geometry)
-        params["bbox-crs"] = from_crs(crs)
-        collection = get_collection(url=url, params=params)
-    else:
-        geoms = get_partitions(geometry, partition)
+        return get_collection(url=url, params=params)
+
+    if partition < 1:
+        local_params = params.copy()
+        local_params["bbox"] = get_bbox(geometry)
+        local_params["bbox-crs"] = from_crs(crs)
+        return get_collection(url=url, params=local_params)
+
+    # Prepare partitions
+    geoms = get_partitions(geometry, partition)
+    features_list = []
+
+    # Use ThreadPoolExecutor for parallel I/O-bound API requests
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        future_to_geom = {}
+
         for g in geoms:
-            params["bbox"] = get_bbox(g)
-            params["bbox-crs"] = from_crs(crs)
-            coll = get_collection(url=url, params=params)
-            if collection == {}:
-                collection = dict(coll)
-            elif "features" in collection and "features" in coll:
-                collection["features"].extend(coll["features"])
+            # Create a shallow copy of params to avoid race conditions
+            thread_params = params.copy()
+            thread_params["bbox"] = get_bbox(g)
+            thread_params["bbox-crs"] = from_crs(crs)
+
+            # Submit the request to the thread pool
+            future = executor.submit(get_collection, url=url, params=thread_params)
+            future_to_geom[future] = g
+
+        # Collect results as they complete
+        for future in as_completed(future_to_geom):
+            try:
+                coll = future.result()
+                if coll and "features" in coll:
+                    # If this is the first valid response, use it as the template for the collection
+                    if not collection:
+                        collection = dict(coll)
+                        collection["features"] = []
+
+                    features_list.extend(coll["features"])
+            except Exception as exc:
+                # Retrieve the specific geometry that caused the failure for debugging
+                geom_info = future_to_geom[future]
+                print(f"Partition request generated an exception: {exc}")
+                raise exc
+
+    # Re-attach all collected features to the template
+    if collection:
+        unique_features = deduplicate_features(features_list)
+        collection["features"] = unique_features
+
     return collection
+
+
+def deduplicate_features(features):
+    """
+    Removes duplicate features using ID or a content-based hash as fallback.
+
+    Parameters
+    ----------
+    features : list
+        List of GeoJSON-like feature dictionaries.
+
+    Returns
+    -------
+    list
+        Deduplicated list of features.
+    """
+    seen_hashes = set()
+    unique_features = []
+
+    for feat in features:
+        # 1. Try to get the official ID
+        feat_id = feat.get("id")
+
+        # 2. If no ID, create a hash of the content
+        if feat_id is None:
+            # We use a stable JSON string to represent the feature content
+            content = json.dumps(
+                {"g": feat.get("geometry"), "p": feat.get("properties")}, sort_keys=True
+            )
+            feat_id = hashlib.md5(content.encode()).hexdigest()
+
+        if feat_id not in seen_hashes:
+            unique_features.append(feat)
+            seen_hashes.add(feat_id)
+
+    return unique_features
 
 
 def build_reverse_index_wkb(d: dict):

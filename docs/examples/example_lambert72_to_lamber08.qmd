@@ -1,0 +1,18 @@
+---
+title: "Lambert72 to Lambert 08"
+description: "Simple example to align a data-object after Lambert72/08-transformation"
+author: "Karel Dieussaert"
+date: "2026-01-14"
+categories: [Lambert72/08, Transformation]
+format:
+  html:
+    code-fold: true
+jupyter: python3
+---
+# Lambert72/08 transformation
+This example shows how **brdr** can be used to align a data-object after Lambert72/08-tranformation, so small deviations of the transformation are re-aligned to a 08-reference-layer.
+
+```{python}
+#| fig-cap: "Alignment after Lambert72/08-transformation"
+{{< include ../../examples/example_lambert72_to_lambert08.py >}}
+```

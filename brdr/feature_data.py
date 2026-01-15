@@ -179,13 +179,7 @@ class AlignerFeatureCollection:
         BaseGeometry
             A single geometry representing the combined extent of all features.
 
-        Raises
-        ------
-        ValueError
-            If the collection contains no features.
         """
-        if not self.features:
-            raise ValueError("FeatureCollection has no features")
         if self._union is None:
             geoms = [f.geometry for f in self.features.values()]
             self._union = safe_unary_union(geoms)
@@ -209,7 +203,6 @@ class AlignerFeatureCollection:
         ------
         ValueError
             If the collection is not marked as a reference dataset (`is_reference=False`)
-            or if the collection contains no features.
 
         Notes
         -----
@@ -217,8 +210,6 @@ class AlignerFeatureCollection:
         """
         if not self.is_reference:
             raise ValueError("FeatureCollection is not a reference dataset")
-        if not self.features:
-            raise ValueError("FeatureCollection has no features")
         if self._elements is None:
             geoms = [f.geometry for f in self.features.values()]
             self._elements = extract_points_lines_from_geometry(
@@ -243,7 +234,6 @@ class AlignerFeatureCollection:
         ------
         ValueError
             If the collection is not marked as a reference dataset (`is_reference=False`)
-            or if the collection contains no features.
 
         Notes
         -----
@@ -261,8 +251,6 @@ class AlignerFeatureCollection:
         """
         if not self.is_reference:
             raise ValueError("FeatureCollection is not a reference dataset")
-        if not self.features:
-            raise ValueError("FeatureCollection has no features")
         if self._items is None:
             self._items = np.array(list(self.features.keys()), dtype=object)
         return self._items
@@ -280,12 +268,10 @@ class AlignerFeatureCollection:
         Raises
         ------
         ValueError
-            If the collection is not marked as a reference dataset or is empty.
+            If the collection is not marked as a reference dataset
         """
         if not self.is_reference:
             raise ValueError("FeatureCollection is not a reference dataset")
-        if not self.features:
-            raise ValueError("FeatureCollection has no features")
         if self._tree is None:
             geoms = [f.geometry for f in self.features.values()]
             self._tree = STRtree(geoms)

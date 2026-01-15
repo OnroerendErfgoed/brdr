@@ -28,7 +28,9 @@ from brdr.enums import ProcessRemark
 from brdr.enums import ProcessorID
 from brdr.enums import SnapStrategy
 from brdr.feature_data import AlignerFeatureCollection
-from brdr.geometry_utils import buffer_neg
+from brdr.geometry_utils import (
+    buffer_neg,
+)
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import buffer_pos
 from brdr.geometry_utils import fill_and_remove_gaps
@@ -42,7 +44,6 @@ from brdr.geometry_utils import safe_intersection
 from brdr.geometry_utils import safe_symmetric_difference
 from brdr.geometry_utils import safe_unary_union
 from brdr.geometry_utils import safe_union
-from brdr.geometry_utils import shortest_connections_between_geometries
 from brdr.geometry_utils import snap_geometry_to_reference
 from brdr.geometry_utils import to_multi
 from brdr.logger import Logger
@@ -127,6 +128,10 @@ class BaseProcessor(ABC):
             A dictionary containing the resulting geometry and difference metrics.
         """
         pass
+    def check_area_limit(self, input_geometry: BaseGeometry):
+        if self.config.area_limit and input_geometry.area > self.config.area_limit:
+            message = f"The input polygon is too large to process: input area {str(input_geometry.area)} m², limit area: {str(self.config.area_limit)} m²."
+            raise ValueError(message)
 
     def _postprocess_preresult(
         self,
@@ -605,9 +610,7 @@ class SnapGeometryProcessor(BaseProcessor):
         reference_data: AlignerFeatureCollection,
         input_geometry: BaseGeometry,
         mitre_limit: float,
-        ref_intersections_geoms: List[BaseGeometry],
         relevant_distance: float,
-        snap_strategy: SnapStrategy,
         **kwargs: Any,
     ) -> ProcessResult:
         """
@@ -627,12 +630,8 @@ class SnapGeometryProcessor(BaseProcessor):
             The thematic geometry to be snapped.
         mitre_limit : float
             Mitre limit for buffering operations.
-        ref_intersections_geoms : List[BaseGeometry]
-            A list of reference geometries that intersect with the input.
         relevant_distance : float
             The maximum distance within which snapping occurs.
-        snap_strategy : SnapStrategy
-            The specific snapping logic to apply (e.g., to points, lines, or both).
         **kwargs : Any
             Additional arguments passed to the processor.
 
@@ -660,10 +659,34 @@ class SnapGeometryProcessor(BaseProcessor):
             Merge --> Post
         ```
         """
+        self.check_area_limit(input_geometry)
         snapped = []
         virtual_reference = Polygon()
+        snap_strategy = self.config.snap_strategy
 
-        # Handle Open Domain (OD) / Onbekend Terrein logic
+        # CALCULATE INNER and OUTER INPUT GEOMETRY for performance optimization on big geometries
+        # combine all parts of the input geometry to one polygon
+        input_geometry_inner, input_geometry_outer = self._calculate_inner_outer(
+            input_geometry, relevant_distance,self.config.max_outer_buffer
+        )
+        # get a list of all ref_ids that are intersecting the thematic geometry; we take it bigger because we want to check if there are also reference geometries on a relevant distance.
+        input_geometry_outer_buffered = buffer_pos(
+            input_geometry_outer,
+            relevant_distance * self.config.buffer_multiplication_factor,
+        )
+        ref_intersections = reference_data.items.take(
+            reference_data.tree.query(input_geometry_outer_buffered)
+        ).tolist()
+        ref_intersections = reference_data.items.take(
+            reference_data.tree.query(input_geometry_outer_buffered)
+        ).tolist()
+
+        ref_intersections_geoms = []
+        for key_ref in ref_intersections:
+            ref_geom = reference_data[key_ref].geometry
+            ref_intersections_geoms.append(ref_geom)
+
+        # Handle Open Domain (OD)logic
         if self.config.od_strategy != OpenDomainStrategy.EXCLUDE:
             virtual_reference = self._create_virtual_reference(
                 input_geometry,
@@ -784,6 +807,7 @@ class DieussaertGeometryProcessor(BaseProcessor):
             Post --> End[ProcessResult]
         ```
         """
+        self.check_area_limit(input_geometry)
         if (
             not self.config.multi_as_single_modus
             or input_geometry is None
@@ -1456,6 +1480,7 @@ class NetworkGeometryProcessor(BaseProcessor):
             Post --> End[Final ProcessResult]
         ```
         """
+        self.check_area_limit(input_geometry)
         input_geometry = to_multi(input_geometry)
 
         # Determine the search area for relevant network elements
@@ -1599,7 +1624,7 @@ class NetworkGeometryProcessor(BaseProcessor):
         splitter = safe_unary_union(reference_intersection)
         try:
             geom_to_process_splitted = split(geom_to_process_segmentized, splitter)
-        except GeometryTypeError:
+        except (GeometryTypeError,ValueError):
             geom_to_process_splitted = geom_to_process_segmentized
         thematic_points = MultiPoint(
             list(get_coords_from_geometry(geom_to_process_splitted))
@@ -1624,8 +1649,7 @@ class NetworkGeometryProcessor(BaseProcessor):
         # add extra segments (connection lines between theme and reference)
         extra_segments = []
         for geom in thematic_difference.geoms:
-            p_start = Point(geom.coords[0])
-            p_end = Point(geom.coords[-1])
+            p_start, p_end = self._get_startpoint_endpoint_from_geom(geom)
             connection_line_start = self._get_connection_line(
                 thematic_points,
                 thematic_difference,
@@ -1648,15 +1672,15 @@ class NetworkGeometryProcessor(BaseProcessor):
 
         # add extra segments (connection lines between reference_intersections)
         # #268 ?when passing OpenDomain, there is not always connection between the reference-parts. How to solve this?
-        extra_segments_ref_intersections = shortest_connections_between_geometries(
-            reference_intersection
-        )
-        # extra_segments_ref_intersections = get_connection_lines_to_nearest(
+        # extra_segments_ref_intersections = connection_lines_between_multilinestring(
         #     reference_intersection
         # )
-        segments.extend(
-            extra_segments_ref_intersections
-        )  # removed as we first will filter these lines
+        # # extra_segments_ref_intersections = get_connection_lines_to_nearest(
+        # #     reference_intersection
+        # # )
+        # segments.extend(
+        #     extra_segments_ref_intersections
+        # )  # removed as we first will filter these lines
 
         # Filter out lines that are not fully in relevant distance as these are no valid solution-paths
         # Mostly these lines will already be in the distance as both start en endpoint are in range (but not always fully)
@@ -1680,6 +1704,15 @@ class NetworkGeometryProcessor(BaseProcessor):
         #     )
 
         return geom_processed
+
+    def _get_startpoint_endpoint_from_geom(self, geom) -> tuple[Point, Point]:
+        try:
+            p_start = Point(geom.coords[0])
+            p_end = Point(geom.coords[-1])
+        except NotImplementedError:
+            p_start = Point(geom.exterior.coords[0])
+            p_end = Point(geom.exterior.coords[-1])
+        return p_start, p_end
 
 
 class AlignerGeometryProcessor(BaseProcessor):
@@ -1770,9 +1803,7 @@ class AlignerGeometryProcessor(BaseProcessor):
             )
         elif isinstance(input_geometry, (Polygon, MultiPolygon)):
             # Processing thematic polygons
-            if self.config.area_limit and input_geometry.area > self.config.area_limit:
-                message = f"The input polygon is too large to process: input area {str(input_geometry.area)} m², limit area: {str(self.config.area_limit)} m²."
-                raise ValueError(message)
+            self.check_area_limit(input_geometry)
             self.logger.feedback_debug("process geometry")
 
             # For calculations with RD=0 the original input is returned
@@ -1908,6 +1939,7 @@ class TopologyProcessor(BaseProcessor):
             Dissolve --> End[Final ProcessResult]
         ```
         """
+        self.check_area_limit(input_geometry)
         self._build_topo_cache(thematic_data)
 
         # Identify the feature ID via its WKB

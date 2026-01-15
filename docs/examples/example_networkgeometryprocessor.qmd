@@ -1,0 +1,21 @@
+---
+title: "NetworkGeometryProcessor"
+description: "Simple example to get started"
+author: "Karel Dieussaert"
+date: "2026-01-07"
+categories: [NetworkGeometryProcessor, Prediction, Graph]
+format:
+  html:
+    code-fold: true
+jupyter: python3
+---
+# NetworkGeometryProcessor
+This example shows an example how a processor (NetworkGeometryProcessor) can be added to the aligner.
+The aligner makes predictions based on the result from this processor.
+In this case NetworkGeometryProcessor is used. This is a slower processor as DieussaertProcessor, but can be used more generic for all kinds of geometrytypes:
+Polygon/LibeString/Point - to - Polygon/LibeString/Point.
+
+```{python}
+#| fig-cap: "Prediction with NetworkGeometryProcessor"
+{{< include ../../examples/example_networkgeometryprocessor.py >}}
+```
