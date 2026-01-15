@@ -6,7 +6,6 @@ from brdr.be.grb.constants import (
     GRB_MAX_REFERENCE_BUFFER,
     GRB_SUPPORTED_CRS,
     GRB_FEATURE_URL,
-    GRB,
     GRB_PARCEL_ID,
     GRB_VERSION_DATE,
     GRB_FISCAL_PARCELS_URL,
