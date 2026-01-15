@@ -128,6 +128,10 @@ class BaseProcessor(ABC):
             A dictionary containing the resulting geometry and difference metrics.
         """
         pass
+    def check_area_limit(self, input_geometry: BaseGeometry):
+        if self.config.area_limit and input_geometry.area > self.config.area_limit:
+            message = f"The input polygon is too large to process: input area {str(input_geometry.area)} m², limit area: {str(self.config.area_limit)} m²."
+            raise ValueError(message)
 
     def _postprocess_preresult(
         self,
@@ -655,6 +659,7 @@ class SnapGeometryProcessor(BaseProcessor):
             Merge --> Post
         ```
         """
+        self.check_area_limit(input_geometry)
         snapped = []
         virtual_reference = Polygon()
         snap_strategy = self.config.snap_strategy
@@ -802,6 +807,7 @@ class DieussaertGeometryProcessor(BaseProcessor):
             Post --> End[ProcessResult]
         ```
         """
+        self.check_area_limit(input_geometry)
         if (
             not self.config.multi_as_single_modus
             or input_geometry is None
@@ -1474,6 +1480,7 @@ class NetworkGeometryProcessor(BaseProcessor):
             Post --> End[Final ProcessResult]
         ```
         """
+        self.check_area_limit(input_geometry)
         input_geometry = to_multi(input_geometry)
 
         # Determine the search area for relevant network elements
@@ -1796,9 +1803,7 @@ class AlignerGeometryProcessor(BaseProcessor):
             )
         elif isinstance(input_geometry, (Polygon, MultiPolygon)):
             # Processing thematic polygons
-            if self.config.area_limit and input_geometry.area > self.config.area_limit:
-                message = f"The input polygon is too large to process: input area {str(input_geometry.area)} m², limit area: {str(self.config.area_limit)} m²."
-                raise ValueError(message)
+            self.check_area_limit(input_geometry)
             self.logger.feedback_debug("process geometry")
 
             # For calculations with RD=0 the original input is returned
@@ -1934,6 +1939,7 @@ class TopologyProcessor(BaseProcessor):
             Dissolve --> End[Final ProcessResult]
         ```
         """
+        self.check_area_limit(input_geometry)
         self._build_topo_cache(thematic_data)
 
         # Identify the feature ID via its WKB
