@@ -5,7 +5,6 @@ from pathlib import Path
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-from matplotlib import pyplot as plt
 from shapely import wkt
 
 from brdr.aligner import Aligner
@@ -14,13 +13,25 @@ from brdr.be.grb.loader import GRBActualLoader
 from brdr.configs import AlignerConfig
 from brdr.constants import RELEVANT_DISTANCE_DECIMALS, DEFAULT_CRS
 from brdr.enums import AlignerResultType
-from brdr.geometry_utils import buffer_neg, geom_to_wkt, safe_unary_union, buffer_pos
+from brdr.geometry_utils import (
+    buffer_neg,
+    geom_to_wkt,
+    safe_unary_union,
+    buffer_pos,
+    to_crs,
+    from_crs,
+)
 from brdr.loader import DictLoader
 from brdr.utils import geojson_geometry_to_shapely
+from brdr.viz import export_boxplot, export_histogram
 
-FALSE_POSITIVE_WKT = "fp_wkt"
+METRICS_TXT = "metrics.txt"
+STATS_TXT = "stats.txt"
+
+FALSE_POSITIVE_WKT = "falsepositive_wkt"
 DOUBT_WKT = "doubt_wkt"
 BRDR_WKT="brdr_wkt"
+ORIGINAL_WKT = "original_wkt"
 
 FP_ANALYSIS_CSV_NAME = "fp_analysis.csv"
 FP_HISTOGRAM_NAME = "fp_histogram.png"
@@ -66,14 +77,21 @@ def get_coverage_data(aligner, geom, percentages = [0, 1, 5, 10, 50, 90, 95, 99,
 
     return coverage_dict
 
-def get_false_positive_grb_parcels_dataframe(data, id_name, area_limit=inf, processor=None):
-    #TODO add logging of skipped & errored features
-    #write original geometry
-    #also write brdr with ALL_SIDE?
+def get_false_positive_grb_parcels_dataframe(data, id_name, area_limit=inf, processor=None,conn_str=None,tablename="adp",ref_id_name="capakey",geometry_name="geom",crs=DEFAULT_CRS):
+    """
+    Processes features to find false positives and logs processing metrics.
+    """
+    # TODO also write brdr with ALL_SIDE?
+    # 1. Initialize counters
+    metrics = {"area_limit": area_limit,"total_count": 0, "success_ids": [], "skipped_ids": [], "failed_ids": []}
+    # if not area_limit==inf:
+    #     metrics ["area_limit"] = area_limit
+
     rds = [
         round(k, RELEVANT_DISTANCE_DECIMALS)
         for k in np.arange(0, 510, 10, dtype=int) / 100
     ]
+    srid = from_crs(to_crs(crs), format="id")
     dict_coverage_list ={}
     dict_coverage_range ={}
     dict_coverage_0 ={}
@@ -92,47 +110,44 @@ def get_false_positive_grb_parcels_dataframe(data, id_name, area_limit=inf, proc
     dict_fp_wkt = {}
     dict_doubt_parcels = {}
     dict_doubt_wkt = {}
-    features = []
-    if data and "features" in data:
-        features = data['features']
-    print(f"Nr of  features: {len(features)}")
+    dict_original_wkt = {}
+
+    features = data.get("features", []) if data else []
+    metrics["total_count"] = len(features)
+    print(f"Nr of features: {metrics['total_count']}")
+
+    processed_data = []
     for f in features:
         try:
             key = f["properties"][id_name]
             geom = geojson_geometry_to_shapely(f["geometry"])
             if geom.area > area_limit:
                 print(f"Feature {key} skipped based on area {geom.area} m²")
+                metrics["skipped_ids"].append(key)
                 continue
             print(key)
             dict_theme = {key: geom}
 
             aligner_config = AlignerConfig
-            aligner = Aligner(crs="EPSG:31370", processor=processor, config=aligner_config)
+            aligner = Aligner(crs=crs, processor=processor, config=aligner_config)
             loader = DictLoader(dict_theme)
             aligner.load_thematic_data(loader)
-            #TODO: fix
-            if False:
+            if not conn_str:
                 loader = GRBActualLoader(
                     grb_type=GRBType.ADP, partition=1000, aligner=aligner
                 )
             else:
-                # Connection string naar jouw PostGIS database
-                conn_str = "postgresql://postgres:postgres@localhost:5432/athumi"
-                # SQL-query om geometrieën op te halen
-
+                # SQL-query to get geometry from postgis db
                 wkt = buffer_pos(aligner.thematic_data.union, 10)
-                srid = 31370
-
-                sql = f"SELECT capakey,geom from adp where ST_Intersects( geom,ST_SetSRID(ST_GeomFromText('{wkt}'), {str(srid)}))"
-
-                # Lees data rechtstreeks in een GeoDataFrame
-                gdf = gpd.read_postgis(sql, conn_str, geom_col="geom")
-                dict_reference = dict(zip(gdf["capakey"], gdf["geom"]))
+                sql = f"SELECT {ref_id_name},{geometry_name} from {tablename} where ST_Intersects({geometry_name},ST_SetSRID(ST_GeomFromText('{wkt}'), {str(srid)}))"
+                # Read SQL-result into GeoDataFrame
+                gdf = gpd.read_postgis(sql, conn_str, geom_col=geometry_name)
+                dict_reference = dict(zip(gdf[ref_id_name], gdf[geometry_name]))
                 loader = DictLoader(data_dict=dict_reference)
                 aligner.load_reference_data(loader)
-
             aligner.load_reference_data(loader)
 
+            dict_original_wkt[key] = geom.wkt
             # COVERAGE ANALYSIS
             coverage_data = get_coverage_data(aligner, geom, percentages=[0, 1, 5, 10, 50, 90, 95, 99, 100])
             parcel_coverage_counts = [coverage_data[b]["count"] for b in coverage_data.keys()]
@@ -211,8 +226,14 @@ def get_false_positive_grb_parcels_dataframe(data, id_name, area_limit=inf, proc
                 [aligner.reference_data.features[p].geometry for p in doubt_parcels]
             ).wkt
             dict_doubt_wkt[key] = doubt_geometry
+
+            metrics["success_ids"].append(key)
+
         except Exception as e:
-            print(f"Error: {e}")
+            if key is None:
+                raise KeyError(f"No key found")
+            metrics["failed_ids"].append(key)
+            print(f"Error processing feature {key}: {e}")
 
     # Combine in dataframe
     df = pd.DataFrame(
@@ -235,13 +256,15 @@ def get_false_positive_grb_parcels_dataframe(data, id_name, area_limit=inf, proc
             DOUBT_WKT: dict_doubt_wkt,
             FALSE_POSITIVE_WKT: dict_fp_wkt,
             BRDR_WKT: dict_prediction_wkt,
+            ORIGINAL_WKT: dict_original_wkt,
         }
     )
 
     # Set index to column 'id'
     df.reset_index(inplace=True)
     df.rename(columns={"index": id_name}, inplace=True)
-    return df
+
+    return df,metrics
 
 
 def get_folder_path(analysis_name):
@@ -252,9 +275,10 @@ def get_folder_path(analysis_name):
 
     return output_dir
 
-def export_wkt_columns_to_geojson(df, wkt_columns, path):
+def export_wkt_columns_to_geojson(df, wkt_columns, path, crs=DEFAULT_CRS):
     """
-    Exports multiple WKT columns from a DataFrame to separate GeoJSON files.
+    Exports multiple WKT columns from a DataFrame to separate GeoJSON files,
+    ensuring that other WKT columns are excluded from the properties.
 
     Parameters
     ----------
@@ -262,8 +286,10 @@ def export_wkt_columns_to_geojson(df, wkt_columns, path):
         The source DataFrame containing geometry and property columns.
     wkt_columns : list of str
         The names of the columns containing WKT strings.
-    output_dir : str or Path
+    path : str or Path
         The directory where the GeoJSON files will be saved.
+    crs : str, optional
+        The coordinate reference system for the GeoJSON.
     """
     output_path = Path(path)
     output_path.mkdir(parents=True, exist_ok=True)
@@ -273,29 +299,33 @@ def export_wkt_columns_to_geojson(df, wkt_columns, path):
             print(f"Warning: Column '{col}' not found in DataFrame. Skipping.")
             continue
 
-        # 1. Create a copy to avoid modifying the original DF
-        # We only take the geometry column and the other non-WKT columns as properties
-        other_cols = [c for c in df.columns if c not in wkt_columns]
-        temp_df = df[other_cols + [col]].copy()
+        # 1. Identify property columns: Exclude ALL columns listed in wkt_columns
+        # This ensures that no WKT strings remain in the attributes
+        property_cols = [c for c in df.columns if c not in wkt_columns]
 
-        # 2. Convert WKT strings to actual geometry objects
+        # 2. Select properties + the current WKT column
+        temp_df = df[property_cols + [col]].copy()
+
+        # 3. Convert WKT string to actual geometry
         temp_df["geometry"] = temp_df[col].apply(wkt.loads)
 
-        # 3. Create GeoDataFrame
-        gdf = gpd.GeoDataFrame(temp_df, geometry="geometry", crs=DEFAULT_CRS)
+        # 4. Initialize GeoDataFrame
+        gdf = gpd.GeoDataFrame(temp_df, geometry="geometry", crs=crs)
 
-        # 4. Remove the original WKT string column to avoid redundancy in properties
+        # 5. Drop the redundant string version of the current column
         gdf = gdf.drop(columns=[col])
 
-        # 5. Define filename and export
+        # 6. Export to file
         file_name = f"{col}.geojson"
         final_destination = output_path / file_name
 
         gdf.to_file(final_destination, driver="GeoJSON")
-        print(f"Successfully exported {col} to {final_destination}")
+        print(
+            f"Successfully exported {col} (properties cleaned) to {final_destination}"
+        )
 
 
-def export_stats(df, column_name, tolerance, path,filename="stats.txt"):
+def export_stats(df, column_name, tolerance, path,filename=STATS_TXT):
     """
     Calculates error statistics for a specific column and exports them to a text file.
 
@@ -317,27 +347,40 @@ def export_stats(df, column_name, tolerance, path,filename="stats.txt"):
     if column_name not in df.columns:
         raise ValueError(f"Column '{column_name}' not found in DataFrame.")
 
-    # 1. Perform calculations
-    data = df[column_name].dropna()  # Exclude missing values for accuracy
+        # 1. Perform calculations
+    data = df[column_name].dropna()
+    if data.empty:
+        print(f"Warning: Column '{column_name}' is empty after dropping NaNs.")
+        return
 
     mean_error = data.mean()
+    median_error = data.median()
     max_error = data.max()
 
-    # RMS Calculation: Square root of the mean of the squares
+    # RMS Calculation
     rms_error = np.sqrt(np.mean(data**2))
+
+    # Percentiles calculation (P25, P50, P75, P90, P95)
+    percentiles = data.quantile([0.25, 0.5, 0.75, 0.9, 0.95]).to_dict()
 
     # Percentage within tolerance
     within_tol_count = (data <= tolerance).sum()
-    within_tol_percent = (within_tol_count / len(data)) * 100 if len(data) > 0 else 0
+    within_tol_percent = (within_tol_count / len(data)) * 100
 
     # 2. Prepare stats dictionary
     stats = {
         "Mean error": mean_error,
+        "Median error": median_error,
         "Max error": max_error,
         "RMS error": rms_error,
         f"% beneath threshold ({tolerance})": within_tol_percent,
+        "---": None,  # Visual separator
+        "P25 (1st Quartile)": percentiles[0.25],
+        "P50 (Median)": percentiles[0.5],
+        "P75 (3rd Quartile)": percentiles[0.75],
+        "P90": percentiles[0.9],
+        "P95": percentiles[0.95],
     }
-
     # 3. Write to file
     file_path = Path(path /filename)
 
@@ -345,173 +388,57 @@ def export_stats(df, column_name, tolerance, path,filename="stats.txt"):
         f.write(f"Stats for column: {column_name}\n")
         f.write("-" * 40 + "\n")
         for k, v in stats.items():
-            # Format numbers to 3 decimal places
-            f.write(f"{k:<30}: {v:.3f}\n")
+            if v is None:
+                # Seperator
+                f.write("-" * 45 + "\n")
+            else:
+                # Format numbers
+                f.write(f"{k:<30}: {v:.3f}\n")
 
     print(f"Statistics for '{column_name}' written to: {file_path}")
 
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-from pathlib import Path
+def export_metrics(metrics, path, filename=METRICS_TXT):
+    """Internal helper to write the counter dictionary to a text file."""
+    path = Path(path)
+    dataset_date = str(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    file_path = Path(path /filename)
+
+    with open(file_path, "a", encoding="utf-8") as f:
+        f.write("\nDetailed Processing Report\n")
+        f.write("=" * 45 + "\n")
+        f.write(f"\nArea limit: {metrics['area_limit']}\n")
+        f.write(f"\nNameDate: {dataset_date}\n")
+        f.write(f"\nArea limit: {metrics['area_limit']}\n")
+        f.write("=" * 45 + "\n")
+        f.write(f"{'Total features loaded':<30}: {metrics['total_count']}\n")
+        f.write(f"{'Successfully processed':<30}: {len(metrics['success_ids'])}\n")
+        f.write(f"{'Skipped by area limit' :<30}: {len(metrics['skipped_ids'])}\n")
+        f.write(f"{'Failed (Errors)':<30}: {len(metrics['failed_ids'])}\n")
+
+        if metrics["skipped_ids"]:
+            f.write(
+                "\nSkipped IDs:\n" + ", ".join(map(str, metrics["skipped_ids"])) + "\n"
+            )
+
+        if metrics["failed_ids"]:
+            f.write(
+                "\nFailed IDs:\n" + ", ".join(map(str, metrics["failed_ids"])) + "\n"
+            )
+        f.write("-" * 45 + "\n")
 
 
-def export_histogram(path, df, column_name, filename="histogram.png"):
-    """
-    Creates and saves a high-quality histogram from a DataFrame column.
-
-    Parameters
-    ----------
-    path : str or Path
-        Directory where the plot will be saved.
-    df : pd.DataFrame
-        The DataFrame containing the data.
-    column_name : str
-        The name of the column to plot.
-    filename : str, optional
-        The name of the resulting image file. Default is "histogram.png".
-
-    Returns
-    -------
-    None
-    """
-    if df is None or df.empty:
-        print("Warning: No data available to plot histogram.")
-        return
-
-    values = df[column_name].dropna().values
-    if len(values) == 0:
-        print("Warning: Column is empty. Skipping histogram.")
-        return
-
-    # Set modern style
-    plt.style.use("seaborn-v0_8-muted")
-    fig, ax = plt.subplots(figsize=(10, 6))
-
-    # Define bins (integer steps)
-    bins = np.arange(int(min(values)), int(max(values)) + 2, 1)
-
-    # Plot histogram
-    ax.hist(
-        values,
-        bins=bins,
-        color="royalblue",
-        edgecolor="white",
-        linewidth=1.2,
-        alpha=0.85,
-        label="Object Count",
-    )
-
-    # X-axis configuration
-    ticks = np.arange(int(min(values)), int(max(values)) + 1, step=2)
-    ax.set_xticks(ticks)
-
-    # Styling
-    ax.yaxis.grid(True, linestyle="--", alpha=0.7)
-    ax.set_axisbelow(True)
-    ax.set_title(f"Histogram - {column_name}", fontsize=14, pad=15, fontweight="bold")
-    ax.set_xlabel("Value", fontsize=12)
-    ax.set_ylabel("Count", fontsize=12)
-
-    # Remove top and right spines
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-
-    ax.legend()
-    plt.tight_layout()
-
-    save_path = Path(path) / filename
-    plt.savefig(save_path, dpi=300)
-    plt.close(fig)  # Close to free up memory
-    print(f"Histogram saved to: {save_path}")
-
-
-def export_boxplot(path, df, column_name, filename="boxplot.png"):
-    """
-    Creates and saves a horizontal boxplot from a DataFrame column.
-
-    Parameters
-    ----------
-    path : str or Path
-        Directory where the plot will be saved.
-    df : pd.DataFrame
-        The DataFrame containing the data.
-    column_name : str
-        The name of the column to plot.
-    filename : str, optional
-        The name of the resulting image file. Default is "boxplot.png".
-
-    Returns
-    -------
-    None
-    """
-    if df is None or df.empty:
-        print("Warning: No data available to plot boxplot.")
-        return
-
-    values = df[column_name].dropna().values
-    if len(values) == 0:
-        print("Warning: Column is empty. Skipping boxplot.")
-        return
-
-    plt.style.use("seaborn-v0_8-muted")
-    fig, ax = plt.subplots(figsize=(10, 4))
-
-    # Plot boxplot
-    result = ax.boxplot(
-        values,
-        vert=False,
-        patch_artist=True,
-        notch=False,
-        showmeans=True,
-        meanprops={
-            "marker": "^",
-            "markerfacecolor": "green",
-            "markeredgecolor": "green",
-        },
-        medianprops={"color": "black", "linewidth": 2},
-        flierprops={
-            "markerfacecolor": "red",
-            "marker": "o",
-            "markersize": 5,
-            "alpha": 0.5,
-        },
-    )
-
-    # Coloring the box
-    for patch in result["boxes"]:
-        patch.set_facecolor("royalblue")
-        patch.set_alpha(0.7)
-
-    # X-axis configuration
-    ticks = np.arange(int(min(values)), int(max(values)) + 1, step=2)
-    ax.set_xticks(ticks)
-
-    # Styling
-    ax.set_title(f"Boxplot - {column_name}", fontsize=14, fontweight="bold", pad=15)
-    ax.set_xlabel("Value", fontsize=12)
-    ax.set_yticks([])  # Hide Y-axis labels for a single box
-
-    ax.grid(axis="x", linestyle="--", alpha=0.6)
-    ax.set_axisbelow(True)
-
-    # Clean up spines
-    for spine in ["top", "right", "left"]:
-        ax.spines[spine].set_visible(False)
-
-    plt.tight_layout()
-
-    save_path = Path(path) / filename
-    plt.savefig(save_path, dpi=300)
-    plt.close(fig)
-    print(f"Boxplot saved to: {save_path}")
-
-def export_analysis_results(path,df=None, column_name=FP_ESIMATION_COLUMN_NAME, tolerance=2,wkt_columns=[BRDR_WKT, FALSE_POSITIVE_WKT, DOUBT_WKT]):
+def export_analysis_results(path,df=None,metrics=None, column_name=FP_ESIMATION_COLUMN_NAME, tolerance=2,wkt_columns=[BRDR_WKT, FALSE_POSITIVE_WKT, DOUBT_WKT]):
     if df is None:
         df = pd.read_csv(path / FP_ANALYSIS_CSV_NAME)
     if df is None or df.empty:
-        print("Warning: No data available to plot histogram.")
+        print("Warning: No data to export.")
         return
+    # Export while dropping wkt columns
+    df.drop(columns=wkt_columns).to_csv(path / FP_ANALYSIS_CSV_NAME, index=False)
+    if metrics:
+        export_metrics(metrics=metrics, path=path, filename=METRICS_TXT)
     export_stats(df=df, column_name=column_name, tolerance=tolerance, path=path)
     export_wkt_columns_to_geojson(df=df, wkt_columns=wkt_columns, path=path)
     export_boxplot(df=df, path=path, column_name=column_name)

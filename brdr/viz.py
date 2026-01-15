@@ -4,6 +4,7 @@ from math import ceil
 from pathlib import Path
 
 import geopandas as gpd
+import numpy as np
 from shapely.geometry import Point, LineString
 
 from brdr.constants import DEFAULT_CRS
@@ -510,3 +511,154 @@ def export_to_geopackage(G, output_filename="graph_output.gpkg",crs=DEFAULT_CRS)
     gdf_edges.to_file(output_filename, layer='edges', driver="GPKG")
 
     print(f"Exported graph:  You can now add this to GIS software.")
+
+def export_histogram(path, df, column_name, filename="histogram.png"):
+    """
+    Creates and saves a high-quality histogram from a DataFrame column.
+
+    Parameters
+    ----------
+    path : str or Path
+        Directory where the plot will be saved.
+    df : pd.DataFrame
+        The DataFrame containing the data.
+    column_name : str
+        The name of the column to plot.
+    filename : str, optional
+        The name of the resulting image file. Default is "histogram.png".
+
+    Returns
+    -------
+    None
+    """
+    if df is None or df.empty:
+        print("Warning: No data available to plot histogram.")
+        return
+
+    values = df[column_name].dropna().values
+    if len(values) == 0:
+        print("Warning: Column is empty. Skipping histogram.")
+        return
+
+    # Set modern style
+    plt.style.use("seaborn-v0_8-muted")
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    # Define bins (integer steps)
+    bins = np.arange(int(min(values)), int(max(values)) + 2, 1)
+
+    # Plot histogram
+    ax.hist(
+        values,
+        bins=bins,
+        color="royalblue",
+        edgecolor="white",
+        linewidth=1.2,
+        alpha=0.85,
+        label="Object Count",
+    )
+
+    # X-axis configuration
+    ticks = np.arange(int(min(values)), int(max(values)) + 1, step=2)
+    ax.set_xticks(ticks)
+
+    # Styling
+    ax.yaxis.grid(True, linestyle="--", alpha=0.7)
+    ax.set_axisbelow(True)
+    ax.set_title(f"Histogram - {column_name}", fontsize=14, pad=15, fontweight="bold")
+    ax.set_xlabel("Value", fontsize=12)
+    ax.set_ylabel("Count", fontsize=12)
+
+    # Remove top and right spines
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    ax.legend()
+    plt.tight_layout()
+
+    save_path = Path(path) / filename
+    plt.savefig(save_path, dpi=300)
+    plt.close(fig)  # Close to free up memory
+    print(f"Histogram saved to: {save_path}")
+
+
+def export_boxplot(path, df, column_name, filename="boxplot.png"):
+    """
+    Creates and saves a horizontal boxplot from a DataFrame column.
+
+    Parameters
+    ----------
+    path : str or Path
+        Directory where the plot will be saved.
+    df : pd.DataFrame
+        The DataFrame containing the data.
+    column_name : str
+        The name of the column to plot.
+    filename : str, optional
+        The name of the resulting image file. Default is "boxplot.png".
+
+    Returns
+    -------
+    None
+    """
+    if df is None or df.empty:
+        print("Warning: No data available to plot boxplot.")
+        return
+
+    values = df[column_name].dropna().values
+    if len(values) == 0:
+        print("Warning: Column is empty. Skipping boxplot.")
+        return
+
+    plt.style.use("seaborn-v0_8-muted")
+    fig, ax = plt.subplots(figsize=(10, 4))
+
+    # Plot boxplot
+    result = ax.boxplot(
+        values,
+        vert=False,
+        patch_artist=True,
+        notch=False,
+        showmeans=True,
+        meanprops={
+            "marker": "^",
+            "markerfacecolor": "green",
+            "markeredgecolor": "green",
+        },
+        medianprops={"color": "black", "linewidth": 2},
+        flierprops={
+            "markerfacecolor": "red",
+            "marker": "o",
+            "markersize": 5,
+            "alpha": 0.5,
+        },
+    )
+
+    # Coloring the box
+    for patch in result["boxes"]:
+        patch.set_facecolor("royalblue")
+        patch.set_alpha(0.7)
+
+    # X-axis configuration
+    ticks = np.arange(int(min(values)), int(max(values)) + 1, step=2)
+    ax.set_xticks(ticks)
+
+    # Styling
+    ax.set_title(f"Boxplot - {column_name}", fontsize=14, fontweight="bold", pad=15)
+    ax.set_xlabel("Value", fontsize=12)
+    ax.set_yticks([])  # Hide Y-axis labels for a single box
+
+    ax.grid(axis="x", linestyle="--", alpha=0.6)
+    ax.set_axisbelow(True)
+
+    # Clean up spines
+    for spine in ["top", "right", "left"]:
+        ax.spines[spine].set_visible(False)
+
+    plt.tight_layout()
+
+    save_path = Path(path) / filename
+    plt.savefig(save_path, dpi=300)
+    plt.close(fig)
+    print(f"Boxplot saved to: {save_path}")
+
