@@ -1892,3 +1892,99 @@ def from_crs(crs, format="uri"):
             return str(auth[0]) + ":" + str(auth[1])
     except Exception as e:
         raise ValueError(f"Error converting CRS: {e}")
+
+
+import networkx as nx
+from shapely.geometry import Point, LineString
+from shapely.strtree import STRtree
+from collections import defaultdict
+
+
+def insert_pseudonodes_bulk(G, new_points, tolerance=1e-6):
+    """
+    Inserts a list of points into the graph in a high-performance batch operation.
+
+    Parameters
+    ----------
+    G : nx.Graph
+        The networkx graph to modify. Must have 'geometry' (LineString) on edges.
+    new_points : list of tuple
+        List of (x, y) coordinates to be inserted as pseudonodes.
+    tolerance : float
+        Distance within which a point is considered to lie on an edge.
+    """
+    # 1. Bouw een Spatial Index van de edges
+    # We bewaren een mapping van geometry-ID naar de edge (u, v, data)
+    edges_data = []
+    geoms = []
+    for u, v, data in G.edges(data=True):
+        if "geometry" in data:
+            geoms.append(data["geometry"])
+            edges_data.append((u, v, data))
+
+    tree = STRtree(geoms)
+
+    # 2. Koppel elk punt aan de dichtstbijzijnde edge
+    points_to_split = defaultdict(list)
+
+    for pt_coords in new_points:
+        p = Point(pt_coords)
+        # Zoek de dichtstbijzijnde edge geometry
+        nearest_idx = tree.nearest_index(p)
+        nearest_geom = geoms[nearest_idx]
+
+        if nearest_geom.distance(p) < tolerance:
+            # Sla de projectie-afstand op voor sortering later
+            dist = nearest_geom.project(p)
+            points_to_split[nearest_idx].append((dist, pt_coords))
+
+    # 3. Voer de splitsingen uit per edge
+    for idx, pts in points_to_split.items():
+        u, v, data = edges_data[idx]
+
+        # Sorteer alle punten op deze edge op basis van hun positie langs de lijn
+        # Dit garandeert dat we de lijn in de juiste volgorde opknippen
+        pts.sort()
+
+        # Verwijder de originele edge
+        if G.has_edge(u, v):
+            G.remove_edge(u, v)
+
+        # Knip de lijn op in segmenten
+        original_geom = data["geometry"]
+        current_node = u
+        current_dist = 0
+
+        for dist, coords in pts:
+            new_node = tuple(coords)
+
+            # Maak het lijnsegment tussen de vorige stop en dit punt
+            segment_geom = LineString(
+                [
+                    original_geom.interpolate(current_dist),
+                    original_geom.interpolate(dist),
+                ]
+            )
+
+            # Voeg segment toe aan graaf
+            new_data = data.copy()
+            new_data["geometry"] = segment_geom
+            new_data["weight"] = segment_geom.length
+            G.add_edge(current_node, new_node, **new_data)
+
+            current_node = new_node
+            current_dist = dist
+
+        # Voeg het laatste segment toe (van laatste punt naar v)
+        final_segment_geom = LineString(
+            [
+                original_geom.interpolate(current_dist),
+                original_geom.interpolate(original_geom.length),
+            ]
+        )
+        final_data = data.copy()
+        final_data["geometry"] = final_segment_geom
+        final_data["weight"] = final_segment_geom.length
+        G.add_edge(current_node, v, **final_data)
+
+    return G

@@ -81,7 +81,6 @@ def get_false_positive_grb_parcels_dataframe(data, id_name, area_limit=inf, proc
     """
     Processes features to find false positives and logs processing metrics.
     """
-    # TODO also write brdr with ALL_SIDE?
     # 1. Initialize counters
     metrics = {"area_limit": area_limit,"total_count": 0, "success_ids": [], "skipped_ids": [], "failed_ids": []}
     # if not area_limit==inf:
@@ -175,7 +174,7 @@ def get_false_positive_grb_parcels_dataframe(data, id_name, area_limit=inf, proc
             dict_predictions_evaluated = aligner_result.get_results(aligner=aligner,
                                                                     result_type=AlignerResultType.EVALUATED_PREDICTIONS)
 
-            # TODO? also make a list of all predictions?
+            # Only the prediction with best score is kept (=BEST PREDICTION) -idea? also make a list of all predictions?
             for key, results in dict_predictions_evaluated.items():
                 # call the parcels, evaluate through brdr and merge them
                 rd = next(iter(results))
@@ -211,7 +210,10 @@ def get_false_positive_grb_parcels_dataframe(data, id_name, area_limit=inf, proc
                 common_ids = s1 & s2
 
             doubt_parcels = list(all_ids - common_ids)
-            # fp_parcels = list(set(fp_parcels) | set(doubt_parcels)) #TODO or not?
+
+            # Do we want to add the extra doubtable parcels to the 'estimated false positive parcels'?
+            # Currently decided to not do that -> line below commented
+            # fp_parcels = list(set(fp_parcels) | set(doubt_parcels))
             fp_parcel_count = len(fp_parcels)
             fp_geometry = safe_unary_union(
                 [aligner.reference_data.features[p].geometry for p in fp_parcels]
