@@ -24,6 +24,7 @@ class OnroerendErfgoedLoader(GeoJsonLoader):
             objectids is not None and bbox is not None
         ):
             raise ValueError("Please provide a ID-filter OR a BBOX-filter, not both")
+
         super().__init__()
         self.objectids = objectids
         self.oetype = oetype
