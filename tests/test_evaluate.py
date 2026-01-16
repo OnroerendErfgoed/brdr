@@ -124,6 +124,7 @@ class TestEvaluate(unittest.TestCase):
             == Evaluation.TO_CHECK_PREDICTION_MULTI_FULL
         )
 
+    @pytest.mark.usefixtures("mock_grb_response2")
     def test_evaluate_full_strategy_prefer_full(self):
         thematic_dict = {
             "theme_id_1": from_wkt(
@@ -200,6 +201,7 @@ class TestEvaluate(unittest.TestCase):
             == Evaluation.TO_CHECK_PREDICTION_FULL
         )
 
+    @pytest.mark.usefixtures("mock_grb_response2")
     def test_evaluate_limited_predictions(self):
         thematic_dict = {
             "theme_id_1": from_wkt(
@@ -345,6 +347,7 @@ class TestEvaluate(unittest.TestCase):
             == Evaluation.TO_CHECK_PREDICTION_MULTI_FULL
         )
 
+    @pytest.mark.usefixtures("mock_grb_response2")
     def test_evaluate_point(self):
         # Load thematic data & reference data
         # thematic_dict = {"theme_id": from_wkt("POINT (0 0)")}

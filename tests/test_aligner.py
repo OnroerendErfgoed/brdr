@@ -203,6 +203,7 @@ class TestAligner(unittest.TestCase):
             "Polygon",
         )
 
+    @pytest.mark.usefixtures("callback_grb_response")
     def test_load_reference_data_grb_actual_adp(self):
         thematic_dict = {
             "theme_id_1": from_wkt(
@@ -290,6 +291,7 @@ class TestAligner(unittest.TestCase):
                 len(aligner_result.results["theme_id_1"][relevant_distance]), 9
             )
 
+    @pytest.mark.usefixtures("callback_grb_response")
     def test_process_interior_ring(self):
         thematic_dict = {
             "theme_id_1": from_wkt(
@@ -362,6 +364,7 @@ class TestAligner(unittest.TestCase):
         result_dict = self.sample_aligner.process([100])
         self.assertEqual(len(result_dict.results), len(thematic_dict))
 
+    @pytest.mark.usefixtures("callback_grb_response")
     def test_process_circle(self):
         geometry = Point(0, 0).buffer(3)
         # geometry = MultiPolygon([geometry])
@@ -464,6 +467,7 @@ class TestAligner(unittest.TestCase):
             .is_empty
         )
 
+    @pytest.mark.usefixtures("callback_grb_response")
     def test_remark_for_poly_multipoly(self):
         shape = from_wkt(
             "MultiPolygon(((48893.03662109375 214362.93756103515625, 48890.8258056640625 214368.482666015625, 48890.7159423828125 214368.44110107421875, 48887.6488037109375 214367.2845458984375, 48886.3800048828125 214368.68017578125, 48885.1068115234375 214370.08062744140625, 48884.3330078125 214369.782470703125, 48882.563720703125 214369.10064697265625, 48882.1116943359375 214370.1346435546875, 48878.5626220703125 214368.70196533203125, 48877.839111328125 214368.40997314453125, 48877.2352294921875 214369.79376220703125, 48876.7911376953125 214369.60687255859375, 48875.0850830078125 214373.62353515625, 48875.478759765625 214373.8182373046875, 48881.5286865234375 214376.81109619140625, 48885.10546875 214372.36151123046875, 48887.0050048828125 214370.08538818359375, 48888.4698486328125 214368.330078125, 48890.366943359375 214369.2685546875, 48901.0638427734375 214374.56024169921875, 48905.0159912109375 214369.61175537109375, 48904.472900390625 214367.53851318359375, 48893.03662109375 214362.93756103515625)))"
