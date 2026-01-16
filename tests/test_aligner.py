@@ -7,7 +7,7 @@ from shapely import from_wkt
 from shapely.geometry import Polygon
 from shapely.geometry import shape
 
-from brdr.aligner import Aligner
+from brdr.aligner import Aligner, _reverse_metadata_observations_to_brdr_observation
 from brdr.be.grb.enums import GRBType
 from brdr.be.grb.loader import GRBActualLoader
 from brdr.configs import ProcessorConfig
@@ -512,3 +512,88 @@ class TestAligner(unittest.TestCase):
         assert fcs["result_diff"]["features"][0]["properties"][AREA_ATTRIBUTE] == 0
         assert fcs["result_diff_min"]["features"][0]["properties"][AREA_ATTRIBUTE] == 0
         assert fcs["result_diff_plus"]["features"][0]["properties"][AREA_ATTRIBUTE] == 0
+
+
+import unittest
+
+
+
+class TestReverseMetadata(unittest.TestCase):
+
+    def setUp(self):
+        """Mock data to re-use"""
+        self.sample_observation = {
+            "has_feature_of_interest": "parcel_123",
+            "observed_property": "brdr:area",
+            "result": {"value": 150.5},
+            "used": {"id": "parcel_123"},
+        }
+
+        self.ref_feature_observation = {
+            "has_feature_of_interest": "parcel_123",
+            "observed_property": "brdr:area_overlap",
+            "result": {"value": 45.0},
+            "used": {"id": "ref_abc", "geometry": "POLYGON(...)"},
+        }
+
+    def test_empty_input(self):
+        """Test if function returns empty dict when input is empty or observations are empty."""
+        self.assertEqual(_reverse_metadata_observations_to_brdr_observation({}), {})
+        self.assertEqual(
+            _reverse_metadata_observations_to_brdr_observation({"obs": []}), {}
+        )
+
+
+    def test_happy_path_root_properties(self):
+        """Test of observations (area, area_od) are placed correctly."""
+
+
+        metadata = {
+            "observations": [
+                {
+                    "observed_property": "brdr:area",
+                    "result": {"value": 100},
+                    "has_feature_of_interest": "A",
+                },
+                {
+                    "observed_property": "brdr:area_od",
+                    "result": {"value": 90},
+                    "has_feature_of_interest": "A",
+                },
+            ]
+        }
+
+        result = _reverse_metadata_observations_to_brdr_observation(metadata)
+
+        self.assertEqual(result["area"], 100)
+        self.assertEqual(result["area_od"]["area"], 90)
+        self.assertIsNone(result["alignment_date"])
+
+
+    def test_reference_features_aggregation(self):
+        """Test if values of references are grouped correctly."""
+
+
+        metadata = {
+            "observations": [
+                {
+                    "observed_property": "brdr:area_overlap",
+                    "result": {"value": 10},
+                    "used": {"id": "REF_1"},
+                    "has_feature_of_interest": "MAIN",
+                },
+                {
+                    "observed_property": "brdr:area_overlap_percentage",
+                    "result": {"value": 0.5},
+                    "used": {"id": "REF_1"},
+                    "has_feature_of_interest": "MAIN",
+                },
+            ]
+        }
+
+        result = _reverse_metadata_observations_to_brdr_observation(metadata)
+
+        # Check of REF_1 is aangemaakt in reference_features
+        self.assertIn("REF_1", result["reference_features"])
+        self.assertEqual(result["reference_features"]["REF_1"]["area"], 10)
+        self.assertEqual(result["reference_features"]["REF_1"]["percentage"], 0.5)

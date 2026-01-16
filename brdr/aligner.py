@@ -545,6 +545,10 @@ def _reverse_metadata_observations_to_brdr_observation(metadata: List[Dict]) -> 
 
     # Finalize the result structure
     result = res["observation"]
+    if not "full" in result:
+        result["full"] = None
+    if not "area" in result:
+        result["area"] = None
     result["alignment_date"] = None
     result["reference_source"] = None
     result["brdr_version"] = None
