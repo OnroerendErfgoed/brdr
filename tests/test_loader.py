@@ -25,7 +25,9 @@ class TestExamples:
         )
         # EXAMPLE
         aligner = Aligner()
-        thematic_loader = OnroerendErfgoedLoader(objectids=['https://id.erfgoed.net/aanduidingsobjecten/131635'])
+        thematic_loader = OnroerendErfgoedLoader(
+            objectids=["https://id.erfgoed.net/aanduidingsobjecten/131635"]
+        )
         reference_loader = GRBActualLoader(
             grb_type=GRBType.ADP, aligner=aligner, partition=1000
         )

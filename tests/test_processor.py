@@ -20,7 +20,7 @@ class TestProcessor(unittest.TestCase):
         reference_dict = {"ref_id": from_wkt("POLYGON ((0 1, 0 10,8 10,10 1,0 1))")}
         # LOAD THEMATIC DICTIONARY
         processor = NetworkGeometryProcessor(config=ProcessorConfig())
-        aligner=Aligner(processor=processor)
+        aligner = Aligner(processor=processor)
         aligner.load_thematic_data(DictLoader(thematic_dict))
         # LOAD REFERENCE DICTIONARY
         aligner.load_reference_data(DictLoader(reference_dict))
@@ -30,4 +30,3 @@ class TestProcessor(unittest.TestCase):
 
         prediction_result = aligner.predict(series)
         assert len(prediction_result.results) == len(thematic_dict)
-

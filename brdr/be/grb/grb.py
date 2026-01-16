@@ -182,20 +182,24 @@ def update_featurecollection_to_actual_grb(
     else:
         affected = list(aligner.thematic_data.features.keys())
 
-    aligner_result = aligner.process(thematic_ids=affected,relevant_distances=[max_distance_for_actualisation])
+    aligner_result = aligner.process(
+        thematic_ids=affected, relevant_distances=[max_distance_for_actualisation]
+    )
     process_results = aligner_result.get_results(aligner=aligner)
     affected_and_changeable = []
-    for k,v in process_results.items():
+    for k, v in process_results.items():
         if v[max_distance_for_actualisation]["result_diff"].is_empty:
             affected_and_changeable.append(k)
 
-
     # EXECUTE evaluation
-    aligner_result = aligner.evaluate(relevant_distances=relevant_distances, thematic_ids=affected_and_changeable,
-                                      metadata_field=BASE_OBSERVATION_FIELD_NAME,
-                                      full_reference_strategy=full_reference_strategy, max_predictions=max_predictions,
-                                      multi_to_best_prediction=multi_to_best_prediction)
-
+    aligner_result = aligner.evaluate(
+        relevant_distances=relevant_distances,
+        thematic_ids=affected_and_changeable,
+        metadata_field=BASE_OBSERVATION_FIELD_NAME,
+        full_reference_strategy=full_reference_strategy,
+        max_predictions=max_predictions,
+        multi_to_best_prediction=multi_to_best_prediction,
+    )
 
     return aligner_result.get_results_as_geojson(
         aligner=aligner,

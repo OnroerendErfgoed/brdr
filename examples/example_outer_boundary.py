@@ -7,9 +7,10 @@ from brdr.geometry_utils import geom_from_wkt
 from brdr.loader import DictLoader, GeoJsonFileLoader
 from brdr.processor import DieussaertGeometryProcessor
 from brdr.viz import print_observation_of_aligner_results, show_map
-processor_config=ProcessorConfig()
-processor_config.od_strategy=OpenDomainStrategy.SNAP_ALL_SIDE
-processor=DieussaertGeometryProcessor(config=processor_config)
+
+processor_config = ProcessorConfig()
+processor_config.od_strategy = OpenDomainStrategy.SNAP_ALL_SIDE
+processor = DieussaertGeometryProcessor(config=processor_config)
 aligner = Aligner(processor=processor)
 
 relevant_distance = 2
@@ -30,15 +31,15 @@ else:
     loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
 aligner.load_reference_data(loader)
 
-aligner_result = aligner.process(
-    relevant_distances=[relevant_distance]
-)
+aligner_result = aligner.process(relevant_distances=[relevant_distance])
 
 # show results
 aligner_result.save_results(
     aligner=aligner, path="output/", add_original_attributes=True, add_metadata=True
 )
-print_observation_of_aligner_results(aligner_result.get_results(aligner=aligner), aligner)
+print_observation_of_aligner_results(
+    aligner_result.get_results(aligner=aligner), aligner
+)
 
 thematic_geometries = {
     key: feat.geometry for key, feat in aligner.thematic_data.features.items()

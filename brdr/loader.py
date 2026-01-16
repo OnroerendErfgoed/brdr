@@ -148,7 +148,7 @@ class DictLoader(Loader):
         self,
         data_dict: Dict[str, BaseGeometry],
         data_dict_properties: Dict[str, dict] = {},
-        data_dict_source: Dict[str, str] = { "source_url": None },
+        data_dict_source: Dict[str, str] = {"source_url": None},
         is_reference: bool = False,
     ):
         """
@@ -235,8 +235,8 @@ class GeoJsonFileLoader(GeoJsonLoader):
             _input = json.load(f)
         super().__init__(
             _input=_input,
-            source = path_to_file,
-            source_url = f"file://{os.path.abspath(path)}",
+            source=path_to_file,
+            source_url=f"file://{os.path.abspath(path)}",
             id_property=id_property,
             is_reference=is_reference,
         )
@@ -260,7 +260,7 @@ class GeoJsonUrlLoader(GeoJsonLoader):
         super().__init__(
             _input=_input,
             source=url,
-            source_url=url, 
+            source_url=url,
             id_property=id_property,
             is_reference=is_reference,
         )
@@ -311,7 +311,7 @@ class OGCFeatureAPIReferenceLoader(GeoJsonLoader):
         self.limit = limit
         self.coll = collection
         self.data_dict_source["source"] = url
-        self.data_dict_source["source_url"] = url + '/' + collection
+        self.data_dict_source["source_url"] = url + "/" + collection
 
     def load_data(self) -> AlignerFeatureCollection:
         """
@@ -497,4 +497,3 @@ class WFSReferenceLoader(GeoJsonLoader):
         self.input = dict(collection)
         self.aligner.logger.feedback_info(f"Downloaded from OGC WFS: {self.url}")
         return super().load_data()
-

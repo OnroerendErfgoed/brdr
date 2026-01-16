@@ -83,7 +83,7 @@ def get_affected_ids_by_grb_change(
     border_distance=0,
     geometry_thematic_union=None,
     crs=DEFAULT_CRS,
-)->list:
+) -> list:
     """
     Get a list of affected IDs by GRB-changes in a
     specific timespan
@@ -341,4 +341,3 @@ def get_collection_grb_parcels_by_date(
     collection_specific_date["features"] = specific_date_features
 
     return collection_specific_date
-

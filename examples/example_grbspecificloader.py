@@ -1,7 +1,5 @@
 from shapely import from_wkt
 
-from shapely import from_wkt
-
 from brdr.aligner import Aligner
 from brdr.be.grb.loader import GRBSpecificDateParcelLoader
 from brdr.enums import AlignerResultType

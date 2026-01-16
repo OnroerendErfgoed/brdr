@@ -125,6 +125,7 @@ class BaseProcessor(ABC):
             A dictionary containing the resulting geometry and difference metrics.
         """
         pass
+
     def check_area_limit(self, input_geometry: BaseGeometry):
         if self.config.area_limit and input_geometry.area > self.config.area_limit:
             message = f"The input polygon is too large to process: input area {str(input_geometry.area)} m², limit area: {str(self.config.area_limit)} m²."
@@ -483,7 +484,7 @@ class BaseProcessor(ABC):
 
     @staticmethod
     def _calculate_inner_outer(
-        input_geometry: BaseGeometry, relevant_distance: float,max_outer_buffer: int
+        input_geometry: BaseGeometry, relevant_distance: float, max_outer_buffer: int
     ) -> tuple:
         """
         Splits a polygon into inner and outer zones for optimized processing.
@@ -593,7 +594,7 @@ class SnapGeometryProcessor(BaseProcessor):
         # CALCULATE INNER and OUTER INPUT GEOMETRY for performance optimization on big geometries
         # combine all parts of the input geometry to one polygon
         input_geometry_inner, input_geometry_outer = self._calculate_inner_outer(
-            input_geometry, relevant_distance,self.config.max_outer_buffer
+            input_geometry, relevant_distance, self.config.max_outer_buffer
         )
         # get a list of all ref_ids that are intersecting the thematic geometry; we take it bigger because we want to check if there are also reference geometries on a relevant distance.
         input_geometry_outer_buffered = buffer_pos(
@@ -836,7 +837,7 @@ class DieussaertGeometryProcessor(BaseProcessor):
         # CALCULATE INNER and OUTER INPUT GEOMETRY for performance optimization on big geometries
         # combine all parts of the input geometry to one polygon
         input_geometry_inner, input_geometry_outer = self._calculate_inner_outer(
-            input_geometry, relevant_distance,self.config.max_outer_buffer
+            input_geometry, relevant_distance, self.config.max_outer_buffer
         )
         # get a list of all ref_ids that are intersecting the thematic geometry; we take it bigger because we want to check if there are also reference geometries on a relevant distance.
         input_geometry_outer_buffered = buffer_pos(
@@ -1551,7 +1552,7 @@ class NetworkGeometryProcessor(BaseProcessor):
         splitter = safe_unary_union(reference_intersection)
         try:
             geom_to_process_splitted = split(geom_to_process_segmentized, splitter)
-        except (GeometryTypeError,ValueError):
+        except (GeometryTypeError, ValueError):
             geom_to_process_splitted = geom_to_process_segmentized
         thematic_points = MultiPoint(
             list(get_coords_from_geometry(geom_to_process_splitted))
@@ -1565,18 +1566,32 @@ class NetworkGeometryProcessor(BaseProcessor):
         thematic_difference,
         relevant_distance,
     ):
-        ref_multilinestring, ref_points = self._multilinestring_multipoint_from_reference_intersection(reference_intersection)
+        ref_multilinestring, ref_points = (
+            self._multilinestring_multipoint_from_reference_intersection(
+                reference_intersection
+            )
+        )
         thematic_points = self._get_thematic_points(
             input_geometry, reference_intersection
         )
-        graph = build_custom_network(theme_multiline=thematic_difference, ref_multiline=ref_multilinestring,ref_points=ref_points, theme_points=thematic_points, gap_threshold=0.1,relevant_distance=relevant_distance)
+        graph = build_custom_network(
+            theme_multiline=thematic_difference,
+            ref_multiline=ref_multilinestring,
+            ref_points=ref_points,
+            theme_points=thematic_points,
+            gap_threshold=0.1,
+            relevant_distance=relevant_distance,
+        )
         return find_best_path_in_network(
             input_geometry, graph, self.config.snap_strategy, relevant_distance
         )
-    def _multilinestring_multipoint_from_reference_intersection(self, reference_intersection):
-        if isinstance(reference_intersection, (LineString,MultiLineString)):
+
+    def _multilinestring_multipoint_from_reference_intersection(
+        self, reference_intersection
+    ):
+        if isinstance(reference_intersection, (LineString, MultiLineString)):
             return to_multi(reference_intersection), MultiPoint()
-        if isinstance(reference_intersection, (Point,MultiPoint)):
+        if isinstance(reference_intersection, (Point, MultiPoint)):
             return MultiLineString(), to_multi(reference_intersection)
         if isinstance(reference_intersection, GeometryCollection):
             points = []
@@ -1585,14 +1600,17 @@ class NetworkGeometryProcessor(BaseProcessor):
 
                 if isinstance(geom, (Point, MultiPoint)):
                     points.append(geom)
-                elif isinstance(geom, (LineString,MultiLineString)):
+                elif isinstance(geom, (LineString, MultiLineString)):
                     lines.append(geom)
                 else:
-                    TypeError ("Geometrytype not valid at this stage")
+                    TypeError("Geometrytype not valid at this stage")
 
             return to_multi(safe_unary_union(lines)), to_multi(safe_unary_union(points))
 
-        raise TypeError("Reference could not be interpreted by NetworkGeometryProcessor")
+        raise TypeError(
+            "Reference could not be interpreted by NetworkGeometryProcessor"
+        )
+
 
 class AlignerGeometryProcessor(BaseProcessor):
     """
@@ -1607,6 +1625,7 @@ class AlignerGeometryProcessor(BaseProcessor):
     processor_id : ProcessorID
         Unique identifier for the aligner processor.
     """
+
     processor_id = ProcessorID.ALIGNER
 
     def process(
