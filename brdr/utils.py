@@ -37,7 +37,10 @@ from brdr.geometry_utils import to_crs
 from brdr.geometry_utils import total_vertex_distance
 from brdr.logger import LOGGER
 from brdr.typings import ProcessResult
+import hashlib
+import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
 log = logging.getLogger(__name__)
 
 
@@ -783,7 +786,8 @@ def get_relevant_polygons_from_geom(
                     array.append(g)
     return safe_unary_union(array)
 
-
+def urn_from_geom(geom: BaseGeometry):
+    return uuid.UUID(hex=hashlib.sha256(geom.wkb).hexdigest()[::2]).urn
 # def equal_geom_in_array(geom, geom_array, correction_distance, mitre_limit):
 #     """
 #     Check if a predicted geometry is equal to other predicted geometries in a list.

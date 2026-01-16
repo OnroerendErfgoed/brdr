@@ -24,6 +24,7 @@ class OnroerendErfgoedLoader(GeoJsonLoader):
             objectids is not None and bbox is not None
         ):
             raise ValueError("Please provide a ID-filter OR a BBOX-filter, not both")
+
         super().__init__()
         self.objectids = objectids
         self.oetype = oetype
@@ -32,6 +33,7 @@ class OnroerendErfgoedLoader(GeoJsonLoader):
         self.part = partition
         self.crs = to_crs(crs)
         self.data_dict_source["source"] = "Onroerend Erfgoed"
+        self.data_dict_source["source_url"] = "https://inventaris.onroerenderfgoed.be/"
 
     def load_data(self):
         collection, id_property = get_collection_oe_objects(

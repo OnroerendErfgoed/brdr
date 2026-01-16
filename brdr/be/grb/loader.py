@@ -2,9 +2,14 @@ import logging
 from datetime import datetime
 from typing import Any
 
-from brdr.be.grb.constants import GRB_MAX_REFERENCE_BUFFER, GRB_SUPPORTED_CRS
-from brdr.be.grb.constants import GRB_PARCEL_ID
-from brdr.be.grb.constants import GRB_VERSION_DATE
+from brdr.be.grb.constants import (
+    GRB_MAX_REFERENCE_BUFFER,
+    GRB_SUPPORTED_CRS,
+    GRB_FEATURE_URL,
+    GRB_PARCEL_ID,
+    GRB_VERSION_DATE,
+    GRB_FISCAL_PARCELS_URL,
+)
 from brdr.be.grb.enums import GRBType
 from brdr.be.grb.utils import (
     get_collection_grb_actual,
@@ -85,6 +90,7 @@ class GRBActualLoader(GeoJsonLoader):
         self.grb_type = grb_type
         self.part = partition
         self.data_dict_source["source"] = grb_type.value
+        self.data_dict_source["source_url"] = GRB_FEATURE_URL + '/' + grb_type.name
         self.versiondate_info = {"name": GRB_VERSION_DATE, "format": DATE_FORMAT}
 
     def load_data(self) -> Any:
@@ -120,7 +126,18 @@ class GRBActualLoader(GeoJsonLoader):
         self.input = dict(collection)
         self.data_dict_source[VERSION_DATE] = datetime.now().strftime(DATE_FORMAT)
         self.aligner.logger.feedback_info(f"GRB downloaded: {self.grb_type}")
-        return super().load_data()
+        collection = super().load_data()
+        for feature_id, feature in collection.features.items():
+            if hasattr(feature, "data_id") and feature.data_id:
+                match self.grb_type:
+                    case GRBType.ADP:
+                        feature.data_uri = f"https://data.vlaanderen.be/id/geometry/capakey/{feature.data_id}"
+                    case GRBType.KNW:
+                        feature.data_uri = f"https://data.vlaanderen.be/id/grb/kunstwerken/{feature.data_id}"
+                    case GRBType.GBG:
+                        feature.data_uri = f"https://data.vlaanderen.be/id/grb/gebouwen/{feature.data_id}"
+            feature.brdr_id = feature.data_id
+        return collection
 
 
 class GRBFiscalParcelLoader(GeoJsonLoader):
@@ -147,6 +164,7 @@ class GRBFiscalParcelLoader(GeoJsonLoader):
         self.year = year
         self.part = partition
         self.data_dict_source["source"] = "Adpf"
+        self.data_dict_source["source_url"] = GRB_FISCAL_PARCELS_URL + "/Adpf" + str(year)
         self.data_dict_source[VERSION_DATE] = datetime(int(year), 1, 1).strftime(
             DATE_FORMAT
         )
@@ -232,6 +250,9 @@ class GRBSpecificDateParcelLoader(GeoJsonLoader):
         self.date = date_obj
         self.part = partition
         self.data_dict_source["source"] = "Adp"
+        # This is a temporary source_url, that mimics the experimental implementation in
+        # `get_collections_grb_parcels_by_date().
+        self.data_dict_source["source_url"] = GRB_FISCAL_PARCELS_URL + "/Adpf" + str(date_obj.year)
         self.data_dict_source[VERSION_DATE] = date_obj.strftime(DATE_FORMAT)
         self.versiondate_info = {"name": GRB_VERSION_DATE, "format": datetime_format_TZ}
 

@@ -48,6 +48,7 @@ class BRKLoader(GeoJsonLoader):
         self.brk_type = brk_type
         self.part = partition
         self.data_dict_source["source"] = brk_type.value
+        self.data_dict_source["url"] = BRK_FEATURE_URL + "/" + brk_type.name
         self.versiondate_info = {"name": BRK_VERSION_DATE, "format": DATE_FORMAT}
 
     def load_data(self):

@@ -79,6 +79,7 @@ from brdr.utils import get_geometry_difference_metrics_from_processresult
 from brdr.utils import get_geometry_difference_metrics_from_processresults
 from brdr.utils import is_brdr_observation
 from brdr.utils import write_geojson
+from brdr.utils import urn_from_geom
 
 ###################
 
@@ -356,18 +357,18 @@ def _get_metadata_observations_from_process_result(processResult: ProcessResult)
     observation = processResult["observation"]
     actuation_metadata = processResult["metadata"]["actuation"]
     observation_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S%z")
-    sensor_uuid = uuid.uuid4().hex
+    sensor_uuid = uuid.uuid4()
     result_id = actuation_metadata["result"]
     observation_metadata = {
         "type": "sosa:Observation",
         "has_feature_of_interest": result_id,
-        "made_by_sensor": f"brdrid:sensors/{sensor_uuid}",
+        "made_by_sensor": sensor_uuid.urn,
         "result_time": observation_time,
     }
 
     def get_reference_from_actuation(ref_id):
         for ref in actuation_metadata["reference_geometries"]:
-            if ref["id"] == ref_id:
+            if ref["derived_from"]["id"] == ref_id:
                 return ref
         raise ValueError("reference geometry not found in actuation metadata")
 
@@ -378,29 +379,32 @@ def _get_metadata_observations_from_process_result(processResult: ProcessResult)
             observations.append(
                 {
                     **observation_metadata,
-                    "id": f"brdrid/observations/{uuid.uuid4().hex}",
+                    "id": uuid.uuid4().urn,
                     "observed_property": "brdr:area_overlap",
+                    "has_feature_of_interest": reference,
                     "result": {"value": area, "type": "float"},
                     "used_procedure": "brdr:observation_procedure_area_overlap",
-                    "used": reference,
+                    "used": result_id,
                 }
             )
         if percentage:= observations_dict.get("percentage"):
             observations.append(
                 {
                     **observation_metadata,
-                    "id": f"brdrid/observations/{uuid.uuid4().hex}",
+                    "id": uuid.uuid4().urn,
+                    "has_feature_of_interest": reference,
                     "observed_property": "brdr:area_overlap_percentage",
                     "result": {"value": percentage, "type": "float"},
                     "used_procedure": "brdr:observation_procedure_area_overlap_percentage",
-                    "used": reference,
+                    "used": result_id,
                 }
             )
+        # TODO: decide whether to keep this observation
         if full:= observations_dict.get("full"):
             observations.append(
                 {
                     **observation_metadata,
-                    "id": f"brdrid/observations/{uuid.uuid4().hex}",
+                    "id": uuid.uuid4().urn,
                     "observed_property": "brdr:area_overlap_full",
                     "result": {"value": full, "type": "boolean"},
                     "used_procedure": "brdr:observation_procedure_area_overlap_full",
@@ -412,42 +416,26 @@ def _get_metadata_observations_from_process_result(processResult: ProcessResult)
         observations.append(
             {
                 **observation_metadata,
-                "id": f"brdrid/observations/{uuid.uuid4().hex}",
+                "id": uuid.uuid4().urn,
+                "has_feature_of_interest": result_id,
                 "observed_property": "brdr:area",
                 "result": {"value": area, "type": "float"},
                 "used_procedure": "brdr:observation_procedure_area",
-                "used": {
-                    "id": result_id,
-                    "type": f"geo:Geometry",
-                    "version_date": observation_time,
-                },
             }
         )
     if area_od:= observation.get("area_od", {}).get("area"):
         observations.append(
             {
                 **observation_metadata,
-                "id": f"brdrid/observations/{uuid.uuid4().hex}",
-                "observed_property": "brdr:area_od",
+                "id": uuid.uuid4().urn,
+                "has_feature_of_interest": result_id,
+                "observed_property": "brdr:areaOD",
                 "result": {"value": area_od, "type": "float"},
                 "used_procedure": "brdr:observation_procedure_area_od",
-                "used": {
-                    "id": result_id,
-                    "type": f"geo:Geometry",
-                    "version_date": observation_time,
-                },
+                "reference_features": actuation_metadata['reference_features'],
             }
         )
-    if full:= observation.get("full"):
-        observations.append(
-            {
-                **observation_metadata,
-                "id": f"brdrid/observations/{uuid.uuid4().hex}",
-                "observed_property": "brdr:area_overlap_full",
-                "result": {"value": full, "type": "bool"},
-                "used_procedure": "brdr:observation_procedure_area_overlap_full",
-            }
-        )
+        
     return observations
 
 
@@ -571,22 +559,23 @@ def aligner_metadata_decorator(f):
                     res["observation"] = aligner.compare_to_reference(res.get("result"))
         if aligner.log_metadata:
             # generate uuid for actuation
-            actuation_id = "brdrid:actuations/" + uuid.uuid4().hex
+            actuation_id = uuid.uuid4()
             processor_id = aligner.processor.processor_id.value
             processor_name = type(aligner.processor).__name__
             reference_data = aligner.reference_data
             reference_features = reference_data.features.values()
             reference_geometries = [
                 {
-                    "id": feature.data_id,
+                    #"id": feature.data_id,
+                    "id": feature.brdr_id,
                     "type": f"geo:{feature.geometry.geom_type}",
                     "version_date": reference_data.source.get(VERSION_DATE, ""),
-                    "identifier": {
-                        "id": feature.brdr_id,
-                        "type": "adms:Identifier",
-                    },
-                }
-                for feature in reference_features
+                    "derived_from":
+                       { "id": feature.data_id,
+                         "type": "geo:Feature",
+                         "source": reference_data.source.get("source_url", ""),
+                       },
+                } for feature in reference_features
             ]
             stack = inspect.stack()
             f_locals = stack[0][0].f_locals
@@ -598,15 +587,15 @@ def aligner_metadata_decorator(f):
             ]:
                 thematic_feature = aligner.thematic_data.features[thematic_id]
                 feature_of_interest_id = thematic_feature.brdr_id  # TODO (emrys?)
-                result_hash = hashlib.sha1(result["result"].wkt.encode()).hexdigest()
+                result_urn = urn_from_geom(result["result"])
                 result["metadata"] = {}
                 result["metadata"]["actuation"] = {
-                    "id": actuation_id,
+                    "id": actuation_id.urn,
                     "type": "sosa:Actuation",
                     "reference_geometries": reference_geometries,
                     "changes": "geo:hasGeometry",
                     "sosa:hasFeatureOfInterest": {"id": feature_of_interest_id},
-                    "result": f"brdrid:geoms/{result_hash}",  # id is sha265 hash of wkt
+                    "result": result_urn,
                     "procedure": {
                         "id": processor_id,
                         "implementedBy": processor_name,

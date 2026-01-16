@@ -19,13 +19,13 @@ class TestExamples:
     def test_load_data(self, requests_mock):
         requests_mock.add(
             requests_mock.GET,
-            "https://www.mercator.vlaanderen.be/raadpleegdienstenmercatorpubliek/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAMES=ps%3Aps_aandobj&SRSNAME=http%3A%2F%2Fwww.opengis.net%2Fdef%2Fcrs%2FEPSG%2F0%2F31370&outputFormat=application%2Fjson&limit=10000&CQL_FILTER=aanduid_id+IN+%28131635%29",
+            "https://www.mercator.vlaanderen.be/raadpleegdienstenmercatorpubliek/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAMES=ps:ps_aandobj&SRSNAME=http://www.opengis.net/def/crs/EPSG/0/31370&outputFormat=application/json&limit=10000&CQL_FILTER=uri+IN+('https://id.erfgoed.net/aanduidingsobjecten/131635')",
             json=mercator_responses.response1,
             status=200,
         )
         # EXAMPLE
         aligner = Aligner()
-        thematic_loader = OnroerendErfgoedLoader(objectids=[131635])
+        thematic_loader = OnroerendErfgoedLoader(objectids=['https://id.erfgoed.net/aanduidingsobjecten/131635'])
         reference_loader = GRBActualLoader(
             grb_type=GRBType.ADP, aligner=aligner, partition=1000
         )

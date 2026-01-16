@@ -76,6 +76,7 @@ target-version = ['py311', 'py312', 'py313', 'py314']
 [tool.hatch.envs.dev]
 features = [
     'dev',
+    'viz',
 ]
 
 # Config for hatch test

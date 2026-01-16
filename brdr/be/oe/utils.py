@@ -39,10 +39,10 @@ def get_collection_oe_objects(
     """
     if oetype == OEType.AO:
         typename = "ps:ps_aandobj"
-        id_property = "aanduid_id"
+        id_property = "uri"
     elif oetype == OEType.EO:
         typename = "lu:lu_wet_erfgobj_pub"
-        id_property = "erfgoed_id"
+        id_property = "uri"
     else:
         logging.warning(
             "Undefined OE-type: " + str(oetype) + ": Empty collection returned"
@@ -63,8 +63,12 @@ def get_collection_oe_objects(
     }
     if objectids is not None:
         params["CQL_FILTER"] = (
-            f"{id_property} IN (" + ", ".join(str(o) for o in objectids) + ")"
-        )
+              id_property + 
+              ' IN ' + 
+              '(' + 
+              ','.join([ f"'{str(o)}'" for o in objectids ]) + 
+              ')'
+           )
     bbox_polygon = None
     if bbox is not None:
         bbox_polygon = box(*tuple(o for o in bbox))
