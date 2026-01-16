@@ -1,6 +1,5 @@
 import logging
 import math
-from copy import copy
 from itertools import combinations
 from math import inf
 from math import pi
@@ -9,6 +8,7 @@ from typing import Union, List, Tuple
 import networkx as nx
 import numpy as np
 import pyproj
+from networkx import Graph
 from shapely import GEOSException
 from shapely import STRtree
 from shapely import buffer
@@ -24,8 +24,6 @@ from shapely import is_empty
 from shapely import make_valid
 from shapely import polygons
 from shapely import segmentize
-from shapely import shortest_line
-from shapely import snap
 from shapely import symmetric_difference
 from shapely import to_wkt
 from shapely import unary_union
@@ -87,7 +85,7 @@ def buffer_neg_pos(geometry, buffer_value, mitre_limit=5):
         >>> from shapely import Point
         >>> point = Point(0, 0)
         >>> result = buffer_neg_pos(point, 1.0)
-        >>> print(result)
+        >>> logging.debug(result)
         POLYGON EMPTY
     """
     # Implementation details
@@ -126,7 +124,7 @@ def buffer_neg(geometry, buffer_value, mitre_limit=5):
         >>> from shapely import Point
         >>> point = Point(0, 0)
         >>> result = buffer_neg(point, 1.0)
-        >>> print(result)
+        >>> logging.debug(result)
         POLYGON EMPTY
     """
     # Implementation details
@@ -159,7 +157,7 @@ def buffer_pos(geometry, buffer_value, mitre_limit=5):
         >>> from shapely import Point
         >>> point = Point(0, 0)
         >>> result = buffer_pos(point, 1.0)
-        >>> print(result)
+        >>> logging.debug(result)
         POLYGON ((-1 -1, -1 1, 1 1, 1 -1, -1 -1))
     """
     # Implementation details
@@ -206,7 +204,7 @@ def safe_union(geom_a: BaseGeometry, geom_b: BaseGeometry) -> BaseGeometry:
         >>> point_a = Point(0, 0)
         >>> point_b = Point(1, 1)
         >>> result = safe_union(point_a, point_b)
-        >>> print(result)
+        >>> logging.debug(result)
         POLYGON EMPTY
     """
     try:
@@ -1181,100 +1179,6 @@ def get_geoms_from_geometry(geometry):
     return geoms
 
 
-def connection_lines_between_multilinestring(multilinestring):
-    """
-    Verbindt losse segmenten in een MultiLineString met de kortste
-    mogelijke tussenstukken zodat alles verbonden is.
-    """
-    if multilinestring.is_empty or len(multilinestring.geoms) <= 1:
-        return []
-
-    segments = list(multilinestring.geoms)
-    connected_indices = {0}  # Start met het eerste segment
-    unconnected_indices = set(range(1, len(segments)))
-    connection_lines = []
-
-    # Blijf verbinden tot alles aan de 'boom' hangt
-    while unconnected_indices:
-        min_dist = float("inf")
-        best_connection = None
-        best_unconnected_idx = None
-
-        # Zoek de kortste verbinding tussen de reeds verbonden groep en de rest
-        for i in connected_indices:
-            for j in unconnected_indices:
-                # Bereken kortste punten tussen segment i en segment j
-                p1, p2 = nearest_points(segments[i], segments[j])
-                dist = p1.distance(p2)
-
-                if dist < min_dist:
-                    min_dist = dist
-                    best_connection = LineString([p1, p2])
-                    best_unconnected_idx = j
-
-        if best_connection:
-            if best_connection.length>0:
-                connection_lines.append(best_connection)
-            connected_indices.add(best_unconnected_idx)
-            unconnected_indices.remove(best_unconnected_idx)
-
-    return connection_lines
-
-
-def shortest_connections_between_geometries(geometry):
-    """
-    Voor elk element in een GeometryCollection, bepaal de kortste verbindingslijn
-    naar het dichtstbijzijnde andere element.
-
-    Parameters:
-    - geometry_collection: shapely.geometry.GeometryCollection
-
-    Returns:
-    - List van shapely.geometry.LineString objecten die de kortste verbindingen representeren
-    """
-    connection_lines = []
-    geometry = safe_unary_union(geometry)
-    geometry = to_multi(geometry)
-
-    if geometry is None or geometry.is_empty or len(geometry.geoms) <= 1:
-        return connection_lines
-
-    geometries = list(geometry.geoms)
-
-    for i, geom in enumerate(geometries):
-        other_geometries = copy(geometries)
-        del other_geometries[i]
-        connection_line = shortest_line(geom, safe_unary_union(other_geometries))
-        if connection_line.length>0:
-            connection_lines.append(connection_line)
-    return make_linestrings_unique(connection_lines)
-
-
-def make_linestrings_unique(lines):
-    """
-    Verwijder dubbele LineStrings uit een lijst, waarbij lijnen met omgekeerde richting
-    als gelijk worden beschouwd.
-
-    Parameters:
-    - lines: lijst van shapely.geometry.LineString objecten
-
-    Returns:
-    - lijst van unieke LineStrings
-    """
-    seen = set()
-    unique_lines = []
-
-    for line in lines:
-        coords = tuple(line.coords)
-        # Sorteer de coördinaten zodat richting niet uitmaakt
-        key = tuple(sorted([coords[0], coords[-1]]))
-        if key not in seen:
-            seen.add(key)
-            unique_lines.append(line)
-
-    return unique_lines
-
-
 def fill_gaps_in_multilinestring(multilinestring, tolerance):
     """
     Vul kleine gaps in een MultiLineString op door verbindingslijnen toe te voegen
@@ -1315,7 +1219,7 @@ def fill_gaps_in_multilinestring(multilinestring, tolerance):
 
 def nearest_node(point, nodes):
     """
-    vind de dichtstbijzijnde knopen bij start- en eindpunt
+    find closest node to point
     :param point:
     :param nodes:
     :return:
@@ -1337,8 +1241,8 @@ def find_best_circle_path(graph, geom_to_process):
         if i > max_amount:  #safetyleak
             logging.warning(f"max cycles tested while searching for geometry: {max_amount}")
             break
-        # print (i)
-        # print (LineString(cycle).wkt)
+        # logging.debug (i)
+        # logging.debug (LineString(cycle).wkt)
         cycle_coords = cycle + [cycle[0]]
 
         cycle_line = LineString(cycle_coords)
@@ -1365,9 +1269,8 @@ def longest_linestring_from_multilinestring(multilinestring):
         return GeometryCollection()
 
     # Create a graph from the MultiLineString
-    graph = graph_from_multilinestring(multilinestring)
-
-
+    graph = Graph()
+    _multilinestring_to_edges(graph, multilinestring,"")
 
     # Find all simple paths and keep the longest one
     longest_path = []
@@ -1394,149 +1297,40 @@ def longest_linestring_from_multilinestring(multilinestring):
     return LineString(longest_path)
 
 
-def graph_from_multilinestring(multilinestring,relevant_distance=10):
-    if not isinstance(multilinestring, MultiLineString):
-        raise TypeError("multilinstring expected")
-    graph = nx.Graph()
-    for line in multilinestring.geoms:
-        coords = list(line.coords)
-        for i in range(len(coords) - 1):
-            p1 = tuple(coords[i])
-            p2 = tuple(coords[i + 1])
-            segment = LineString([p1, p2])
-            graph.add_edge(p1, p2, weight=segment.length, geometry=segment)
-        # graph, added_edges = _connect_components_greedy(graph)
-    loops = list(nx.nodes_with_selfloops(graph))
-    graph.remove_edges_from([(n, n) for n in loops])
-    removed_edges =remove_composite_edges(graph)
-    #export_to_geopackage(graph,"graph_before.gpkg")
-    graph = bridge_multiple_complex_gaps(graph, max_phys_dist=2*relevant_distance, min_net_dist=relevant_distance)
-    #export_to_geopackage(graph,"graph_after.gpkg")
-
-    return graph
-
-
-def bridge_multiple_complex_gaps(G, max_phys_dist=5, min_net_dist=50.0):
-    """
-    Robustly closes multiple gaps, even if they split the graph into
-    separate disconnected components.
-    """
-
-    #We keep repeating until we do not find any gaps anymore that match the criteria
-    while True:
-        endpoints = [n for n, d in G.degree() if d == 1]
-        best_gap = None
-        min_gap_dist = float("inf")
-
-        #we search fot the 'safest' gap to close first
-        for i, n1 in enumerate(endpoints):
-            for n2 in endpoints[i + 1 :]:
-                phys_dist = euclidean_distance(n1, n2)
-
-                if phys_dist < max_phys_dist:
-                    # Check if they are connected
-                    try:
-                        # In same component? Check network distance
-                        if nx.has_path(G, n1, n2):
-                            net_dist = nx.shortest_path_length(
-                                G, n1, n2, weight="weight"
-                            )
-                            is_valid_gap = net_dist > min_net_dist
-                        else:
-                            # NOT in same component: always a valid gap
-                            is_valid_gap = True
-                    except nx.NetworkXNoPath:
-                        is_valid_gap = True
-
-                    if is_valid_gap and phys_dist < min_gap_dist:
-                        min_gap_dist = phys_dist
-                        best_gap = (n1, n2)
-
-        if best_gap:
-            u, v = best_gap
-            G.add_edge(u, v, weight=min_gap_dist, type="bridge")
-            logging.debug(
-                f"Bridge added: {u} - {v} ({min_gap_dist:.2f}m)"
-            )
-            # we repeat the loop because topology is changed
-        else:
-            break  # No gaps found anymore
-
-    return G
-
-
 def euclidean_distance(p1, p2):
     return math.hypot(p1[0] - p2[0], p1[1] - p2[1])
 
 
-# def _connect_components_greedy(G):
-#     added_edges = []
+# def insert_vertex(multilinestring, point):
+#     new_lines = []
+#     if isinstance(multilinestring, LineString):
+#         multilinestring = to_multi(multilinestring, None)
 #
-#     while not nx.is_connected(G):
-#         components = list(nx.connected_components(G))
+#     for line in multilinestring.geoms:
+#         # Find the nearest point on the line to the given point
+#         nearest_point = line.interpolate(line.project(point))
+#
+#         # Split the line at the nearest point
+#         coords = list(line.coords)
 #         min_dist = float("inf")
-#         best_pair = None
+#         insert_index = None
 #
-#         # Compare nodes from different components
-#         for i in range(len(components)):
-#             for j in range(i + 1, len(components)):
-#                 comp1 = components[i]
-#                 comp2 = components[j]
-#                 for u in comp1:
-#                     for v in comp2:
-#                         dist = euclidean_distance(u, v)
-#                         if dist < min_dist:
-#                             min_dist = dist
-#                             best_pair = (u, v)
+#         for i in range(len(coords) - 1):
+#             segment = LineString([coords[i], coords[i + 1]])
+#             dist = segment.distance(nearest_point)
+#             if dist < min_dist:
+#                 min_dist = dist
+#                 insert_index = i + 1
 #
-#         # Add the shortest edge found
-#         if best_pair:
-#             G.add_edge(best_pair[0], best_pair[1], weight=min_dist)
-#             added_edges.append((best_pair[0], best_pair[1], min_dist))
+#         # Insert the nearest point into the coordinates
+#         new_coords = (
+#             coords[:insert_index]
+#             + [(nearest_point.x, nearest_point.y)]
+#             + coords[insert_index:]
+#         )
+#         new_lines.append(LineString(new_coords))
 #
-#     return G, added_edges
-
-
-def prepare_network(segments):
-    network = line_merge(safe_unary_union(segments))
-    network = snap(network, network, tolerance=0.01)
-    # #274: Research if this is sufficient; possibly we also need to inject vertex on edge where line almost touches an edge
-    network = fill_gaps_in_multilinestring(
-        network, 0.1
-    )  # also needed to fill 'gaps' to connect reference objects fe points
-    return line_merge(safe_unary_union(network))
-
-
-def insert_vertex(multilinestring, point):
-    new_lines = []
-    if isinstance(multilinestring, LineString):
-        multilinestring = to_multi(multilinestring, None)
-
-    for line in multilinestring.geoms:
-        # Find the nearest point on the line to the given point
-        nearest_point = line.interpolate(line.project(point))
-
-        # Split the line at the nearest point
-        coords = list(line.coords)
-        min_dist = float("inf")
-        insert_index = None
-
-        for i in range(len(coords) - 1):
-            segment = LineString([coords[i], coords[i + 1]])
-            dist = segment.distance(nearest_point)
-            if dist < min_dist:
-                min_dist = dist
-                insert_index = i + 1
-
-        # Insert the nearest point into the coordinates
-        new_coords = (
-            coords[:insert_index]
-            + [(nearest_point.x, nearest_point.y)]
-            + coords[insert_index:]
-        )
-        new_lines.append(LineString(new_coords))
-
-    return MultiLineString(new_lines)
+#     return MultiLineString(new_lines)
 
 
 def total_vertex_distance(
@@ -1611,9 +1405,8 @@ def remove_composite_edges(G: nx.Graph) -> List[Tuple]:
 
     return removed_edges
 
-
 def find_best_path_in_network(
-    geom_to_process, nw_multilinestring, snap_strategy, relevant_distance
+    geom_to_process, graph, snap_strategy, relevant_distance
 ):
     """
     Determine the best path between 2 points in the network using the Hausdorf-distance
@@ -1627,12 +1420,10 @@ def find_best_path_in_network(
 
     start_point = Point(geom_to_process.coords[0])
     end_point = Point(geom_to_process.coords[-1])
-    nw_multilinestring = insert_vertex(nw_multilinestring, start_point)
-    nw_multilinestring = insert_vertex(nw_multilinestring, end_point)
+    #Possibly to  - check if something like this has to be added, these are possibly already added by thematic_points
+    # nw_multilinestring = insert_vertex(nw_multilinestring, start_point)
+    # nw_multilinestring = insert_vertex(nw_multilinestring, end_point)
 
-    # Create graph
-    graph = graph_from_multilinestring(nw_multilinestring,relevant_distance)
-    # remove cycles
 
     start_node = nearest_node(start_point, graph.nodes)
     end_node = nearest_node(end_point, graph.nodes)
@@ -1645,8 +1436,15 @@ def find_best_path_in_network(
         start_node = get_vertex_node(graph, relevant_distance, start_node, start_point)
         end_node = get_vertex_node(graph, relevant_distance, end_node, end_point)
 
-    # Search all simple paths (limited to 500, because cyclic paths can result in a lot of simple paths
-    max_amount = 500
+
+    # Search all simple paths (limited, because cyclic paths can result in a lot of simple paths
+    max_amount = 1000
+    path_found = nx.has_path(graph, start_node, end_node)
+    logging.debug ("Path detected? - " + str(path_found))
+    if not path_found:
+        graph = finalize_network_connectivity(graph, 50,edge_tags=["theme_lines","ref_lines","interconnect","gap_closure"])
+
+
     all_paths_generator = nx.all_simple_paths(graph, source=start_node, target=end_node,cutoff=max_amount)
 
     # Determine the network-path that fits the best to the original inputgeometry
@@ -1894,97 +1692,393 @@ def from_crs(crs, format="uri"):
         raise ValueError(f"Error converting CRS: {e}")
 
 
-import networkx as nx
-from shapely.geometry import Point, LineString
-from shapely.strtree import STRtree
-from collections import defaultdict
 
-
-def insert_pseudonodes_bulk(G, new_points, tolerance=1e-6):
+def build_custom_network(
+    theme_multiline, ref_multiline,ref_points, theme_points, relevant_distance, gap_threshold=0.1
+):
     """
-    Inserts a list of points into the graph in a high-performance batch operation.
+    Build a topological network from multiple linestrings and point geometries.
+
+    This function integrates theme lines and reference lines into a graph,
+    inserts pseudo-nodes (theme points) into the reference network, and
+    executes a series of optimization steps to ensure connectivity and
+    cycle formation.
+
+    Parameters
+    ----------
+    theme_multiline : shapely.geometry.MultiLineString
+        The primary linestrings representing the thematic network layer.
+    ref_multiline : shapely.geometry.MultiLineString
+        The reference linestrings used for snapping and connectivity.
+    ref_multiline : shapely.geometry.MultiPoint
+        The reference points used for snapping and connectivity.
+    theme_points : shapely.geometry.MultiPoint
+        Points to be inserted as pseudo-nodes on the reference lines.
+    relevant_distance : float
+        A base distance used to calculate interconnect and connectivity thresholds.
+    gap_threshold : float, optional
+        The distance threshold for closing small gaps, by default 0.1.
+
+    Returns
+    -------
+    nx.Graph
+        A topologically connected graph with optimized edges and nodes.
+    """
+    G = nx.Graph()
+
+    # 1. Load Theme & reference Lines
+    _multilinestring_to_edges(G, theme_multiline, "theme_lines")
+    _multilinestring_to_edges(G, ref_multiline, "ref_lines")
+
+    # 2. Load Reference Points
+    for pt in ref_points.geoms:
+        p_coord = pt.coords[0]
+        G.add_node(p_coord, tag="ref_points")
+
+    # 3. Add Pseudo-nodes (theme_points) onto ref_lines
+    for point in theme_points.geoms:
+        p_coord = point.coords[0]
+
+        # Retrieve all edges tagged as 'ref_lines'
+        ref_edges = [
+            (u, v, d) for u, v, d in G.edges(data=True) if d.get("tag") == "ref_lines"
+        ]
+
+        for u, v, data in ref_edges:
+            line = data["geometry"]
+            # Check if the point lies on the line (using a small tolerance)
+            if line.distance(point) < 1e-7:
+                # Remove the original edge and split it into two new edges at the point
+                G.remove_edge(u, v)
+                G.add_node(p_coord, tag="theme_points")
+                G.add_edge(
+                    u, p_coord, tag="ref_lines", geometry=LineString([u, p_coord])
+                )
+                G.add_edge(
+                    p_coord, v, tag="ref_lines", geometry=LineString([p_coord, v])
+                )
+                break
+
+    # 4. Optimization and Connectivity Pipeline
+    # Close gaps and create initial theme-to-ref interconnections
+    G = solve_all_network_gaps(
+        G=G,
+        gap_dist=gap_threshold,
+        interconnect_dist=2 * relevant_distance,
+        snap_dist=0.01,
+        merge_nodes=False,
+    )
+
+    # Ensure all isolated islands of reference lines are connected
+    G = finalize_network_connectivity(G, interconnect_dist=2 * relevant_distance,edge_tags=["ref_lines"])
+
+    # Force the creation of a cycle if the graph is currently a tree/forest
+    G = ensure_cycle_exists(G, interconnect_dist=2 * relevant_distance)
+
+    # # 5. Final Cleanup
+    # composite_edges_removed = remove_composite_edges(G)
+    # logging.debug(f"Removed composite edges: {len(composite_edges_removed)}")
+
+    return G
+
+
+def _multilinestring_to_edges(G, multilinestring, tag):
+
+    multilinestring = to_multi(multilinestring)
+    if not isinstance(multilinestring, MultiLineString):
+        return
+    for line in multilinestring.geoms:
+        coords = list(line.coords)
+        for i in range(len(coords) - 1):
+            G.add_edge(
+                coords[i],
+                coords[i + 1],
+                tag=tag,
+                geometry=LineString([coords[i], coords[i + 1]]),
+            )
+    return
+
+
+def ensure_cycle_exists(G, interconnect_dist=5.0):
+    """
+    Ensure the graph contains at least one cycle by connecting the closest endpoints.
+
+    If the graph is acyclic (a tree or forest), this function identifies all nodes
+    with degree 1 and connects the two closest ones within the specified distance
+    threshold to create a loop.
 
     Parameters
     ----------
     G : nx.Graph
-        The networkx graph to modify. Must have 'geometry' (LineString) on edges.
-    new_points : list of tuple
-        List of (x, y) coordinates to be inserted as pseudonodes.
-    tolerance : float
-        Distance within which a point is considered to lie on an edge.
+        The network graph to evaluate.
+    interconnect_dist : float, optional
+        The maximum distance allowed to create a 'cycle_closure' edge between
+        two endpoints, by default 5.0.
+
+    Returns
+    -------
+    nx.Graph
+        The graph, potentially with one additional 'cycle_closure' edge if a
+        cycle was successfully formed.
     """
-    # 1. Bouw een Spatial Index van de edges
-    # We bewaren een mapping van geometry-ID naar de edge (u, v, data)
-    edges_data = []
-    geoms = []
-    for u, v, data in G.edges(data=True):
-        if "geometry" in data:
-            geoms.append(data["geometry"])
-            edges_data.append((u, v, data))
+    # 1. Check if a cycle already exists
+    try:
+        cycles = nx.find_cycle(G)
+        if cycles:
+            logging.debug("Graph already contains a cycle. No action required.")
+            return G
+    except nx.NetworkXNoCycle:
+        logging.debug("No cycle found. Searching for a closing link...")
 
-    tree = STRtree(geoms)
+    # 2. Identify all endpoints (nodes with degree 1)
+    endpoints = [n for n, deg in G.degree() if deg == 1]
 
-    # 2. Koppel elk punt aan de dichtstbijzijnde edge
-    points_to_split = defaultdict(list)
+    if len(endpoints) < 2:
+        logging.debug("Not enough endpoints to close a cycle.")
+        return G
 
-    for pt_coords in new_points:
-        p = Point(pt_coords)
-        # Zoek de dichtstbijzijnde edge geometry
-        nearest_idx = tree.nearest_index(p)
-        nearest_geom = geoms[nearest_idx]
+    # 3. Find the two closest endpoints using STRtree
+    endpoint_pts = [Point(n) for n in endpoints]
+    tree = STRtree(endpoint_pts)
 
-        if nearest_geom.distance(p) < tolerance:
-            # Sla de projectie-afstand op voor sortering later
-            dist = nearest_geom.project(p)
-            points_to_split[nearest_idx].append((dist, pt_coords))
+    best_dist = float('inf')
+    best_pair = None
 
-    # 3. Voer de splitsingen uit per edge
-    for idx, pts in points_to_split.items():
-        u, v, data = edges_data[idx]
+    for i, pt_a in enumerate(endpoint_pts):
+        # Search for candidates within the interconnect_dist buffer
+        # Note: index 0 is often the node itself, handled by the 'i == idx' check
+        indices = tree.query(pt_a.buffer(interconnect_dist))
+        for idx in indices:
+            if i == idx:
+                continue
 
-        # Sorteer alle punten op deze edge op basis van hun positie langs de lijn
-        # Dit garandeert dat we de lijn in de juiste volgorde opknippen
-        pts.sort()
+            pt_b = endpoint_pts[idx]
+            dist = pt_a.distance(pt_b)
 
-        # Verwijder de originele edge
-        if G.has_edge(u, v):
-            G.remove_edge(u, v)
+            if dist < best_dist:
+                best_dist = dist
+                best_pair = (endpoints[i], endpoints[idx])
 
-        # Knip de lijn op in segmenten
-        original_geom = data["geometry"]
-        current_node = u
-        current_dist = 0
-
-        for dist, coords in pts:
-            new_node = tuple(coords)
-
-            # Maak het lijnsegment tussen de vorige stop en dit punt
-            segment_geom = LineString(
-                [
-                    original_geom.interpolate(current_dist),
-                    original_geom.interpolate(dist),
-                ]
-            )
-
-            # Voeg segment toe aan graaf
-            new_data = data.copy()
-            new_data["geometry"] = segment_geom
-            new_data["weight"] = segment_geom.length
-            G.add_edge(current_node, new_node, **new_data)
-
-            current_node = new_node
-            current_dist = dist
-
-        # Voeg het laatste segment toe (van laatste punt naar v)
-        final_segment_geom = LineString(
-            [
-                original_geom.interpolate(current_dist),
-                original_geom.interpolate(original_geom.length),
-            ]
+    # 4. Add the "cycle-closing" edge
+    if best_pair:
+        u, v = best_pair
+        G.add_edge(
+            u, v,
+            tag='cycle_closure',
+            weight=best_dist,
+            geometry=LineString([u, v])
         )
-        final_data = data.copy()
-        final_data["geometry"] = final_segment_geom
-        final_data["weight"] = final_segment_geom.length
-        G.add_edge(current_node, v, **final_data)
+        logging.debug(f"Cycle closed between {u} and {v} (distance: {best_dist:.3f})")
+    else:
+        logging.debug("No endpoints found within the maximum distance to form a cycle.")
+
+    return G
+
+
+def solve_all_network_gaps(
+    G, snap_dist=0.001, gap_dist=0.1, interconnect_dist=2.0, merge_nodes=False
+):
+    """
+    Solve network gaps through universal snapping, gap closure, and targeted interconnects.
+
+    Step 1 performs a universal gap closure across all layers of the graph. If enabled,
+    it merges nodes within the snap distance. Step 2 creates functional connections
+    specifically between 'theme_lines' endpoints and 'ref_lines'.
+
+    Parameters
+    ----------
+    G : nx.Graph
+        The input network graph containing nodes as coordinate tuples.
+    snap_dist : float, optional
+        Maximum distance for merging nodes (snapping), by default 0.001.
+    gap_dist : float, optional
+        Maximum distance for creating 'gap_closure' edges, by default 0.1.
+    interconnect_dist : float, optional
+        Maximum distance for 'interconnect' edges between theme and reference lines,
+        by default 2.0.
+    merge_nodes : bool, optional
+        If True, nodes within `snap_dist` will be merged into one. If False,
+        a 'gap_closure' edge is created instead, by default False.
+
+    Returns
+    -------
+    nx.Graph
+        The optimized graph with closed gaps and new interconnections.
+    """
+    # --- STEP 1: Universal Gap Closure ---
+    all_nodes = list(G.nodes())
+    if not all_nodes:
+        return G
+
+    all_points = [Point(n) for n in all_nodes]
+    global_tree = STRtree(all_points)
+
+    nodes_to_relabel = {}
+    endpoints = [n for n, deg in G.degree() if deg <= 1]
+
+    for ep in endpoints:
+        ep_pt = Point(ep)
+        # Search for neighbors within gap_dist radius
+        indices = global_tree.query(ep_pt.buffer(gap_dist))
+
+        for idx in indices:
+            candidate = all_nodes[idx]
+            # Self-check: do not connect a node to itself
+            if ep == candidate:
+                continue
+
+            dist = ep_pt.distance(all_points[idx])
+
+            if dist <= gap_dist:
+                if merge_nodes and dist <= snap_dist:
+                    nodes_to_relabel[ep] = candidate
+                    break
+                else:
+                    # Only add an edge if it does not form a self-loop
+                    if ep != candidate and not G.has_edge(ep, candidate):
+                        G.add_edge(
+                            ep,
+                            candidate,
+                            tag="gap_closure",
+                            weight=dist,
+                            geometry=LineString([ep, candidate]),
+                        )
+                    break
+
+    # Perform node merging (relabeling)
+    if merge_nodes and nodes_to_relabel:
+        # nx.relabel_nodes moves the connections.
+        # If an edge existed between ep and candidate, it becomes a self-loop.
+        nx.relabel_nodes(G, nodes_to_relabel, copy=False)
+
+        # Explicitly remove all self-loops created by merging
+        loops = list(nx.selfloop_edges(G))
+        G.remove_edges_from(loops)
+
+        if loops:
+            logging.debug(f"Cleaned: {len(loops)} self-loops removed after merging.")
+
+    # --- STEP 2: Targeted Interconnections (Theme -> Ref) ---
+    # Use subgraphs for performant selection of reference nodes
+    ref_edges = [
+        (u, v) for u, v, d in G.edges(data=True) if d.get("tag") == "ref_lines"
+    ]
+    if ref_edges:
+        ref_sub = G.edge_subgraph(ref_edges)
+        ref_nodes_coords = list(ref_sub.nodes())
+        ref_pts = [Point(n) for n in ref_nodes_coords]
+        ref_tree = STRtree(ref_pts)
+
+        # Extract endpoints of the 'theme_lines' network
+        theme_edges = [
+            (u, v)
+            for u, v, d in G.edges(data=True)
+            if d.get("tag") == "theme_lines"
+        ]
+        theme_sub = G.edge_subgraph(theme_edges)
+        theme_endpoints = [n for n, deg in theme_sub.degree() if deg == 1]
+
+        for tep in theme_endpoints:
+            tep_pt = Point(tep)
+            n_idx = ref_tree.nearest(tep_pt)
+            target_coord = ref_nodes_coords[n_idx]
+            dist = tep_pt.distance(ref_pts[n_idx])
+
+            # Prevent self-loops and check functional distance
+            if tep != target_coord and gap_dist < dist <= interconnect_dist:
+                if not G.has_edge(tep, target_coord):
+                    G.add_edge(
+                        tep,
+                        target_coord,
+                        tag="interconnect",
+                        weight=dist,
+                        geometry=LineString([tep, target_coord]),
+                    )
+
+    return G
+
+import networkx as nx
+from shapely.geometry import Point, LineString
+from shapely.strtree import STRtree
+
+def finalize_network_connectivity(G, interconnect_dist=2.0,edge_tags=["theme_lines","ref_lines"]):
+    """
+    Connect isolated network islands of reference lines if the graph is not fully connected.
+
+    This function identifies disjoint components in the graph and attempts to bridge
+    them by finding the nearest reference nodes between different components,
+    provided they are within the specified distance threshold.
+
+    Parameters
+    ----------
+    G : nx.Graph
+        The network graph containing 'ref_lines' and 'theme_lines'.
+    interconnect_dist : float, optional
+        The maximum distance allowed to create a bridging connection between
+        components, by default 2.0.
+
+    Returns
+    -------
+    nx.Graph
+        The graph with additional 'ref_interconnect' edges where gaps were bridged.
+    """
+    # 1. Retrieve all connected components
+    components = list(nx.connected_components(G))
+    if len(components) <= 1:
+        return G  # Everything is already connected, no action needed
+
+    # 2. Collect all potential reference nodes per component
+    component_data = []
+    for i, comp in enumerate(components):
+        # Filter nodes that belong to a 'ref_lines' edge within this component
+        ref_in_comp = [
+            n for n in comp if any(
+                d.get("tag") in edge_tags for _, _, d in G.edges(n, data=True)
+            )
+        ]
+
+        if ref_in_comp:
+            comp_points = [Point(n) for n in ref_in_comp]
+            component_data.append({
+                'id': i,
+                'nodes': ref_in_comp,
+                'points': comp_points,
+                'tree': STRtree(comp_points)
+            })
+
+    # 3. Attempt to connect the components
+    for i in range(len(component_data)):
+        comp_a = component_data[i]
+
+        # Search for the nearest node in ALL other components
+        best_dist = float('inf')
+        best_connection = None
+
+        for j in range(len(component_data)):
+            if i == j:
+                continue
+            comp_b = component_data[j]
+
+            # For each node in A, find the nearest neighbor in B using STRtree
+            for idx_a, pt_a in enumerate(comp_a['points']):
+                idx_b = comp_b['tree'].nearest(pt_a)
+                pt_b = comp_b['points'][idx_b]
+                dist = pt_a.distance(pt_b)
+
+                if dist < best_dist and dist <= interconnect_dist:
+                    best_dist = dist
+                    best_connection = (comp_a['nodes'][idx_a], comp_b['nodes'][idx_b])
+
+        # 4. Add the interconnecting edge
+        if best_connection:
+            u, v = best_connection
+            if not G.has_edge(u, v):
+                G.add_edge(
+                    u, v,
+                    tag='component_interconnect',
+                    weight=best_dist,
+                    geometry=LineString([u, v])
+                )
+                logging.debug(f"Component {i} connected to another component (distance: {best_dist:.3f})")
 
     return G
