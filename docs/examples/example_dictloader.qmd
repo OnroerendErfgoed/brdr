@@ -1,0 +1,18 @@
+---
+title: "DictLoader"
+description: "example how a DictLoader is used to load a Dictionary of thematic data"
+author: "Karel Dieussaert"
+date: "2026-01-07"
+categories: [Loader]
+format:
+  html:
+    code-fold: false
+jupyter: python3
+---
+# DictLoader
+This example shows a basic Loader example of the Aligner
+
+```{python}
+#| fig-cap: "basic example"
+{{< include ../../examples/example_dictloader.py >}}
+```

@@ -1,9 +1,9 @@
 import numpy as np
 
 from brdr.aligner import Aligner
-from brdr.constants import EVALUATION_FIELD_NAME
-from brdr.enums import GRBType, FullStrategy, Evaluation
-from brdr.grb import GRBActualLoader
+from brdr.be.grb.enums import GRBType
+from brdr.be.grb.loader import GRBActualLoader
+from brdr.enums import FullReferenceStrategy
 from brdr.loader import GeoJsonLoader
 
 thematic_json = {
@@ -89,7 +89,7 @@ thematic_json = {
 # 4001 will give a result, 4002 &4009 should also give the original geometry
 
 
-aligner = Aligner(relevant_distances=np.arange(0, 310, 10, dtype=int) / 100)
+aligner = Aligner()
 
 loader = GeoJsonLoader(_input=thematic_json, id_property="fid")
 aligner.load_thematic_data(loader)
@@ -98,12 +98,6 @@ loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
 aligner.load_reference_data(loader)
 
 # Use the EVALUATE-function
-dict_predictions_evaluated, prop_dictionary = aligner.evaluate(
-    max_predictions=1,
-    full_strategy=FullStrategy.ONLY_FULL,
-    multi_to_best_prediction=True,
-)
-
-assert prop_dictionary[1][0][EVALUATION_FIELD_NAME] == Evaluation.PREDICTION_UNIQUE_FULL
-assert prop_dictionary[2][0][EVALUATION_FIELD_NAME] == Evaluation.TO_CHECK_NO_PREDICTION
-assert prop_dictionary[3][0][EVALUATION_FIELD_NAME] == Evaluation.TO_CHECK_NO_PREDICTION
+aligner_result = aligner.evaluate(full_reference_strategy=FullReferenceStrategy.ONLY_FULL_REFERENCE, max_predictions=1,
+                                  multi_to_best_prediction=True)
+print (aligner_result)

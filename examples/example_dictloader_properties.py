@@ -8,7 +8,7 @@ if __name__ == "__main__":
     Example to load dat with a DictLoader, and also adding the properties to the result
     """
     # CREATE AN ALIGNER
-    aligner = Aligner(crs="EPSG:31370", multi_as_single_modus=True)
+    aligner = Aligner(crs="EPSG:31370")
     # ADD A THEMATIC POLYGON TO THEMATIC DICTIONARY and LOAD into Aligner
     id = "my_theme_id"
     thematic_dict = {id: geom_from_wkt("POLYGON ((0 0, 0 9, 5 10, 10 0, 0 0))")}
@@ -26,20 +26,13 @@ if __name__ == "__main__":
     aligner.load_reference_data(loader)
     # EXECUTE THE ALIGNMENT
     relevant_distance = 1
-    process_result = aligner.process(
-        relevant_distance=relevant_distance,
-        od_strategy=OpenDomainStrategy.SNAP_INNER_SIDE,
-        threshold_overlap_percentage=50,
-    )
+    aligner_result = aligner.process(relevant_distances=[relevant_distance])
+    process_results = aligner_result.get_results(aligner=aligner)
     # PRINT RESULTS IN WKT
-    print("result: " + process_result[id][relevant_distance]["result"].wkt)
+    print("result: " + process_results[id][relevant_distance]["result"].wkt)
     print(
-        "added area: " + process_result[id][relevant_distance]["result_diff_plus"].wkt
+        "added area: " + process_results[id][relevant_distance]["result_diff_plus"].wkt
     )
     print(
-        "removed area: " + process_result[id][relevant_distance]["result_diff_min"].wkt
+        "removed area: " + process_results[id][relevant_distance]["result_diff_min"].wkt
     )
-    fcs = aligner.get_results_as_geojson(
-        resulttype=AlignerResultType.PROCESSRESULTS, formula=True, attributes=True
-    )
-    print(fcs["result"])

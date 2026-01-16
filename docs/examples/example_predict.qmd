@@ -1,0 +1,21 @@
+---
+title: "Prediction"
+description: "Example of a simple prediction by using **brdr**"
+author: "Karel Dieussaert"
+date: "2026-01-07"
+categories: [Prediction]
+format:
+  html:
+    code-fold: false
+jupyter: python3
+---
+# Prediction
+This example shows a simple Prediction by using **brdr**
+
+```{python}
+#| label: fig-plots
+#| fig-cap:
+#|   - "Graphic"
+#|   - "Visual predictions"
+{{< include ../../examples/example_predictor.py >}}
+```

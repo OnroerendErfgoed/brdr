@@ -1,7 +1,7 @@
 from brdr.aligner import Aligner
-from brdr.constants import EVALUATION_FIELD_NAME, FORMULA_FIELD_NAME
-from brdr.grb import GRBFiscalParcelLoader
-from brdr.grb import update_to_actual_grb
+from brdr.be.grb.grb import update_featurecollection_to_actual_grb
+from brdr.be.grb.loader import GRBFiscalParcelLoader
+from brdr.constants import EVALUATION_FIELD_NAME, OBSERVATION_FIELD_NAME
 from brdr.loader import GeoJsonLoader
 
 if __name__ == "__main__":
@@ -65,15 +65,17 @@ if __name__ == "__main__":
     base_aligner.load_reference_data(
         GRBFiscalParcelLoader(year=base_year, aligner=base_aligner)
     )
-    base_process_result = base_aligner.process(relevant_distance=2)
-    fcs = base_aligner.get_results_as_geojson(formula=True, attributes=True)
+    aligner_result_base = base_aligner.process(relevant_distances=[2])
+    fcs = aligner_result_base.get_results_as_geojson(
+        aligner=base_aligner, add_metadata=True, add_original_attributes=True
+    )
     featurecollection_base_result = fcs["result"]
     print(featurecollection_base_result)
     # Update Featurecollection to actual version
-    featurecollection = update_to_actual_grb(
+    featurecollection = update_featurecollection_to_actual_grb(
         featurecollection_base_result,
-        base_aligner.name_thematic_id,
-        base_formula_field=FORMULA_FIELD_NAME,
+        id_theme_fieldname="ID",
+        base_metadata_field=OBSERVATION_FIELD_NAME,
         max_distance_for_actualisation=3,
     )
     if len(featurecollection) == 0:
@@ -82,17 +84,17 @@ if __name__ == "__main__":
         # Print results
         for feature in featurecollection["result"]["features"]:
             print(
-                feature["properties"][name_thematic_id]
+                feature["properties"]["brdr_id"]
                 + ": "
                 + feature["properties"][EVALUATION_FIELD_NAME]
             )
         geojson = featurecollection["result"]
         print(geojson)
 
-    featurecollection = update_to_actual_grb(
+    featurecollection = update_featurecollection_to_actual_grb(
         featurecollection_base_result,
-        base_aligner.name_thematic_id,
-        base_formula_field=FORMULA_FIELD_NAME,
+        id_theme_fieldname="ID",
+        base_metadata_field=OBSERVATION_FIELD_NAME,
         max_distance_for_actualisation=0,
     )
     if len(featurecollection) == 0:
@@ -108,10 +110,9 @@ if __name__ == "__main__":
         geojson = featurecollection["result"]
         print(geojson)
 
-    featurecollection = update_to_actual_grb(
+    featurecollection = update_featurecollection_to_actual_grb(
         featurecollection_base_result,
-        base_aligner.name_thematic_id,
-        base_formula_field=None,
+        id_theme_fieldname="ID",
         max_distance_for_actualisation=3,
     )
     if len(featurecollection) == 0:

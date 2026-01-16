@@ -2,10 +2,14 @@ import statistics
 from datetime import datetime
 
 from brdr.aligner import Aligner
-from brdr.enums import OpenDomainStrategy, GRBType
+from brdr.be.grb.enums import GRBType
+from brdr.be.grb.loader import GRBActualLoader
+from brdr.configs import ProcessorConfig
+from brdr.enums import OpenDomainStrategy
 from brdr.geometry_utils import geom_from_wkt
-from brdr.grb import GRBActualLoader
 from brdr.loader import GeoJsonFileLoader, DictLoader
+from brdr.processor import AlignerGeometryProcessor
+from examples.example_outer_boundary import processor
 
 
 def main():
@@ -13,13 +17,17 @@ def main():
     EXAMPLE of a test to measure the speed of the aligner
     :return:
     """
-    # Initiate brdr
-    aligner = Aligner(max_workers=None)
+
     iterations = 2
     od_strategy = OpenDomainStrategy.SNAP_PREFER_VERTICES
+    processor_config=ProcessorConfig()
+    processor_config.partial_snapping = True
+    processor_config.od_strategy = od_strategy
+    processor=AlignerGeometryProcessor(config=processor_config)
+    # Initiate brdr
+    aligner = Aligner(processor=processor)
     relevant_distance = 3
     grb_loader = True
-    aligner.multi_as_single_modus = True
     # Load local thematic data and reference data
     # loader = GeoJsonFileLoader(
     #     "../tests/testdata/theme.geojson", "theme_identifier"
@@ -43,16 +51,17 @@ def main():
     else:
         loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
     aligner.load_reference_data(loader)
-    aligner.partial_snapping = True
-    aligner.process(relevant_distance=relevant_distance, od_strategy=od_strategy)
+
+
+    aligner.process(relevant_distances=[relevant_distance])
     times = []
     total_starttime = datetime.now()
     for iter in range(1, iterations + 1):
         starttime = datetime.now()
 
         # Example how to use the Aligner
-        aligner.process(relevant_distance=relevant_distance, od_strategy=od_strategy)
-        # fcs = aligner.get_results_as_geojson(formula=True)
+        aligner.process(relevant_distances=[relevant_distance])
+        # fcs = aligner.get_results_as_geojson(observation=True)
         endtime = datetime.now()
         seconds = (endtime - starttime).total_seconds()
         times.append(seconds)
@@ -68,7 +77,7 @@ def main():
     print("Stdv: " + str(statistics.stdev(times)))
 
 
-# #BEFORE REFACTORING dict_series
+# #BEFORE REFACTORING process_results
 # duration: [25.652311, 27.894154, 19.641618, 19.929254, 44.754033, 25.218422, 23.167992, 18.649832, 22.899336, 52.108296]
 # Min: 18.649832
 # Max: 52.108296

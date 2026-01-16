@@ -1,0 +1,425 @@
+<wfs:FeatureCollection xmlns:wfs="http://www.opengis.net/wfs/2.0"
+                       xmlns:gml="http://www.opengis.net/gml/3.2"
+                       xmlns:CL="http://ccff02.minfin.fgov.be/geoservices/arcgis/admin/services/Cadastral_LayersWFS/MapServer/WFSServer"
+                       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       timeStamp="2025-12-15T13:41:01Z" numberMatched="13" numberReturned="13"
+                       xsi:schemaLocation="http://www.opengis.net/wfs/2.0 http://schemas.opengis.net/wfs/2.0/wfs.xsd http://www.opengis.net/gml/3.2 http://schemas.opengis.net/gml/3.2.1/gml.xsd http://ccff02.minfin.fgov.be/geoservices/arcgis/admin/services/Cadastral_LayersWFS/MapServer/WFSServer https://ccff02.minfin.fgov.be/arcgis/services/WMS/Cadastral_LayersWFS/MapServer/WFSServer?service=wfs%26version=2.0.0%26request=DescribeFeatureType">
+    <wfs:member>
+        <CL:Cadastral_parcel gml:id="Cadastral_parcel.8603018">
+            <CL:OBJECTID>8603018</CL:OBJECTID>
+            <CL:CaPaKey>24434F0211/00W006</CL:CaPaKey>
+            <CL:CaSeKey>24434F</CL:CaSeKey>
+            <CL:SuVaCn>716</CL:SuVaCn>
+            <CL:SuVaCnType>GR</CL:SuVaCnType>
+            <CL:Status>UN</CL:Status>
+            <CL:FiscSitId>4</CL:FiscSitId>
+            <CL:LastUpdDTS>2018-10-06T15:27:28</CL:LastUpdDTS>
+            <CL:GlobalID>{DDF00745-72F2-4B20-BB26-843C77B158B6}</CL:GlobalID>
+            <CL:SHAPE>
+                <gml:MultiSurface gml:id="Cadastral_parcel.8603018.pl" srsName="urn:ogc:def:crs:EPSG::3812">
+                    <gml:surfaceMember>
+                        <gml:Polygon gml:id="Cadastral_parcel.8603018.pl.0">
+                            <gml:exterior>
+                                <gml:LinearRing>
+                                    <gml:posList>672958.09860000 671539.92840000 672946.41610000 671514.52060000
+                                        672935.46040000 671517.94920000 672931.70360000 671519.12490000 672935.62700000
+                                        671527.65760000 672951.87090000 671562.98620000 672951.92690000 671563.10800000
+                                        672966.00070000 671557.11450000 672965.82930000 671556.74170000 672963.57940000
+                                        671551.84840000 672963.16160000 671550.93970000 672963.03550000 671550.66560000
+                                        672958.09860000 671539.92840000
+                                    </gml:posList>
+                                </gml:LinearRing>
+                            </gml:exterior>
+                        </gml:Polygon>
+                    </gml:surfaceMember>
+                </gml:MultiSurface>
+            </CL:SHAPE>
+            <CL:SHAPE.STArea__>728.52576800</CL:SHAPE.STArea__>
+            <CL:SHAPE.STLength__>126.00331824</CL:SHAPE.STLength__>
+        </CL:Cadastral_parcel>
+    </wfs:member>
+    <wfs:member>
+        <CL:Cadastral_parcel gml:id="Cadastral_parcel.8603396">
+            <CL:OBJECTID>8603396</CL:OBJECTID>
+            <CL:CaPaKey>24434F0208/00L002</CL:CaPaKey>
+            <CL:CaSeKey>24434F</CL:CaSeKey>
+            <CL:SuVaCn>1300</CL:SuVaCn>
+            <CL:SuVaCnType>TI</CL:SuVaCnType>
+            <CL:Status>UN</CL:Status>
+            <CL:FiscSitId>4</CL:FiscSitId>
+            <CL:LastUpdDTS>2018-10-06T15:27:26</CL:LastUpdDTS>
+            <CL:GlobalID>{C8A0C0C6-DC34-433A-A5EE-C09BF2763F6B}</CL:GlobalID>
+            <CL:SHAPE>
+                <gml:MultiSurface gml:id="Cadastral_parcel.8603396.pl" srsName="urn:ogc:def:crs:EPSG::3812">
+                    <gml:surfaceMember>
+                        <gml:Polygon gml:id="Cadastral_parcel.8603396.pl.0">
+                            <gml:exterior>
+                                <gml:LinearRing>
+                                    <gml:posList>672935.72710000 671448.99410000 672915.92900000 671455.19000000
+                                        672935.46040000 671517.94920000 672946.41610000 671514.52060000 672955.25850000
+                                        671511.75340000 672935.72710000 671448.99410000
+                                    </gml:posList>
+                                </gml:LinearRing>
+                            </gml:exterior>
+                        </gml:Polygon>
+                    </gml:surfaceMember>
+                </gml:MultiSurface>
+            </CL:SHAPE>
+            <CL:SHAPE.STArea__>1363.52731232</CL:SHAPE.STArea__>
+            <CL:SHAPE.STLength__>172.94636001</CL:SHAPE.STLength__>
+        </CL:Cadastral_parcel>
+    </wfs:member>
+    <wfs:member>
+        <CL:Cadastral_parcel gml:id="Cadastral_parcel.8603741">
+            <CL:OBJECTID>8603741</CL:OBJECTID>
+            <CL:CaPaKey>24434F0211/00Z007</CL:CaPaKey>
+            <CL:CaSeKey>24434F</CL:CaSeKey>
+            <CL:SuVaCn>1247</CL:SuVaCn>
+            <CL:SuVaCnType>TI</CL:SuVaCnType>
+            <CL:Status>UN</CL:Status>
+            <CL:FiscSitId>4</CL:FiscSitId>
+            <CL:LastUpdDTS>2018-10-06T15:27:35</CL:LastUpdDTS>
+            <CL:GlobalID>{B8BB2E11-76B6-4D24-BFE4-9BE148DC4F40}</CL:GlobalID>
+            <CL:SHAPE>
+                <gml:MultiSurface gml:id="Cadastral_parcel.8603741.pl" srsName="urn:ogc:def:crs:EPSG::3812">
+                    <gml:surfaceMember>
+                        <gml:Polygon gml:id="Cadastral_parcel.8603741.pl.0">
+                            <gml:exterior>
+                                <gml:LinearRing>
+                                    <gml:posList>672935.62700000 671527.65760000 672931.70360000 671519.12490000
+                                        672917.35620000 671523.61500000 672907.98230000 671526.54860000 672929.23550000
+                                        671572.77130000 672945.02910000 671566.04550000 672951.92690000 671563.10800000
+                                        672951.87090000 671562.98620000 672935.62700000 671527.65760000
+                                    </gml:posList>
+                                </gml:LinearRing>
+                            </gml:exterior>
+                        </gml:Polygon>
+                    </gml:surfaceMember>
+                </gml:MultiSurface>
+            </CL:SHAPE>
+            <CL:SHAPE.STArea__>1223.85307682</CL:SHAPE.STArea__>
+            <CL:SHAPE.STLength__>148.80349637</CL:SHAPE.STLength__>
+        </CL:Cadastral_parcel>
+    </wfs:member>
+    <wfs:member>
+        <CL:Cadastral_parcel gml:id="Cadastral_parcel.8604678">
+            <CL:OBJECTID>8604678</CL:OBJECTID>
+            <CL:CaPaKey>24434F0208/00Y000</CL:CaPaKey>
+            <CL:CaSeKey>24434F</CL:CaSeKey>
+            <CL:SuVaCn>685</CL:SuVaCn>
+            <CL:SuVaCnType>GR</CL:SuVaCnType>
+            <CL:Status>UN</CL:Status>
+            <CL:FiscSitId>4</CL:FiscSitId>
+            <CL:LastUpdDTS>2018-10-06T15:27:31</CL:LastUpdDTS>
+            <CL:GlobalID>{7482B378-8681-41AA-8C4B-F6679999F222}</CL:GlobalID>
+            <CL:SHAPE>
+                <gml:MultiSurface gml:id="Cadastral_parcel.8604678.pl" srsName="urn:ogc:def:crs:EPSG::3812">
+                    <gml:surfaceMember>
+                        <gml:Polygon gml:id="Cadastral_parcel.8604678.pl.0">
+                            <gml:exterior>
+                                <gml:LinearRing>
+                                    <gml:posList>672841.57220000 671478.46010000 672821.46250000 671484.75350000
+                                        672833.41500000 671521.15170000 672852.68920000 671514.50950000 672841.57220000
+                                        671478.46010000
+                                    </gml:posList>
+                                </gml:LinearRing>
+                            </gml:exterior>
+                        </gml:Polygon>
+                    </gml:surfaceMember>
+                </gml:MultiSurface>
+            </CL:SHAPE>
+            <CL:SHAPE.STArea__>787.92171446</CL:SHAPE.STArea__>
+            <CL:SHAPE.STLength__>117.49315329</CL:SHAPE.STLength__>
+        </CL:Cadastral_parcel>
+    </wfs:member>
+    <wfs:member>
+        <CL:Cadastral_parcel gml:id="Cadastral_parcel.8619152">
+            <CL:OBJECTID>8619152</CL:OBJECTID>
+            <CL:CaPaKey>24434F0208/00S000</CL:CaPaKey>
+            <CL:CaSeKey>24434F</CL:CaSeKey>
+            <CL:SuVaCn>1545</CL:SuVaCn>
+            <CL:SuVaCnType>TI</CL:SuVaCnType>
+            <CL:Status>UN</CL:Status>
+            <CL:FiscSitId>4</CL:FiscSitId>
+            <CL:LastUpdDTS>2018-10-06T15:27:56</CL:LastUpdDTS>
+            <CL:GlobalID>{0A98C246-95C6-4E02-BF29-5DC93EAF1D75}</CL:GlobalID>
+            <CL:SHAPE>
+                <gml:MultiSurface gml:id="Cadastral_parcel.8619152.pl" srsName="urn:ogc:def:crs:EPSG::3812">
+                    <gml:surfaceMember>
+                        <gml:Polygon gml:id="Cadastral_parcel.8619152.pl.0">
+                            <gml:exterior>
+                                <gml:LinearRing>
+                                    <gml:posList>672860.94160000 671541.27010000 672852.68920000 671514.50950000
+                                        672833.41500000 671521.15170000 672815.92780000 671527.17810000 672802.39220000
+                                        671490.72160000 672800.90440000 671491.18720000 672796.63700000 671492.52270000
+                                        672796.72380000 671492.71360000 672812.80820000 671528.09100000 672814.99420000
+                                        671536.61290000 672819.88940000 671557.48030000 672820.13250000 671557.37280000
+                                        672832.95470000 671551.70530000 672841.85470000 671547.77140000 672841.85730000
+                                        671547.24250000 672860.94160000 671541.27010000
+                                    </gml:posList>
+                                </gml:LinearRing>
+                            </gml:exterior>
+                        </gml:Polygon>
+                    </gml:surfaceMember>
+                </gml:MultiSurface>
+            </CL:SHAPE>
+            <CL:SHAPE.STArea__>1399.03409401</CL:SHAPE.STArea__>
+            <CL:SHAPE.STLength__>225.65065218</CL:SHAPE.STLength__>
+        </CL:Cadastral_parcel>
+    </wfs:member>
+    <wfs:member>
+        <CL:Cadastral_parcel gml:id="Cadastral_parcel.8625426">
+            <CL:OBJECTID>8625426</CL:OBJECTID>
+            <CL:CaPaKey>24434F0211/00K009</CL:CaPaKey>
+            <CL:CaSeKey>24434F</CL:CaSeKey>
+            <CL:SuVaCn>2703</CL:SuVaCn>
+            <CL:SuVaCnType>GR</CL:SuVaCnType>
+            <CL:Status>UN</CL:Status>
+            <CL:FiscSitId>4</CL:FiscSitId>
+            <CL:LastUpdDTS>2018-10-06T15:28:22</CL:LastUpdDTS>
+            <CL:GlobalID>{53EB026D-04D3-4E55-8150-F6735C972D67}</CL:GlobalID>
+            <CL:SHAPE>
+                <gml:MultiSurface gml:id="Cadastral_parcel.8625426.pl" srsName="urn:ogc:def:crs:EPSG::3812">
+                    <gml:surfaceMember>
+                        <gml:Polygon gml:id="Cadastral_parcel.8625426.pl.0">
+                            <gml:exterior>
+                                <gml:LinearRing>
+                                    <gml:posList>672906.82790000 671582.31370000 672884.55790000 671533.87930000
+                                        672878.05980000 671535.91290000 672860.94160000 671541.27010000 672841.85730000
+                                        671547.24250000 672841.85470000 671547.77140000 672842.26440000 671556.24620000
+                                        672842.34880000 671557.99280000 672844.20520000 671559.63710000 672852.54460000
+                                        671571.51550000 672855.42130000 671579.33790000 672859.74990000 671591.10830000
+                                        672863.28090000 671600.71010000 672863.32820000 671600.83840000 672866.14510000
+                                        671599.63890000 672906.82790000 671582.31370000
+                                    </gml:posList>
+                                </gml:LinearRing>
+                            </gml:exterior>
+                        </gml:Polygon>
+                    </gml:surfaceMember>
+                </gml:MultiSurface>
+            </CL:SHAPE>
+            <CL:SHAPE.STArea__>2569.10309529</CL:SHAPE.STArea__>
+            <CL:SHAPE.STLength__>204.33017796</CL:SHAPE.STLength__>
+        </CL:Cadastral_parcel>
+    </wfs:member>
+    <wfs:member>
+        <CL:Cadastral_parcel gml:id="Cadastral_parcel.8629523">
+            <CL:OBJECTID>8629523</CL:OBJECTID>
+            <CL:CaPaKey>24434F0208/00E002</CL:CaPaKey>
+            <CL:CaSeKey>24434F</CL:CaSeKey>
+            <CL:SuVaCn>1322</CL:SuVaCn>
+            <CL:SuVaCnType>TI</CL:SuVaCnType>
+            <CL:Status>UN</CL:Status>
+            <CL:FiscSitId>4</CL:FiscSitId>
+            <CL:LastUpdDTS>2018-10-06T15:28:33</CL:LastUpdDTS>
+            <CL:GlobalID>{AF24401B-4D48-4453-B843-EBDFEE0F8751}</CL:GlobalID>
+            <CL:SHAPE>
+                <gml:MultiSurface gml:id="Cadastral_parcel.8629523.pl" srsName="urn:ogc:def:crs:EPSG::3812">
+                    <gml:surfaceMember>
+                        <gml:Polygon gml:id="Cadastral_parcel.8629523.pl.0">
+                            <gml:exterior>
+                                <gml:LinearRing>
+                                    <gml:posList>672897.59290000 671529.80000000 672877.95230000 671467.07490000
+                                        672858.41920000 671473.18780000 672878.05980000 671535.91290000 672884.55790000
+                                        671533.87930000 672891.06670000 671531.84240000 672897.59290000 671529.80000000
+                                    </gml:posList>
+                                </gml:LinearRing>
+                            </gml:exterior>
+                        </gml:Polygon>
+                    </gml:surfaceMember>
+                </gml:MultiSurface>
+            </CL:SHAPE>
+            <CL:SHAPE.STArea__>1345.27671439</CL:SHAPE.STArea__>
+            <CL:SHAPE.STLength__>172.39088447</CL:SHAPE.STLength__>
+        </CL:Cadastral_parcel>
+    </wfs:member>
+    <wfs:member>
+        <CL:Cadastral_parcel gml:id="Cadastral_parcel.8631930">
+            <CL:OBJECTID>8631930</CL:OBJECTID>
+            <CL:CaPaKey>24434F0208/00G002</CL:CaPaKey>
+            <CL:CaSeKey>24434F</CL:CaSeKey>
+            <CL:SuVaCn>1308</CL:SuVaCn>
+            <CL:SuVaCnType>TI</CL:SuVaCnType>
+            <CL:Status>UN</CL:Status>
+            <CL:FiscSitId>4</CL:FiscSitId>
+            <CL:LastUpdDTS>2018-10-06T15:28:41</CL:LastUpdDTS>
+            <CL:GlobalID>{9755632F-E992-4DAA-9F56-7A143BE18EC7}</CL:GlobalID>
+            <CL:SHAPE>
+                <gml:MultiSurface gml:id="Cadastral_parcel.8631930.pl" srsName="urn:ogc:def:crs:EPSG::3812">
+                    <gml:surfaceMember>
+                        <gml:Polygon gml:id="Cadastral_parcel.8631930.pl.0">
+                            <gml:exterior>
+                                <gml:LinearRing>
+                                    <gml:posList>672917.35620000 671523.61500000 672931.70360000 671519.12490000
+                                        672935.46040000 671517.94920000 672915.92900000 671455.19000000 672897.82480000
+                                        671460.85570000 672917.35620000 671523.61500000
+                                    </gml:posList>
+                                </gml:LinearRing>
+                            </gml:exterior>
+                        </gml:Polygon>
+                    </gml:surfaceMember>
+                </gml:MultiSurface>
+            </CL:SHAPE>
+            <CL:SHAPE.STArea__>1246.86595865</CL:SHAPE.STArea__>
+            <CL:SHAPE.STLength__>169.39654130</CL:SHAPE.STLength__>
+        </CL:Cadastral_parcel>
+    </wfs:member>
+    <wfs:member>
+        <CL:Cadastral_parcel gml:id="Cadastral_parcel.8633677">
+            <CL:OBJECTID>8633677</CL:OBJECTID>
+            <CL:CaPaKey>24434F0208/00H002</CL:CaPaKey>
+            <CL:CaSeKey>24434F</CL:CaSeKey>
+            <CL:SuVaCn>1315</CL:SuVaCn>
+            <CL:SuVaCnType>TI</CL:SuVaCnType>
+            <CL:Status>UN</CL:Status>
+            <CL:FiscSitId>4</CL:FiscSitId>
+            <CL:LastUpdDTS>2018-10-06T15:28:44</CL:LastUpdDTS>
+            <CL:GlobalID>{30D51E60-9403-4428-AA02-7BD4C78E49C4}</CL:GlobalID>
+            <CL:SHAPE>
+                <gml:MultiSurface gml:id="Cadastral_parcel.8633677.pl" srsName="urn:ogc:def:crs:EPSG::3812">
+                    <gml:surfaceMember>
+                        <gml:Polygon gml:id="Cadastral_parcel.8633677.pl.0">
+                            <gml:exterior>
+                                <gml:LinearRing>
+                                    <gml:posList>672897.59290000 671529.80000000 672907.98230000 671526.54860000
+                                        672917.35620000 671523.61500000 672897.82480000 671460.85570000 672877.95230000
+                                        671467.07490000 672897.59290000 671529.80000000
+                                    </gml:posList>
+                                </gml:LinearRing>
+                            </gml:exterior>
+                        </gml:Polygon>
+                    </gml:surfaceMember>
+                </gml:MultiSurface>
+            </CL:SHAPE>
+            <CL:SHAPE.STArea__>1364.89299867</CL:SHAPE.STArea__>
+            <CL:SHAPE.STLength__>172.98787501</CL:SHAPE.STLength__>
+        </CL:Cadastral_parcel>
+    </wfs:member>
+    <wfs:member>
+        <CL:Cadastral_parcel gml:id="Cadastral_parcel.8633918">
+            <CL:OBJECTID>8633918</CL:OBJECTID>
+            <CL:CaPaKey>24434F0205/00H000</CL:CaPaKey>
+            <CL:CaSeKey>24434F</CL:CaSeKey>
+            <CL:SuVaCn>712</CL:SuVaCn>
+            <CL:SuVaCnType>TI</CL:SuVaCnType>
+            <CL:Status>UN</CL:Status>
+            <CL:FiscSitId>4</CL:FiscSitId>
+            <CL:LastUpdDTS>2018-10-06T15:28:44</CL:LastUpdDTS>
+            <CL:GlobalID>{172FF7D5-E278-4489-A511-FF68CE082730}</CL:GlobalID>
+            <CL:SHAPE>
+                <gml:MultiSurface gml:id="Cadastral_parcel.8633918.pl" srsName="urn:ogc:def:crs:EPSG::3812">
+                    <gml:surfaceMember>
+                        <gml:Polygon gml:id="Cadastral_parcel.8633918.pl.0">
+                            <gml:exterior>
+                                <gml:LinearRing>
+                                    <gml:posList>672870.76710000 671451.20680000 672866.75780000 671437.33680000
+                                        672866.58840000 671437.38710000 672835.52640000 671446.60840000 672842.51290000
+                                        671467.29730000 672842.59360000 671467.53650000 672854.76500000 671463.52720000
+                                        672866.31120000 671459.72390000 672870.44960000 671451.81380000 672870.76710000
+                                        671451.20680000
+                                    </gml:posList>
+                                </gml:LinearRing>
+                            </gml:exterior>
+                        </gml:Polygon>
+                    </gml:surfaceMember>
+                </gml:MultiSurface>
+            </CL:SHAPE>
+            <CL:SHAPE.STArea__>671.28309138</CL:SHAPE.STArea__>
+            <CL:SHAPE.STLength__>103.68905853</CL:SHAPE.STLength__>
+        </CL:Cadastral_parcel>
+    </wfs:member>
+    <wfs:member>
+        <CL:Cadastral_parcel gml:id="Cadastral_parcel.8635774">
+            <CL:OBJECTID>8635774</CL:OBJECTID>
+            <CL:CaPaKey>24434F0205/00M000</CL:CaPaKey>
+            <CL:CaSeKey>24434F</CL:CaSeKey>
+            <CL:SuVaCn>1792</CL:SuVaCn>
+            <CL:SuVaCnType>TI</CL:SuVaCnType>
+            <CL:Status>UN</CL:Status>
+            <CL:FiscSitId>4</CL:FiscSitId>
+            <CL:LastUpdDTS>2018-10-06T15:28:39</CL:LastUpdDTS>
+            <CL:GlobalID>{863E9A8B-3194-4E10-BCE3-429AF719A42D}</CL:GlobalID>
+            <CL:SHAPE>
+                <gml:MultiSurface gml:id="Cadastral_parcel.8635774.pl" srsName="urn:ogc:def:crs:EPSG::3812">
+                    <gml:surfaceMember>
+                        <gml:Polygon gml:id="Cadastral_parcel.8635774.pl.0">
+                            <gml:exterior>
+                                <gml:LinearRing>
+                                    <gml:posList>672917.86890000 671443.45860000 672904.02200000 671399.72220000
+                                        672869.42480000 671410.41140000 672871.56380000 671418.15940000 672877.96880000
+                                        671441.35960000 672880.20910000 671449.47450000 672887.11430000 671453.12660000
+                                        672917.86890000 671443.45860000
+                                    </gml:posList>
+                                </gml:LinearRing>
+                            </gml:exterior>
+                        </gml:Polygon>
+                    </gml:surfaceMember>
+                </gml:MultiSurface>
+            </CL:SHAPE>
+            <CL:SHAPE.STArea__>1688.11683632</CL:SHAPE.STArea__>
+            <CL:SHAPE.STLength__>162.66118894</CL:SHAPE.STLength__>
+        </CL:Cadastral_parcel>
+    </wfs:member>
+    <wfs:member>
+        <CL:Cadastral_parcel gml:id="Cadastral_parcel.8638570">
+            <CL:OBJECTID>8638570</CL:OBJECTID>
+            <CL:CaPaKey>24434F0208/00A002</CL:CaPaKey>
+            <CL:CaSeKey>24434F</CL:CaSeKey>
+            <CL:SuVaCn>1329</CL:SuVaCn>
+            <CL:SuVaCnType>TI</CL:SuVaCnType>
+            <CL:Status>UN</CL:Status>
+            <CL:FiscSitId>4</CL:FiscSitId>
+            <CL:LastUpdDTS>2018-10-06T15:28:46</CL:LastUpdDTS>
+            <CL:GlobalID>{6DB6283F-6661-43EB-8641-A02E61B66060}</CL:GlobalID>
+            <CL:SHAPE>
+                <gml:MultiSurface gml:id="Cadastral_parcel.8638570.pl" srsName="urn:ogc:def:crs:EPSG::3812">
+                    <gml:surfaceMember>
+                        <gml:Polygon gml:id="Cadastral_parcel.8638570.pl.0">
+                            <gml:exterior>
+                                <gml:LinearRing>
+                                    <gml:posList>672852.68920000 671514.50950000 672860.94160000 671541.27010000
+                                        672878.05980000 671535.91290000 672858.41920000 671473.18780000 672841.57220000
+                                        671478.46010000 672852.68920000 671514.50950000
+                                    </gml:posList>
+                                </gml:LinearRing>
+                            </gml:exterior>
+                        </gml:Polygon>
+                    </gml:surfaceMember>
+                </gml:MultiSurface>
+            </CL:SHAPE>
+            <CL:SHAPE.STArea__>1169.61863256</CL:SHAPE.STArea__>
+            <CL:SHAPE.STLength__>167.04654183</CL:SHAPE.STLength__>
+        </CL:Cadastral_parcel>
+    </wfs:member>
+    <wfs:member>
+        <CL:Cadastral_parcel gml:id="Cadastral_parcel.8638587">
+            <CL:OBJECTID>8638587</CL:OBJECTID>
+            <CL:CaPaKey>24434F0211/00K008</CL:CaPaKey>
+            <CL:CaSeKey>24434F</CL:CaSeKey>
+            <CL:SuVaCn>1316</CL:SuVaCn>
+            <CL:SuVaCnType>TI</CL:SuVaCnType>
+            <CL:Status>UN</CL:Status>
+            <CL:FiscSitId>4</CL:FiscSitId>
+            <CL:LastUpdDTS>2018-10-06T15:28:46</CL:LastUpdDTS>
+            <CL:GlobalID>{79425332-D8E8-4AD8-BC6C-0A353A6CA7E0}</CL:GlobalID>
+            <CL:SHAPE>
+                <gml:MultiSurface gml:id="Cadastral_parcel.8638587.pl" srsName="urn:ogc:def:crs:EPSG::3812">
+                    <gml:surfaceMember>
+                        <gml:Polygon gml:id="Cadastral_parcel.8638587.pl.0">
+                            <gml:exterior>
+                                <gml:LinearRing>
+                                    <gml:posList>672929.23550000 671572.77130000 672907.98230000 671526.54860000
+                                        672897.59290000 671529.80000000 672891.06670000 671531.84240000 672884.55790000
+                                        671533.87930000 672906.82790000 671582.31370000 672929.23550000 671572.77130000
+                                    </gml:posList>
+                                </gml:LinearRing>
+                            </gml:exterior>
+                        </gml:Polygon>
+                    </gml:surfaceMember>
+                </gml:MultiSurface>
+            </CL:SHAPE>
+            <CL:SHAPE.STArea__>1268.17344032</CL:SHAPE.STArea__>
+            <CL:SHAPE.STLength__>153.08318373</CL:SHAPE.STLength__>
+        </CL:Cadastral_parcel>
+    </wfs:member>
+</wfs:FeatureCollection>

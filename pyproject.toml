@@ -1,6 +1,6 @@
 [project]
 name = "brdr"
-version = "0.14.0"
+version = "0.15.0"
 description = "BRDR - a Python library to assist in realigning (multi-)polygons (OGC Simple Features) to reference borders "
 readme = { file = "README.md", content-type = "text/markdown" }
 license = { file = "LICENSE" }
@@ -18,19 +18,21 @@ classifiers = [
     "Development Status :: 3 - Alpha",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Scientific/Engineering :: GIS",
 ]
 dependencies = [
-    "geojson~=3.1",
+    "geojson~=3.2",
     "requests~=2.32",
-    "shapely~=2.0",
-    "topojson>=1.10",
-    "networkx>=3.3",
+    "shapely~=2.1",
+    "topojson~=1.10",
+    "networkx~=3.6",
+    "pyproj~=3.7",
     "osmnx~=2.0",
-    "geopandas>=1.1"
+    "geopandas~=1.1"
 ]
 [project.urls]
 Documentation = "https://github.com/OnroerendErfgoed/brdr/blob/main/README.md"
@@ -38,22 +40,26 @@ Repository = "https://github.com/OnroerendErfgoed/brdr"
 Issues = "https://github.com/OnroerendErfgoed/brdr/issues"
 
 [project.optional-dependencies]
+viz = [
+    "matplotlib~=3.10",
+    "pillow~=12.0",
+]
 test = [
     "pytest-cov==6.0.0",
-    "pytest==8.3.3",
-    "responses==0.25.3",
+    "pytest==8.3.4",
+    "responses==0.25.6",
     "toml==0.10.2",
 ]
 dev = [
+    "brdr[viz]",
     "brdr[test]",
-    "black==25.1.0",
+    "black~=25.12",
     "flake8==7.1.1",
-    "geopandas==1.1.0",
-    "hatchling==1.27.0",
-    "matplotlib==3.8.4",
-    "mypy==1.13.0",
-    "pip-tools==7.4.1",
-    "types-requests==2.31.0.20240406",
+    "hatchling~=1.28",
+    "pyogrio~=0.12",
+    "mypy~=1.14",
+    "pip-tools~=7.5",
+    "types-requests~=2.32",
 ]
 
 [build-system]
@@ -64,12 +70,13 @@ build-backend = "hatchling.build"
 packages = ["brdr"]
 
 [tool.black]
-target-version = ['py310', 'py311', 'py312']
+target-version = ['py311', 'py312', 'py313', 'py314']
 
 # Config for hatch environments
 [tool.hatch.envs.dev]
 features = [
     'dev',
+    'viz',
 ]
 
 # Config for hatch test
@@ -79,4 +86,4 @@ features = [
 ]
 
 [[tool.hatch.envs.hatch-test.matrix]]
-python = ["3.10", '3.11', '3.12']
+python = ['3.11', '3.12', '3.13', '3.14']

@@ -39,7 +39,21 @@ The figure below shows:
 * A reference layer (yellow-black).
 * The resulting geometry after alignment with `brdr` (green)
 
-![](docs/figures/example.png)
+
+<img src="docs/figures/example.png" width="50%">
+
+In the animated gif below you can see the core of 'brdr' in action:
+* The visualization on the left:
+  * the original thematic geometry (blue),
+  * A reference layer (yellow-black).
+  * The resulting geometry after alignment with ``brdr`` (green)**
+* The graphic on the right:
+  * X-as: Relevant distance (~distance that change is allowed), that increases
+  * Y-as: Change (%) of the resulting geometry
+
+**brdr** will 'detect' stable situations that result in one or more predictions.
+![](docs/figures/animation.gif)
+
 
 ### Functionalities
 
@@ -110,7 +124,6 @@ pip install brdr
 
 ``` python
 from brdr.aligner import Aligner
-from brdr.enums import OpenDomainStrategy
 from brdr.geometry_utils import geom_from_wkt
 from brdr.loader import DictLoader
 
@@ -128,20 +141,19 @@ loader = DictLoader(reference_dict)
 aligner.load_reference_data(loader)
 # EXECUTE THE ALIGNMENT
 relevant_distance = 1
-process_result = aligner.process(
-    relevant_distance=relevant_distance,
-    od_strategy=OpenDomainStrategy.SNAP_INNER_SIDE,
-    threshold_overlap_percentage=50,
+aligner_result = aligner.process(
+    relevant_distances=[relevant_distance],
 )
+process_results = aligner_result.get_results(aligner=aligner)
 # PRINT RESULTS IN WKT
-print("result: " + process_result["theme_id_1"][relevant_distance]["result"].wkt)
+print("result: " + process_results["theme_id_1"][relevant_distance]["result"].wkt)
 print(
     "added area: "
-    + process_result["theme_id_1"][relevant_distance]["result_diff_plus"].wkt
+    + process_results["theme_id_1"][relevant_distance]["result_diff_plus"].wkt
 )
 print(
     "removed area: "
-    + process_result["theme_id_1"][relevant_distance]["result_diff_min"].wkt
+    + process_results["theme_id_1"][relevant_distance]["result_diff_min"].wkt
 )
 
 ```

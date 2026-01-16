@@ -1,8 +1,9 @@
 from brdr.aligner import Aligner
-from brdr.enums import GRBType, AlignerResultType, OpenDomainStrategy
-from brdr.grb import GRBActualLoader
+from brdr.be.grb.enums import GRBType
+from brdr.be.grb.loader import GRBActualLoader
+from brdr.enums import AlignerResultType
 from brdr.loader import GeoJsonFileLoader
-from examples import show_map, plot_dict_diffs
+from brdr.viz import show_map, plot_difference_by_relevant_distance
 
 # Press the green button in the gutter to run the script.
 if __name__ == "__main__":
@@ -12,7 +13,7 @@ if __name__ == "__main__":
     relevant distances of 'no-change')
     """
     # Initiate an Aligner
-    aligner = Aligner(max_workers=-1)
+    aligner = Aligner()
     # Load thematic data & reference data
     loader = GeoJsonFileLoader("input/predictor_one.geojson", "theme_id")
 
@@ -24,39 +25,27 @@ if __name__ == "__main__":
     # PREDICT the 'stable' relevant distances, for a series of relevant distances
     series = [3]
     # predict which relevant distances are interesting to propose as resulting geometry
-    dict_series, dict_predictions, diffs = aligner.predictor(
+    aligner_result = aligner.predict(
         relevant_distances=series,
-        od_strategy=OpenDomainStrategy.SNAP_ALL_SIDE,
-        threshold_overlap_percentage=50,
     )
+    dict_predictions = aligner_result.get_results(aligner=aligner,result_type=AlignerResultType.PREDICTIONS)
 
-    # # SHOW results of the predictions
-    # fcs_predictions = aligner.get_results_as_geojson(
-    #     resulttype=AlignerResultType.PREDICTIONS, formula=False
-    # )
-    # if fcs_predictions is None or "result" not in fcs_predictions:
-    #     print("empty predictions")
-    # else:
-    #     print(fcs_predictions["result"])
-    #     for key in dict_predictions:
-    #         plot_series(aligner.relevant_distances, {key: diffs[key]})
-    #         show_map(
-    #             {key: dict_predictions[key]},
-    #             {key: aligner.dict_thematic[key]},
-    #             aligner.dict_reference,
-    #         )
-
-    fcs_all = aligner.get_results_as_geojson(
-        resulttype=AlignerResultType.PROCESSRESULTS, formula=False
+    # SHOW results of the predictions
+    fcs = aligner_result.get_results_as_geojson(add_metadata=False, aligner=aligner)
+    diffs_dict = aligner.get_difference_metrics_for_thematic_data(
+        dict_processresults=aligner_result.results, thematic_data=aligner.thematic_data
     )
-    if fcs_all is None or "result" not in fcs_all:
-        print("no calculations")
+    reference_geometries = {
+        key: feat.geometry for key, feat in aligner.reference_data.features.items()
+    }
+    if fcs is None or "result" not in fcs:
+        print("empty predictions")
     else:
-        print(fcs_all["result"])
-        for key in dict_series:
-            plot_dict_diffs({key: diffs[key]})
+        print(fcs["result"])
+        for key in dict_predictions:
+            plot_difference_by_relevant_distance({key: diffs_dict[key]})
             show_map(
-                {key: dict_series[key]},
-                {key: aligner.dict_thematic[key]},
-                aligner.dict_reference,
+                {key: dict_predictions[key]},
+                {key: aligner.thematic_data.features[key].geometry},
+                reference_geometries,
             )

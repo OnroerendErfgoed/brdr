@@ -1,0 +1,18 @@
+---
+title: "GeojsonLoader"
+description: "example how a GeojsonLoader is used to load thematic data"
+author: "Karel Dieussaert"
+date: "2026-01-14"
+categories: [Loader, GeojsonLoader]
+format:
+  html:
+    code-fold: false
+jupyter: python3
+---
+# DictLoader
+This example shows how a GeojsonLoader can be used to add data to the aligner
+
+```{python}
+#| fig-cap: "basic example"
+{{< include ../../examples/example_dictloader.py >}}
+```

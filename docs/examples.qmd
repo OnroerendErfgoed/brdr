@@ -1,21 +1,15 @@
-
 ---
-title: "Examples - Get Started"
-format:
-  html:
-    code-fold: true
-jupyter: python3
+title: "Examples"
+listing:
+  contents: examples        # Map with examples
+  type: grid                # View: 'grid', 'default' or 'table'
+  sort: "date desc"         # Sort by date (newest first)
+  categories: true          # Show categories in sidebar
+  sort-ui: true             # User can sort
+  filter-ui: true           # Search alloweed
+  fields: [title, description, author, date, categories] # Fields from metadata
 ---
 
-This example shows a basic example of the Aligner
+Here you can find several examples how 'brdr' can be used:
 
-```{python}
-#| fig-cap: "basic example"
-{{< include ../examples/example_readme.py >}}
-```
-This example shows a plotted example - (todo)
 
-```{python}
-#| fig-cap: "plotted example"
-{{< include ../examples/example_readme.py >}}
-```

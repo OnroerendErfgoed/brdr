@@ -1,5 +1,4 @@
 from brdr.aligner import Aligner
-from brdr.enums import OpenDomainStrategy
 from brdr.geometry_utils import geom_from_wkt
 from brdr.loader import DictLoader
 
@@ -17,18 +16,17 @@ loader = DictLoader(reference_dict)
 aligner.load_reference_data(loader)
 # EXECUTE THE ALIGNMENT
 relevant_distance = 1
-process_result = aligner.process(
-    relevant_distance=relevant_distance,
-    od_strategy=OpenDomainStrategy.SNAP_INNER_SIDE,
-    threshold_overlap_percentage=50,
+aligner_result = aligner.process(
+    relevant_distances=[relevant_distance],
 )
+process_results = aligner_result.get_results(aligner=aligner)
 # PRINT RESULTS IN WKT
-print("result: " + process_result["theme_id_1"][relevant_distance]["result"].wkt)
+print("result: " + process_results["theme_id_1"][relevant_distance]["result"].wkt)
 print(
     "added area: "
-    + process_result["theme_id_1"][relevant_distance]["result_diff_plus"].wkt
+    + process_results["theme_id_1"][relevant_distance]["result_diff_plus"].wkt
 )
 print(
     "removed area: "
-    + process_result["theme_id_1"][relevant_distance]["result_diff_min"].wkt
+    + process_results["theme_id_1"][relevant_distance]["result_diff_min"].wkt
 )

@@ -1,74 +1,111 @@
-import unittest
-from datetime import date, timedelta
+from datetime import date
+from datetime import timedelta
 
 import numpy as np
-from shapely import Polygon, from_wkt
+from shapely import Polygon
+from shapely import from_wkt
 
 from brdr.aligner import Aligner
+from brdr.be.grb.enums import GRBType
+from brdr.be.grb.grb import update_featurecollection_to_actual_grb
+from brdr.be.grb.loader import GRBActualLoader, GRBFiscalParcelLoader
+from brdr.be.grb.loader import GRBSpecificDateParcelLoader
+from brdr.be.grb.utils import get_affected_ids_by_grb_change
+from brdr.be.grb.utils import get_last_version_date
+from brdr.be.grb.utils import is_grb_changed
 from brdr.constants import EVALUATION_FIELD_NAME
-from brdr.enums import GRBType, Evaluation
-from brdr.grb import (
-    get_last_version_date,
-    is_grb_changed,
-    get_affected_by_grb_change,
-    GRBSpecificDateParcelLoader,
-    update_to_actual_grb,
-    GRBActualLoader,
-)
+from brdr.enums import Evaluation
 from brdr.loader import DictLoader
+from tests.testdata.responses import grb_responses
 
 
-class TestGrb(unittest.TestCase):
+class TestGrb:
 
     def test_grbtype_enum(self):
         print(GRBType)
         for item in GRBType:
             print(f"{item.name} = {item.value}")
 
-    def test_get_last_version_date(self):
-        # Check if the result of the _buffer_neg_pos gives an equal geometry
-        geom = Polygon([(0, 0), (0, 10), (10, 10), (10, 0)])
-        out = get_last_version_date(geom)
-        self.assertIsNone(out)
+    def test_get_last_version_date(self, callback_grb_response):
         geom = Polygon(
-            [(170000, 170000), (170000, 170100), (170100, 170100), (170100, 170000)]
+            [
+                [171778.79554631, 171796.04172135],
+                [171780.54140231, 171797.88044135],
+                [171740.01385028, 171836.32306538],
+                [171739.78799428, 171836.13202538],
+                [171739.78005828, 171836.12530538],
+                [171737.61788228, 171834.29663338],
+                [171723.46709827, 171822.32882537],
+                [171726.93359427, 171819.40389737],
+                [171753.40873029, 171797.06514535],
+                [171761.2615303, 171790.43916135],
+                [171768.0429703, 171784.71724134],
+                [171778.79554631, 171796.04172135],
+            ]
         )
-        out = get_last_version_date(geom)
-        self.assertIsInstance(out, date)
 
-    def test_is_grb_changed(self):
+        out = get_last_version_date(geom)
+        assert isinstance(out, date)
+
+    def test_is_grb_changed(self, callback_grb_response):
         # Check if the result of the _buffer_neg_pos gives an equal geometry
         geom = Polygon([(0, 0), (0, 10), (10, 10), (10, 0)])
         out = is_grb_changed(geom)
-        self.assertIsNone(out)
+        assert out is None
         geom = Polygon(
-            [(170000, 170000), (170000, 170100), (170100, 170100), (170100, 170000)]
+            [
+                [171778.79554631, 171796.04172135],
+                [171780.54140231, 171797.88044135],
+                [171740.01385028, 171836.32306538],
+                [171739.78799428, 171836.13202538],
+                [171739.78005828, 171836.12530538],
+                [171737.61788228, 171834.29663338],
+                [171723.46709827, 171822.32882537],
+                [171726.93359427, 171819.40389737],
+                [171753.40873029, 171797.06514535],
+                [171761.2615303, 171790.43916135],
+                [171768.0429703, 171784.71724134],
+                [171778.79554631, 171796.04172135],
+            ]
         )
         out = is_grb_changed(geom, grb_type=GRBType.ADP, date_start=date(2024, 7, 16))
-        self.assertFalse(out)
+        assert not out
         out = is_grb_changed(geom, grb_type=GRBType.ADP, date_start=date(2021, 7, 16))
-        self.assertTrue(out)
+        assert out
 
-    def test_is_grb_changed_outerborder(self):
+    def test_is_grb_changed_outerborder(self, callback_grb_response):
         geom = Polygon(
-            [(170000, 170000), (170000, 172000), (172000, 172000), (172000, 170000)]
+            [
+                [171778.79554631, 171796.04172135],
+                [171780.54140231, 171797.88044135],
+                [171740.01385028, 171836.32306538],
+                [171739.78799428, 171836.13202538],
+                [171739.78005828, 171836.12530538],
+                [171737.61788228, 171834.29663338],
+                [171723.46709827, 171822.32882537],
+                [171726.93359427, 171819.40389737],
+                [171753.40873029, 171797.06514535],
+                [171761.2615303, 171790.43916135],
+                [171768.0429703, 171784.71724134],
+                [171778.79554631, 171796.04172135],
+            ]
         )
         out = is_grb_changed(
             geom,
             border_distance=0,
             grb_type=GRBType.ADP,
-            date_start=date(2024, 7, 1),
+            date_start=date(2021, 7, 1),
         )
-        self.assertTrue(out)
+        assert out
         out = is_grb_changed(
             geom,
             border_distance=10,
             grb_type=GRBType.ADP,
-            date_start=date(2024, 7, 1),
+            date_start=date(2021, 7, 1),
         )
-        self.assertTrue(out)
+        assert out
 
-    def test_get_geoms_affected_by_grb_change_outerborder(self):
+    def test_get_geoms_affected_by_grb_change_outerborder(self, callback_grb_response):
         thematic_dict = {
             "theme_id_1": Polygon(
                 [(170000, 170000), (170000, 172000), (172000, 172000), (172000, 170000)]
@@ -76,8 +113,8 @@ class TestGrb(unittest.TestCase):
         }
         aligner = Aligner()
         aligner.load_thematic_data(DictLoader(thematic_dict))
-        affected, unaffected = get_affected_by_grb_change(
-            dict_thematic=thematic_dict,
+        affected = get_affected_ids_by_grb_change(
+            thematic_geometries=thematic_dict,
             grb_type=GRBType.ADP,
             date_start=date(2025, 1, 1),
             date_end=date.today(),
@@ -87,8 +124,8 @@ class TestGrb(unittest.TestCase):
         affected_1 = len(affected)
         assert affected_1 > 0
 
-        affected, unaffected = get_affected_by_grb_change(
-            dict_thematic=thematic_dict,
+        affected = get_affected_ids_by_grb_change(
+            thematic_geometries=thematic_dict,
             grb_type=GRBType.ADP,
             date_start=date(2025, 1, 1),
             date_end=date.today(),
@@ -98,7 +135,7 @@ class TestGrb(unittest.TestCase):
         affected_2 = len(affected)
         assert affected_2 == affected_1
 
-    def test_get_geoms_affected_by_grb_change(self):
+    def test_get_geoms_affected_by_grb_change(self, callback_grb_response):
         thematic_dict = {
             "theme_id_1": from_wkt(
                 "MultiPolygon (((174184.09476602054201066 171899.68933439542888664, "
@@ -111,8 +148,8 @@ class TestGrb(unittest.TestCase):
         }
         aligner = Aligner()
         aligner.load_thematic_data(DictLoader(thematic_dict))
-        affected, unaffected = get_affected_by_grb_change(
-            dict_thematic=thematic_dict,
+        affected = get_affected_ids_by_grb_change(
+            thematic_geometries=thematic_dict,
             grb_type=GRBType.ADP,
             date_start=date.today() - timedelta(days=1),
             date_end=date.today(),
@@ -120,14 +157,16 @@ class TestGrb(unittest.TestCase):
         )
         assert len(affected) == 0
 
-        affected, unaffected = get_affected_by_grb_change(
-            dict_thematic=thematic_dict,
+        affected = get_affected_ids_by_grb_change(
+            thematic_geometries=thematic_dict,
             grb_type=GRBType.ADP,
             date_start=date.today() - timedelta(days=1000),
             date_end=date.today(),
             one_by_one=True,
         )
         assert len(affected) == 0
+
+        callback_grb_response.update(grb_responses.grb_response4)
         thematic_dict2 = {
             "theme_id_2": from_wkt(
                 "MultiPolygon (((174180.20077791667426936 171966.14649116666987538, "
@@ -140,8 +179,8 @@ class TestGrb(unittest.TestCase):
         }
         aligner2 = Aligner()
         aligner2.load_thematic_data(DictLoader(thematic_dict2))
-        affected, unaffected = get_affected_by_grb_change(
-            dict_thematic=thematic_dict2,
+        affected = get_affected_ids_by_grb_change(
+            thematic_geometries=thematic_dict2,
             grb_type=GRBType.ADP,
             date_start=date.today() - timedelta(days=1000),
             date_end=date.today(),
@@ -149,7 +188,7 @@ class TestGrb(unittest.TestCase):
         )
         assert len(affected) > 0
 
-    def test_get_geoms_affected_by_grb_change_bulk(self):
+    def test_get_geoms_affected_by_grb_change_bulk(self, callback_grb_response):
         thematic_dict = {
             "theme_id_1": from_wkt(
                 "MultiPolygon (((174180.20077791667426936 171966.14649116666987538, "
@@ -162,8 +201,8 @@ class TestGrb(unittest.TestCase):
         }
         aligner = Aligner()
         aligner.load_thematic_data(DictLoader(thematic_dict))
-        affected, unaffected = get_affected_by_grb_change(
-            dict_thematic=thematic_dict,
+        affected = get_affected_ids_by_grb_change(
+            thematic_geometries=thematic_dict,
             grb_type=GRBType.ADP,
             date_start=date.today() - timedelta(days=1),
             date_end=date.today(),
@@ -171,8 +210,9 @@ class TestGrb(unittest.TestCase):
         )
         assert len(affected) == 0
 
-        affected, unaffected = get_affected_by_grb_change(
-            dict_thematic=thematic_dict,
+        callback_grb_response.update(grb_responses.grb_response4)
+        affected = get_affected_ids_by_grb_change(
+            thematic_geometries=thematic_dict,
             grb_type=GRBType.ADP,
             date_start=date.today() - timedelta(days=1000),
             date_end=date.today(),
@@ -180,7 +220,22 @@ class TestGrb(unittest.TestCase):
         )
         assert len(affected) > 0
 
-    def test_grbspecificdateparcelloader(self):
+    def test_grbfiscalparcelloader(self, callback_grb_response):
+        callback_grb_response.update(grb_responses.grb_response5)
+        thematic_dict = {
+            "theme_id_1": from_wkt(
+                "Polygon ((172283.76869662097305991 174272.85233648214489222, 172276.89871930953813717 174278.68436246179044247, 172274.71383684969623573 174280.57171753142029047, 172274.63047763772192411 174280.64478165470063686, 172272.45265833073062822 174282.52660570573061705, 172269.33533191855531186 174285.22093996312469244, 172265.55258252174826339 174288.49089696351438761, 172258.77032718938426115 174294.22654021997004747, 172258.63259260458289646 174294.342757155187428, 172254.93673790179309435 174288.79932878911495209, 172248.71360730109154247 174279.61860501393675804, 172248.96566232520854101 174279.43056782521307468, 172255.25363882273086347 174274.73737183399498463, 172257.08298882702365518 174273.37133203260600567, 172259.32325354730710387 174271.69890458136796951, 172261.65807284769834951 174269.9690355472266674, 172266.35596220899606124 174266.4871726930141449, 172273.34350050613284111 174261.30863015633076429, 172289.60360219911672175 174249.35944479051977396, 172293.30328181147342548 174246.59864199347794056, 172297.34760522318538278 174253.10583685990422964, 172289.53060952731175348 174259.6846851697191596, 172292.86485871637705714 174265.19099397677928209, 172283.76869662097305991 174272.85233648214489222))"
+            )
+        }
+        aligner = Aligner()
+        loader = DictLoader(thematic_dict)
+        aligner.load_thematic_data(loader)
+        loader = GRBFiscalParcelLoader(year="2023", aligner=aligner)
+        aligner.load_reference_data(loader)
+        assert len(aligner.reference_data.features) == 52
+
+    def test_grbspecificdateparcelloader(self, callback_grb_response):
+        callback_grb_response.update(grb_responses.grb_response5)
         thematic_dict = {
             "theme_id_1": from_wkt(
                 "Polygon ((172283.76869662097305991 174272.85233648214489222, 172276.89871930953813717 174278.68436246179044247, 172274.71383684969623573 174280.57171753142029047, 172274.63047763772192411 174280.64478165470063686, 172272.45265833073062822 174282.52660570573061705, 172269.33533191855531186 174285.22093996312469244, 172265.55258252174826339 174288.49089696351438761, 172258.77032718938426115 174294.22654021997004747, 172258.63259260458289646 174294.342757155187428, 172254.93673790179309435 174288.79932878911495209, 172248.71360730109154247 174279.61860501393675804, 172248.96566232520854101 174279.43056782521307468, 172255.25363882273086347 174274.73737183399498463, 172257.08298882702365518 174273.37133203260600567, 172259.32325354730710387 174271.69890458136796951, 172261.65807284769834951 174269.9690355472266674, 172266.35596220899606124 174266.4871726930141449, 172273.34350050613284111 174261.30863015633076429, 172289.60360219911672175 174249.35944479051977396, 172293.30328181147342548 174246.59864199347794056, 172297.34760522318538278 174253.10583685990422964, 172289.53060952731175348 174259.6846851697191596, 172292.86485871637705714 174265.19099397677928209, 172283.76869662097305991 174272.85233648214489222))"
@@ -191,13 +246,15 @@ class TestGrb(unittest.TestCase):
         aligner.load_thematic_data(loader)
         loader = GRBSpecificDateParcelLoader(date="2023-01-03", aligner=aligner)
         aligner.load_reference_data(loader)
-        assert len(aligner.dict_reference.keys()) == 53
+        assert len(aligner.reference_data.features) == 52
 
+        callback_grb_response["features"].pop()
+        callback_grb_response["numberReturned"] = 51
         loader = GRBSpecificDateParcelLoader(date="2023-08-03", aligner=aligner)
         aligner.load_reference_data(loader)
-        assert len(aligner.dict_reference.keys()) == 52
+        assert len(aligner.reference_data.features) == 51
 
-    def test_update_to_actual_grb(self):
+    def test_update_to_actual_grb(self, callback_grb_response):
         # Create a featurecollection (aligned on 2022), to use for the 'update_to_actual_grb'
         name_thematic_id = "theme_identifier"
         featurecollection_base_result = {
@@ -242,16 +299,17 @@ class TestGrb(unittest.TestCase):
         }
 
         # Update Featurecollection to actual version
-        featurecollection = update_to_actual_grb(
+        featurecollections = update_featurecollection_to_actual_grb(
             featurecollection_base_result,
             name_thematic_id,
-            base_formula_field="brdr_base_formula",
+            base_metadata_field="brdr_base_formula",
         )
-        # Print results
-        for feature in featurecollection["result"]["features"]:
+
+        # # Print results
+        for feature in featurecollections["result"]["features"]:
             assert isinstance(feature["properties"][EVALUATION_FIELD_NAME], Evaluation)
 
-    def test_wegbaan_reference(self):
+    def test_wegbaan_reference(self, callback_grb_response):
         aligner = Aligner()
         # Load thematic data & reference data
         thematic_dict = {
@@ -267,7 +325,5 @@ class TestGrb(unittest.TestCase):
         series = np.arange(0, 1010, 100, dtype=int) / 100
         # predict which relevant distances are interesting to propose as resulting
         # geometry
-        dict_series, dict_predictions, dict_diffs = aligner.predictor(
-            relevant_distances=series,
-        )
-        self.assertEqual(len(dict_series), len(thematic_dict))
+        prediction_result = aligner.predict(series)
+        assert len(prediction_result.results) == len(thematic_dict)

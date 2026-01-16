@@ -1,7 +1,7 @@
 from brdr.aligner import Aligner
 from brdr.geometry_utils import geom_from_wkt
 from brdr.loader import DictLoader
-from brdr.osm import OSMLoader
+from brdr.osm.loader import OSMLoader
 
 if __name__ == "__main__":
     """
@@ -35,11 +35,12 @@ if __name__ == "__main__":
 
     admin_tags = {"boundary": "administrative"}
     # Use a OSMLoader for the reference data
-    loader = OSMLoader(osm_tags=landuse_tags, aligner=aligner)
+    loader = OSMLoader(osm_tags=building_tags, aligner=aligner)
     aligner.load_reference_data(loader)
     # EXECUTE THE ALIGNMENT
     relevant_distance = 5
-    process_result = aligner.process(relevant_distance=relevant_distance)
+    aligner_result = aligner.process(relevant_distances=[relevant_distance])
+    process_result = aligner_result.get_results(aligner=aligner)
     # PRINT RESULTS IN WKT
     print("result: " + process_result[id][relevant_distance]["result"].wkt)
     print(

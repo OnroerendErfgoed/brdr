@@ -1,9 +1,12 @@
 from brdr.aligner import Aligner
-from brdr.enums import GRBType, OpenDomainStrategy
-from brdr.grb import GRBActualLoader
-from brdr.oe import OnroerendErfgoedLoader, OEType
-from examples import print_brdr_formula
-from examples import show_map
+from brdr.be.grb.enums import GRBType
+from brdr.be.grb.loader import GRBActualLoader
+from brdr.be.oe.enums import OEType
+from brdr.be.oe.loader import OnroerendErfgoedLoader
+from brdr.configs import AlignerConfig
+from brdr.enums import OpenDomainStrategy
+from brdr.viz import print_observation_of_aligner_results
+from brdr.viz import show_map
 
 if __name__ == "__main__":
     """
@@ -20,34 +23,47 @@ if __name__ == "__main__":
 
     # EXAMPLE of "multi_as_single_modus"=FALSE
     print("EXAMPLE with 'multi_as_single_modus'=False")
+    aligner_config = AlignerConfig()
+    aligner_config.multi_as_single_modus = False
     aligner = Aligner(
-        multi_as_single_modus=False,
-        relevant_distance=relevant_distance,
-        od_strategy=od_strategy,
-        threshold_circle_ratio=threshold_circle_ratio,
+        config=aligner_config,
     )
     aligner.load_thematic_data(loader)
     aligner.load_reference_data(
         GRBActualLoader(aligner=aligner, grb_type=GRBType.ADP, partition=1000)
     )
-    dict_results = aligner.process()
-    aligner.save_results("output/")
-    print_brdr_formula(dict_results, aligner)
-    show_map(dict_results, aligner.dict_thematic, aligner.dict_reference)
+    aligner_result = aligner.process(relevant_distances=[relevant_distance])
+    aligner_result.save_results(path="output/", aligner=aligner)
+    print_observation_of_aligner_results(aligner_result.get_results(aligner=aligner), aligner)
+    thematic_geometries = {
+        key: feat.geometry for key, feat in aligner.thematic_data.features.items()
+    }
+    reference_geometries = {
+        key: feat.geometry for key, feat in aligner.reference_data.features.items()
+    }
+    show_map(aligner_result.results, thematic_geometries, reference_geometries)
 
     # WITH "multi_as_single_modus"=True
     print("EXAMPLE with 'multi_as_single_modus'=True")
+    aligner_config = AlignerConfig()
+    aligner_config.multi_as_single_modus = True
     aligner = Aligner(
-        multi_as_single_modus=True,
-        relevant_distance=relevant_distance,
-        od_strategy=od_strategy,
-        threshold_circle_ratio=threshold_circle_ratio,
+        config=aligner_config,
     )
     aligner.load_thematic_data(loader)
     aligner.load_reference_data(
         GRBActualLoader(aligner=aligner, grb_type=GRBType.ADP, partition=1000)
     )
-    dict_results = aligner.process()
-    aligner.save_results("output/")
-    print_brdr_formula(dict_results, aligner)
-    show_map(dict_results, aligner.dict_thematic, aligner.dict_reference)
+    aligner_result = aligner.process(relevant_distances=[relevant_distance])
+    aligner_result.save_results(path="output/", aligner=aligner)
+
+    print_observation_of_aligner_results(aligner_result.get_results(aligner=aligner), aligner)
+
+
+    thematic_geometries = {
+        key: feat.geometry for key, feat in aligner.thematic_data.features.items()
+    }
+    reference_geometries = {
+        key: feat.geometry for key, feat in aligner.reference_data.features.items()
+    }
+    show_map(aligner_result.results, thematic_geometries, reference_geometries)

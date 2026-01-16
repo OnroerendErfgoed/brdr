@@ -1,31 +1,47 @@
-import unittest
-
 import numpy as np
+import pytest
 
 from brdr.aligner import Aligner
-from brdr.enums import GRBType
-from brdr.grb import GRBActualLoader
+from brdr.be.grb.enums import GRBType
+from brdr.be.grb.loader import GRBActualLoader
+from brdr.be.oe.loader import OnroerendErfgoedLoader
+from brdr.configs import ProcessorConfig
 from brdr.loader import DictLoader
 from brdr.loader import GeoJsonLoader
-from brdr.oe import get_oe_dict_by_ids, OnroerendErfgoedLoader
+from brdr.processor import AlignerGeometryProcessor
+from tests.testdata.responses import mercator_responses
 
 
-class TestExamples(unittest.TestCase):
+class TestExamples:
 
-    def test_example_131635(self):
+    @pytest.mark.usefixtures("callback_grb_response")
+    def test_example_131635(self, requests_mock):
+        requests_mock.add(
+            requests_mock.GET,
+            "https://www.mercator.vlaanderen.be/raadpleegdienstenmercatorpubliek/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAMES=ps:ps_aandobj&SRSNAME=http://www.opengis.net/def/crs/EPSG/0/31370&outputFormat=application/json&limit=10000&CQL_FILTER=uri+IN+('https://id.erfgoed.net/aanduidingsobjecten/131635')",
+            json=mercator_responses.response1,
+            status=200,
+        )
         # EXAMPLE
         aligner = Aligner()
-        dict_theme = get_oe_dict_by_ids([131635])
-        loader = DictLoader(dict_theme)
+        loader = OnroerendErfgoedLoader(['https://id.erfgoed.net/aanduidingsobjecten/131635'])
         aligner.load_thematic_data(loader)
         loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         aligner.load_reference_data(loader)
         rel_dist = 2
-        aligner.process(relevant_distance=rel_dist, od_strategy=4)
+        aligner.process(relevant_distances=[rel_dist])
+        assert True
 
-    def test_example_combined_borders_adp_gbg(self):
+    @pytest.mark.usefixtures("callback_grb_response")
+    def test_example_combined_borders_adp_gbg(self, requests_mock):
+        requests_mock.add(
+            requests_mock.GET,
+            "https://www.mercator.vlaanderen.be/raadpleegdienstenmercatorpubliek/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAMES=ps:ps_aandobj&SRSNAME=http://www.opengis.net/def/crs/EPSG/0/31370&outputFormat=application/json&limit=10000&CQL_FILTER=uri+IN+('https://id.erfgoed.net/aanduidingsobjecten/131635')",
+            json=mercator_responses.response1,
+            status=200,
+        )
         aligner = Aligner()
-        loader = OnroerendErfgoedLoader([131635])
+        loader = OnroerendErfgoedLoader(['https://id.erfgoed.net/aanduidingsobjecten/131635'])
         aligner.load_thematic_data(loader)
         adp_loader = GRBActualLoader(
             grb_type=GRBType.ADP, partition=1000, aligner=aligner
@@ -33,19 +49,26 @@ class TestExamples(unittest.TestCase):
         gbg_loader = GRBActualLoader(
             grb_type=GRBType.GBG, partition=1000, aligner=aligner
         )
-        dict_ref, dict_ref_properties_adp, source_adp = adp_loader.load_data()
-        dict_ref2, dict_ref_properties_gbg, source_gbg = gbg_loader.load_data()
-        dict_ref.update(dict_ref2)  # combine 2 dictionaries
+
+        adp_data = adp_loader.load_data()
+        gbg_data = gbg_loader.load_data()
+        dict_ref = {}
+        for id, f in adp_data.features.items():
+            dict_ref[id] = f.geometry
+        for id, f in adp_data.features.items():
+            dict_ref[id] = f.geometry
+
         # make a polygonized version of the reference data with non-overlapping polygons
         aligner.load_reference_data(DictLoader(dict_ref))
 
         rel_dist = 2
-        result_dict = aligner.process(relevant_distance=rel_dist, od_strategy=4)
-        for process_results in result_dict.values():
-            aligner.get_brdr_formula(process_results[rel_dist]["result"])
+        process_result = aligner.process(relevant_distances=[rel_dist])
+        for process_results in process_result.results.values():
+            aligner.compare_to_reference(process_results[rel_dist]["result"])
 
+    @pytest.mark.usefixtures("callback_grb_response")
     def test_example_multipolygon(self):
-        aligner0 = Aligner()
+
         testdata = {
             "type": "FeatureCollection",
             "name": "themelayer",
@@ -153,46 +176,56 @@ class TestExamples(unittest.TestCase):
             ],
         }
 
+        aligner0 = Aligner()
         # Load thematic data
         aligner0.load_thematic_data(
             GeoJsonLoader(_input=testdata, id_property="theme_identifier")
         )
-        aligner0.multi_as_single_modus = True
-        dict_thematic = aligner0.dict_thematic
-        aligner0.load_thematic_data(DictLoader(dict_thematic))
+        dict_thematic = {
+            key: feat.geometry for key, feat in aligner0.thematic_data.features.items()
+        }
 
         # gebruik de actuele adp-percelen adp= administratieve percelen
-        aligner = Aligner()
+        config = ProcessorConfig()
+        config.multi_as_single_modus = True
+        processor = AlignerGeometryProcessor(config=config)
+        aligner = Aligner(processor=processor)
         aligner.load_thematic_data(DictLoader(dict_thematic))
         aligner.load_reference_data(
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         )
 
-        _, dict_predictions, _ = aligner.predictor()
+        aligner_result = aligner.predict()
 
-        self.assertGreater(len(dict_predictions), 0)
-        fcs = aligner.get_results_as_geojson(formula=True)
-        self.assertEqual(len(fcs), 6)
+        assert len(aligner_result.results) > 0
+        fcs = aligner_result.get_results_as_geojson(aligner=aligner, add_metadata=False)
+        assert len(fcs) == 6
 
-    def test_example_wanted_changes(self):
+    @pytest.mark.usefixtures("callback_grb_response")
+    def test_example_wanted_changes(self, requests_mock):
+        requests_mock.add(
+            requests_mock.GET,
+            "https://www.mercator.vlaanderen.be/raadpleegdienstenmercatorpubliek/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAMES=ps:ps_aandobj&SRSNAME=http://www.opengis.net/def/crs/EPSG/0/31370&outputFormat=application/json&limit=10000&CQL_FILTER=uri+IN+('https://id.erfgoed.net/aanduidingsobjecten/131635')",
+            json=mercator_responses.response1,
+            status=200,
+        )
         aligner = Aligner()
-        # Load thematic data & reference data
-        dict_theme = get_oe_dict_by_ids([131635])
-        aligner.load_thematic_data(DictLoader(dict_theme))
+        loader = OnroerendErfgoedLoader(['https://id.erfgoed.net/aanduidingsobjecten/131635'])
+        aligner.load_thematic_data(loader)
+
         aligner.load_reference_data(
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         )
 
         # Example how to use the Aligner
         rel_dist = 2
-        aligner.process(relevant_distance=rel_dist, od_strategy=4)
 
         # Example how to use a series (for histogram)
         series = np.arange(0, 310, 10, dtype=int) / 100
-        dict_series = aligner.process(
-            relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
+        process_result = aligner.process(relevant_distances=series)
+        resulting_areas = aligner.get_difference_metrics_for_thematic_data(
+            process_result.results, aligner.thematic_data
         )
-        resulting_areas = aligner.get_diff_metrics(dict_series, aligner.dict_thematic)
         for key in resulting_areas:
             if len(resulting_areas[key]) == len(series):
                 lst_diffs = list(resulting_areas[key].values())
@@ -207,11 +240,17 @@ class TestExamples(unittest.TestCase):
                 #     )
                 #     aligner.process(relevant_distance=st[0], od_strategy=4)
 
-    def test_example_predictor(self):
+    @pytest.mark.usefixtures("callback_grb_response")
+    def test_example_predictor(self, requests_mock):
+        requests_mock.add(
+            requests_mock.GET,
+            "https://www.mercator.vlaanderen.be/raadpleegdienstenmercatorpubliek/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAMES=ps:ps_aandobj&SRSNAME=http://www.opengis.net/def/crs/EPSG/0/31370&outputFormat=application/json&limit=10000&CQL_FILTER=uri+IN+('https://id.erfgoed.net/aanduidingsobjecten/131635')",
+            json=mercator_responses.response1,
+            status=200,
+        )
         aligner = Aligner()
-        # Load thematic data & reference data
-        dict_theme = get_oe_dict_by_ids([131635])
-        aligner.load_thematic_data(DictLoader(dict_theme))
+        loader = OnroerendErfgoedLoader(['https://id.erfgoed.net/aanduidingsobjecten/131635'])
+        aligner.load_thematic_data(loader)
         aligner.load_reference_data(
             GRBActualLoader(aligner=aligner, grb_type=GRBType.GBG, partition=1000)
         )
@@ -219,9 +258,7 @@ class TestExamples(unittest.TestCase):
         # predict which relevant distances are interesting to propose as resulting
         # geometry
 
-        _, dict_predictions, _ = aligner.predictor(
-            relevant_distances=series, od_strategy=4, threshold_overlap_percentage=50
-        )
-        for key in dict_predictions.keys():
-            assert key in dict_predictions.keys()
+        prediction_result = aligner.predict(series)
+        for key in prediction_result.results.keys():
+            assert key in prediction_result.results.keys()
             continue

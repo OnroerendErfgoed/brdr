@@ -1,0 +1,21 @@
+---
+title: "Evaluation"
+description: "Example of a simple Evaluation by using **brdr**"
+author: "Karel Dieussaert"
+date: "2026-01-07"
+categories: [Evaluation]
+format:
+  html:
+    code-fold: false
+jupyter: python3
+---
+# Evaluation
+This example shows a simple Evaluation by using **brdr**
+
+```{python}
+#| label: fig-plots
+#| fig-cap:
+#|   - "Graphic"
+#|   - "Visual predictions"
+{{< include ../../examples/example_evaluate.py >}}
+```

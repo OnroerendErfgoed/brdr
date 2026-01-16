@@ -1,0 +1,18 @@
+---
+title: "Get Started"
+description: "Simple example to get started"
+author: "Karel Dieussaert"
+date: "2026-01-07"
+categories: [Process]
+format:
+  html:
+    code-fold: true
+jupyter: python3
+---
+# Get Started
+This example shows a basic example to 'Get Started'.
+
+```{python}
+#| fig-cap: "basic example"
+{{< include ../../examples/example_readme.py >}}
+```

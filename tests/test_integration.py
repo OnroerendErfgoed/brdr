@@ -2,19 +2,23 @@ import json
 import unittest
 
 import numpy as np
+import pytest
 from shapely import to_geojson
 from shapely.geometry import shape
 
 from brdr.aligner import Aligner
+from brdr.be.grb.enums import GRBType
+from brdr.be.grb.loader import GRBActualLoader
+from brdr.configs import ProcessorConfig
 from brdr.enums import DiffMetric
-from brdr.enums import GRBType
 from brdr.enums import OpenDomainStrategy
-from brdr.grb import GRBActualLoader
 from brdr.loader import DictLoader
+from brdr.processor import AlignerGeometryProcessor
 
 
 class TestExamples(unittest.TestCase):
 
+    @pytest.mark.usefixtures("callback_grb_response")
     def test_webservice_inventaris_brdr_integration(self):
         """
         Code used in inventaris-webservice for brdr-integration
@@ -39,9 +43,12 @@ class TestExamples(unittest.TestCase):
             ],
         }
         referentielaag_type = GRBType.ADP
-        openbaardomein_strategy = OpenDomainStrategy.SNAP_INNER_SIDE
 
-        aligner = Aligner(area_limit=100000)
+        config = ProcessorConfig(
+            area_limit=100000, od_strategy=OpenDomainStrategy.SNAP_INNER_SIDE
+        )
+        processor = AlignerGeometryProcessor(config)
+        aligner = Aligner(processor=processor)
 
         geometry = shape(contour)
 
@@ -54,18 +61,16 @@ class TestExamples(unittest.TestCase):
 
         series = np.arange(0, 61, 1, dtype=float) / 10
 
-        dict_series = aligner.process(
-            relevant_distances=series,
-            od_strategy=openbaardomein_strategy,
-            threshold_overlap_percentage=50,
-        )
-        dict_diffs = aligner.get_diff_metrics(
-            dict_series, aligner.dict_thematic, DiffMetric.CHANGES_AREA
+        process_result = aligner.process(relevant_distances=series)
+        dict_diffs = aligner.get_difference_metrics_for_thematic_data(
+            process_result.results,
+            aligner.thematic_data,
+            DiffMetric.SYMMETRICAL_AREA_CHANGE,
         )
 
         dict_diffs = dict_diffs["input_id"]
         serial_dict = {}
-        dict_results = dict_series["input_id"]
+        dict_results = process_result.results["input_id"]
         for rel_dist, process_results in dict_results.items():
             serial_dict[rel_dist] = {
                 "result": json.loads(to_geojson(dict_results[rel_dist]["result"])),

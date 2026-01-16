@@ -1,15 +1,13 @@
 import unittest
 
+import pytest
 import shapely
-from shapely import is_empty
 from shapely.geometry import Polygon
 
-from brdr.constants import MULTI_SINGLE_ID_SEPARATOR
-from brdr.oe import get_oe_dict_by_ids
-from brdr.typings import ProcessResult
-from brdr.utils import get_collection, diffs_from_dict_processresult
-from brdr.utils import merge_process_results
-from brdr.utils import multi_to_singles
+from brdr.utils import (
+    get_collection,
+    get_geometry_difference_metrics_from_processresults,
+)
 from brdr.utils import polygonize_reference_data
 
 
@@ -35,30 +33,6 @@ class TestUtils(unittest.TestCase):
     #     )
     #     assert len(breakpoints) != 0
     #     assert len(zerostreaks) == 0
-
-    def test_multipolygons_to_singles_empty_dict(self):
-        data = {}
-        result, dict_multi_as_single = multi_to_singles(data)
-        self.assertEqual(result, {})
-
-    def test_multipolygons_to_singles_with_point(self):
-        geometry1 = shapely.geometry.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
-        geometry2 = shapely.geometry.Point(0, 0)
-        data = {"test_id1": geometry1, "test_id2": geometry2}
-        result, dict_multi_as_single = multi_to_singles(data)
-        self.assertEqual(result, data)
-
-    def test_multipolygons_to_singles_single_polygon(self):
-        geometry = shapely.geometry.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
-        data = {"test_id": geometry}
-        result, dict_multi_as_single = multi_to_singles(data)
-        self.assertEqual(result, data)
-
-    def test_multipolygons_to_singles_multipolygon_single_poly(self):
-        geometry = shapely.geometry.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
-        data = {"test_id": shapely.geometry.MultiPolygon([geometry])}
-        result, dict_multi_as_single = multi_to_singles(data)
-        self.assertEqual(result, {"test_id": geometry})
 
     def test_polygonize_reference_data_no_overlap(self):
         """Tests polygonize_reference_data with non-overlapping polygons."""
@@ -86,42 +60,8 @@ class TestUtils(unittest.TestCase):
         for key in result.keys():
             self.assertTrue(key.isdigit())
 
-    def test_get_oe_dict_by_ids(self):
-        aanduid_id = 131635
-        dict_thematic = get_oe_dict_by_ids([aanduid_id])
-        self.assertFalse(is_empty(dict_thematic[str(aanduid_id)]))
-
-    # def test_get_oe_dict_by_ids_erfgoedobject(self):
-    #     eo_id = 206363
-    #     dict_thematic = get_oe_dict_by_ids([eo_id], oetype=OEType.EO)
-    #     self.assertFalse(is_empty(dict_thematic[str(eo_id)]))
-    #
-    # def test_get_oe_dict_by_ids_empty(self):
-    #     dict_thematic = get_oe_dict_by_ids([])
-    #     self.assertEqual(dict_thematic, {})
-    #
-    # def test_get_oe_dict_by_ids_not_existing(self):
-    #     aanduid_id = -1
-    #     dict_thematic = get_oe_dict_by_ids([aanduid_id])
-    #     self.assertEqual(dict_thematic, {})
-
-    # def test_filter_dict_by_key_empty_dict(self):
-    #     data = {}
-    #     result = filter_dict_by_key(data, "key")
-    #     self.assertEqual(result, {})
-    #
-    # def test_filter_dict_by_key_single_match(self):
-    #     data = {"key1": "value1", "key2": "value2"}
-    #     result = filter_dict_by_key(data, "key1")
-    #     self.assertEqual(result, {"key1": "value1"})
-    #
-    # def test_filter_dict_by_key_no_match(self):
-    #     data = {"key1": "value1", "key2": "value2"}
-    #     result = filter_dict_by_key(data, "key3")
-    #     self.assertEqual(result, {})
-
-    def test_diffs_from_dict_series_complete(self):
-        """Tests diffs_from_dict_series with complete data."""
+    def test_diffs_from_process_results_complete(self):
+        """Tests diffs_from_process_results with complete data."""
         # Mock data
         geom_thematic = Polygon([(0, 0), (10, 0), (10, 10), (0, 10)])
         dict_processresult = {
@@ -132,10 +72,11 @@ class TestUtils(unittest.TestCase):
         }
         expected_diffs = {10: 16.0}
 
-        assert expected_diffs == diffs_from_dict_processresult(
+        assert expected_diffs == get_geometry_difference_metrics_from_processresults(
             dict_processresult, geom_thematic, reference_union=None
         )
 
+    @pytest.mark.usefixtures("callback_grb_response")
     def test_get_collection(self):
         base_year = 2023
         limit = 100
@@ -145,28 +86,7 @@ class TestUtils(unittest.TestCase):
             "https://geo.api.vlaanderen.be/Adpf/ogc/features/collections/Adpf"
             + str(base_year)
             + "/items?"
-            "limit=" + str(limit) + "&crs=" + crs + "&bbox-crs=EPSG:31370&bbox=" + bbox
         )
-        collection = get_collection(ref_url, limit)
+        params = {"limit": limit, "crs": crs, "bbox-crs": crs, "bbox": bbox}
+        collection = get_collection(url=ref_url, params=params)
         self.assertTrue("features" in collection.keys())
-
-    def test_merge_process_results(self):
-        key_1 = "key" + MULTI_SINGLE_ID_SEPARATOR + "1"
-        key_2 = "key" + MULTI_SINGLE_ID_SEPARATOR + "2"
-        key_3 = "key_3"
-        dict_multi_as_single = {key_1: "key", key_2: "key"}
-        process_result_1 = ProcessResult()
-        process_result_1["result"] = Polygon([(0, 0), (10, 0), (10, 10), (0, 10)])
-        process_result_2 = ProcessResult()
-        process_result_2["result"] = Polygon([(0, 0), (8, 0), (8, 8), (0, 8)])
-        process_result_3 = ProcessResult()
-        process_result_3["result"] = Polygon([(0, 0), (8, 0), (8, 8), (0, 8)])
-        testdict = {
-            key_1: {0: process_result_1},
-            key_2: {0: process_result_2},
-            key_3: {0: process_result_3},
-        }
-        merged_testdict = merge_process_results(
-            result_dict=testdict, dict_multi_as_single=dict_multi_as_single
-        )
-        assert len(merged_testdict.keys()) == 2
