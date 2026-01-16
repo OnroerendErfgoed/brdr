@@ -1,3 +1,5 @@
+import json
+
 from brdr.aligner import Aligner
 from brdr.be.grb.enums import GRBType
 from brdr.be.grb.loader import GRBActualLoader
@@ -5,8 +7,6 @@ from brdr.be.oe.loader import OnroerendErfgoedLoader, OEType
 from brdr.enums import AlignerResultType
 from brdr.viz import print_observation_of_aligner_results
 from brdr.viz import show_map
-from pprint import pprint
-import json
 
 if __name__ == "__main__":
     # EXAMPLE for a thematic Polygon from Onroerend Erfgoed (https://inventaris.onroerenderfgoed.be/aanduidingsobjecten/131635)

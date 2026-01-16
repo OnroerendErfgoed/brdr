@@ -1,12 +1,11 @@
-import os
+from shapely import from_wkt
 
 from shapely import from_wkt
 
 from brdr.aligner import Aligner
 from brdr.be.grb.loader import GRBSpecificDateParcelLoader
-from brdr.enums import AlignerInputType, AlignerResultType
+from brdr.enums import AlignerResultType
 from brdr.loader import DictLoader
-from brdr.utils import write_geojson
 from brdr.viz import show_map, print_observation_of_aligner_results
 
 if __name__ == "__main__":

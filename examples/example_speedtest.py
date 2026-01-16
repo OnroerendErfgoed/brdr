@@ -9,7 +9,6 @@ from brdr.enums import OpenDomainStrategy
 from brdr.geometry_utils import geom_from_wkt
 from brdr.loader import GeoJsonFileLoader, DictLoader
 from brdr.processor import AlignerGeometryProcessor
-from examples.example_outer_boundary import processor
 
 
 def main():

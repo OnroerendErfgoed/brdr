@@ -1,11 +1,13 @@
+import hashlib
+import json
 import logging
 import math
 import os.path
+import uuid
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import numpy as np
 import requests
-import hashlib
-import json
 from geojson import Feature
 from geojson import FeatureCollection
 from geojson import dump
@@ -37,9 +39,6 @@ from brdr.geometry_utils import to_crs
 from brdr.geometry_utils import total_vertex_distance
 from brdr.logger import LOGGER
 from brdr.typings import ProcessResult
-import hashlib
-import uuid
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 log = logging.getLogger(__name__)
 

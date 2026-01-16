@@ -2,6 +2,7 @@ import logging
 from datetime import datetime
 from math import ceil
 from pathlib import Path
+from pprint import pprint
 
 import geopandas as gpd
 import numpy as np
@@ -9,7 +10,6 @@ from shapely.geometry import Point, LineString
 
 from brdr.constants import DEFAULT_CRS
 from brdr.typings import ProcessResult
-from pprint import pprint
 
 try:
     import matplotlib.pyplot as plt
@@ -140,7 +140,7 @@ def show_map(
     num_rows = ceil(num_plots / num_cols)
 
     # Create figure with dynamic height
-    #plt.figure(figsize=(12, 4 * num_rows))
+    # plt.figure(figsize=(12, 4 * num_rows))
     fig, ax = plt.subplots(figsize=(12, 4 * num_rows))
 
     for i, dist in enumerate(distances):
@@ -222,7 +222,9 @@ def animated_map(
     x_vals = []
     y_vals = []
     (plot_line,) = ax2.plot([], [], color="blue", lw=2, label="% area change")
-    marker_line = ax2.axvline(x=0, color="red", linestyle="--", label="Current Relevant Distance")
+    marker_line = ax2.axvline(
+        x=0, color="red", linestyle="--", label="Current Relevant Distance"
+    )
 
     ax2.set_xlim(0, xlim)
     ax2.set_ylim(0, ylim)
@@ -366,7 +368,7 @@ def plot_difference_by_relevant_distance(
     adjusting the `relevant_distance` parameter impacts the final
     geometric outcome.
     """
-    #plt.figure(figsize=(10, 6))
+    # plt.figure(figsize=(10, 6))
     fig, ax = plt.subplots(figsize=(10, 6))
 
     for key, diffs in dict_differences.items():
@@ -453,7 +455,7 @@ def _processresult_to_dicts(process_results):
     )
 
 
-def export_to_geopackage(G, output_filename="graph_output.gpkg",crs=DEFAULT_CRS):
+def export_to_geopackage(G, output_filename="graph_output.gpkg", crs=DEFAULT_CRS):
     """
     Export a NetworkX graph to a GeoPackage file with separate layers for nodes and edges.
 
@@ -489,29 +491,23 @@ def export_to_geopackage(G, output_filename="graph_output.gpkg",crs=DEFAULT_CRS)
     node_data = []
     for node, data in G.nodes(data=True):
         # We assume 'node' is a coordinate tuple (x, y)
-        node_data.append({
-            'node_id': str(node),
-            'geometry': Point(node),
-            **data
-        })
+        node_data.append({"node_id": str(node), "geometry": Point(node), **data})
     gdf_nodes = gpd.GeoDataFrame(node_data, crs=crs)
 
     # 2. Export Edges
     edge_data = []
     for u, v, data in G.edges(data=True):
-        edge_data.append({
-            'u': str(u),
-            'v': str(v),
-            'geometry': LineString([u, v]),
-            **data
-        })
+        edge_data.append(
+            {"u": str(u), "v": str(v), "geometry": LineString([u, v]), **data}
+        )
     gdf_edges = gpd.GeoDataFrame(edge_data, crs=crs)
 
     # 3. Save as layers in a single GeoPackage
-    gdf_nodes.to_file(output_filename, layer='nodes', driver="GPKG")
-    gdf_edges.to_file(output_filename, layer='edges', driver="GPKG")
+    gdf_nodes.to_file(output_filename, layer="nodes", driver="GPKG")
+    gdf_edges.to_file(output_filename, layer="edges", driver="GPKG")
 
     print(f"Exported graph:  You can now add this to GIS software.")
+
 
 def export_histogram(path, df, column_name, filename="histogram.png"):
     """
@@ -662,4 +658,3 @@ def export_boxplot(path, df, column_name, filename="boxplot.png"):
     plt.savefig(save_path, dpi=300)
     plt.close(fig)
     print(f"Boxplot saved to: {save_path}")
-

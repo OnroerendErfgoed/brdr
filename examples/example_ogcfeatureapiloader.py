@@ -62,8 +62,9 @@ if __name__ == "__main__":
     # show results
     aligner_result.save_results(path="output/", aligner=aligner)
 
-    print_observation_of_aligner_results(aligner_result.get_results(aligner=aligner), aligner)
-
+    print_observation_of_aligner_results(
+        aligner_result.get_results(aligner=aligner), aligner
+    )
 
     thematic_geometries = {
         key: feat.geometry for key, feat in aligner.thematic_data.features.items()

@@ -4,7 +4,7 @@ from brdr.aligner import Aligner
 from brdr.be.grb.enums import GRBType
 from brdr.be.grb.loader import GRBActualLoader
 from brdr.enums import AlignerResultType
-from brdr.loader import GeoJsonFileLoader, GeoJsonLoader
+from brdr.loader import GeoJsonLoader
 from brdr.viz import show_map, plot_difference_by_relevant_distance
 
 # Press the green button in the gutter to run the script.

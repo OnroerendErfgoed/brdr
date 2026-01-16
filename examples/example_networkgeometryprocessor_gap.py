@@ -4,12 +4,10 @@ from brdr.aligner import Aligner
 from brdr.be.grb.enums import GRBType
 from brdr.be.grb.loader import GRBActualLoader
 from brdr.configs import ProcessorConfig
-from brdr.enums import OpenDomainStrategy, AlignerResultType
+from brdr.enums import AlignerResultType
 from brdr.geometry_utils import geom_from_wkt
 from brdr.loader import DictLoader
 from brdr.processor import (
-    NetworkGeometryProcessor,
-    SnapGeometryProcessor,
     DieussaertGeometryProcessor,
 )
 from brdr.viz import plot_difference_by_relevant_distance, show_map

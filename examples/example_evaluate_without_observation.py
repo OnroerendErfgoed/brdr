@@ -1,5 +1,3 @@
-import numpy as np
-
 from brdr.aligner import Aligner
 from brdr.be.grb.enums import GRBType
 from brdr.be.grb.loader import GRBActualLoader
@@ -8,7 +6,7 @@ from brdr.constants import (
     PREDICTION_SCORE,
     RELEVANT_DISTANCE_FIELD_NAME,
 )
-from brdr.enums import AlignerResultType, FullReferenceStrategy
+from brdr.enums import AlignerResultType
 from brdr.loader import GeoJsonFileLoader
 
 # Press the green button in the gutter to run the script.
