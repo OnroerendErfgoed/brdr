@@ -29,7 +29,10 @@ if __name__ == "__main__":
     aligner72 = Aligner(crs="EPSG:31370")
     print("start loading OE-objects")
     # Load the thematic data to evaluate
-    loader = OnroerendErfgoedLoader(objectids=["https://id.erfgoed.net/aanduidingsobjecten/121125"], oetype=OEType.AO)
+    loader = OnroerendErfgoedLoader(
+        objectids=["https://id.erfgoed.net/aanduidingsobjecten/121125"],
+        oetype=OEType.AO,
+    )
     aligner72.load_thematic_data(loader)
     print(
         "Number of OE-thematic features loaded into base-aligner: "
