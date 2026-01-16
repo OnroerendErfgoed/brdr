@@ -28,11 +28,11 @@ aligner.load_thematic_data(loader)
 loader = GRBActualLoader(grb_type=GRBType.ADP, partition=-1, aligner=aligner)
 aligner.load_reference_data(loader)
 
-series = np.arange(0, 170, 10, dtype=int) / 100
+series = np.arange(0, 410, 10, dtype=int) / 100
 # predict which relevant distances are interesting to propose as resulting geometry
-#aligner_result = aligner.predict(relevant_distances=series,)
+aligner_result = aligner.predict(relevant_distances=series,)
 #aligner_result = aligner.process(relevant_distances=[0,1,2,3,4],)
-aligner_result = aligner.process(relevant_distances=[1.8],) #weird behaviour at 1.8
+#aligner_result = aligner.process(relevant_distances=[3],) #weird behaviour at 1.8
 dict_predictions = aligner_result.get_results(
     aligner=aligner, result_type=AlignerResultType.PREDICTIONS
 )
