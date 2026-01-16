@@ -5,14 +5,20 @@ from brdr.be.oe.loader import OnroerendErfgoedLoader, OEType
 from brdr.enums import AlignerResultType
 from brdr.viz import print_observation_of_aligner_results
 from brdr.viz import show_map
+from pprint import pprint
+import json
 
 if __name__ == "__main__":
     # EXAMPLE for a thematic Polygon from Onroerend Erfgoed (https://inventaris.onroerenderfgoed.be/aanduidingsobjecten/131635)
 
     # Initiate brdr
     aligner = Aligner()
+    aligner.log_metadata = True
+    aligner.add_observations = True 
     # Load thematic data from Onroerend Erfgoed
-    loader = OnroerendErfgoedLoader(objectids=[5914, 121125], oetype=OEType.AO)
+    loader = OnroerendErfgoedLoader(objectids=[
+                                    #'https://id.erfgoed.net/aanduidingsobjecten/5914',
+                                    'https://id.erfgoed.net/aanduidingsobjecten/163287'], oetype=OEType.AO)
     aligner.load_thematic_data(loader)
     # Load reference data: The actual GRB-parcels
     loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
@@ -37,6 +43,7 @@ if __name__ == "__main__":
 
     # SHOW results of the predictions
     fcs = aligner_result.get_results_as_geojson(
-        result_type=AlignerResultType.EVALUATED_PREDICTIONS, aligner=aligner
+        result_type=AlignerResultType.EVALUATED_PREDICTIONS, aligner=aligner,
+        add_metadata=True
     )
-    print(fcs["result"])
+    print(json.dumps(json.loads(fcs['result']['features'][0]["properties"]["brdr_metadata"]), indent=2))

@@ -417,15 +417,10 @@ def _get_metadata_observations_from_process_result(processResult: ProcessResult)
             {
                 **observation_metadata,
                 "id": uuid.uuid4().urn,
-                "has_feature_of_interest": reference,
+                "has_feature_of_interest": result_id,
                 "observed_property": "brdr:area",
                 "result": {"value": area, "type": "float"},
                 "used_procedure": "brdr:observation_procedure_area",
-                "used": {
-                    "id": result_id,
-                    "type": f"geo:Geometry",
-                    "version_date": observation_time,
-                },
             }
         )
     if area_od:= observation.get("area_od", {}).get("area"):
@@ -433,27 +428,14 @@ def _get_metadata_observations_from_process_result(processResult: ProcessResult)
             {
                 **observation_metadata,
                 "id": uuid.uuid4().urn,
+                "has_feature_of_interest": result_id,
                 "observed_property": "brdr:areaOD",
                 "result": {"value": area_od, "type": "float"},
                 "used_procedure": "brdr:observation_procedure_area_od",
-                "used": {
-                    "id": result_id,
-                    "type": f"geo:Geometry",
-                    "version_date": observation_time,
-                },
+                "reference_features": actuation_metadata['reference_features'],
             }
         )
-    # TODO:check if this is a duplicate
-    if full:= observation.get("full"):
-        observations.append(
-            {
-                **observation_metadata,
-                "id": uuid.uuid4().urn,
-                "observed_property": "brdr:area_overlap_full",
-                "result": {"value": full, "type": "bool"},
-                "used_procedure": "brdr:observation_procedure_area_overlap_full",
-            }
-        )
+        
     return observations
 
 
@@ -589,8 +571,7 @@ def aligner_metadata_decorator(f):
                          "type": "geo:Feature",
                          "source": reference_data.source.get("source_url", ""),
                        },
-                }
-                for feature in reference_features
+                } for feature in reference_features
             ]
             stack = inspect.stack()
             f_locals = stack[0][0].f_locals

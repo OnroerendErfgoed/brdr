@@ -9,6 +9,7 @@ from shapely.geometry import Point, LineString
 
 from brdr.constants import DEFAULT_CRS
 from brdr.typings import ProcessResult
+from pprint import pprint
 
 try:
     import matplotlib.pyplot as plt
@@ -319,7 +320,7 @@ def print_observation_of_aligner_results(aligner_results, aligner):
 
             # Access the 'result' geometry and compare it to the reference
             comparison_report = aligner.compare_to_reference(processresults["result"])
-            print(comparison_report)
+            pprint(comparison_report)
 
     return
 

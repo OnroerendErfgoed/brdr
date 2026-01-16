@@ -341,3 +341,4 @@ def get_collection_grb_parcels_by_date(
     collection_specific_date["features"] = specific_date_features
 
     return collection_specific_date
+

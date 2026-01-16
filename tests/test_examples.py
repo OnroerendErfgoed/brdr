@@ -18,13 +18,13 @@ class TestExamples:
     def test_example_131635(self, requests_mock):
         requests_mock.add(
             requests_mock.GET,
-            "https://www.mercator.vlaanderen.be/raadpleegdienstenmercatorpubliek/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAMES=ps%3Aps_aandobj&SRSNAME=http%3A%2F%2Fwww.opengis.net%2Fdef%2Fcrs%2FEPSG%2F0%2F31370&outputFormat=application%2Fjson&limit=10000&CQL_FILTER=aanduid_id+IN+%28131635%29",
+            "https://www.mercator.vlaanderen.be/raadpleegdienstenmercatorpubliek/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAMES=ps:ps_aandobj&SRSNAME=http://www.opengis.net/def/crs/EPSG/0/31370&outputFormat=application/json&limit=10000&CQL_FILTER=uri+IN+('https://id.erfgoed.net/aanduidingsobjecten/131635')",
             json=mercator_responses.response1,
             status=200,
         )
         # EXAMPLE
         aligner = Aligner()
-        loader = OnroerendErfgoedLoader([131635])
+        loader = OnroerendErfgoedLoader(['https://id.erfgoed.net/aanduidingsobjecten/131635'])
         aligner.load_thematic_data(loader)
         loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         aligner.load_reference_data(loader)
@@ -36,12 +36,12 @@ class TestExamples:
     def test_example_combined_borders_adp_gbg(self, requests_mock):
         requests_mock.add(
             requests_mock.GET,
-            "https://www.mercator.vlaanderen.be/raadpleegdienstenmercatorpubliek/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAMES=ps%3Aps_aandobj&SRSNAME=http%3A%2F%2Fwww.opengis.net%2Fdef%2Fcrs%2FEPSG%2F0%2F31370&outputFormat=application%2Fjson&limit=10000&CQL_FILTER=aanduid_id+IN+%28131635%29",
+            "https://www.mercator.vlaanderen.be/raadpleegdienstenmercatorpubliek/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAMES=ps:ps_aandobj&SRSNAME=http://www.opengis.net/def/crs/EPSG/0/31370&outputFormat=application/json&limit=10000&CQL_FILTER=uri+IN+('https://id.erfgoed.net/aanduidingsobjecten/131635')",
             json=mercator_responses.response1,
             status=200,
         )
         aligner = Aligner()
-        loader = OnroerendErfgoedLoader([131635])
+        loader = OnroerendErfgoedLoader(['https://id.erfgoed.net/aanduidingsobjecten/131635'])
         aligner.load_thematic_data(loader)
         adp_loader = GRBActualLoader(
             grb_type=GRBType.ADP, partition=1000, aligner=aligner
@@ -205,12 +205,12 @@ class TestExamples:
     def test_example_wanted_changes(self, requests_mock):
         requests_mock.add(
             requests_mock.GET,
-            "https://www.mercator.vlaanderen.be/raadpleegdienstenmercatorpubliek/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAMES=ps%3Aps_aandobj&SRSNAME=http%3A%2F%2Fwww.opengis.net%2Fdef%2Fcrs%2FEPSG%2F0%2F31370&outputFormat=application%2Fjson&limit=10000&CQL_FILTER=aanduid_id+IN+%28131635%29",
+            "https://www.mercator.vlaanderen.be/raadpleegdienstenmercatorpubliek/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAMES=ps:ps_aandobj&SRSNAME=http://www.opengis.net/def/crs/EPSG/0/31370&outputFormat=application/json&limit=10000&CQL_FILTER=uri+IN+('https://id.erfgoed.net/aanduidingsobjecten/131635')",
             json=mercator_responses.response1,
             status=200,
         )
         aligner = Aligner()
-        loader = OnroerendErfgoedLoader([131635])
+        loader = OnroerendErfgoedLoader(['https://id.erfgoed.net/aanduidingsobjecten/131635'])
         aligner.load_thematic_data(loader)
 
         aligner.load_reference_data(
@@ -244,12 +244,12 @@ class TestExamples:
     def test_example_predictor(self, requests_mock):
         requests_mock.add(
             requests_mock.GET,
-            "https://www.mercator.vlaanderen.be/raadpleegdienstenmercatorpubliek/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAMES=ps%3Aps_aandobj&SRSNAME=http%3A%2F%2Fwww.opengis.net%2Fdef%2Fcrs%2FEPSG%2F0%2F31370&outputFormat=application%2Fjson&limit=10000&CQL_FILTER=aanduid_id+IN+%28131635%29",
+            "https://www.mercator.vlaanderen.be/raadpleegdienstenmercatorpubliek/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAMES=ps:ps_aandobj&SRSNAME=http://www.opengis.net/def/crs/EPSG/0/31370&outputFormat=application/json&limit=10000&CQL_FILTER=uri+IN+('https://id.erfgoed.net/aanduidingsobjecten/131635')",
             json=mercator_responses.response1,
             status=200,
         )
         aligner = Aligner()
-        loader = OnroerendErfgoedLoader([131635])
+        loader = OnroerendErfgoedLoader(['https://id.erfgoed.net/aanduidingsobjecten/131635'])
         aligner.load_thematic_data(loader)
         aligner.load_reference_data(
             GRBActualLoader(aligner=aligner, grb_type=GRBType.GBG, partition=1000)
