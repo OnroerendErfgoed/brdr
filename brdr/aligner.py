@@ -1,4 +1,3 @@
-import hashlib
 import inspect
 import json
 import logging
@@ -78,8 +77,8 @@ from brdr.utils import get_geojsons_from_process_results
 from brdr.utils import get_geometry_difference_metrics_from_processresult
 from brdr.utils import get_geometry_difference_metrics_from_processresults
 from brdr.utils import is_brdr_observation
-from brdr.utils import write_geojson
 from brdr.utils import urn_from_geom
+from brdr.utils import write_geojson
 
 ###################
 

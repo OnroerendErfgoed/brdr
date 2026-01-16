@@ -1,7 +1,6 @@
 import unittest
 
 import pytest
-import shapely
 from shapely.geometry import Polygon
 
 from brdr.utils import (
