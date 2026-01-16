@@ -18,6 +18,10 @@ Quick links:
 
 ## Description
 
+### Documentation/API Reference
+
+[https://onroerenderfgoed.github.io/brdr/](https://onroerenderfgoed.github.io/brdr/)
+
 ### Intro
 
 `brdr` is a Python package that assists in aligning geometric boundaries to reference boundaries. This is an important
