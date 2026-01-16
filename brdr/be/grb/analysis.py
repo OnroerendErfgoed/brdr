@@ -81,6 +81,7 @@ def get_false_positive_grb_parcels_dataframe(data, id_name, area_limit=inf, proc
     """
     Processes features to find false positives and logs processing metrics.
     """
+
     # 1. Initialize counters
     metrics = {"area_limit": area_limit,"total_count": 0, "success_ids": [], "skipped_ids": [], "failed_ids": []}
     # if not area_limit==inf:
@@ -114,9 +115,11 @@ def get_false_positive_grb_parcels_dataframe(data, id_name, area_limit=inf, proc
     features = data.get("features", []) if data else []
     metrics["total_count"] = len(features)
     print(f"Nr of features: {metrics['total_count']}")
-
+    count = 0
     processed_data = []
     for f in features:
+        count+=1
+        print(f"Processing feature {count}/{metrics['total_count']}")
         try:
             key = f["properties"][id_name]
             geom = geojson_geometry_to_shapely(f["geometry"])
@@ -124,7 +127,7 @@ def get_false_positive_grb_parcels_dataframe(data, id_name, area_limit=inf, proc
                 print(f"Feature {key} skipped based on area {geom.area} m²")
                 metrics["skipped_ids"].append(key)
                 continue
-            print(key)
+            print(f"Feature - key: {str(key)}")
             dict_theme = {key: geom}
 
             aligner_config = AlignerConfig
@@ -233,7 +236,7 @@ def get_false_positive_grb_parcels_dataframe(data, id_name, area_limit=inf, proc
 
         except Exception as e:
             if key is None:
-                raise KeyError(f"No key found")
+                raise KeyError(f"Error - No key found")
             metrics["failed_ids"].append(key)
             print(f"Error processing feature {key}: {e}")
 
