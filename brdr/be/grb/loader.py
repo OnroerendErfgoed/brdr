@@ -136,7 +136,6 @@ class GRBActualLoader(GeoJsonLoader):
                         feature.data_uri = f"https://data.vlaanderen.be/id/grb/kunstwerken/{feature.data_id}"
                     case GRBType.GBG:
                         feature.data_uri = f"https://data.vlaanderen.be/id/grb/gebouwen/{feature.data_id}"
-            feature.brdr_id = feature.data_id
         return collection
 
 
