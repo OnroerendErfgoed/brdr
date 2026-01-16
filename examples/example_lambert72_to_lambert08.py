@@ -29,7 +29,10 @@ if __name__ == "__main__":
     aligner72 = Aligner(crs="EPSG:31370")
     print("start loading OE-objects")
     # Load the thematic data to evaluate
-    loader = OnroerendErfgoedLoader(objectids=[121125], oetype=OEType.AO)
+    loader = OnroerendErfgoedLoader(
+        objectids=["https://id.erfgoed.net/aanduidingsobjecten/121125"],
+        oetype=OEType.AO,
+    )
     aligner72.load_thematic_data(loader)
     print(
         "Number of OE-thematic features loaded into base-aligner: "
@@ -41,10 +44,10 @@ if __name__ == "__main__":
     print("Reference-data loaded")
     #
     rd = 2
-    aligner_result72 = aligner72.process(
-        relevant_distances=[rd]
+    aligner_result72 = aligner72.process(relevant_distances=[rd])
+    print(
+        "Processed: the data-object is now fully aligned to the reference-data in Lambert72"
     )
-    print("Processed: the data-object is now fully aligned to the reference-data in Lambert72")
     dict08 = {}
 
     # transform features (72-->2008)
@@ -64,14 +67,18 @@ if __name__ == "__main__":
     aligner08.load_reference_data(
         GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner08)
     )
-    rd08 = 0.5 #we use 0.5, so deviations up to 50cm will be aligner to the reference-data(Lambert08)
-    aligner_result08 = aligner08.process(
-        relevant_distances=[rd08]
-    )
+    rd08 = 0.5  # we use 0.5, so deviations up to 50cm will be aligner to the reference-data(Lambert08)
+    aligner_result08 = aligner08.process(relevant_distances=[rd08])
     for key, processresult in aligner_result08.results.items():
 
-        print("Resulting aligned geometry (Lambert08): " +processresult[rd08]["result"].wkt)
-        print("Corrected deviations (Lambert08): " + processresult[rd08]["result_diff"].wkt)
+        print(
+            "Resulting aligned geometry (Lambert08): "
+            + processresult[rd08]["result"].wkt
+        )
+        print(
+            "Corrected deviations (Lambert08): "
+            + processresult[rd08]["result_diff"].wkt
+        )
 
     thematic_geometries = {
         key: feat.geometry for key, feat in aligner08.thematic_data.features.items()

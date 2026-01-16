@@ -24,7 +24,9 @@ class TestExamples:
         )
         # EXAMPLE
         aligner = Aligner()
-        loader = OnroerendErfgoedLoader(['https://id.erfgoed.net/aanduidingsobjecten/131635'])
+        loader = OnroerendErfgoedLoader(
+            ["https://id.erfgoed.net/aanduidingsobjecten/131635"]
+        )
         aligner.load_thematic_data(loader)
         loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         aligner.load_reference_data(loader)
@@ -41,7 +43,9 @@ class TestExamples:
             status=200,
         )
         aligner = Aligner()
-        loader = OnroerendErfgoedLoader(['https://id.erfgoed.net/aanduidingsobjecten/131635'])
+        loader = OnroerendErfgoedLoader(
+            ["https://id.erfgoed.net/aanduidingsobjecten/131635"]
+        )
         aligner.load_thematic_data(loader)
         adp_loader = GRBActualLoader(
             grb_type=GRBType.ADP, partition=1000, aligner=aligner
@@ -210,7 +214,9 @@ class TestExamples:
             status=200,
         )
         aligner = Aligner()
-        loader = OnroerendErfgoedLoader(['https://id.erfgoed.net/aanduidingsobjecten/131635'])
+        loader = OnroerendErfgoedLoader(
+            ["https://id.erfgoed.net/aanduidingsobjecten/131635"]
+        )
         aligner.load_thematic_data(loader)
 
         aligner.load_reference_data(
@@ -249,7 +255,9 @@ class TestExamples:
             status=200,
         )
         aligner = Aligner()
-        loader = OnroerendErfgoedLoader(['https://id.erfgoed.net/aanduidingsobjecten/131635'])
+        loader = OnroerendErfgoedLoader(
+            ["https://id.erfgoed.net/aanduidingsobjecten/131635"]
+        )
         aligner.load_thematic_data(loader)
         aligner.load_reference_data(
             GRBActualLoader(aligner=aligner, grb_type=GRBType.GBG, partition=1000)

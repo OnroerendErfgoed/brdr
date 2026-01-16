@@ -114,8 +114,10 @@ class TestEvaluate(unittest.TestCase):
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         )
 
-        evaluation_result = aligner.evaluate(relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
-                                             full_reference_strategy=FullReferenceStrategy.NO_FULL_REFERENCE)
+        evaluation_result = aligner.evaluate(
+            relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
+            full_reference_strategy=FullReferenceStrategy.NO_FULL_REFERENCE,
+        )
         assert len(evaluation_result.results["theme_id_1"]) > 1
         assert (
             evaluation_result.results["theme_id_1"][3.5]["properties"][
@@ -137,8 +139,10 @@ class TestEvaluate(unittest.TestCase):
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         )
 
-        evaluation_result = aligner.evaluate(relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
-                                             full_reference_strategy=FullReferenceStrategy.PREFER_FULL_REFERENCE)
+        evaluation_result = aligner.evaluate(
+            relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
+            full_reference_strategy=FullReferenceStrategy.PREFER_FULL_REFERENCE,
+        )
         assert len(evaluation_result.results["theme_id_1"]) > 1
         assert (
             evaluation_result.results["theme_id_1"][3.5]["properties"][
@@ -160,8 +164,10 @@ class TestEvaluate(unittest.TestCase):
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         )
 
-        aligner_result = aligner.evaluate(relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
-                                          full_reference_strategy=FullReferenceStrategy.ONLY_FULL_REFERENCE)
+        aligner_result = aligner.evaluate(
+            relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
+            full_reference_strategy=FullReferenceStrategy.ONLY_FULL_REFERENCE,
+        )
         process_results_evaluated = aligner_result.get_results(
             aligner=aligner, result_type=AlignerResultType.EVALUATED_PREDICTIONS
         )
@@ -186,9 +192,11 @@ class TestEvaluate(unittest.TestCase):
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         )
 
-        aligner_result = aligner.evaluate(relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
-                                          full_reference_strategy=FullReferenceStrategy.PREFER_FULL_REFERENCE,
-                                          max_predictions=-1)
+        aligner_result = aligner.evaluate(
+            relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
+            full_reference_strategy=FullReferenceStrategy.PREFER_FULL_REFERENCE,
+            max_predictions=-1,
+        )
         process_results_evaluated = aligner_result.get_results(
             aligner=aligner, result_type=AlignerResultType.EVALUATED_PREDICTIONS
         )
@@ -214,9 +222,11 @@ class TestEvaluate(unittest.TestCase):
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         )
 
-        evaluation_result = aligner.evaluate(relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
-                                             full_reference_strategy=FullReferenceStrategy.NO_FULL_REFERENCE,
-                                             max_predictions=2)
+        evaluation_result = aligner.evaluate(
+            relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
+            full_reference_strategy=FullReferenceStrategy.NO_FULL_REFERENCE,
+            max_predictions=2,
+        )
         assert len(evaluation_result.results["theme_id_1"]) > 1
         # assert (
         #     prop_dictionary["theme_id_1"][3.5]["properties"][EVALUATION_FIELD_NAME]
@@ -236,9 +246,12 @@ class TestEvaluate(unittest.TestCase):
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         )
 
-        aligner_result = aligner.evaluate(relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
-                                          full_reference_strategy=FullReferenceStrategy.NO_FULL_REFERENCE,
-                                          max_predictions=1, multi_to_best_prediction=True)
+        aligner_result = aligner.evaluate(
+            relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
+            full_reference_strategy=FullReferenceStrategy.NO_FULL_REFERENCE,
+            max_predictions=1,
+            multi_to_best_prediction=True,
+        )
         process_results_evaluated = aligner_result.get_results(
             aligner=aligner, result_type=AlignerResultType.EVALUATED_PREDICTIONS
         )
@@ -263,9 +276,12 @@ class TestEvaluate(unittest.TestCase):
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         )
 
-        aligner_result = aligner.evaluate(relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
-                                          full_reference_strategy=FullReferenceStrategy.NO_FULL_REFERENCE,
-                                          max_predictions=1, multi_to_best_prediction=False)
+        aligner_result = aligner.evaluate(
+            relevant_distances=np.arange(0, 410, 10, dtype=int) / 100,
+            full_reference_strategy=FullReferenceStrategy.NO_FULL_REFERENCE,
+            max_predictions=1,
+            multi_to_best_prediction=False,
+        )
         process_results_evaluated = aligner_result.get_results(
             aligner=aligner, result_type=AlignerResultType.EVALUATED_PREDICTIONS
         )
@@ -293,9 +309,12 @@ class TestEvaluate(unittest.TestCase):
         loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         aligner.load_reference_data(loader)
 
-        aligner_result = aligner.evaluate(relevant_distances=np.arange(0, 110, 10, dtype=int) / 100,
-                                          full_reference_strategy=FullReferenceStrategy.NO_FULL_REFERENCE,
-                                          max_predictions=1, multi_to_best_prediction=True)
+        aligner_result = aligner.evaluate(
+            relevant_distances=np.arange(0, 110, 10, dtype=int) / 100,
+            full_reference_strategy=FullReferenceStrategy.NO_FULL_REFERENCE,
+            max_predictions=1,
+            multi_to_best_prediction=True,
+        )
         process_results_evaluated = aligner_result.get_results(
             aligner=aligner, result_type=AlignerResultType.EVALUATED_PREDICTIONS
         )
@@ -315,9 +334,13 @@ class TestEvaluate(unittest.TestCase):
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         )
         with pytest.raises(ValueError):
-            aligner_result = aligner.evaluate(relevant_distances=np.arange(10, 410, 10, dtype=int) / 100,
-                                              full_reference_strategy=FullReferenceStrategy.NO_FULL_REFERENCE,
-                                              max_predictions=1, multi_to_best_prediction=False)
+            aligner_result = aligner.evaluate(
+                relevant_distances=np.arange(10, 410, 10, dtype=int) / 100,
+                full_reference_strategy=FullReferenceStrategy.NO_FULL_REFERENCE,
+                max_predictions=1,
+                multi_to_best_prediction=False,
+            )
+
     @pytest.mark.usefixtures("callback_grb_response")
     def test_evaluate_line(self):
         # Load thematic data & reference data
@@ -336,9 +359,12 @@ class TestEvaluate(unittest.TestCase):
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         )
 
-        evaluation_result = aligner.evaluate(relevant_distances=np.arange(0, 1010, 50, dtype=int) / 100,
-                                             full_reference_strategy=FullReferenceStrategy.NO_FULL_REFERENCE,
-                                             max_predictions=3, multi_to_best_prediction=False)
+        evaluation_result = aligner.evaluate(
+            relevant_distances=np.arange(0, 1010, 50, dtype=int) / 100,
+            full_reference_strategy=FullReferenceStrategy.NO_FULL_REFERENCE,
+            max_predictions=3,
+            multi_to_best_prediction=False,
+        )
         assert len(evaluation_result.results["theme_id"]) >= 1
         assert (
             evaluation_result.results["theme_id"][0]["properties"][
@@ -363,9 +389,12 @@ class TestEvaluate(unittest.TestCase):
             GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
         )
 
-        evaluation_result = aligner.evaluate(relevant_distances=np.arange(0, 1010, 50, dtype=int) / 100,
-                                             full_reference_strategy=FullReferenceStrategy.NO_FULL_REFERENCE,
-                                             max_predictions=3, multi_to_best_prediction=False)
+        evaluation_result = aligner.evaluate(
+            relevant_distances=np.arange(0, 1010, 50, dtype=int) / 100,
+            full_reference_strategy=FullReferenceStrategy.NO_FULL_REFERENCE,
+            max_predictions=3,
+            multi_to_best_prediction=False,
+        )
         assert len(evaluation_result.results["theme_id"]) > 0
         # assert (
         #     evaluation_result.results["theme_id"][0]["properties"][EVALUATION_FIELD_NAME]
@@ -395,9 +424,12 @@ class TestEvaluate(unittest.TestCase):
         aligner.load_thematic_data(DictLoader(thematic_dict))
         aligner.load_reference_data(DictLoader(reference_dict))
 
-        evaluation_result = aligner.evaluate(relevant_distances=np.arange(0, 510, 50, dtype=int) / 100,
-                                             full_reference_strategy=FullReferenceStrategy.NO_FULL_REFERENCE,
-                                             max_predictions=3, multi_to_best_prediction=False)
+        evaluation_result = aligner.evaluate(
+            relevant_distances=np.arange(0, 510, 50, dtype=int) / 100,
+            full_reference_strategy=FullReferenceStrategy.NO_FULL_REFERENCE,
+            max_predictions=3,
+            multi_to_best_prediction=False,
+        )
         assert True
 
     @pytest.mark.usefixtures("mock_grb_response3")
@@ -495,9 +527,12 @@ class TestEvaluate(unittest.TestCase):
         aligner.load_reference_data(loader)
 
         # Use the EVALUATE-function
-        aligner_result = aligner.evaluate(relevant_distances=np.arange(0, 310, 10, dtype=int) / 100,
-                                          full_reference_strategy=FullReferenceStrategy.ONLY_FULL_REFERENCE,
-                                          max_predictions=1, multi_to_best_prediction=True)
+        aligner_result = aligner.evaluate(
+            relevant_distances=np.arange(0, 310, 10, dtype=int) / 100,
+            full_reference_strategy=FullReferenceStrategy.ONLY_FULL_REFERENCE,
+            max_predictions=1,
+            multi_to_best_prediction=True,
+        )
         process_results_evaluated = aligner_result.get_results(
             aligner=aligner, result_type=AlignerResultType.EVALUATED_PREDICTIONS
         )

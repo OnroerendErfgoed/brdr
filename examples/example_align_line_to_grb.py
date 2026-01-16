@@ -19,5 +19,7 @@ if __name__ == "__main__":
 
     aligner_result = aligner.process(relevant_distances=[3])
     print(aligner_result.results["theme_id_1"][3]["result"])
-    aligner_result =aligner.predict()
-    aligner_result.save_results(path="output", result_type=AlignerResultType.PREDICTIONS,aligner=aligner)
+    aligner_result = aligner.predict()
+    aligner_result.save_results(
+        path="output", result_type=AlignerResultType.PREDICTIONS, aligner=aligner
+    )

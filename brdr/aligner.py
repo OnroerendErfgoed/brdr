@@ -1,4 +1,3 @@
-import hashlib
 import inspect
 import json
 import logging
@@ -78,8 +77,8 @@ from brdr.utils import get_geojsons_from_process_results
 from brdr.utils import get_geometry_difference_metrics_from_processresult
 from brdr.utils import get_geometry_difference_metrics_from_processresults
 from brdr.utils import is_brdr_observation
-from brdr.utils import write_geojson
 from brdr.utils import urn_from_geom
+from brdr.utils import write_geojson
 
 ###################
 
@@ -239,7 +238,11 @@ class AlignerResult:
                 tid: {
                     rd: res
                     for rd, res in rd_dict.items()
-                    if res and EVALUATION_FIELD_NAME in res["properties"]# and res["properties"][EVALUATION_FIELD_NAME]!=Evaluation.NOT_EVALUATED
+                    if res
+                    and EVALUATION_FIELD_NAME
+                    in res[
+                        "properties"
+                    ]  # and res["properties"][EVALUATION_FIELD_NAME]!=Evaluation.NOT_EVALUATED
                 }
                 for tid, rd_dict in self.results.items()
             }
@@ -297,13 +300,13 @@ class AlignerResult:
                     )
 
                 if add_metadata:
-                    metadata_result = process_result.get("metadata",None)
+                    metadata_result = process_result.get("metadata", None)
                     if metadata_result is None:
                         logging.debug("metadata not available")
                         continue
-                    prop_dictionary[theme_id][relevant_distance][METADATA_FIELD_NAME] = (
-                        json.dumps(metadata_result)
-                    )
+                    prop_dictionary[theme_id][relevant_distance][
+                        METADATA_FIELD_NAME
+                    ] = json.dumps(metadata_result)
 
         return get_geojsons_from_process_results(
             results,
@@ -353,7 +356,10 @@ class AlignerResult:
             file_name = f"{result_type.value}_{name}.geojson"
             write_geojson(os.path.join(path, file_name), fc)
 
-def _get_metadata_observations_from_process_result(processResult: ProcessResult) -> List[Dict]:
+
+def _get_metadata_observations_from_process_result(
+    processResult: ProcessResult,
+) -> List[Dict]:
     observation = processResult["observation"]
     actuation_metadata = processResult["metadata"]["actuation"]
     observation_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S%z")
@@ -375,7 +381,7 @@ def _get_metadata_observations_from_process_result(processResult: ProcessResult)
     observations = []
     for ref_id, observations_dict in observation["reference_features"].items():
         reference = get_reference_from_actuation(ref_id)
-        if area:= observations_dict.get("area"):
+        if area := observations_dict.get("area"):
             observations.append(
                 {
                     **observation_metadata,
@@ -387,7 +393,7 @@ def _get_metadata_observations_from_process_result(processResult: ProcessResult)
                     "used": result_id,
                 }
             )
-        if percentage:= observations_dict.get("percentage"):
+        if percentage := observations_dict.get("percentage"):
             observations.append(
                 {
                     **observation_metadata,
@@ -400,7 +406,7 @@ def _get_metadata_observations_from_process_result(processResult: ProcessResult)
                 }
             )
         # TODO: decide whether to keep this observation
-        if full:= observations_dict.get("full"):
+        if full := observations_dict.get("full"):
             observations.append(
                 {
                     **observation_metadata,
@@ -412,7 +418,7 @@ def _get_metadata_observations_from_process_result(processResult: ProcessResult)
                 }
             )
 
-    if area:= observation.get("area"):
+    if area := observation.get("area"):
         observations.append(
             {
                 **observation_metadata,
@@ -423,7 +429,7 @@ def _get_metadata_observations_from_process_result(processResult: ProcessResult)
                 "used_procedure": "brdr:observation_procedure_area",
             }
         )
-    if area_od:= observation.get("area_od", {}).get("area"):
+    if area_od := observation.get("area_od", {}).get("area"):
         observations.append(
             {
                 **observation_metadata,
@@ -432,10 +438,10 @@ def _get_metadata_observations_from_process_result(processResult: ProcessResult)
                 "observed_property": "brdr:areaOD",
                 "result": {"value": area_od, "type": "float"},
                 "used_procedure": "brdr:observation_procedure_area_od",
-                "reference_features": actuation_metadata['reference_features'],
+                "reference_features": actuation_metadata["reference_features"],
             }
         )
-        
+
     return observations
 
 
@@ -566,16 +572,17 @@ def aligner_metadata_decorator(f):
             reference_features = reference_data.features.values()
             reference_geometries = [
                 {
-                    #"id": feature.data_id,
+                    # "id": feature.data_id,
                     "id": feature.brdr_id,
                     "type": f"geo:{feature.geometry.geom_type}",
                     "version_date": reference_data.source.get(VERSION_DATE, ""),
-                    "derived_from":
-                       { "id": feature.data_id,
-                         "type": "geo:Feature",
-                         "source": reference_data.source.get("source_url", ""),
-                       },
-                } for feature in reference_features
+                    "derived_from": {
+                        "id": feature.data_id,
+                        "type": "geo:Feature",
+                        "source": reference_data.source.get("source_url", ""),
+                    },
+                }
+                for feature in reference_features
             ]
             stack = inspect.stack()
             f_locals = stack[0][0].f_locals
@@ -610,8 +617,8 @@ def aligner_metadata_decorator(f):
                     },
                 }
                 if result["observation"]:
-                    result["metadata"]["observations"] = _get_metadata_observations_from_process_result(
-                        result
+                    result["metadata"]["observations"] = (
+                        _get_metadata_observations_from_process_result(result)
                     )
 
         return response
@@ -1246,23 +1253,32 @@ class Aligner:
         process_results_zero = aligner_result_zero.get_results(aligner=self)
 
         aligner_result = self.predict(
-                thematic_ids=thematic_ids,
-                relevant_distances=relevant_distances,
-                diff_metric=self.diff_metric,
-            )
+            thematic_ids=thematic_ids,
+            relevant_distances=relevant_distances,
+            diff_metric=self.diff_metric,
+        )
         process_results = aligner_result.get_results(aligner=self)
         process_results_predictions = aligner_result.get_results(
             aligner=self, result_type=AlignerResultType.PREDICTIONS
         )
-        process_results = deep_merge(process_results_zero,process_results,)
-        process_results_temp_predictions= deepcopy(process_results_predictions)
+        process_results = deep_merge(
+            process_results_zero,
+            process_results,
+        )
+        process_results_temp_predictions = deepcopy(process_results_predictions)
         process_results_evaluated = deepcopy(process_results)
 
-        for theme_id,feat in self.thematic_data.features.items():
+        for theme_id, feat in self.thematic_data.features.items():
             original_geometry = feat.geometry
             if theme_id not in thematic_ids:
                 # PART 1)NOT EVALUATED
-                process_results_evaluated = self._update_evaluation_with_original(metadata_field, original_geometry, process_results_evaluated, theme_id,Evaluation.NOT_EVALUATED)
+                process_results_evaluated = self._update_evaluation_with_original(
+                    metadata_field,
+                    original_geometry,
+                    process_results_evaluated,
+                    theme_id,
+                    Evaluation.NOT_EVALUATED,
+                )
 
             # Features are split up in 2 groups: TO_EVALUATE and NOT_TO_EVALUATE (original returned)
             # The evaluated features will be split up:
@@ -1272,7 +1288,10 @@ class Aligner:
             # PART 2: TO_EVALUATE
             elif theme_id in thematic_ids:
 
-                if theme_id not in process_results_predictions.keys() or process_results_predictions[theme_id]=={}:
+                if (
+                    theme_id not in process_results_predictions.keys()
+                    or process_results_predictions[theme_id] == {}
+                ):
                     # No predictions available
                     process_results_evaluated = self._update_evaluation_with_original(
                         metadata_field,
@@ -1283,9 +1302,12 @@ class Aligner:
                     )
                     continue
                 # Check if prediction_scores are available to do the evaluatrion
-                prediction_score_available=True
+                prediction_score_available = True
                 for dist in process_results_temp_predictions[theme_id]:
-                    if not PREDICTION_SCORE in process_results_evaluated[theme_id][dist]["properties"]:
+                    if (
+                        not PREDICTION_SCORE
+                        in process_results_evaluated[theme_id][dist]["properties"]
+                    ):
                         prediction_score_available = False
                 # thematic objects that do not have a prediction_score from predict() are not evaluated and returned as they are
                 if not prediction_score_available:
@@ -1299,17 +1321,15 @@ class Aligner:
                     continue
 
                 # When there are predictions available
-                dict_predictions_results = process_results_predictions[
-                    theme_id
-                ]
+                dict_predictions_results = process_results_predictions[theme_id]
                 scores = []
                 distances = []
                 predictions = []
                 observation_match = False
                 for dist in sorted(dict_predictions_results.keys()):
-                    props = deepcopy(process_results_evaluated[theme_id][dist][
-                        "properties"
-                    ])
+                    props = deepcopy(
+                        process_results_evaluated[theme_id][dist]["properties"]
+                    )
                     props_evaluation = self._evaluate(
                         id_theme=theme_id,
                         geom_predicted=dict_predictions_results[dist]["result"],
@@ -1352,12 +1372,8 @@ class Aligner:
                         predictions = []
                         scores.append(props[PREDICTION_SCORE])
                         distances.append(dist)
-                        process_results_evaluated[theme_id][dist][
-                            "properties"
-                        ] = props
-                        predictions.append(
-                            process_results_evaluated[theme_id][dist]
-                        )
+                        process_results_evaluated[theme_id][dist]["properties"] = props
+                        predictions.append(process_results_evaluated[theme_id][dist])
                         continue
                     if full:
                         if (
@@ -1381,9 +1397,7 @@ class Aligner:
                     process_results_temp_predictions[theme_id][dist][
                         "properties"
                     ] = props
-                    predictions.append(
-                        process_results_temp_predictions[theme_id][dist]
-                    )
+                    predictions.append(process_results_temp_predictions[theme_id][dist])
 
                 # get max amount of best-scoring predictions
                 best_ix = sorted(
@@ -1425,7 +1439,9 @@ class Aligner:
                             ProcessRemark.MULTIPLE_PREDICTIONS_ORIGINAL_RETURNED
                         )
                         props[REMARK_FIELD_NAME] = remarks
-                        process_results_evaluated[theme_id][relevant_distance]["properties"].update(props)
+                        process_results_evaluated[theme_id][relevant_distance][
+                            "properties"
+                        ].update(props)
                         continue
 
                 if max_predictions > 0 and len_best_ix > max_predictions:
@@ -1447,12 +1463,19 @@ class Aligner:
 
         return AlignerResult(process_results_evaluated)
 
-    def _update_evaluation_with_original(self, metadata_field: str, original_geometry: BaseGeometry, process_results_evaluated,
-                                         theme_id: str | int, evaluation:Evaluation) -> Any:
+    def _update_evaluation_with_original(
+        self,
+        metadata_field: str,
+        original_geometry: BaseGeometry,
+        process_results_evaluated,
+        theme_id: str | int,
+        evaluation: Evaluation,
+    ) -> Any:
         relevant_distance = round(0, RELEVANT_DISTANCE_DECIMALS)
         try:
-            props = deepcopy(process_results_evaluated[theme_id][relevant_distance][
-                                 "properties"])
+            props = deepcopy(
+                process_results_evaluated[theme_id][relevant_distance]["properties"]
+            )
         except:
             props = {}
         props_evaluation = self._evaluate(
@@ -1469,7 +1492,9 @@ class Aligner:
             remarks = []
         remarks.append(ProcessRemark.NOT_EVALUATED_ORIGINAL_RETURNED)
         props[REMARK_FIELD_NAME] = remarks
-        process_results_evaluated[theme_id][relevant_distance]["properties"].update(props)
+        process_results_evaluated[theme_id][relevant_distance]["properties"].update(
+            props
+        )
         return process_results_evaluated
 
     def compare_to_reference(
@@ -1605,13 +1630,15 @@ class Aligner:
                     version_date.strftime(DATE_FORMAT)
                 )
             if with_geom:
-                dict_observation["reference_features"][key_ref]["geometry"] = to_geojson(
-                    geom
+                dict_observation["reference_features"][key_ref]["geometry"] = (
+                    to_geojson(geom)
                 )
 
         dict_observation["full"] = full_total
         if last_version_date is not None:
-            dict_observation[LAST_VERSION_DATE] = last_version_date.strftime(DATE_FORMAT)
+            dict_observation[LAST_VERSION_DATE] = last_version_date.strftime(
+                DATE_FORMAT
+            )
         geom_od = buffer_pos(
             buffer_neg(
                 safe_difference(geometry, safe_unary_union(intersected)),
@@ -1632,9 +1659,7 @@ class Aligner:
 
     def get_difference_metrics_for_thematic_data(
         self,
-        dict_processresults: Dict[
-            InputId, Dict[float, Optional[ProcessResult]]
-        ] = None,
+        dict_processresults: Dict[InputId, Dict[float, Optional[ProcessResult]]] = None,
         thematic_data: AlignerFeatureCollection = None,
         diff_metric: DiffMetric = DiffMetric.SYMMETRICAL_AREA_CHANGE,
     ) -> Dict[InputId, Dict[float, float]]:
@@ -1726,7 +1751,7 @@ class Aligner:
         """
         threshold_od_percentage = 1
         properties = {
-            #METADATA_FIELD_NAME: "",
+            # METADATA_FIELD_NAME: "",
             EVALUATION_FIELD_NAME: Evaluation.TO_CHECK_NO_PREDICTION,
             FULL_BASE_FIELD_NAME: None,
             FULL_ACTUAL_FIELD_NAME: None,
@@ -1735,8 +1760,14 @@ class Aligner:
             DIFF_PERCENTAGE_FIELD_NAME: None,
             DIFF_AREA_FIELD_NAME: None,
         }
-        actual_brdr_observation = observation or self.compare_to_reference(geom_predicted)
-        if actual_brdr_observation is None or geom_predicted is None or geom_predicted.is_empty:
+        actual_brdr_observation = observation or self.compare_to_reference(
+            geom_predicted
+        )
+        if (
+            actual_brdr_observation is None
+            or geom_predicted is None
+            or geom_predicted.is_empty
+        ):
             properties[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
             properties[FULL_ACTUAL_FIELD_NAME] = False
             return properties
@@ -1744,9 +1775,13 @@ class Aligner:
 
         try:
             base_metadata = json.loads(
-                self.thematic_data.features.get(id_theme).properties[base_metadata_field]
+                self.thematic_data.features.get(id_theme).properties[
+                    base_metadata_field
+                ]
             )
-            base_brdr_observation = _reverse_metadata_observations_to_brdr_observation(base_metadata)
+            base_brdr_observation = _reverse_metadata_observations_to_brdr_observation(
+                base_metadata
+            )
         except:
             base_brdr_observation = None
 
@@ -1828,7 +1863,9 @@ class Aligner:
             and base_brdr_observation["full"]
             and actual_brdr_observation["full"]
         ):  # observation is the same, and both geometries are 'full'
-            properties[EVALUATION_FIELD_NAME] = Evaluation.EQUALITY_BY_ID_AND_FULL_REFERENCE
+            properties[EVALUATION_FIELD_NAME] = (
+                Evaluation.EQUALITY_BY_ID_AND_FULL_REFERENCE
+            )
         elif (
             equal_reference_features
             and od_alike
@@ -1836,7 +1873,9 @@ class Aligner:
         ):  # observation is the same,  both geometries are not 'full'
             properties[EVALUATION_FIELD_NAME] = Evaluation.EQUALITY_BY_ID
         elif (
-            base_brdr_observation["full"] and actual_brdr_observation["full"] and od_alike
+            base_brdr_observation["full"]
+            and actual_brdr_observation["full"]
+            and od_alike
         ):  # observation not the same but geometries are full
             properties[EVALUATION_FIELD_NAME] = Evaluation.EQUALITY_BY_FULL_REFERENCE
         else:

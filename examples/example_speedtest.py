@@ -9,7 +9,6 @@ from brdr.enums import OpenDomainStrategy
 from brdr.geometry_utils import geom_from_wkt
 from brdr.loader import GeoJsonFileLoader, DictLoader
 from brdr.processor import AlignerGeometryProcessor
-from examples.example_outer_boundary import processor
 
 
 def main():
@@ -20,10 +19,10 @@ def main():
 
     iterations = 2
     od_strategy = OpenDomainStrategy.SNAP_PREFER_VERTICES
-    processor_config=ProcessorConfig()
+    processor_config = ProcessorConfig()
     processor_config.partial_snapping = True
     processor_config.od_strategy = od_strategy
-    processor=AlignerGeometryProcessor(config=processor_config)
+    processor = AlignerGeometryProcessor(config=processor_config)
     # Initiate brdr
     aligner = Aligner(processor=processor)
     relevant_distance = 3
@@ -51,7 +50,6 @@ def main():
     else:
         loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
     aligner.load_reference_data(loader)
-
 
     aligner.process(relevant_distances=[relevant_distance])
     times = []

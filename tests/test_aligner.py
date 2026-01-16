@@ -521,7 +521,6 @@ class TestAligner(unittest.TestCase):
 import unittest
 
 
-
 class TestReverseMetadata(unittest.TestCase):
 
     def setUp(self):
@@ -547,10 +546,8 @@ class TestReverseMetadata(unittest.TestCase):
             _reverse_metadata_observations_to_brdr_observation({"obs": []}), {}
         )
 
-
     def test_happy_path_root_properties(self):
         """Test of observations (area, area_od) are placed correctly."""
-
 
         metadata = {
             "observations": [
@@ -573,10 +570,8 @@ class TestReverseMetadata(unittest.TestCase):
         self.assertEqual(result["area_od"]["area"], 90)
         self.assertIsNone(result["alignment_date"])
 
-
     def test_reference_features_aggregation(self):
         """Test if values of references are grouped correctly."""
-
 
         metadata = {
             "observations": [

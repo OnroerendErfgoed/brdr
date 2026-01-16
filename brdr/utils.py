@@ -1,11 +1,13 @@
+import hashlib
+import json
 import logging
 import math
 import os.path
+import uuid
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import numpy as np
 import requests
-import hashlib
-import json
 from geojson import Feature
 from geojson import FeatureCollection
 from geojson import dump
@@ -37,9 +39,6 @@ from brdr.geometry_utils import to_crs
 from brdr.geometry_utils import total_vertex_distance
 from brdr.logger import LOGGER
 from brdr.typings import ProcessResult
-import hashlib
-import uuid
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 log = logging.getLogger(__name__)
 
@@ -99,6 +98,7 @@ def deep_merge(dict_a, dict_b):
         else:
             dict_a[key] = value
     return dict_a
+
 
 def _feature_from_geom(
     geom: BaseGeometry,
@@ -541,12 +541,16 @@ def geojson_to_dicts(collection, id_property=None):
             if "id" in f:
                 key = f["id"]
             else:
-                raise KeyError("Feature-identifier 'id' not found in GeoJson FeatureCollection. Please provide a Geojson with feature-identifiers or define id_property (name of attribute with unique ids) from the properties")
+                raise KeyError(
+                    "Feature-identifier 'id' not found in GeoJson FeatureCollection. Please provide a Geojson with feature-identifiers or define id_property (name of attribute with unique ids) from the properties"
+                )
         else:
             if "properties" in f and id_property in f["properties"]:
                 key = f["properties"][id_property]
             else:
-                raise KeyError(f"Identifier '{id_property}' not found in properties of GeoJson FeatureCollection")
+                raise KeyError(
+                    f"Identifier '{id_property}' not found in properties of GeoJson FeatureCollection"
+                )
         geom = shape(f["geometry"])
         data_dict[key] = make_valid(geom)
         data_dict_properties[key] = f["properties"]
@@ -554,12 +558,7 @@ def geojson_to_dicts(collection, id_property=None):
 
 
 def get_collection_by_partition(
-        url,
-        params,
-        geometry,
-        partition=1000,
-        crs=DEFAULT_CRS,
-        max_workers=None
+    url, params, geometry, partition=1000, crs=DEFAULT_CRS, max_workers=None
 ):
     """
     Retrieves a collection of geographic data by partitioning the input geometry.
@@ -786,8 +785,11 @@ def get_relevant_polygons_from_geom(
                     array.append(g)
     return safe_unary_union(array)
 
+
 def urn_from_geom(geom: BaseGeometry):
     return uuid.UUID(hex=hashlib.sha256(geom.wkb).hexdigest()[::2]).urn
+
+
 # def equal_geom_in_array(geom, geom_array, correction_distance, mitre_limit):
 #     """
 #     Check if a predicted geometry is equal to other predicted geometries in a list.

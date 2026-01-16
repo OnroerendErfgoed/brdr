@@ -11,12 +11,16 @@ a Python library to assist in realigning (multi-)polygons (OGC Simple Features) 
 <!-- badges: end -->
 
 Quick links:
-
+- [Documentation & API Reference](https://onroerenderfgoed.github.io/brdr/)
 - [Installation](#installation)
 - [Development](#development)
 - [Issues, questions, comments and contributions](#comments-and-contributions)
 
 ## Description
+
+### Documentation/API Reference
+
+[https://onroerenderfgoed.github.io/brdr/](https://onroerenderfgoed.github.io/brdr/)
 
 ### Intro
 

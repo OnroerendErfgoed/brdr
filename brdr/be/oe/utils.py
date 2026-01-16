@@ -63,12 +63,12 @@ def get_collection_oe_objects(
     }
     if objectids is not None:
         params["CQL_FILTER"] = (
-              id_property + 
-              ' IN ' + 
-              '(' + 
-              ','.join([ f"'{str(o)}'" for o in objectids ]) + 
-              ')'
-           )
+            id_property
+            + " IN "
+            + "("
+            + ",".join([f"'{str(o)}'" for o in objectids])
+            + ")"
+        )
     bbox_polygon = None
     if bbox is not None:
         bbox_polygon = box(*tuple(o for o in bbox))

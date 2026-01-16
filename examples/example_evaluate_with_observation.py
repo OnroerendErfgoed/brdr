@@ -42,7 +42,8 @@ if __name__ == "__main__":
     for key in base_results:
         thematic_dict_result[key] = base_results[key][relevant_distance]["result"]
         thematic_dict_observation[key] = {
-            name_observation: json.dumps(base_results[key][relevant_distance]["metadata"]
+            name_observation: json.dumps(
+                base_results[key][relevant_distance]["metadata"]
             )
         }
         print(key + ": " + thematic_dict_result[key].wkt)
@@ -67,7 +68,8 @@ if __name__ == "__main__":
     # Load the thematic objects (aligned on 2022) and also give the brdr_observation from 2022 as property
     actual_aligner.load_thematic_data(
         DictLoader(
-            data_dict=thematic_dict_result, data_dict_properties=thematic_dict_observation
+            data_dict=thematic_dict_result,
+            data_dict_properties=thematic_dict_observation,
         )
     )
     # Load reference data; the actual parcels
@@ -76,11 +78,17 @@ if __name__ == "__main__":
     )
     # Use the EVALUATE-function
     relevant_distances = np.arange(0, 310, 10, dtype=int) / 100
-    aligner_result = actual_aligner.evaluate(relevant_distances=relevant_distances, thematic_ids=affected,
-                                             metadata_field=name_observation)
+    aligner_result = actual_aligner.evaluate(
+        relevant_distances=relevant_distances,
+        thematic_ids=affected,
+        metadata_field=name_observation,
+    )
     # SHOW the EVALUATED results
     fc = aligner_result.get_results_as_geojson(
-        result_type=AlignerResultType.EVALUATED_PREDICTIONS, add_metadata=True, add_original_attributes=True, aligner=actual_aligner
+        result_type=AlignerResultType.EVALUATED_PREDICTIONS,
+        add_metadata=True,
+        add_original_attributes=True,
+        aligner=actual_aligner,
     )
     print(fc["result"])
 

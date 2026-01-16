@@ -4,7 +4,7 @@ from brdr.aligner import Aligner
 from brdr.be.grb.enums import GRBType
 from brdr.be.grb.loader import GRBActualLoader
 from brdr.enums import AlignerResultType
-from brdr.loader import GeoJsonFileLoader, GeoJsonLoader
+from brdr.loader import GeoJsonLoader
 from brdr.viz import show_map, plot_difference_by_relevant_distance
 
 # Press the green button in the gutter to run the script.
@@ -68,8 +68,7 @@ if __name__ == "__main__":
     # SHOW results of the predictions
     fcs = aligner_result.get_results_as_geojson(add_metadata=False, aligner=aligner)
     diffs_dict = aligner.get_difference_metrics_for_thematic_data(
-    dict_processresults = aligner_result.results,
-    thematic_data = aligner.thematic_data
+        dict_processresults=aligner_result.results, thematic_data=aligner.thematic_data
     )
     reference_geometries = {
         key: feat.geometry for key, feat in aligner.reference_data.features.items()

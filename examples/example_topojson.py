@@ -36,4 +36,3 @@ if fcs is None or "result" not in fcs:
     print("empty predictions")
 else:
     print(fcs["result"])
-

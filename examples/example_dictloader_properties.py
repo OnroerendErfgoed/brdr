@@ -1,5 +1,4 @@
 from brdr.aligner import Aligner
-from brdr.enums import OpenDomainStrategy, AlignerResultType
 from brdr.geometry_utils import geom_from_wkt
 from brdr.loader import DictLoader
 

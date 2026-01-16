@@ -1,5 +1,3 @@
-import numpy as np
-
 from brdr.aligner import Aligner
 from brdr.be.grb.enums import GRBType
 from brdr.be.grb.loader import GRBActualLoader
@@ -98,6 +96,9 @@ loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
 aligner.load_reference_data(loader)
 
 # Use the EVALUATE-function
-aligner_result = aligner.evaluate(full_reference_strategy=FullReferenceStrategy.ONLY_FULL_REFERENCE, max_predictions=1,
-                                  multi_to_best_prediction=True)
-print (aligner_result)
+aligner_result = aligner.evaluate(
+    full_reference_strategy=FullReferenceStrategy.ONLY_FULL_REFERENCE,
+    max_predictions=1,
+    multi_to_best_prediction=True,
+)
+print(aligner_result)

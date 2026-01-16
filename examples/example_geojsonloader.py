@@ -54,7 +54,7 @@ if __name__ == "__main__":
     aligner.load_reference_data(loader)
 
     # Example how to use the Aligner
-    rel_dist=5
+    rel_dist = 5
     aligner_result = aligner.process(relevant_distances=[rel_dist])
     aligner_result.save_results(path="output/", aligner=aligner)
     thematic_geometries = {
@@ -70,4 +70,3 @@ if __name__ == "__main__":
         result_type=AlignerResultType.PROCESSRESULTS, aligner=aligner
     )
     print(fcs["result"])
-

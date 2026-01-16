@@ -1,10 +1,10 @@
-<WFS_Capabilities xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.opengis.net/wfs/2.0"
-                  xmlns:ows="http://www.opengis.net/ows/1.1" xmlns:gml="http://www.opengis.net/gml/3.2"
-                  xmlns:fes="http://www.opengis.net/fes/2.0" xmlns:xlink="http://www.w3.org/1999/xlink"
-                  xmlns:xs="http://www.w3.org/2001/XMLSchema"
+<WFS_Capabilities xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ows="http://www.opengis.net/ows/1.1"
+                  xmlns:gml="http://www.opengis.net/gml/3.2" xmlns:fes="http://www.opengis.net/fes/2.0"
+                  xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xs="http://www.w3.org/2001/XMLSchema"
                   xmlns:inspire_dls="http://inspire.ec.europa.eu/schemas/inspire_dls/1.0"
                   xmlns:inspire_common="http://inspire.ec.europa.eu/schemas/common/1.0"
-                  xmlns:GRB="https://geo.api.vlaanderen.be/GRB" version="2.0.0"
+                  xmlns:GRB="https://geo.api.vlaanderen.be/GRB"
+                  xmlns="http://www.opengis.net/wfs/2.0" version="2.0.0"
                   xsi:schemaLocation="http://www.opengis.net/wfs/2.0 http://schemas.opengis.net/wfs/2.0/wfs.xsd http://inspire.ec.europa.eu/schemas/inspire_dls/1.0 http://inspire.ec.europa.eu/schemas/inspire_dls/1.0/inspire_dls.xsd">
     <ows:ServiceIdentification>
         <ows:Title>WFS GRB</ows:Title>

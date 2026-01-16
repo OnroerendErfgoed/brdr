@@ -1,5 +1,3 @@
-import numpy as np
-
 from brdr.aligner import Aligner
 from brdr.be.grb.enums import GRBType
 from brdr.be.grb.loader import GRBActualLoader
@@ -8,7 +6,7 @@ from brdr.constants import (
     PREDICTION_SCORE,
     RELEVANT_DISTANCE_FIELD_NAME,
 )
-from brdr.enums import AlignerResultType, FullReferenceStrategy
+from brdr.enums import AlignerResultType
 from brdr.loader import GeoJsonFileLoader
 
 # Press the green button in the gutter to run the script.
@@ -26,10 +24,15 @@ if __name__ == "__main__":
         GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=actual_aligner)
     )
     # Use the EVALUATE-function
-    aligner_result = actual_aligner.evaluate(relevant_distances=None, thematic_ids=None, metadata_field=None)
+    aligner_result = actual_aligner.evaluate(
+        relevant_distances=None, thematic_ids=None, metadata_field=None
+    )
     # SHOW the EVALUATED results
     fc = aligner_result.get_results_as_geojson(
-        result_type=AlignerResultType.EVALUATED_PREDICTIONS, add_metadata=True, add_original_attributes=True, aligner=actual_aligner
+        result_type=AlignerResultType.EVALUATED_PREDICTIONS,
+        add_metadata=True,
+        add_original_attributes=True,
+        aligner=actual_aligner,
     )
     print(fc["result"])
 

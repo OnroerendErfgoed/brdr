@@ -30,60 +30,79 @@ STATS_TXT = "stats.txt"
 
 FALSE_POSITIVE_WKT = "falsepositive_wkt"
 DOUBT_WKT = "doubt_wkt"
-BRDR_WKT="brdr_wkt"
+BRDR_WKT = "brdr_wkt"
 ORIGINAL_WKT = "original_wkt"
 
 FP_ANALYSIS_CSV_NAME = "fp_analysis.csv"
 FP_HISTOGRAM_NAME = "fp_histogram.png"
 FP_BOXPLOT_NAME = "fp_boxplot.png"
-FP_ESIMATION_COLUMN_NAME= "fp_estimation"
+FP_ESIMATION_COLUMN_NAME = "fp_estimation"
 
-def get_parcel_lists(aligner,geom):
+
+def get_parcel_lists(aligner, geom):
     parcel_100perc_list = []
     observation = aligner.compare_to_reference(geom)
-    reference_features_list=[]
+    reference_features_list = []
     if "reference_features" in observation:
-        reference_features_list=observation["reference_features"].keys()
-        for k,v in observation["reference_features"].items():
+        reference_features_list = observation["reference_features"].keys()
+        for k, v in observation["reference_features"].items():
             if v["full"]:
                 parcel_100perc_list.append(k)
-    return list(reference_features_list),parcel_100perc_list
+    return list(reference_features_list), parcel_100perc_list
 
 
-def get_buffer_data(aligner, geom, buffers = [0.1, 0.2, 0.5, 1, 2, 3, 4, 5]):
-    buffer_dict={}
+def get_buffer_data(aligner, geom, buffers=[0.1, 0.2, 0.5, 1, 2, 3, 4, 5]):
+    buffer_dict = {}
     for buffer in buffers:
         buffer_dict[buffer] = {}
-        geom_buffered = buffer_neg(geom,buffer)
-        parcel_list,parcel_100perc_list =get_parcel_lists(aligner,geom_buffered)
-        buffer_dict[buffer] ["geometry"]=geom_buffered
-        buffer_dict[buffer] ["parcels"]=parcel_list
-        buffer_dict[buffer] ["parcels_full"]=parcel_100perc_list
+        geom_buffered = buffer_neg(geom, buffer)
+        parcel_list, parcel_100perc_list = get_parcel_lists(aligner, geom_buffered)
+        buffer_dict[buffer]["geometry"] = geom_buffered
+        buffer_dict[buffer]["parcels"] = parcel_list
+        buffer_dict[buffer]["parcels_full"] = parcel_100perc_list
 
     return buffer_dict
 
-def get_coverage_data(aligner, geom, percentages = [0, 1, 5, 10, 50, 90, 95, 99, 100]):
 
-    coverage_dict = {item: {"parcels":[],"count":0} for item in percentages}
+def get_coverage_data(aligner, geom, percentages=[0, 1, 5, 10, 50, 90, 95, 99, 100]):
+
+    coverage_dict = {item: {"parcels": [], "count": 0} for item in percentages}
 
     observation = aligner.compare_to_reference(geom)
     if "reference_features" in observation:
-        for k,v in observation["reference_features"].items():
-            area_percentage =v["percentage"]
+        for k, v in observation["reference_features"].items():
+            area_percentage = v["percentage"]
             for p in percentages:
-                if area_percentage>=p:
+                if area_percentage >= p:
                     coverage_dict[p]["parcels"].append(k)
-                    coverage_dict[p]["count"]+=1
+                    coverage_dict[p]["count"] += 1
 
     return coverage_dict
 
-def get_false_positive_grb_parcels_dataframe(data, id_name, area_limit=inf, processor=None,conn_str=None,tablename="adp",ref_id_name="capakey",geometry_name="geom",crs=DEFAULT_CRS):
+
+def get_false_positive_grb_parcels_dataframe(
+    data,
+    id_name,
+    area_limit=inf,
+    processor=None,
+    conn_str=None,
+    tablename="adp",
+    ref_id_name="capakey",
+    geometry_name="geom",
+    crs=DEFAULT_CRS,
+):
     """
     Processes features to find false positives and logs processing metrics.
     """
 
     # 1. Initialize counters
-    metrics = {"area_limit": area_limit,"total_count": 0, "success_ids": [], "skipped_ids": [], "failed_ids": []}
+    metrics = {
+        "area_limit": area_limit,
+        "total_count": 0,
+        "success_ids": [],
+        "skipped_ids": [],
+        "failed_ids": [],
+    }
     # if not area_limit==inf:
     #     metrics ["area_limit"] = area_limit
 
@@ -92,20 +111,20 @@ def get_false_positive_grb_parcels_dataframe(data, id_name, area_limit=inf, proc
         for k in np.arange(0, 510, 10, dtype=int) / 100
     ]
     srid = from_crs(to_crs(crs), format="id")
-    dict_coverage_list ={}
-    dict_coverage_range ={}
-    dict_coverage_0 ={}
-    dict_coverage_50 ={}
-    dict_buffer_list ={}
+    dict_coverage_list = {}
+    dict_coverage_range = {}
+    dict_coverage_0 = {}
+    dict_coverage_50 = {}
+    dict_buffer_list = {}
     dict_buffer_vip = {}
     dict_buffer_2 = {}
     dict_buffer_5 = {}
     dict_prediction_rd = {}
     dict_prediction = {}
     dict_prediction_wkt = {}
-    dict_prediction_state={}
-    dict_prediction_score={}
-    dict_fp ={}
+    dict_prediction_state = {}
+    dict_prediction_score = {}
+    dict_fp = {}
     dict_fp_parcels = {}
     dict_fp_wkt = {}
     dict_doubt_parcels = {}
@@ -118,7 +137,7 @@ def get_false_positive_grb_parcels_dataframe(data, id_name, area_limit=inf, proc
     count = 0
     processed_data = []
     for f in features:
-        count+=1
+        count += 1
         print(f"Processing feature {count}/{metrics['total_count']}")
         try:
             key = f["properties"][id_name]
@@ -151,16 +170,26 @@ def get_false_positive_grb_parcels_dataframe(data, id_name, area_limit=inf, proc
 
             dict_original_wkt[key] = geom.wkt
             # COVERAGE ANALYSIS
-            coverage_data = get_coverage_data(aligner, geom, percentages=[0, 1, 5, 10, 50, 90, 95, 99, 100])
-            parcel_coverage_counts = [coverage_data[b]["count"] for b in coverage_data.keys()]
+            coverage_data = get_coverage_data(
+                aligner, geom, percentages=[0, 1, 5, 10, 50, 90, 95, 99, 100]
+            )
+            parcel_coverage_counts = [
+                coverage_data[b]["count"] for b in coverage_data.keys()
+            ]
             dict_coverage_list[key] = parcel_coverage_counts
-            dict_coverage_range[key] = parcel_coverage_counts[0] - parcel_coverage_counts[-1]
+            dict_coverage_range[key] = (
+                parcel_coverage_counts[0] - parcel_coverage_counts[-1]
+            )
             dict_coverage_0[key] = parcel_coverage_counts[0]
             dict_coverage_50[key] = parcel_coverage_counts[4]
 
             # BUFFER ANALYSIS
-            buffer_data = get_buffer_data(aligner, geom, buffers=[0.1, 0.2, 0.5, 1, 2, 3, 4, 5])
-            parcel_buffer_counts = [len(buffer_data[b]["parcels"]) for b in buffer_data.keys()]
+            buffer_data = get_buffer_data(
+                aligner, geom, buffers=[0.1, 0.2, 0.5, 1, 2, 3, 4, 5]
+            )
+            parcel_buffer_counts = [
+                len(buffer_data[b]["parcels"]) for b in buffer_data.keys()
+            ]
             dict_buffer_list[key] = parcel_buffer_counts
             dict_buffer_vip[key] = parcel_buffer_counts[1]
             # parcels_vip = buffer_data.get(0.2)["parcels"]
@@ -170,12 +199,11 @@ def get_false_positive_grb_parcels_dataframe(data, id_name, area_limit=inf, proc
             # BRDR ANALYSIS
             # This is done for every feature seperately
             aligner_result = aligner.evaluate(
-                relevant_distances=rds,
-                max_predictions=1,
-                multi_to_best_prediction=True
+                relevant_distances=rds, max_predictions=1, multi_to_best_prediction=True
             )
-            dict_predictions_evaluated = aligner_result.get_results(aligner=aligner,
-                                                                    result_type=AlignerResultType.EVALUATED_PREDICTIONS)
+            dict_predictions_evaluated = aligner_result.get_results(
+                aligner=aligner, result_type=AlignerResultType.EVALUATED_PREDICTIONS
+            )
 
             # Only the prediction with best score is kept (=BEST PREDICTION) -idea? also make a list of all predictions?
             for key, results in dict_predictions_evaluated.items():
@@ -186,8 +214,10 @@ def get_false_positive_grb_parcels_dataframe(data, id_name, area_limit=inf, proc
                 dict_prediction_state[key] = state
                 score = results[rd]["properties"]["brdr_prediction_score"]
                 dict_prediction_score[key] = score
-                print(f"brdr correction: '{state}' with relevant distance {rd}  & score {str(score)} for ID {key}")
-                geom = results[rd]['result']
+                print(
+                    f"brdr correction: '{state}' with relevant distance {rd}  & score {str(score)} for ID {key}"
+                )
+                geom = results[rd]["result"]
                 dict_prediction_wkt[key] = geom_to_wkt(geom)
                 brdr_parcels, parcel_100perc_list = get_parcel_lists(aligner, geom)
                 brdr_parcel_count = len(brdr_parcels)
@@ -198,17 +228,30 @@ def get_false_positive_grb_parcels_dataframe(data, id_name, area_limit=inf, proc
             # En welke zijn dit dan? Deze mee oplijsten
             if not (score is None or score == -1):
                 # vip-buffer minus brdr
-                fp_parcels = list(set(buffer_data[0.2]["parcels"]) - set(brdr_parcels) - set(coverage_data[100]["parcels"]))
+                fp_parcels = list(
+                    set(buffer_data[0.2]["parcels"])
+                    - set(brdr_parcels)
+                    - set(coverage_data[100]["parcels"])
+                )
                 # calculated_false_positives = parcel_buffer_counts[1] - brdr_parcel_count
-                s1, s2, s3 = set(buffer_data[2]["parcels"]), set(coverage_data[50]["parcels"]), set(brdr_parcels)
+                s1, s2, s3 = (
+                    set(buffer_data[2]["parcels"]),
+                    set(coverage_data[50]["parcels"]),
+                    set(brdr_parcels),
+                )
                 all_ids = s1 | s2 | s3
                 common_ids = s1 & s2 & s3
             else:
                 # vip-buffer minus buffer_2
                 fp_parcels = list(
-                    set(buffer_data[0.2]["parcels"]) - set(buffer_data[5]["parcels"]) - set(coverage_data[100]["parcels"]))
+                    set(buffer_data[0.2]["parcels"])
+                    - set(buffer_data[5]["parcels"])
+                    - set(coverage_data[100]["parcels"])
+                )
                 # calculated_false_positives = parcel_buffer_counts[1] -parcel_buffer_counts[-1]
-                s1, s2 = set(buffer_data[2]["parcels"]), set(coverage_data[50]["parcels"])
+                s1, s2 = set(buffer_data[2]["parcels"]), set(
+                    coverage_data[50]["parcels"]
+                )
                 all_ids = s1 | s2
                 common_ids = s1 & s2
 
@@ -269,7 +312,7 @@ def get_false_positive_grb_parcels_dataframe(data, id_name, area_limit=inf, proc
     df.reset_index(inplace=True)
     df.rename(columns={"index": id_name}, inplace=True)
 
-    return df,metrics
+    return df, metrics
 
 
 def get_folder_path(analysis_name):
@@ -279,6 +322,7 @@ def get_folder_path(analysis_name):
     output_dir.mkdir(parents=True, exist_ok=True)
 
     return output_dir
+
 
 def export_wkt_columns_to_geojson(df, wkt_columns, path, crs=DEFAULT_CRS):
     """
@@ -330,7 +374,7 @@ def export_wkt_columns_to_geojson(df, wkt_columns, path, crs=DEFAULT_CRS):
         )
 
 
-def export_stats(df, column_name, tolerance, path,filename=STATS_TXT):
+def export_stats(df, column_name, tolerance, path, filename=STATS_TXT):
     """
     Calculates error statistics for a specific column and exports them to a text file.
 
@@ -387,7 +431,7 @@ def export_stats(df, column_name, tolerance, path,filename=STATS_TXT):
         "P95": percentiles[0.95],
     }
     # 3. Write to file
-    file_path = Path(path /filename)
+    file_path = Path(path / filename)
 
     with open(file_path, "w", encoding="utf-8") as f:
         f.write(f"Stats for column: {column_name}\n")
@@ -402,13 +446,14 @@ def export_stats(df, column_name, tolerance, path,filename=STATS_TXT):
 
     print(f"Statistics for '{column_name}' written to: {file_path}")
 
+
 def export_metrics(metrics, path, filename=METRICS_TXT):
     """Internal helper to write the counter dictionary to a text file."""
     path = Path(path)
     dataset_date = str(path)
     path.parent.mkdir(parents=True, exist_ok=True)
 
-    file_path = Path(path /filename)
+    file_path = Path(path / filename)
 
     with open(file_path, "a", encoding="utf-8") as f:
         f.write("\nDetailed Processing Report\n")
@@ -434,7 +479,14 @@ def export_metrics(metrics, path, filename=METRICS_TXT):
         f.write("-" * 45 + "\n")
 
 
-def export_analysis_results(path,df=None,metrics=None, column_name=FP_ESIMATION_COLUMN_NAME, tolerance=2,wkt_columns=[BRDR_WKT, FALSE_POSITIVE_WKT, DOUBT_WKT]):
+def export_analysis_results(
+    path,
+    df=None,
+    metrics=None,
+    column_name=FP_ESIMATION_COLUMN_NAME,
+    tolerance=2,
+    wkt_columns=[BRDR_WKT, FALSE_POSITIVE_WKT, DOUBT_WKT],
+):
     if df is None:
         df = pd.read_csv(path / FP_ANALYSIS_CSV_NAME)
     if df is None or df.empty:

@@ -1,12 +1,9 @@
-import os
-
 from shapely import from_wkt
 
 from brdr.aligner import Aligner
 from brdr.be.grb.loader import GRBSpecificDateParcelLoader
-from brdr.enums import AlignerInputType, AlignerResultType
+from brdr.enums import AlignerResultType
 from brdr.loader import DictLoader
-from brdr.utils import write_geojson
 from brdr.viz import show_map, print_observation_of_aligner_results
 
 if __name__ == "__main__":
@@ -26,7 +23,7 @@ if __name__ == "__main__":
     aligner.load_reference_data(loader)
 
     # Example how to use the Aligner
-    rel_dist=5
+    rel_dist = 5
     aligner_result = aligner.process(relevant_distances=[rel_dist])
     aligner_result.save_results(path="output/", aligner=aligner)
     thematic_geometries = {

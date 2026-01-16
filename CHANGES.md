@@ -179,3 +179,8 @@
 
 - code cleanup in the runup to 1.0.0 release, including breaking changes
 - add metadata generation
+
+# 0.15.1
+
+- small fixes for missing paths and styling
+- fixed examples for documentation and added documention link
