@@ -2,12 +2,12 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.8.25">
+<meta name="generator" content="quarto-1.8.27">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>Examples - Get Started – BRDR - Aligning borders</title>
+<title>Examples – BRDR - Aligning borders</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -20,41 +20,6 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
-/* CSS for syntax highlighting */
-html { -webkit-text-size-adjust: 100%; }
-pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
-pre > code.sourceCode > span:empty { height: 1.2em; }
-.sourceCode { overflow: visible; }
-code.sourceCode > span { color: inherit; text-decoration: inherit; }
-div.sourceCode { margin: 1em 0; }
-pre.sourceCode { margin: 0; }
-@media screen {
-div.sourceCode { overflow: auto; }
-}
-@media print {
-pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
-}
-pre.numberSource code
-  { counter-reset: source-line 0; }
-pre.numberSource code > span
-  { position: relative; left: -4em; counter-increment: source-line; }
-pre.numberSource code > span > a:first-child::before
-  { content: counter(source-line);
-    position: relative; left: -1em; text-align: right; vertical-align: baseline;
-    border: none; display: inline-block;
-    -webkit-touch-callout: none; -webkit-user-select: none;
-    -khtml-user-select: none; -moz-user-select: none;
-    -ms-user-select: none; user-select: none;
-    padding: 0 4px; width: 4em;
-  }
-pre.numberSource { margin-left: 3em;  padding-left: 4px; }
-div.sourceCode
-  {   }
-@media screen {
-pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
-}
 </style>
 
 
@@ -65,6 +30,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="site_libs/quarto-search/fuse.min.js"></script>
 <script src="site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="./">
+<script src="site_libs/quarto-listing/list.min.js"></script>
+<script src="site_libs/quarto-listing/quarto-listing.js"></script>
 <script src="site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
 <script src="site_libs/quarto-html/axe/axe-check.js" type="module"></script>
@@ -72,10 +39,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="site_libs/quarto-html/anchor.min.js"></script>
 <link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-969ddfa49e00a70eb3423444dbc81f6c.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-f1aadacce99040138bbb613f9330654f.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-66637f7aac715e5a0db970eb374460cc.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-b79b1fcb1424b07627426b9f3ef330b1.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -103,7 +70,65 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     "search-label": "Search"
   }
 }</script>
+<script>
 
+  window.document.addEventListener("DOMContentLoaded", function (_event) {
+    const listingTargetEl = window.document.querySelector('#listing-listing .list');
+    if (!listingTargetEl) {
+      // No listing discovered, do not attach.
+      return; 
+    }
+
+    const options = {
+      valueNames: ['listing-title','listing-description','listing-author','listing-date','listing-categories',{ data: ['index'] },{ data: ['categories'] },{ data: ['listing-date-sort'] },{ data: ['listing-file-modified-sort'] }],
+      
+      searchColumns: ["listing-title","listing-author","listing-date","listing-image","listing-description","listing-categories"],
+    };
+
+    window['quarto-listings'] = window['quarto-listings'] || {};
+    window['quarto-listings']['listing-listing'] = new List('listing-listing', options);
+
+    if (window['quarto-listing-loaded']) {
+      window['quarto-listing-loaded']();
+    }
+  });
+
+  window.addEventListener('hashchange',() => {
+    if (window['quarto-listing-loaded']) {
+      window['quarto-listing-loaded']();
+    }
+  })
+  </script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
 
 </head>
 
@@ -141,6 +166,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <a class="nav-link active" href="./examples.html" aria-current="page"> 
 <span class="menu-text">Examples</span></a>
   </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./qa.html"> 
+<span class="menu-text">Q &amp; A</span></a>
+  </li>  
 </ul>
           </div> <!-- /navcollapse -->
             <div class="quarto-navbar-tools">
@@ -152,15 +181,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
 <!-- sidebar -->
 <!-- margin-sidebar -->
-    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
         
-    </div>
+    <h5 class="quarto-listing-category-title">Categories</h5><div class="quarto-listing-category category-default"><div class="category" data-category="">All <span class="quarto-category-count">(8)</span></div><div class="category" data-category="QW5pbWF0aW9u">Animation <span class="quarto-category-count">(1)</span></div><div class="category" data-category="RXZhbHVhdGlvbg==">Evaluation <span class="quarto-category-count">(1)</span></div><div class="category" data-category="R2VvanNvbkxvYWRlcg==">GeojsonLoader <span class="quarto-category-count">(1)</span></div><div class="category" data-category="R3JhcGg=">Graph <span class="quarto-category-count">(1)</span></div><div class="category" data-category="TGFtYmVydDcyJTJGMDg=">Lambert72/08 <span class="quarto-category-count">(1)</span></div><div class="category" data-category="TG9hZGVy">Loader <span class="quarto-category-count">(2)</span></div><div class="category" data-category="TmV0d29ya0dlb21ldHJ5UHJvY2Vzc29y">NetworkGeometryProcessor <span class="quarto-category-count">(1)</span></div><div class="category" data-category="UHJlZGljdGlvbg==">Prediction <span class="quarto-category-count">(2)</span></div><div class="category" data-category="UHJvY2Vzcw==">Process <span class="quarto-category-count">(1)</span></div><div class="category" data-category="VHJhbnNmb3JtYXRpb24=">Transformation <span class="quarto-category-count">(1)</span></div></div></div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">Examples - Get Started</h1>
+<h1 class="title">Examples</h1>
 </div>
 
 
@@ -177,100 +206,257 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<p>This example shows a basic example of the Aligner</p>
-<div id="31e9e7d4" class="cell" data-execution_count="1">
-<details class="code-fold">
-<summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.aligner <span class="im">import</span> Aligner</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.enums <span class="im">import</span> OpenDomainStrategy</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.geometry_utils <span class="im">import</span> geom_from_wkt</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.loader <span class="im">import</span> DictLoader</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co"># CREATE AN ALIGNER</span></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>aligner <span class="op">=</span> Aligner(</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    crs<span class="op">=</span><span class="st">"EPSG:31370"</span>,</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co"># ADD A THEMATIC POLYGON TO THEMATIC DICTIONARY and LOAD into Aligner</span></span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>thematic_dict <span class="op">=</span> {<span class="st">"theme_id_1"</span>: geom_from_wkt(<span class="st">"POLYGON ((0 0, 0 9, 5 10, 10 0, 0 0))"</span>)}</span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>loader <span class="op">=</span> DictLoader(thematic_dict)</span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>aligner.load_thematic_data(loader)</span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co"># ADD A REFERENCE POLYGON TO REFERENCE DICTIONARY and LOAD into Aligner</span></span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>reference_dict <span class="op">=</span> {<span class="st">"ref_id_1"</span>: geom_from_wkt(<span class="st">"POLYGON ((0 1, 0 10,8 10,10 1,0 1))"</span>)}</span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>loader <span class="op">=</span> DictLoader(reference_dict)</span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>aligner.load_reference_data(loader)</span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="co"># EXECUTE THE ALIGNMENT</span></span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>relevant_distance <span class="op">=</span> <span class="dv">1</span></span>
-<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>process_result <span class="op">=</span> aligner.process(</span>
-<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    relevant_distance<span class="op">=</span>relevant_distance,</span>
-<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    od_strategy<span class="op">=</span>OpenDomainStrategy.SNAP_INNER_SIDE,</span>
-<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>    threshold_overlap_percentage<span class="op">=</span><span class="dv">50</span>,</span>
-<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a><span class="co"># PRINT RESULTS IN WKT</span></span>
-<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"result: "</span> <span class="op">+</span> process_result[<span class="st">"theme_id_1"</span>][relevant_distance][<span class="st">"result"</span>].wkt)</span>
-<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(</span>
-<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>    <span class="st">"added area: "</span></span>
-<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>    <span class="op">+</span> process_result[<span class="st">"theme_id_1"</span>][relevant_distance][<span class="st">"result_diff_plus"</span>].wkt</span>
-<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(</span>
-<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>    <span class="st">"removed area: "</span></span>
-<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>    <span class="op">+</span> process_result[<span class="st">"theme_id_1"</span>][relevant_distance][<span class="st">"result_diff_min"</span>].wkt</span>
-<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</details>
-<div class="cell-output cell-output-stdout">
-<pre><code>result: POLYGON ((0.2928932188134523 0.2928932188134525, 0.1685303876974549 0.4444297669803975, 0.0761204674887134 0.6173165676349098, 0.0192147195967695 0.8049096779838716, 0 1, 0 10, 4.999999999999999 10, 9.500000000000004 1, 9.381966011250102 1, 9.36275129165333 0.8049096779838723, 9.305845543761384 0.6173165676348947, 9.213435623552671 0.4444297669804294, 9.089072792436635 0.2928932188134386, 8.937536244269706 0.1685303876974548, 8.76464944361519 0.0761204674887132, 8.577056333266233 0.0192147195967696, 8.3819660112501 -1.734723475976807e-18, 0.9999999999999997 -1.734723475976807e-18, 0.8049096779838718 0.0192147195967696, 0.6173165676349087 0.0761204674887139, 0.4444297669803966 0.1685303876974555, 0.2928932188134523 0.2928932188134525))
-added area: POLYGON ((0 10, 4.99850865709512 10, 4.9985376179666465 9.99970752359333, 0 9, 0 10))
-removed area: MULTIPOLYGON (((0.0761204674887134 0.6173165676349098, 0.1685303876974549 0.4444297669803975, 0.2928932188134523 0.2928932188134525, 0.4444297669803966 0.1685303876974556, 0.6173165676349087 0.0761204674887139, 0.8682521196030504 0, 1.734723475976807e-18 0, 1.734723475976807e-18 0.86825211960305, 0.0761204674887134 0.6173165676349098)), ((8.76464944361519 0.0761204674887132, 8.937536244269706 0.1685303876974548, 9.089072792436633 0.2928932188134385, 9.213435623552671 0.4444297669804296, 9.305845543761384 0.6173165676348947, 9.36275129165333 0.8049096779838723, 9.381966011250102 1, 9.5 1, 10 0, 8.513713891647056 0, 8.76464944361519 0.0761204674887132)))</code></pre>
-</div>
-</div>
-<p>This example shows a plotted example - (todo)</p>
-<div id="23ba7deb" class="cell" data-execution_count="2">
-<details class="code-fold">
-<summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.aligner <span class="im">import</span> Aligner</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.enums <span class="im">import</span> OpenDomainStrategy</span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.geometry_utils <span class="im">import</span> geom_from_wkt</span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.loader <span class="im">import</span> DictLoader</span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co"># CREATE AN ALIGNER</span></span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>aligner <span class="op">=</span> Aligner(</span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    crs<span class="op">=</span><span class="st">"EPSG:31370"</span>,</span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="co"># ADD A THEMATIC POLYGON TO THEMATIC DICTIONARY and LOAD into Aligner</span></span>
-<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>thematic_dict <span class="op">=</span> {<span class="st">"theme_id_1"</span>: geom_from_wkt(<span class="st">"POLYGON ((0 0, 0 9, 5 10, 10 0, 0 0))"</span>)}</span>
-<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>loader <span class="op">=</span> DictLoader(thematic_dict)</span>
-<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>aligner.load_thematic_data(loader)</span>
-<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="co"># ADD A REFERENCE POLYGON TO REFERENCE DICTIONARY and LOAD into Aligner</span></span>
-<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>reference_dict <span class="op">=</span> {<span class="st">"ref_id_1"</span>: geom_from_wkt(<span class="st">"POLYGON ((0 1, 0 10,8 10,10 1,0 1))"</span>)}</span>
-<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>loader <span class="op">=</span> DictLoader(reference_dict)</span>
-<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>aligner.load_reference_data(loader)</span>
-<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a><span class="co"># EXECUTE THE ALIGNMENT</span></span>
-<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>relevant_distance <span class="op">=</span> <span class="dv">1</span></span>
-<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>process_result <span class="op">=</span> aligner.process(</span>
-<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>    relevant_distance<span class="op">=</span>relevant_distance,</span>
-<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>    od_strategy<span class="op">=</span>OpenDomainStrategy.SNAP_INNER_SIDE,</span>
-<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>    threshold_overlap_percentage<span class="op">=</span><span class="dv">50</span>,</span>
-<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a><span class="co"># PRINT RESULTS IN WKT</span></span>
-<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"result: "</span> <span class="op">+</span> process_result[<span class="st">"theme_id_1"</span>][relevant_distance][<span class="st">"result"</span>].wkt)</span>
-<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(</span>
-<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>    <span class="st">"added area: "</span></span>
-<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>    <span class="op">+</span> process_result[<span class="st">"theme_id_1"</span>][relevant_distance][<span class="st">"result_diff_plus"</span>].wkt</span>
-<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(</span>
-<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a>    <span class="st">"removed area: "</span></span>
-<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a>    <span class="op">+</span> process_result[<span class="st">"theme_id_1"</span>][relevant_distance][<span class="st">"result_diff_min"</span>].wkt</span>
-<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</details>
-<div class="cell-output cell-output-stdout">
-<pre><code>result: POLYGON ((0.2928932188134523 0.2928932188134525, 0.1685303876974549 0.4444297669803975, 0.0761204674887134 0.6173165676349098, 0.0192147195967695 0.8049096779838716, 0 1, 0 10, 4.999999999999999 10, 9.500000000000004 1, 9.381966011250102 1, 9.36275129165333 0.8049096779838723, 9.305845543761384 0.6173165676348947, 9.213435623552671 0.4444297669804294, 9.089072792436635 0.2928932188134386, 8.937536244269706 0.1685303876974548, 8.76464944361519 0.0761204674887132, 8.577056333266233 0.0192147195967696, 8.3819660112501 -1.734723475976807e-18, 0.9999999999999997 -1.734723475976807e-18, 0.8049096779838718 0.0192147195967696, 0.6173165676349087 0.0761204674887139, 0.4444297669803966 0.1685303876974555, 0.2928932188134523 0.2928932188134525))
-added area: POLYGON ((0 10, 4.99850865709512 10, 4.9985376179666465 9.99970752359333, 0 9, 0 10))
-removed area: MULTIPOLYGON (((0.0761204674887134 0.6173165676349098, 0.1685303876974549 0.4444297669803975, 0.2928932188134523 0.2928932188134525, 0.4444297669803966 0.1685303876974556, 0.6173165676349087 0.0761204674887139, 0.8682521196030504 0, 1.734723475976807e-18 0, 1.734723475976807e-18 0.86825211960305, 0.0761204674887134 0.6173165676349098)), ((8.76464944361519 0.0761204674887132, 8.937536244269706 0.1685303876974548, 9.089072792436633 0.2928932188134385, 9.213435623552671 0.4444297669804296, 9.305845543761384 0.6173165676348947, 9.36275129165333 0.8049096779838723, 9.381966011250102 1, 9.5 1, 10 0, 8.513713891647056 0, 8.76464944361519 0.0761204674887132)))</code></pre>
-</div>
-</div>
+<p>Here you can find several examples how ‘brdr’ can be used:</p>
 
 
 
-</main> <!-- /main -->
+
+<div class="quarto-listing quarto-listing-container-grid" id="listing-listing">
+<div class="listing-actions-group">
+   <div class="input-group input-group-sm quarto-listing-sort">
+    <span class="input-group-text"><i class="bi bi-sort-down"></i></span>
+    <select id="listing-listing-sort" class="form-select" aria-label="Order By" onchange="window['quarto-listings']['listing-listing'].sort(this.options[this.selectedIndex].value, { order: this.options[this.selectedIndex].getAttribute('data-direction')})">
+      <option value="" disabled="" selected="" hidden="">Order By</option>
+      <option value="index" data-direction="asc">Default</option>
+      <option value="listing-title" data-direction="asc">
+        Title
+      </option>
+      <option value="listing-date-sort" data-direction="asc">
+        Date - Oldest
+      </option>
+      <option value="listing-date-sort" data-direction="desc">
+        Date - Newest
+      </option>
+      <option value="listing-author" data-direction="asc">
+        Author
+      </option>
+    </select>
+  </div>
+    <div class="input-group input-group-sm quarto-listing-filter">
+      <span class="input-group-text"><i class="bi bi-search"></i></span>
+      <input type="text" class="search form-control" placeholder="Filter">
+    </div>
+</div>
+<div class="list grid quarto-listing-cols-3">
+<div class="g-col-1" data-index="0" data-categories="TG9hZGVyJTJDR2VvanNvbkxvYWRlcg==" data-listing-date-sort="1768348800000" data-listing-file-modified-sort="1768605429165" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="1" data-listing-word-count-sort="21">
+<a href="./examples/example_geojsonloader.html" class="quarto-grid-link">
+<div class="quarto-grid-item card h-100 card-left">
+<div class="card-body post-contents">
+<h5 class="no-anchor card-title listing-title">
+GeojsonLoader
+</h5>
+<div class="listing-categories">
+
+<div class="listing-category" onclick="window.quartoListingCategory('TG9hZGVy'); return false;">Loader</div>
+
+<div class="listing-category" onclick="window.quartoListingCategory('R2VvanNvbkxvYWRlcg=='); return false;">GeojsonLoader</div>
+
+</div>
+<div class="card-text listing-description delink">
+<p>example how a GeojsonLoader is used to load thematic data</p>
+</div>
+<div class="card-attribution card-text-small justify">
+<div class="listing-author">
+Karel Dieussaert
+</div>
+<div class="listing-date">
+Jan 14, 2026
+</div>
+</div>
+</div>
+</div></a>
+</div>
+<div class="g-col-1" data-index="1" data-categories="TGFtYmVydDcyJTJGMDglMkNUcmFuc2Zvcm1hdGlvbg==" data-listing-date-sort="1768348800000" data-listing-file-modified-sort="1768605429165" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="1" data-listing-word-count-sort="32">
+<a href="./examples/example_lambert72_to_lambert08.html" class="quarto-grid-link">
+<div class="quarto-grid-item card h-100 card-left">
+<div class="card-body post-contents">
+<h5 class="no-anchor card-title listing-title">
+Lambert72 to Lambert 08
+</h5>
+<div class="listing-categories">
+
+<div class="listing-category" onclick="window.quartoListingCategory('TGFtYmVydDcyJTJGMDg='); return false;">Lambert72/08</div>
+
+<div class="listing-category" onclick="window.quartoListingCategory('VHJhbnNmb3JtYXRpb24='); return false;">Transformation</div>
+
+</div>
+<div class="card-text listing-description delink">
+<p>Simple example to align a data-object after Lambert72/08-transformation</p>
+</div>
+<div class="card-attribution card-text-small justify">
+<div class="listing-author">
+Karel Dieussaert
+</div>
+<div class="listing-date">
+Jan 14, 2026
+</div>
+</div>
+</div>
+</div></a>
+</div>
+<div class="g-col-1" data-index="2" data-categories="QW5pbWF0aW9u" data-listing-date-sort="1767744000000" data-listing-file-modified-sort="1768605429165" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="1" data-listing-word-count-sort="58">
+<a href="./examples/example_animation.html" class="quarto-grid-link">
+<div class="quarto-grid-item card h-100 card-left">
+<div class="card-body post-contents">
+<h5 class="no-anchor card-title listing-title">
+Animated GIF
+</h5>
+<div class="listing-categories">
+
+<div class="listing-category" onclick="window.quartoListingCategory('QW5pbWF0aW9u'); return false;">Animation</div>
+
+</div>
+<div class="card-text listing-description delink">
+<p>Example to create a animated GIF showing the principle of <strong>brdr</strong></p>
+</div>
+<div class="card-attribution card-text-small justify">
+<div class="listing-author">
+Karel Dieussaert
+</div>
+<div class="listing-date">
+Jan 7, 2026
+</div>
+</div>
+</div>
+</div></a>
+</div>
+<div class="g-col-1" data-index="3" data-categories="UHJlZGljdGlvbg==" data-listing-date-sort="1767744000000" data-listing-file-modified-sort="1768605429165" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="1" data-listing-word-count-sort="24">
+<a href="./examples/example_predict.html" class="quarto-grid-link">
+<div class="quarto-grid-item card h-100 card-left">
+<div class="card-body post-contents">
+<h5 class="no-anchor card-title listing-title">
+Prediction
+</h5>
+<div class="listing-categories">
+
+<div class="listing-category" onclick="window.quartoListingCategory('UHJlZGljdGlvbg=='); return false;">Prediction</div>
+
+</div>
+<div class="card-text listing-description delink">
+<p>Example of a simple prediction by using <strong>brdr</strong></p>
+</div>
+<div class="card-attribution card-text-small justify">
+<div class="listing-author">
+Karel Dieussaert
+</div>
+<div class="listing-date">
+Jan 7, 2026
+</div>
+</div>
+</div>
+</div></a>
+</div>
+<div class="g-col-1" data-index="4" data-categories="TmV0d29ya0dlb21ldHJ5UHJvY2Vzc29yJTJDUHJlZGljdGlvbiUyQ0dyYXBo" data-listing-date-sort="1767744000000" data-listing-file-modified-sort="1768605429165" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="1" data-listing-word-count-sort="59">
+<a href="./examples/example_networkgeometryprocessor.html" class="quarto-grid-link">
+<div class="quarto-grid-item card h-100 card-left">
+<div class="card-body post-contents">
+<h5 class="no-anchor card-title listing-title">
+NetworkGeometryProcessor
+</h5>
+<div class="listing-categories">
+
+<div class="listing-category" onclick="window.quartoListingCategory('TmV0d29ya0dlb21ldHJ5UHJvY2Vzc29y'); return false;">NetworkGeometryProcessor</div>
+
+<div class="listing-category" onclick="window.quartoListingCategory('UHJlZGljdGlvbg=='); return false;">Prediction</div>
+
+<div class="listing-category" onclick="window.quartoListingCategory('R3JhcGg='); return false;">Graph</div>
+
+</div>
+<div class="card-text listing-description delink">
+<p>Simple example to get started</p>
+</div>
+<div class="card-attribution card-text-small justify">
+<div class="listing-author">
+Karel Dieussaert
+</div>
+<div class="listing-date">
+Jan 7, 2026
+</div>
+</div>
+</div>
+</div></a>
+</div>
+<div class="g-col-1" data-index="5" data-categories="UHJvY2Vzcw==" data-listing-date-sort="1767744000000" data-listing-file-modified-sort="1768605429165" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="1" data-listing-word-count-sort="15">
+<a href="./examples/example_readme.html" class="quarto-grid-link">
+<div class="quarto-grid-item card h-100 card-left">
+<div class="card-body post-contents">
+<h5 class="no-anchor card-title listing-title">
+Get Started
+</h5>
+<div class="listing-categories">
+
+<div class="listing-category" onclick="window.quartoListingCategory('UHJvY2Vzcw=='); return false;">Process</div>
+
+</div>
+<div class="card-text listing-description delink">
+<p>Simple example to get started</p>
+</div>
+<div class="card-attribution card-text-small justify">
+<div class="listing-author">
+Karel Dieussaert
+</div>
+<div class="listing-date">
+Jan 7, 2026
+</div>
+</div>
+</div>
+</div></a>
+</div>
+<div class="g-col-1" data-index="6" data-categories="TG9hZGVy" data-listing-date-sort="1767744000000" data-listing-file-modified-sort="1768605429165" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="1" data-listing-word-count-sort="16">
+<a href="./examples/example_dictloader.html" class="quarto-grid-link">
+<div class="quarto-grid-item card h-100 card-left">
+<div class="card-body post-contents">
+<h5 class="no-anchor card-title listing-title">
+DictLoader
+</h5>
+<div class="listing-categories">
+
+<div class="listing-category" onclick="window.quartoListingCategory('TG9hZGVy'); return false;">Loader</div>
+
+</div>
+<div class="card-text listing-description delink">
+<p>example how a DictLoader is used to load a Dictionary of thematic data</p>
+</div>
+<div class="card-attribution card-text-small justify">
+<div class="listing-author">
+Karel Dieussaert
+</div>
+<div class="listing-date">
+Jan 7, 2026
+</div>
+</div>
+</div>
+</div></a>
+</div>
+<div class="g-col-1" data-index="7" data-categories="RXZhbHVhdGlvbg==" data-listing-date-sort="1767744000000" data-listing-file-modified-sort="1768605429165" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="1" data-listing-word-count-sort="24">
+<a href="./examples/example_evaluate.html" class="quarto-grid-link">
+<div class="quarto-grid-item card h-100 card-left">
+<div class="card-body post-contents">
+<h5 class="no-anchor card-title listing-title">
+Evaluation
+</h5>
+<div class="listing-categories">
+
+<div class="listing-category" onclick="window.quartoListingCategory('RXZhbHVhdGlvbg=='); return false;">Evaluation</div>
+
+</div>
+<div class="card-text listing-description delink">
+<p>Example of a simple Evaluation by using <strong>brdr</strong></p>
+</div>
+<div class="card-attribution card-text-small justify">
+<div class="listing-author">
+Karel Dieussaert
+</div>
+<div class="listing-date">
+Jan 7, 2026
+</div>
+</div>
+</div>
+</div></a>
+</div>
+</div>
+<div class="listing-no-matching d-none">No matching items</div>
+</div></main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {
     const icon = "";
@@ -676,4 +862,4 @@ removed area: MULTIPOLYGON (((0.0761204674887134 0.6173165676349098, 0.168530387
 
 
 
-</body></html>
+<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/examples.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>

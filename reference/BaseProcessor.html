@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>dictloader – BRDR - Aligning borders</title>
+<title>baseprocessor – BRDR - Aligning borders</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -156,7 +156,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/Loader.html">Loaders</a></li><li class="breadcrumb-item"><a href="../reference/DictLoader.html">DictLoader</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/BaseProcessor.html">Processors</a></li><li class="breadcrumb-item"><a href="../reference/BaseProcessor.html">BaseProcessor</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
     </div>
@@ -237,7 +237,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/DictLoader.html" class="sidebar-item-text sidebar-link active">
+  <a href="../reference/DictLoader.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">DictLoader</span></a>
   </div>
 </li>
@@ -284,7 +284,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/BaseProcessor.html" class="sidebar-item-text sidebar-link">
+  <a href="../reference/BaseProcessor.html" class="sidebar-item-text sidebar-link active">
  <span class="menu-text">BaseProcessor</span></a>
   </div>
 </li>
@@ -540,32 +540,57 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#brdr.loader.DictLoader" id="toc-brdr.loader.DictLoader" class="nav-link active" data-scroll-target="#brdr.loader.DictLoader">DictLoader</a>
+  <li><a href="#brdr.processor.BaseProcessor" id="toc-brdr.processor.BaseProcessor" class="nav-link active" data-scroll-target="#brdr.processor.BaseProcessor">BaseProcessor</a>
   <ul class="collapse">
+  <li><a href="#attributes" id="toc-attributes" class="nav-link" data-scroll-target="#attributes">Attributes</a></li>
   <li><a href="#methods" id="toc-methods" class="nav-link" data-scroll-target="#methods">Methods</a>
   <ul class="collapse">
-  <li><a href="#brdr.loader.DictLoader.load_data" id="toc-brdr.loader.DictLoader.load_data" class="nav-link" data-scroll-target="#brdr.loader.DictLoader.load_data">load_data</a></li>
+  <li><a href="#brdr.processor.BaseProcessor.process" id="toc-brdr.processor.BaseProcessor.process" class="nav-link" data-scroll-target="#brdr.processor.BaseProcessor.process">process</a></li>
   </ul></li>
   </ul></li>
   </ul>
-<div class="toc-actions"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/reference/DictLoader.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
+<div class="toc-actions"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/reference/BaseProcessor.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
 <!-- main -->
-<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/Loader.html">Loaders</a></li><li class="breadcrumb-item"><a href="../reference/DictLoader.html">DictLoader</a></li></ol></nav></header>
+<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/BaseProcessor.html">Processors</a></li><li class="breadcrumb-item"><a href="../reference/BaseProcessor.html">BaseProcessor</a></li></ol></nav></header>
 
 
 
 
-<section id="brdr.loader.DictLoader" class="level1">
-<h1>DictLoader</h1>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>loader.DictLoader(</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    data_dict,</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    data_dict_properties<span class="op">=</span>{},</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    data_dict_source<span class="op">=</span>{<span class="st">'source_url'</span>: <span class="va">None</span>},</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    is_reference<span class="op">=</span><span class="va">False</span>,</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Loader that accepts data directly from Python dictionaries.</p>
-<p>Useful for integrating with existing in-memory data structures.</p>
+<section id="brdr.processor.BaseProcessor" class="level1">
+<h1>BaseProcessor</h1>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>processor.BaseProcessor(config, feedback<span class="op">=</span><span class="va">None</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Abstract base class for geometric alignment processors.</p>
+<p>The processor is responsible for the core alignment logic between thematic geometries and reference data. It provides a standardized pipeline for processing, cleaning, and validating resulting geometries.</p>
+<section id="attributes" class="level2 doc-section doc-section-attributes">
+<h2 class="doc-section doc-section-attributes anchored" data-anchor-id="attributes">Attributes</h2>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>config</td>
+<td><a href="`brdr.configs.ProcessorConfig`">ProcessorConfig</a></td>
+<td>Configuration object containing thresholds and strategy settings.</td>
+</tr>
+<tr class="even">
+<td>feedback</td>
+<td>(<a href="`typing.Any`">Any</a>, <a href="`optional`">optional</a>)</td>
+<td>Feedback mechanism for reporting progress or logs.</td>
+</tr>
+<tr class="odd">
+<td>logger</td>
+<td><a href="`brdr.logger.Logger`">Logger</a></td>
+<td>Internal logger for debugging and user feedback.</td>
+</tr>
+</tbody>
+</table>
+</section>
 <section id="methods" class="level2">
 <h2 class="anchored" data-anchor-id="methods">Methods</h2>
 <table class="caption-top table">
@@ -577,17 +602,101 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
-<td><a href="#brdr.loader.DictLoader.load_data">load_data</a></td>
-<td>Executes the standard loading process.</td>
+<td><a href="#brdr.processor.BaseProcessor.process">process</a></td>
+<td>Abstract method to align a single geometry to the reference layer.</td>
 </tr>
 </tbody>
 </table>
-<section id="brdr.loader.DictLoader.load_data" class="level3">
-<h3 class="anchored" data-anchor-id="brdr.loader.DictLoader.load_data">load_data</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>loader.DictLoader.load_data()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Executes the standard loading process.</p>
+<section id="brdr.processor.BaseProcessor.process" class="level3">
+<h3 class="anchored" data-anchor-id="brdr.processor.BaseProcessor.process">process</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>processor.BaseProcessor.process(</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    correction_distance,</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    reference_data,</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    input_geometry,</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    mitre_limit,</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    relevant_distance,</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    thematic_data,</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    id_thematic,</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Abstract method to align a single geometry to the reference layer.</p>
+<section id="parameters" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>correction_distance</td>
+<td><a href="`float`">float</a></td>
+<td>Small buffer distance used to filter out geometric noise.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td>reference_data</td>
+<td><a href="`brdr.feature_data.AlignerFeatureCollection`">AlignerFeatureCollection</a></td>
+<td>The collection of reference geometries (the ‘target’).</td>
+<td><em>required</em></td>
+</tr>
+<tr class="odd">
+<td>input_geometry</td>
+<td><a href="`shapely.geometry.base.BaseGeometry`">BaseGeometry</a></td>
+<td>The thematic geometry to be aligned.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td>mitre_limit</td>
+<td><a href="`float`">float</a></td>
+<td>The mitre limit used for buffering operations.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="odd">
+<td>relevant_distance</td>
+<td><a href="`float`">float</a></td>
+<td>The maximum distance within which alignment should occur.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td>thematic_data</td>
+<td><a href="`brdr.feature_data.AlignerFeatureCollection`">AlignerFeatureCollection</a></td>
+<td>The full thematic collection for context.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="odd">
+<td>id_thematic</td>
+<td><a href="`typing.Any`">Any</a></td>
+<td>The unique identifier of the feature being processed.</td>
+<td><em>required</em></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="returns" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns">Returns</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td><a href="`brdr.typings.ProcessResult`">ProcessResult</a></td>
+<td>A dictionary containing the resulting geometry and difference metrics.</td>
+</tr>
+</tbody>
+</table>
 
 
+</section>
 </section>
 </section>
 </section>
@@ -998,4 +1107,4 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 
-<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/reference/DictLoader.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>
+<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/reference/BaseProcessor.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>

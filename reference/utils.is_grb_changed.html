@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>dictloader – BRDR - Aligning borders</title>
+<title>utils.is_grb_changed – BRDR - Aligning borders</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -156,7 +156,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/Loader.html">Loaders</a></li><li class="breadcrumb-item"><a href="../reference/DictLoader.html">DictLoader</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/loader.GRBActualLoader.html">GRB (Flanders-specific)</a></li><li class="breadcrumb-item"><a href="../reference/utils.is_grb_changed.html">utils.is_grb_changed</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
     </div>
@@ -237,7 +237,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/DictLoader.html" class="sidebar-item-text sidebar-link active">
+  <a href="../reference/DictLoader.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">DictLoader</span></a>
   </div>
 </li>
@@ -460,7 +460,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/utils.is_grb_changed.html" class="sidebar-item-text sidebar-link">
+  <a href="../reference/utils.is_grb_changed.html" class="sidebar-item-text sidebar-link active">
  <span class="menu-text">utils.is_grb_changed</span></a>
   </div>
 </li>
@@ -540,56 +540,30 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#brdr.loader.DictLoader" id="toc-brdr.loader.DictLoader" class="nav-link active" data-scroll-target="#brdr.loader.DictLoader">DictLoader</a>
-  <ul class="collapse">
-  <li><a href="#methods" id="toc-methods" class="nav-link" data-scroll-target="#methods">Methods</a>
-  <ul class="collapse">
-  <li><a href="#brdr.loader.DictLoader.load_data" id="toc-brdr.loader.DictLoader.load_data" class="nav-link" data-scroll-target="#brdr.loader.DictLoader.load_data">load_data</a></li>
-  </ul></li>
-  </ul></li>
+  <li><a href="#brdr.be.grb.utils.is_grb_changed" id="toc-brdr.be.grb.utils.is_grb_changed" class="nav-link active" data-scroll-target="#brdr.be.grb.utils.is_grb_changed">utils.is_grb_changed</a></li>
   </ul>
-<div class="toc-actions"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/reference/DictLoader.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
+<div class="toc-actions"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/reference/utils.is_grb_changed.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
 <!-- main -->
-<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/Loader.html">Loaders</a></li><li class="breadcrumb-item"><a href="../reference/DictLoader.html">DictLoader</a></li></ol></nav></header>
+<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/loader.GRBActualLoader.html">GRB (Flanders-specific)</a></li><li class="breadcrumb-item"><a href="../reference/utils.is_grb_changed.html">utils.is_grb_changed</a></li></ol></nav></header>
 
 
 
 
-<section id="brdr.loader.DictLoader" class="level1">
-<h1>DictLoader</h1>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>loader.DictLoader(</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    data_dict,</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    data_dict_properties<span class="op">=</span>{},</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    data_dict_source<span class="op">=</span>{<span class="st">'source_url'</span>: <span class="va">None</span>},</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    is_reference<span class="op">=</span><span class="va">False</span>,</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Loader that accepts data directly from Python dictionaries.</p>
-<p>Useful for integrating with existing in-memory data structures.</p>
-<section id="methods" class="level2">
-<h2 class="anchored" data-anchor-id="methods">Methods</h2>
-<table class="caption-top table">
-<thead>
-<tr class="header">
-<th>Name</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td><a href="#brdr.loader.DictLoader.load_data">load_data</a></td>
-<td>Executes the standard loading process.</td>
-</tr>
-</tbody>
-</table>
-<section id="brdr.loader.DictLoader.load_data" class="level3">
-<h3 class="anchored" data-anchor-id="brdr.loader.DictLoader.load_data">load_data</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>loader.DictLoader.load_data()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Executes the standard loading process.</p>
+<section id="brdr.be.grb.utils.is_grb_changed" class="level1">
+<h1>utils.is_grb_changed</h1>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>be.grb.utils.is_grb_changed(</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    geometry,</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    grb_type<span class="op">=</span>GRBType.ADP,</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    date_start<span class="op">=</span>date.today(),</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    date_end<span class="op">=</span>date.today(),</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    border_distance<span class="op">=</span><span class="dv">0</span>,</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    crs<span class="op">=</span>DEFAULT_CRS,</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>checks if a geometry is possibly affected by changes in the reference layer during a specified timespan Args: geometry: Geometry to check on GRB-changes grb_type: Type of GRB (parcels, buildings,artwork,…) to check date_start: Start of timespan to check if GRB-changes has occurred date_end: End of timespan to check if GRB-changes has occurred border_distance: Distance that can be used to only check the ‘border’ of the geometry, so ‘big’ geometries with internal parcel-updates are not affected (Default:0, indicating that the full geometry is checked fot GRB-changes) crs: Coordinate reference system to use</p>
+<p>Returns: Boolean, indicating if GRB is changed underneath the geometry</p>
 
 
-</section>
-</section>
 </section>
 
 </main> <!-- /main -->
@@ -998,4 +972,4 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 
-<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/reference/DictLoader.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>
+<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/reference/utils.is_grb_changed.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>

@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.8.25">
+<meta name="generator" content="quarto-1.8.27">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -72,10 +72,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-969ddfa49e00a70eb3423444dbc81f6c.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-f1aadacce99040138bbb613f9330654f.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-66637f7aac715e5a0db970eb374460cc.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-b79b1fcb1424b07627426b9f3ef330b1.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -103,6 +103,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     "search-label": "Search"
   }
 }</script>
+<script src="../site_libs/quarto-diagram/mermaid.min.js"></script>
+<script src="../site_libs/quarto-diagram/mermaid-init.js"></script>
+<link href="../site_libs/quarto-diagram/mermaid.css" rel="stylesheet">
 
 
 </head>
@@ -129,17 +132,21 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
           <div class="collapse navbar-collapse" id="navbarCollapse">
             <ul class="navbar-nav navbar-nav-scroll me-auto">
   <li class="nav-item">
-    <a class="nav-link active" href="../index.html" aria-current="page"> <i class="bi bi-house-fill" role="img">
+    <a class="nav-link" href="../index.html"> <i class="bi bi-house-fill" role="img">
 </i> 
 <span class="menu-text">Home</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="../reference/index.html"> 
+    <a class="nav-link active" href="../reference/index.html" aria-current="page"> 
 <span class="menu-text">Reference</span></a>
   </li>  
   <li class="nav-item">
     <a class="nav-link" href="../examples.html"> 
 <span class="menu-text">Examples</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../qa.html"> 
+<span class="menu-text">Q &amp; A</span></a>
   </li>  
 </ul>
           </div> <!-- /navcollapse -->
@@ -162,10 +169,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
 <!-- sidebar -->
   <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
-    <div class="pt-lg-2 mt-2 text-left sidebar-header">
-      <a href="../index.html" class="sidebar-logo-link">
-      </a>
-      </div>
     <div class="sidebar-menu-container"> 
     <ul class="list-unstyled mt-1">
         <li class="sidebar-item">
@@ -189,17 +192,46 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="menu-text">Aligner</span></a>
   </div>
 </li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/AlignerResult.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">AlignerResult</span></a>
+  </div>
+</li>
       </ul>
   </li>
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
             <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
- <span class="menu-text">Loaders</span></a>
+ <span class="menu-text">AlignerFeatures</span></a>
           <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
       </div>
       <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/AlignerFeatureCollection.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">AlignerFeatureCollection</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/AlignerFeature.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">AlignerFeature</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
+ <span class="menu-text">Loaders</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../reference/Loader.html" class="sidebar-item-text sidebar-link">
@@ -230,11 +262,276 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="menu-text">GeoJsonUrlLoader</span></a>
   </div>
 </li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/OGCFeatureAPIReferenceLoader.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">OGCFeatureAPIReferenceLoader</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/WFSReferenceLoader.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">WFSReferenceLoader</span></a>
+  </div>
+</li>
       </ul>
   </li>
         <li class="sidebar-item sidebar-item-section">
-      <span class="sidebar-item-text sidebar-link text-start">
- <span class="menu-text">GRB</span></span>
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
+ <span class="menu-text">Processors</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/BaseProcessor.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">BaseProcessor</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/AlignerGeometryProcessor.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">AlignerGeometryProcessor</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/DieussaertGeometryProcessor.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">DieussaertGeometryProcessor</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/NetworkGeometryProcessor.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">NetworkGeometryProcessor</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/SnapGeometryProcessor.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">SnapGeometryProcessor</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/TopologyProcessor.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">TopologyProcessor</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true">
+ <span class="menu-text">Enumerators</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/FullReferenceStrategy.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">FullReferenceStrategy</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/AlignerResultType.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">AlignerResultType</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/OpenDomainStrategy.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">OpenDomainStrategy</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/DiffMetric.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">DiffMetric</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/ProcessRemark.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">ProcessRemark</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/Evaluation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Evaluation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/SnapStrategy.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">SnapStrategy</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/PredictionStrategy.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">PredictionStrategy</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/ProcessorID.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">ProcessorID</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="true">
+ <span class="menu-text">Typings</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-6" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/ProcessResult.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">ProcessResult</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" role="navigation" aria-expanded="true">
+ <span class="menu-text">Configs</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-7" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/ProcessorConfig.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">ProcessorConfig</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/AlignerConfig.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">AlignerConfig</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-8" role="navigation" aria-expanded="true">
+ <span class="menu-text">GRB (Flanders-specific)</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-8" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-8" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/loader.GRBActualLoader.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">loader.GRBActualLoader</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/loader.GRBFiscalParcelLoader.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">loader.GRBFiscalParcelLoader</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/loader.GRBSpecificDateParcelLoader.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">loader.GRBSpecificDateParcelLoader</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/grb.update_featurecollection_to_actual_grb.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">grb.update_featurecollection_to_actual_grb</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/utils.is_grb_changed.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">utils.is_grb_changed</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/utils.get_affected_ids_by_grb_change.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">utils.get_affected_ids_by_grb_change</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/enums.GRBType.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">enums.GRBType</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-9" role="navigation" aria-expanded="true">
+ <span class="menu-text">OSM</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-9" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-9" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/loader.OSMLoader.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">loader.OSMLoader</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-10" role="navigation" aria-expanded="true">
+ <span class="menu-text">Visualization-functions (optional by pip install brdr[viz])</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-10" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-10" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/show_map.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">show_map</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/plot_difference_by_relevant_distance.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">plot_difference_by_relevant_distance</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/animated_map.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">animated_map</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/print_observation_of_aligner_results.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">print_observation_of_aligner_results</span></a>
+  </div>
+</li>
+      </ul>
   </li>
     </ul>
     </div>
@@ -248,24 +545,21 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <ul>
   <li><a href="#brdr.aligner.Aligner" id="toc-brdr.aligner.Aligner" class="nav-link active" data-scroll-target="#brdr.aligner.Aligner">Aligner</a>
   <ul class="collapse">
+  <li><a href="#attributes" id="toc-attributes" class="nav-link" data-scroll-target="#attributes">Attributes</a></li>
+  <li><a href="#notes" id="toc-notes" class="nav-link" data-scroll-target="#notes">Notes</a></li>
+  <li><a href="#examples" id="toc-examples" class="nav-link" data-scroll-target="#examples">Examples</a></li>
   <li><a href="#methods" id="toc-methods" class="nav-link" data-scroll-target="#methods">Methods</a>
   <ul class="collapse">
+  <li><a href="#brdr.aligner.Aligner.compare_to_reference" id="toc-brdr.aligner.Aligner.compare_to_reference" class="nav-link" data-scroll-target="#brdr.aligner.Aligner.compare_to_reference">compare_to_reference</a></li>
   <li><a href="#brdr.aligner.Aligner.evaluate" id="toc-brdr.aligner.Aligner.evaluate" class="nav-link" data-scroll-target="#brdr.aligner.Aligner.evaluate">evaluate</a></li>
-  <li><a href="#brdr.aligner.Aligner.get_brdr_formula" id="toc-brdr.aligner.Aligner.get_brdr_formula" class="nav-link" data-scroll-target="#brdr.aligner.Aligner.get_brdr_formula">get_brdr_formula</a></li>
-  <li><a href="#brdr.aligner.Aligner.get_diff_metrics" id="toc-brdr.aligner.Aligner.get_diff_metrics" class="nav-link" data-scroll-target="#brdr.aligner.Aligner.get_diff_metrics">get_diff_metrics</a></li>
-  <li><a href="#brdr.aligner.Aligner.get_input_as_geojson" id="toc-brdr.aligner.Aligner.get_input_as_geojson" class="nav-link" data-scroll-target="#brdr.aligner.Aligner.get_input_as_geojson">get_input_as_geojson</a></li>
-  <li><a href="#brdr.aligner.Aligner.get_results_as_geojson" id="toc-brdr.aligner.Aligner.get_results_as_geojson" class="nav-link" data-scroll-target="#brdr.aligner.Aligner.get_results_as_geojson">get_results_as_geojson</a></li>
-  <li><a href="#brdr.aligner.Aligner.get_thematic_union" id="toc-brdr.aligner.Aligner.get_thematic_union" class="nav-link" data-scroll-target="#brdr.aligner.Aligner.get_thematic_union">get_thematic_union</a></li>
-  <li><a href="#brdr.aligner.Aligner.load_reference_data" id="toc-brdr.aligner.Aligner.load_reference_data" class="nav-link" data-scroll-target="#brdr.aligner.Aligner.load_reference_data">load_reference_data</a></li>
+  <li><a href="#brdr.aligner.Aligner.get_difference_metrics_for_thematic_data" id="toc-brdr.aligner.Aligner.get_difference_metrics_for_thematic_data" class="nav-link" data-scroll-target="#brdr.aligner.Aligner.get_difference_metrics_for_thematic_data">get_difference_metrics_for_thematic_data</a></li>
   <li><a href="#brdr.aligner.Aligner.load_thematic_data" id="toc-brdr.aligner.Aligner.load_thematic_data" class="nav-link" data-scroll-target="#brdr.aligner.Aligner.load_thematic_data">load_thematic_data</a></li>
-  <li><a href="#brdr.aligner.Aligner.predictor" id="toc-brdr.aligner.Aligner.predictor" class="nav-link" data-scroll-target="#brdr.aligner.Aligner.predictor">predictor</a></li>
+  <li><a href="#brdr.aligner.Aligner.predict" id="toc-brdr.aligner.Aligner.predict" class="nav-link" data-scroll-target="#brdr.aligner.Aligner.predict">predict</a></li>
   <li><a href="#brdr.aligner.Aligner.process" id="toc-brdr.aligner.Aligner.process" class="nav-link" data-scroll-target="#brdr.aligner.Aligner.process">process</a></li>
-  <li><a href="#brdr.aligner.Aligner.process_geometry" id="toc-brdr.aligner.Aligner.process_geometry" class="nav-link" data-scroll-target="#brdr.aligner.Aligner.process_geometry">process_geometry</a></li>
-  <li><a href="#brdr.aligner.Aligner.save_results" id="toc-brdr.aligner.Aligner.save_results" class="nav-link" data-scroll-target="#brdr.aligner.Aligner.save_results">save_results</a></li>
   </ul></li>
   </ul></li>
   </ul>
-</nav>
+<div class="toc-actions"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/reference/Aligner.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/Aligner.html">Aligner</a></li><li class="breadcrumb-item"><a href="../reference/Aligner.html">Aligner</a></li></ol></nav></header>
@@ -275,32 +569,110 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <section id="brdr.aligner.Aligner" class="level1">
 <h1>Aligner</h1>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>aligner.Aligner(</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    feedback<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    relevant_distance<span class="op">=</span><span class="dv">1</span>,</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    relevant_distances<span class="op">=</span>[(<span class="bu">round</span>(k, RELEVANT_DISTANCE_DECIMALS)) <span class="cf">for</span> k <span class="kw">in</span> (np.arange(<span class="dv">0</span>, <span class="dv">310</span>, <span class="dv">10</span>, dtype<span class="op">=</span><span class="bu">int</span>) <span class="op">/</span> <span class="dv">100</span>)],</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    threshold_overlap_percentage<span class="op">=</span><span class="dv">50</span>,</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    od_strategy<span class="op">=</span>OpenDomainStrategy.SNAP_ALL_SIDE,</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    crs<span class="op">=</span>DEFAULT_CRS,</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    multi_as_single_modus<span class="op">=</span><span class="va">True</span>,</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    preserve_topology<span class="op">=</span><span class="va">False</span>,</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    snap_strategy<span class="op">=</span>SNAP_STRATEGY,</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    snap_max_segment_length<span class="op">=</span>SNAP_MAX_SEGMENT_LENGTH,</span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    partial_snapping<span class="op">=</span>PARTIAL_SNAPPING,</span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    partial_snap_strategy<span class="op">=</span>PARTIAL_SNAP_STRATEGY,</span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    partial_snap_max_segment_length<span class="op">=</span>PARTIAL_SNAP_MAX_SEGMENT_LENGTH,</span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    threshold_exclusion_area<span class="op">=</span><span class="dv">0</span>,</span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    threshold_exclusion_percentage<span class="op">=</span><span class="dv">0</span>,</span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    threshold_inclusion_percentage<span class="op">=</span><span class="dv">100</span>,</span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    buffer_multiplication_factor<span class="op">=</span>BUFFER_MULTIPLICATION_FACTOR,</span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    threshold_circle_ratio<span class="op">=</span><span class="fl">0.98</span>,</span>
-<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    correction_distance<span class="op">=</span><span class="fl">0.01</span>,</span>
-<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    diff_metric<span class="op">=</span>DIFF_METRIC,</span>
-<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    mitre_limit<span class="op">=</span><span class="dv">10</span>,</span>
-<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>    area_limit<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>    max_workers<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>This class is used to compare and align the thematic data with the reference data. The reference data can be loaded in different ways, for example by using the GRB data. The thematic data can be loaded by using different Loaders: DictLoader, GeojsonLoader,… The class can be used to compare and aligne the thematic data with the reference data.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>aligner.Aligner(processor<span class="op">=</span><span class="va">None</span>, crs<span class="op">=</span>DEFAULT_CRS, config<span class="op">=</span><span class="va">None</span>, feedback<span class="op">=</span><span class="va">None</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Compares and aligns thematic geospatial data against a set of reference data.</p>
+<p>The Aligner manages the loading of both thematic and reference data, configures the geometric processing rules, and executes the alignment, prediction, and evaluation logic across a series of relevant distances.</p>
+<section id="attributes" class="level2 doc-section doc-section-attributes">
+<h2 class="doc-section doc-section-attributes anchored" data-anchor-id="attributes">Attributes</h2>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>logger</td>
+<td><a href="`brdr.logger.Logger`">Logger</a></td>
+<td>Instance for logging feedback and information.</td>
+</tr>
+<tr class="even">
+<td>log_metadata</td>
+<td><a href="`bool`">bool</a></td>
+<td>If True, metadata about the actuation is logged in the results.</td>
+</tr>
+<tr class="odd">
+<td>add_observations</td>
+<td><a href="`bool`">bool</a></td>
+<td>If True, process result observations will be computed by default.</td>
+</tr>
+<tr class="even">
+<td>processor</td>
+<td><a href="`brdr.processor.BaseProcessor`">BaseProcessor</a> or <a href="`brdr.processor.AlignerGeometryProcessor`">AlignerGeometryProcessor</a></td>
+<td>The geometric processor used for alignment calculations.</td>
+</tr>
+<tr class="odd">
+<td>correction_distance</td>
+<td><a href="`float`">float</a></td>
+<td>Distance used in buffer operations to remove slivers (technical correction).</td>
+</tr>
+<tr class="even">
+<td>mitre_limit</td>
+<td><a href="`int`">int</a></td>
+<td>Parameter for the buffer operation to control the maximum length of join corners.</td>
+</tr>
+<tr class="odd">
+<td>max_workers</td>
+<td>(<a href="`int`">int</a>, <a href="`optional`">optional</a>)</td>
+<td>The maximum number of workers for parallel execution (ThreadPoolExecutor).</td>
+</tr>
+<tr class="even">
+<td>crs</td>
+<td><a href="`str`">str</a></td>
+<td>The Coordinate Reference System (CRS) being used (bv. ‘EPSG:31370’).</td>
+</tr>
+<tr class="odd">
+<td>name_thematic_id</td>
+<td><a href="`str`">str</a></td>
+<td>Name of the identifier field for thematic data.</td>
+</tr>
+<tr class="even">
+<td>diff_metric</td>
+<td><a href="`brdr.enums.DiffMetric`">DiffMetric</a></td>
+<td>The metric used to measure differences between geometries (bv. area change).</td>
+</tr>
+<tr class="odd">
+<td>reference_data</td>
+<td>(<a href="`brdr.feature_data.AlignerFeatureCollection`">AlignerFeatureCollection</a>, <a href="`optional`">optional</a>)</td>
+<td>Loaded collection of reference features.</td>
+</tr>
+<tr class="even">
+<td>thematic_data</td>
+<td>(<a href="`brdr.feature_data.AlignerFeatureCollection`">AlignerFeatureCollection</a>, <a href="`optional`">optional</a>)</td>
+<td>Loaded collection of thematic features.</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="notes" class="level2 doc-section doc-section-notes">
+<h2 class="doc-section doc-section-notes anchored" data-anchor-id="notes">Notes</h2>
+<p>The Aligner acts as the central orchestrator of the <code>brdr</code> package. It connects data loaders with geometric processors.</p>
+<div class="cell" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<pre class="mermaid mermaid-js">graph LR
+    T[Thematic Data] --&gt; Aligner
+    R[Reference Data] --&gt; Aligner
+    Aligner --&gt; P{Processor}
+    P --&gt; Res[AlignerResult]
+</pre>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
+</section>
+<section id="examples" class="level2 doc-section doc-section-examples">
+<h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> <span class="im">from</span> brdr.aligner <span class="im">import</span> Aligner</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> aligner <span class="op">=</span> Aligner(crs<span class="op">=</span><span class="st">"EPSG:31370"</span>)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> aligner.load_thematic_data(my_features)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> results <span class="op">=</span> aligner.align(relevant_distances<span class="op">=</span>[<span class="fl">0.5</span>, <span class="fl">1.0</span>])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
 <section id="methods" class="level2">
 <h2 class="anchored" data-anchor-id="methods">Methods</h2>
 <table class="caption-top table">
@@ -312,228 +684,666 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
+<td><a href="#brdr.aligner.Aligner.compare_to_reference">compare_to_reference</a></td>
+<td>Calculates observation-related information based on the input geometry.</td>
+</tr>
+<tr class="even">
 <td><a href="#brdr.aligner.Aligner.evaluate">evaluate</a></td>
-<td>Compares and evaluate input-geometries (with formula). Attributes are added to evaluate and decide if new</td>
-</tr>
-<tr class="even">
-<td><a href="#brdr.aligner.Aligner.get_brdr_formula">get_brdr_formula</a></td>
-<td>Calculates formula-related information based on the input geometry.</td>
+<td>Evaluates input geometries against predictions using observation matching</td>
 </tr>
 <tr class="odd">
-<td><a href="#brdr.aligner.Aligner.get_diff_metrics">get_diff_metrics</a></td>
-<td>Calculates a dictionary containing difference metrics for thematic elements based on a distance series.</td>
+<td><a href="#brdr.aligner.Aligner.get_difference_metrics_for_thematic_data">get_difference_metrics_for_thematic_data</a></td>
+<td>Calculates difference metrics for thematic elements across a series of distances.</td>
 </tr>
 <tr class="even">
-<td><a href="#brdr.aligner.Aligner.get_input_as_geojson">get_input_as_geojson</a></td>
-<td>get a geojson of the input polygons (thematic or reference-polygons)</td>
-</tr>
-<tr class="odd">
-<td><a href="#brdr.aligner.Aligner.get_results_as_geojson">get_results_as_geojson</a></td>
-<td>get a geojson of a dictionary containing the resulting geometries for all</td>
-</tr>
-<tr class="even">
-<td><a href="#brdr.aligner.Aligner.get_thematic_union">get_thematic_union</a></td>
-<td>returns a unary_unioned geometry from all the thematic geometries</td>
-</tr>
-<tr class="odd">
 <td><a href="#brdr.aligner.Aligner.load_reference_data">load_reference_data</a></td>
-<td>Loads the reference features into the aligner, and prepares the reference-data for processing</td>
-</tr>
-<tr class="even">
-<td><a href="#brdr.aligner.Aligner.load_thematic_data">load_thematic_data</a></td>
-<td>Loads the thematic features into the aligner</td>
+<td>Loads the reference features into the aligner and prepares them for processing.</td>
 </tr>
 <tr class="odd">
-<td><a href="#brdr.aligner.Aligner.predictor">predictor</a></td>
+<td><a href="#brdr.aligner.Aligner.load_thematic_data">load_thematic_data</a></td>
+<td>Loads the thematic features into the aligner using a specific loader.</td>
+</tr>
+<tr class="even">
+<td><a href="#brdr.aligner.Aligner.predict">predict</a></td>
 <td>Predicts the ‘most interesting’ relevant distances for changes in thematic</td>
 </tr>
-<tr class="even">
-<td><a href="#brdr.aligner.Aligner.process">process</a></td>
-<td>Calculates the resulting dictionaries for thematic data based on a series of</td>
-</tr>
 <tr class="odd">
-<td><a href="#brdr.aligner.Aligner.process_geometry">process_geometry</a></td>
-<td>method to align a geometry to the reference layer</td>
-</tr>
-<tr class="even">
-<td><a href="#brdr.aligner.Aligner.save_results">save_results</a></td>
-<td>Exports analysis results (as geojson) to path.</td>
+<td><a href="#brdr.aligner.Aligner.process">process</a></td>
+<td>Executes the alignment process across multiple relevant distances.</td>
 </tr>
 </tbody>
 </table>
+<section id="brdr.aligner.Aligner.compare_to_reference" class="level3">
+<h3 class="anchored" data-anchor-id="brdr.aligner.Aligner.compare_to_reference">compare_to_reference</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>aligner.Aligner.compare_to_reference(geometry, with_geom<span class="op">=</span><span class="va">False</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Calculates observation-related information based on the input geometry.</p>
+<p>This method performs a spatial analysis to determine how much of the input geometry is covered by reference features and identifies which specific reference elements are involved. It also detects “OD” (Onbekend Terrein/Open Space) areas that are not covered by any reference data.</p>
+<section id="parameters" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>geometry</td>
+<td><a href="`shapely.geometry.base.BaseGeometry`">BaseGeometry</a></td>
+<td>The input geometry to be analyzed against the reference dataset.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td>with_geom</td>
+<td><a href="`bool`">bool</a></td>
+<td>If True, includes the GeoJSON representation of each intersection and the OD-area in the output. Defaults to False.</td>
+<td><code>False</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="returns" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns">Returns</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td><a href="`typing.Dict`">Dict</a>[<a href="`str`">str</a>, <a href="`typing.Any`">Any</a>]</td>
+<td>A dictionary containing the alignment analysis: - <strong>alignment_date</strong> (str): Timestamp of the calculation. - <strong>brdr_version</strong> (str): Version of the package used. - <strong>full</strong> (bool): True if the geometry is entirely composed of complete reference features. - <strong>area</strong> (float): Total area of the input geometry. - <strong>last_version_date</strong> (str, optional): The most recent version date found among the intersected reference features. - <strong>reference_features</strong> (dict): A mapping of reference IDs to: - <em>full</em> (bool): True if the reference feature is fully contained. - <em>area</em> (float): Area of the intersection. - <em>percentage</em> (float): Coverage percentage relative to the reference. - <em>geometry</em> (str, optional): GeoJSON string (if with_geom is True). - <strong>reference_od</strong> (dict, optional): Description of areas not covered by reference features, containing ‘area’ and optionally ‘geometry’.</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="notes-1" class="level4 doc-section doc-section-notes">
+<h4 class="doc-section doc-section-notes anchored" data-anchor-id="notes-1">Notes</h4>
+<p>The method uses a spatial index (R-tree) to efficiently find intersecting reference features. A correction distance is applied to the “OD” calculation to filter out insignificant slivers.</p>
+<div class="cell" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<pre class="mermaid mermaid-js">graph TD
+    In[Input Geometry] --&gt; Query[Spatial Index Query]
+    Query --&gt; Intersect[Calculate Intersections]
+    Intersect --&gt; Stats[Compute Area &amp; %]
+    In --&gt; Diff[Difference with Union of Refs]
+    Diff --&gt; OD[Identify Unknown Area / OD]
+    Stats --&gt; Dict[Final observation Dictionary]
+    OD --&gt; Dict
+</pre>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
+</section>
+<section id="examples-1" class="level4 doc-section doc-section-examples">
+<h4 class="doc-section doc-section-examples anchored" data-anchor-id="examples-1">Examples</h4>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> info <span class="op">=</span> aligner.compare_to_reference(my_geom, with_geom<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> <span class="bu">print</span>(info[<span class="st">"full"</span>])</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> <span class="bu">print</span>(info[<span class="st">"reference_features"</span>].keys())  <span class="co"># IDs of intersected refs</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+</section>
 <section id="brdr.aligner.Aligner.evaluate" class="level3">
 <h3 class="anchored" data-anchor-id="brdr.aligner.Aligner.evaluate">evaluate</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>aligner.Aligner.evaluate(</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    ids_to_evaluate<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    base_formula_field<span class="op">=</span>FORMULA_FIELD_NAME,</span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    relevant_distances<span class="op">=</span>[(<span class="bu">round</span>(k, RELEVANT_DISTANCE_DECIMALS)) <span class="cf">for</span> k <span class="kw">in</span> (np.arange(<span class="dv">0</span>, <span class="dv">310</span>, <span class="dv">10</span>, dtype<span class="op">=</span><span class="bu">int</span>) <span class="op">/</span> <span class="dv">100</span>)],</span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    full_strategy<span class="op">=</span>FullStrategy.NO_FULL,</span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    max_predictions<span class="op">=-</span><span class="dv">1</span>,</span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    multi_to_best_prediction<span class="op">=</span><span class="va">True</span>,</span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Compares and evaluate input-geometries (with formula). Attributes are added to evaluate and decide if new proposals can be used ids_to_evaluate: list with all IDs to evaluate. all other IDs will be unchanged. If None (default), all self.dict_thematic will be evaluated. base_formula_field: name of the field where the base_formula is found in the data max_predictions: integer that indicates how many predictions are maximally returned. (-1 indicates all predictions are returned) relevant_distances: relevant distances to evaluate full_strategy: enum, decided which predictions are kept or prefered based on full-ness of the prediction multi_to_best_prediction (default True): Only usable in combination with max_predictions=1. If True (and max_predictions=1), the prediction with highest score will be taken.If False, the original geometry is returned.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>aligner.Aligner.evaluate(</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    relevant_distances<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">*</span>,</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    thematic_ids<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    metadata_field<span class="op">=</span>METADATA_FIELD_NAME,</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    full_reference_strategy<span class="op">=</span>FullReferenceStrategy.NO_FULL_REFERENCE,</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    max_predictions<span class="op">=-</span><span class="dv">1</span>,</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    multi_to_best_prediction<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Evaluates input geometries against predictions using observation matching and selection strategies.</p>
+<p>This method identifies the best candidate geometries for alignment by comparing predicted geometries against the original attributes and reference data. It tags results with evaluation labels (e.g., PREDICTION_UNIQUE) to facilitate decision-making.</p>
+<section id="parameters-1" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-1">Parameters</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>relevant_distances</td>
+<td><a href="`typing.Iterable`">Iterable</a>[<a href="`float`">float</a>]</td>
+<td>Distances to evaluate. Defaults to 0.0m to 3.0m (step 0.1m).</td>
+<td><code>None</code></td>
+</tr>
+<tr class="even">
+<td>thematic_ids</td>
+<td><a href="`typing.List`">List</a>[<a href="`ThematicId`">ThematicId</a>]</td>
+<td>List of IDs to evaluate. If None, all loaded thematic features are processed. Features not in this list are marked as NOT_EVALUATED.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="odd">
+<td>metadata_field</td>
+<td><a href="`str`">str</a></td>
+<td>The field name containing the metadata of the input geometry. Defaults to METADATA_FIELD_NAME.</td>
+<td><code>METADATA_FIELD_NAME</code></td>
+</tr>
+<tr class="even">
+<td>full_reference_strategy</td>
+<td><a href="`brdr.enums.FullReferenceStrategy`">FullReferenceStrategy</a></td>
+<td>Strategy to prioritize predictions based on their ‘fullness’ relative to reference data. Defaults to NO_FULL_REFERENCE.</td>
+<td><code>FullReferenceStrategy.NO_FULL_REFERENCE</code></td>
+</tr>
+<tr class="odd">
+<td>max_predictions</td>
+<td><a href="`int`">int</a></td>
+<td>Maximum number of predictions to return per feature. -1 returns all candidates. Defaults to -1.</td>
+<td><code>-1</code></td>
+</tr>
+<tr class="even">
+<td>multi_to_best_prediction</td>
+<td><a href="`bool`">bool</a></td>
+<td>If True and <code>max_predictions=1</code>, returns the candidate with the highest score. If False, returns the original geometry when multiple candidates exist. Defaults to True.</td>
+<td><code>True</code></td>
+</tr>
+</tbody>
+</table>
 </section>
-<section id="brdr.aligner.Aligner.get_brdr_formula" class="level3">
-<h3 class="anchored" data-anchor-id="brdr.aligner.Aligner.get_brdr_formula">get_brdr_formula</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>aligner.Aligner.get_brdr_formula(geometry, with_geom<span class="op">=</span><span class="va">False</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Calculates formula-related information based on the input geometry.</p>
-<p>Args: geometry (shapely.geometry object): The input geometry. with_geom (bool, optional): Whether to include geometry information in the output. Defaults to False.</p>
-<p>Returns: dict: A dictionary containing formula-related data:</p>
-<pre><code>- "alignment_date": datetime.now().strftime(DATE_FORMAT),
-- "brdr_version": str(__version__),
-- "reference_source": self.dict_reference_source,
-- "full": True if the geometry exists out of all full reference-polygons, else False.
-- "area": Area of the geometry.
-- "reference_features": {
-    array of all the reference features the geometry is composed of:
-        -   'full': True if the intersection is the same as the reference
-            geometry, else False.
-        -   'area': Area of the intersection or reference geometry.
-        -   'percentage': Percentage of intersection area relative to the
-            reference geometry.
-        -   'geometry': GeoJSON representation of the intersection (if
-            with_geom is True).},
-- "reference_od": Discription of the OD-part of the geometry (= not covered by reference-features),</code></pre>
+<section id="returns-1" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-1">Returns</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td><a href="`brdr.aligner.AlignerResult`">AlignerResult</a></td>
+<td>An object containing evaluated results with detailed metadata and evaluation status tags.</td>
+</tr>
+</tbody>
+</table>
 </section>
-<section id="brdr.aligner.Aligner.get_diff_metrics" class="level3">
-<h3 class="anchored" data-anchor-id="brdr.aligner.Aligner.get_diff_metrics">get_diff_metrics</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>aligner.Aligner.get_diff_metrics(</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    dict_processresults<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    dict_thematic<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    diff_metric<span class="op">=</span>DiffMetric.CHANGES_AREA,</span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Calculates a dictionary containing difference metrics for thematic elements based on a distance series.</p>
-<p>Parameters: dict_series (dict): A dictionary where keys are thematic IDs and values are dictionaries mapping relevant distances to ProcessResult objects. dict_thematic (dict): A dictionary where keys are thematic IDs and values are BaseGeometry objects representing the original geometries. diff_metric (DiffMetric, optional): The metric to use for calculating differences. Default is DiffMetric.CHANGES_AREA.</p>
-<p>Returns: dict: A dictionary where keys are thematic IDs and values are dictionaries mapping relevant distances to calculated difference metrics.</p>
+<section id="raises" class="level4 doc-section doc-section-raises">
+<h4 class="doc-section doc-section-raises anchored" data-anchor-id="raises">Raises</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td><a href="`ValueError`">ValueError</a></td>
+<td>If provided <code>thematic_ids</code> are not present in the thematic data.</td>
+</tr>
+</tbody>
+</table>
 </section>
-<section id="brdr.aligner.Aligner.get_input_as_geojson" class="level3">
-<h3 class="anchored" data-anchor-id="brdr.aligner.Aligner.get_input_as_geojson">get_input_as_geojson</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>aligner.Aligner.get_input_as_geojson(inputtype<span class="op">=</span>AlignerInputType.REFERENCE)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>get a geojson of the input polygons (thematic or reference-polygons)</p>
+<section id="notes-2" class="level4 doc-section doc-section-notes">
+<h4 class="doc-section doc-section-notes anchored" data-anchor-id="notes-2">Notes</h4>
+<p>The evaluation logic follows a specific priority tree: 1. <strong>observation Match</strong>: If a prediction matches the base observation exactly, it is prioritized (score 100). 2. <strong>Fullness</strong>: If a strategy is set, ‘full’ predictions get a score boost. 3. <strong>Scoring</strong>: Candidates are ranked by their prediction score. 4. <strong>Selection</strong>: Based on <code>max_predictions</code>, the best candidates are selected.</p>
+<div class="cell" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<pre class="mermaid mermaid-js">graph TD
+    Start[Start Evaluation] --&gt; Pred[Generate Predictions]
+    Pred --&gt; Match{observation Match?}
+    Match -- Yes --&gt; HighScore[Prioritize &amp; Score 100]
+    Match -- No --&gt; Full{Full Reference?}
+    Full -- Yes --&gt; Strategy[Apply Fullness Strategy]
+    Full -- No --&gt; Rank[Rank by Prediction Score]
+    Strategy --&gt; Rank
+    HighScore --&gt; Rank
+    Rank --&gt; Select{Max Predictions?}
+    Select --&gt; Final[Return AlignerResult]
+</pre>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
 </section>
-<section id="brdr.aligner.Aligner.get_results_as_geojson" class="level3">
-<h3 class="anchored" data-anchor-id="brdr.aligner.Aligner.get_results_as_geojson">get_results_as_geojson</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>aligner.Aligner.get_results_as_geojson(</span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    resulttype<span class="op">=</span>AlignerResultType.PROCESSRESULTS,</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    formula<span class="op">=</span><span class="va">False</span>,</span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    attributes<span class="op">=</span><span class="va">False</span>,</span>
+<section id="examples-2" class="level4 doc-section doc-section-examples">
+<h4 class="doc-section doc-section-examples anchored" data-anchor-id="examples-2">Examples</h4>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> aligner <span class="op">=</span> Aligner()</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> <span class="co"># Evaluate with a limit of 1 best prediction per feature</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> results <span class="op">=</span> aligner.evaluate(thematic_ids<span class="op">=</span>[<span class="st">"id_01"</span>],full_reference_strategy<span class="op">=</span>FullReferenceStrategy.ONLY_FULL_REFERENCE,max_predictions<span class="op">=</span><span class="dv">1</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+</section>
+<section id="brdr.aligner.Aligner.get_difference_metrics_for_thematic_data" class="level3">
+<h3 class="anchored" data-anchor-id="brdr.aligner.Aligner.get_difference_metrics_for_thematic_data">get_difference_metrics_for_thematic_data</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>aligner.Aligner.get_difference_metrics_for_thematic_data(</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    dict_processresults<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    thematic_data<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    diff_metric<span class="op">=</span>DiffMetric.SYMMETRICAL_AREA_CHANGE,</span>
 <span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>get a geojson of a dictionary containing the resulting geometries for all ‘serial’ relevant distances. The resulttype can be chosen. formula (boolean, Optional): The descriptive formula is added as an attribute to the result attributes (boolean, Optional): The original attributes/properties are added to the result</p>
+<p>Calculates difference metrics for thematic elements across a series of distances.</p>
+<p>This method iterates through the processed results and compares the resulting geometries against their original thematic counterparts. It uses the spatial context of the reference data to calculate metrics like area change or symmetrical difference.</p>
+<section id="parameters-2" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-2">Parameters</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>dict_processresults</td>
+<td><a href="`typing.Dict`">Dict</a>[<a href="`ThematicId`">ThematicId</a>, <a href="`typing.Dict`">Dict</a>[<a href="`float`">float</a>, <a href="`typing.Optional`">Optional</a>[<a href="`brdr.typings.ProcessResult`">ProcessResult</a>]]]</td>
+<td>A nested dictionary where keys are thematic IDs and values are dictionaries mapping relevant distances to <code>ProcessResult</code>[] objects. Required if not provided via internal state.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="even">
+<td>thematic_data</td>
+<td><a href="`brdr.feature_data.AlignerFeatureCollection`">AlignerFeatureCollection</a></td>
+<td>The collection containing the original thematic geometries. Defaults to <code>self.thematic_data</code>.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="odd">
+<td>diff_metric</td>
+<td><a href="`brdr.enums.DiffMetric`">DiffMetric</a></td>
+<td>The metric used to quantify the geometric change. Defaults to <code>DiffMetric.SYMMETRICAL_AREA_CHANGE</code>.</td>
+<td><code>DiffMetric.SYMMETRICAL_AREA_CHANGE</code></td>
+</tr>
+</tbody>
+</table>
 </section>
-<section id="brdr.aligner.Aligner.get_thematic_union" class="level3">
-<h3 class="anchored" data-anchor-id="brdr.aligner.Aligner.get_thematic_union">get_thematic_union</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>aligner.Aligner.get_thematic_union()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>returns a unary_unioned geometry from all the thematic geometries :return:</p>
+<section id="returns-2" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-2">Returns</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td><a href="`typing.Dict`">Dict</a>[<a href="`ThematicId`">ThematicId</a>, <a href="`typing.Dict`">Dict</a>[<a href="`float`">float</a>, <a href="`float`">float</a>]]</td>
+<td>A nested dictionary where each thematic ID maps to a dictionary of distances and their corresponding calculated metric values.</td>
+</tr>
+</tbody>
+</table>
 </section>
-<section id="brdr.aligner.Aligner.load_reference_data" class="level3">
-<h3 class="anchored" data-anchor-id="brdr.aligner.Aligner.load_reference_data">load_reference_data</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>aligner.Aligner.load_reference_data(loader)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Loads the reference features into the aligner, and prepares the reference-data for processing :param loader: :return:</p>
+<section id="raises-1" class="level4 doc-section doc-section-raises">
+<h4 class="doc-section doc-section-raises anchored" data-anchor-id="raises-1">Raises</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td><a href="`ValueError`">ValueError</a></td>
+<td>If <code>dict_processresults</code> is not provided and cannot be resolved.</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="notes-3" class="level4 doc-section doc-section-notes">
+<h4 class="doc-section doc-section-notes anchored" data-anchor-id="notes-3">Notes</h4>
+<p>The calculation involves three primary geometric components: 1. <strong>Original Geometry</strong>: The thematic feature before alignment. 2. <strong>Result Geometry</strong>: The feature after alignment at a specific distance. 3. <strong>Reference Union</strong>: The combined geometry of all reference data, used to contextualize the change.</p>
+<div class="cell" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<pre class="mermaid mermaid-js">graph LR
+    PR[Process Results] --&gt; Calc[Metric Calculator]
+    Orig[Original Geometries] --&gt; Calc
+    Ref[Reference Union] --&gt; Calc
+    Calc --&gt; Output[Distance-Metric Map]
+</pre>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
+</section>
+<section id="examples-3" class="level4 doc-section doc-section-examples">
+<h4 class="doc-section doc-section-examples anchored" data-anchor-id="examples-3">Examples</h4>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> metrics <span class="op">=</span> aligner.get_difference_metrics_for_thematic_data(</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>...     dict_processresults<span class="op">=</span>my_results,</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>...     diff_metric<span class="op">=</span>DiffMetric.AREA_CHANGE</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>... )</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> <span class="co"># Get area change for feature 'A' at distance 0.5</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> <span class="bu">print</span>(metrics[<span class="st">'A'</span>][<span class="fl">0.5</span>])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<pre><code>
+### load_reference_data { #brdr.aligner.Aligner.load_reference_data }
+
+```python
+aligner.Aligner.load_reference_data(loader)</code></pre>
+<p>Loads the reference features into the aligner and prepares them for processing.</p>
+<p>This method retrieves data via the provided loader, synchronizes the CRS, and marks the feature collection as a reference dataset to enable spatial indexing and comparison logic.</p>
+</section>
+<section id="parameters-3" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-3">Parameters</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>loader</td>
+<td><a href="`brdr.loader.Loader`">Loader</a></td>
+<td>An instance of a Loader class (e.g., WFSReferenceLoader) that implements the <code>load_data</code> interface.</td>
+<td><em>required</em></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="notes-4" class="level4 doc-section doc-section-notes">
+<h4 class="doc-section doc-section-notes anchored" data-anchor-id="notes-4">Notes</h4>
+<p>Setting <code>is_reference = True</code> on the resulting dataset is essential for the internal alignment logic, as it distinguishes the ‘anchor’ geometries from the thematic geometries that need to be shifted.</p>
+</section>
+<section id="examples-4" class="level4 doc-section doc-section-examples">
+<h4 class="doc-section doc-section-examples anchored" data-anchor-id="examples-4">Examples</h4>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> <span class="im">from</span> brdr.loader <span class="im">import</span> WFSReferenceLoader</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> ref_loader <span class="op">=</span> WFSReferenceLoader(url<span class="op">=</span><span class="st">"https://geoserver.com/wfs"</span>)</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> aligner.load_reference_data(ref_loader)</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> <span class="bu">print</span>(aligner.reference_data.is_reference)</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="va">True</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
 </section>
 <section id="brdr.aligner.Aligner.load_thematic_data" class="level3">
 <h3 class="anchored" data-anchor-id="brdr.aligner.Aligner.load_thematic_data">load_thematic_data</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>aligner.Aligner.load_thematic_data(loader)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Loads the thematic features into the aligner :param loader: :return:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>aligner.Aligner.load_thematic_data(loader)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Loads the thematic features into the aligner using a specific loader.</p>
+<p>This method executes the loader’s data retrieval logic and ensures that the resulting feature collection is tagged with the Aligner’s CRS.</p>
+<section id="parameters-4" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-4">Parameters</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>loader</td>
+<td><a href="`brdr.loader.Loader`">Loader</a></td>
+<td>An instance of a Loader class (e.g., GeoJsonLoader or WFSReferenceLoader) that implements the <code>load_data</code> interface.</td>
+<td><em>required</em></td>
+</tr>
+</tbody>
+</table>
 </section>
-<section id="brdr.aligner.Aligner.predictor" class="level3">
-<h3 class="anchored" data-anchor-id="brdr.aligner.Aligner.predictor">predictor</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>aligner.Aligner.predictor(</span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>    dict_thematic<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>    relevant_distances<span class="op">=</span>[(<span class="bu">round</span>(k, RELEVANT_DISTANCE_DECIMALS)) <span class="cf">for</span> k <span class="kw">in</span> (np.arange(<span class="dv">0</span>, <span class="dv">310</span>, <span class="dv">10</span>, dtype<span class="op">=</span><span class="bu">int</span>) <span class="op">/</span> <span class="dv">100</span>)],</span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    od_strategy<span class="op">=</span>OpenDomainStrategy.SNAP_ALL_SIDE,</span>
-<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>    threshold_overlap_percentage<span class="op">=</span><span class="dv">50</span>,</span>
-<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>    diff_metric<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Predicts the ‘most interesting’ relevant distances for changes in thematic elements based on a distance series.</p>
-<p>This function analyzes a set of thematic geometries (<code>self.dict_thematic</code>) to identify potentially interesting distances where changes occur. It performs the following steps:</p>
-<ol type="1">
-<li><strong>Process Distance Series:</strong>
-<ul>
-<li>Calculates a series of results for different distances specified by <code>relevant_distances</code>.</li>
-<li>This calculation might involve functions like <code>self.process_series</code> (implementation details likely depend on your specific code).</li>
-</ul></li>
-<li><strong>Calculate Difference Metrics:</strong>
-<ul>
-<li>Analyzes the results from the distance series to compute difference metrics between thematic elements at each distance (using <code>diffs_from_dict_series</code>).</li>
-</ul></li>
-<li><strong>Identify Breakpoints and Zero-Streaks:</strong>
-<ul>
-<li>For each thematic geometry, it identifies potential “breakpoints” where the difference metric changes sign (from positive to negative or vice versa).</li>
-<li>It also identifies “zero-streaks” which are consecutive distances with a difference metric close to zero (potentially indicating minimal change).</li>
-</ul></li>
-<li><strong>Predict Interesting Distances:</strong>
-<ul>
-<li>The function considers distances corresponding to breakpoints and zero-streaks as potentially interesting for further analysis.</li>
-<li>These distances are stored in a dictionary (<code>dict_predictions</code>) with the thematic element key as the outer key.</li>
-<li>Additionally, the corresponding results from the distance series for those distances are included.</li>
-</ul></li>
-</ol>
-<p>Args: dict_thematic: the dictionary with the thematic geometries to ‘predict’. Default is None, so all thematic geometries inside the aligner will be processed. relevant_distances (np.ndarray, optional): A series of relevant distances (in meters) to process. : A NumPy array of distances to be analyzed. od_strategy (int, optional): The strategy to determine how to handle information outside the reference polygons (Open Domain) (default: SNAP_FULL_AREA_ALL_SIDE) threshold_overlap_percentage (int, optional): Threshold (%) to determine from which overlapping-percentage a reference-polygon has to be included when there aren’t relevant intersections or relevant differences (default 50%). When setting this parameter to ‘-1’ the original border for will be returned for cases where nor relevant intersections and relevant differences are found</p>
-<pre><code>relevant_distances (np.ndarray, optional): A NumPy array of distances to
-  be analyzed. Defaults to np.arange(0.1, 5.05, 0.1).
-od_strategy (OpenDomainStrategy, optional): A strategy for handling
-  open data in the processing (implementation specific). Defaults to
- OpenDomainStrategy.SNAP_ALL_SIDE.
-threshold_overlap_percentage (int, optional): A percentage threshold for
-  considering full overlap in the processing (implementation specific).
- Defaults to 50.
-diff_metric (enum, optional): A enum thjat determines the method how differences are measured to determine the 'predictions'</code></pre>
-<p>Returns: dict_series: A dictionary containing the resultset for all relevant distances for each thematic element. dict_predictions: A dictionary containing predicted interesting distances for each thematic element. - Keys: Thematic element identifiers from <code>self.dict_thematic</code>. - Values: Dictionaries with the following structure for each thematic element: - Keys: Distances identified as interesting (breakpoints or zero-streaks). - Values: dicts containing results (likely specific to your implementation) from the distance series for the corresponding distance. diffs_dict: a dictionary with the differences for each relevant distance</p>
+<section id="notes-5" class="level4 doc-section doc-section-notes">
+<h4 class="doc-section doc-section-notes anchored" data-anchor-id="notes-5">Notes</h4>
+<p>The method automatically synchronizes the CRS of the loaded data with the <code>self.crs</code> attribute of the Aligner instance.</p>
+</section>
+<section id="examples-5" class="level4 doc-section doc-section-examples">
+<h4 class="doc-section doc-section-examples anchored" data-anchor-id="examples-5">Examples</h4>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> <span class="im">from</span> brdr.loader <span class="im">import</span> GeoJsonLoader</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> loader <span class="op">=</span> GeoJsonLoader(path<span class="op">=</span><span class="st">"data/themes.json"</span>)</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> aligner.load_thematic_data(loader)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+</section>
+<section id="brdr.aligner.Aligner.predict" class="level3">
+<h3 class="anchored" data-anchor-id="brdr.aligner.Aligner.predict">predict</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>aligner.Aligner.predict(</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    relevant_distances<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">*</span>,</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>    thematic_ids<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>    diff_metric<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Predicts the ‘most interesting’ relevant distances for changes in thematic elements.</p>
+<p>This method analyzes the stability of geometric differences across a range of distances. It identifies “breakpoints” where changes occur and “zero-streaks” where the geometry remains stable. Based on this, a prediction score is assigned to specific results.</p>
+<section id="parameters-5" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-5">Parameters</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>relevant_distances</td>
+<td><a href="`typing.List`">List</a>[<a href="`float`">float</a>] or <a href="`numpy`">np</a>.<a href="`numpy.ndarray`">ndarray</a></td>
+<td>A series of distances (in meters) to be analyzed. Defaults to a range from 0.0 to 3.0 meters with steps of 0.1m.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="even">
+<td>thematic_ids</td>
+<td><a href="`typing.List`">List</a>[<a href="`ThematicId`">ThematicId</a>]</td>
+<td>Specific thematic IDs to process. If None, all loaded thematic geometries are used.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="odd">
+<td>diff_metric</td>
+<td><a href="`brdr.enums.DiffMetric`">DiffMetric</a></td>
+<td>The metric used to determine differences (e.g., area change). If None, the Aligner’s default <code>diff_metric</code> is used.</td>
+<td><code>None</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="returns-3" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-3">Returns</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td><a href="`brdr.aligner.AlignerResult`">AlignerResult</a></td>
+<td>A result object containing the process results enriched with stability properties and prediction scores.</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="raises-2" class="level4 doc-section doc-section-raises">
+<h4 class="doc-section doc-section-raises anchored" data-anchor-id="raises-2">Raises</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td><a href="`ValueError`">ValueError</a></td>
+<td>If provided <code>thematic_ids</code> are not found in the loaded data.</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="notes-6" class="level4 doc-section doc-section-notes">
+<h4 class="doc-section doc-section-notes anchored" data-anchor-id="notes-6">Notes</h4>
+<p>The prediction logic follows a four-step process: 1. <strong>Series Processing</strong>: Calculates results for all specified distances. 2. <strong>Metric Calculation</strong>: Computes the difference between original and result for each step. 3. <strong>Stability Analysis</strong>: Identifies streaks where the change is minimal (zero-streaks) or where the metric flips sign (breakpoints). 4. <strong>Scoring</strong>: Assigns a <code>PREDICTION_SCORE</code> to results that fall within a significant stability window.</p>
+<div class="cell" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<pre class="mermaid mermaid-js">graph TD
+    A[Input Distances] --&gt; B[Process Series]
+    B --&gt; C[Calculate Diffs]
+    C --&gt; D[Stability Analysis]
+    D --&gt; E{Stable?}
+    E -- Yes --&gt; F[Assign Prediction Score]
+    E -- No --&gt; G[Mark unstable]
+    F --&gt; H[AlignerResult]
+    G --&gt; H
+</pre>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
+</section>
+<section id="examples-6" class="level4 doc-section doc-section-examples">
+<h4 class="doc-section doc-section-examples anchored" data-anchor-id="examples-6">Examples</h4>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> aligner <span class="op">=</span> Aligner(crs<span class="op">=</span><span class="st">"EPSG:31370"</span>)</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> <span class="co"># Predict using default distance range</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> prediction_results <span class="op">=</span> aligner.predict(thematic_ids<span class="op">=</span>[<span class="st">"id_1"</span>, <span class="st">"id_2"</span>])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
 </section>
 <section id="brdr.aligner.Aligner.process" class="level3">
 <h3 class="anchored" data-anchor-id="brdr.aligner.Aligner.process">process</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>aligner.Aligner.process(</span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    dict_thematic<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    relevant_distances<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>    relevant_distance<span class="op">=</span><span class="dv">1</span>,</span>
-<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>    od_strategy<span class="op">=</span>OpenDomainStrategy.SNAP_ALL_SIDE,</span>
-<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>    threshold_overlap_percentage<span class="op">=</span><span class="dv">50</span>,</span>
-<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Calculates the resulting dictionaries for thematic data based on a series of relevant distances.</p>
-<p>Args: relevant_distances (Iterable[float]): A series of relevant distances (in meters) to process od_strategy (int, optional): The strategy to determine how to handle information outside the reference polygons (Open Domain) (default: SNAP_FULL_AREA_ALL_SIDE) threshold_overlap_percentage (int, optional): Threshold (%) to determine from which overlapping-percentage a reference-polygon has to be included when there aren’t relevant intersections or relevant differences (default 50%). When setting this parameter to ‘-1’ the original border for will be returned for cases where nor relevant intersections and relevant differences are found</p>
-<p>Returns: dict: A dictionary, for every thematic ID a dictionary with the results for all distances</p>
-<pre><code>    {
-        'theme_id_1': {0: (ProcessResult), 0.1:
-            (ProcessResult), ...},
-        'theme_id_2': {0: (ProcessResult), 0.1:
-            (ProcessResult), ...},
-        ...
-    }</code></pre>
-</section>
-<section id="brdr.aligner.Aligner.process_geometry" class="level3">
-<h3 class="anchored" data-anchor-id="brdr.aligner.Aligner.process_geometry">process_geometry</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>aligner.Aligner.process_geometry(</span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>    input_geometry,</span>
-<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>    relevant_distance<span class="op">=</span><span class="dv">1</span>,</span>
-<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>    od_strategy<span class="op">=</span>OpenDomainStrategy.SNAP_ALL_SIDE,</span>
-<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>    threshold_overlap_percentage<span class="op">=</span><span class="dv">50</span>,</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>aligner.Aligner.process(</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>    relevant_distances<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">*</span>,</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>    thematic_ids<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>    max_workers<span class="op">=</span><span class="va">None</span>,</span>
 <span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>method to align a geometry to the reference layer</p>
-<p>Args: input_geometry (BaseGeometry): The input geometric object. relevant_distance: The relevant distance (in meters) for processing od_strategy (int, optional): The strategy to determine how to handle information outside the reference polygons (Open Domain) (default: SNAP_FULL_AREA_ALL_SIDE) threshold_overlap_percentage (int, optional): Threshold (%) to determine from which overlapping-percentage a reference-polygon has to be included when there aren’t relevant intersections or relevant differences (default 50%). When setting this parameter to ‘-1’ the original border for will be returned for cases where nor relevant intersections and relevant differences are found</p>
-<p>Returns: ProcessResult : A dict containing the resulting geometries:</p>
-<pre><code>*   result (BaseGeometry): The resulting output geometry
-*   result_diff (BaseGeometry): The resulting difference output geometry
-*   result_diff_plus (BaseGeometry): The resulting positive difference
-    output geometry
-*   result_diff_min (BaseGeometry): The resulting negative difference output
-    geometry
-*   relevant_intersection (BaseGeometry): The relevant_intersection
-*   relevant_difference (BaseGeometry): The relevant_difference
-*   remark (str): remarks collected when processing the geometry</code></pre>
+<p>Executes the alignment process across multiple relevant distances.</p>
+<p>This method iterates through the specified thematic features and calculates the alignment for each provided ‘relevant distance’. It can utilize parallel processing via a ThreadPoolExecutor to speed up calculations.</p>
+<section id="parameters-6" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-6">Parameters</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>relevant_distances</td>
+<td><a href="`typing.Iterable`">Iterable</a>[<a href="`float`">float</a>]</td>
+<td>A series of distances (in meters) to use for the alignment logic. This parameter is mandatory.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="even">
+<td>thematic_ids</td>
+<td><a href="`typing.List`">List</a>[<a href="`ThematicId`">ThematicId</a>]</td>
+<td>A specific list of IDs to process. If None, all thematic features currently loaded in the aligner will be processed.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="odd">
+<td>max_workers</td>
+<td><a href="`int`">int</a></td>
+<td>The number of threads for parallel execution. If -1, execution is serial. If None, the Aligner’s default <code>max_workers</code> is used.</td>
+<td><code>None</code></td>
+</tr>
+</tbody>
+</table>
 </section>
-<section id="brdr.aligner.Aligner.save_results" class="level3">
-<h3 class="anchored" data-anchor-id="brdr.aligner.Aligner.save_results">save_results</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>aligner.Aligner.save_results(</span>
-<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>    path,</span>
-<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>    resulttype<span class="op">=</span>AlignerResultType.PROCESSRESULTS,</span>
-<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>    formula<span class="op">=</span><span class="va">True</span>,</span>
-<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Exports analysis results (as geojson) to path.</p>
-<p>This function exports 6 GeoJSON files containing the analysis results to the specified <code>path</code>.</p>
-<p>Args: path (str): The path to the directory where the GeoJSON files will be saved. formula (bool, optional): Whether to include formula-related information in the output. Defaults to True.</p>
-<p>Details of exported files: - result.geojson: Contains the original thematic data from <code>self.dict_result</code>. - result_diff.geojson: Contains the difference between the original and predicted data from <code>self.dict_result_diff</code>. - result_diff_plus.geojson: Contains results for areas that are added (increased area). - result_diff_min.geojson: Contains results for areas that are removed (decreased area). - result_relevant_intersection.geojson: Contains the areas with relevant intersection that has to be included in the result. - result_relevant_difference.geojson: Contains the areas with relevant difference that has to be excluded from the result.</p>
+<section id="returns-4" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-4">Returns</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 6%">
+<col style="width: 18%">
+<col style="width: 75%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td>[AlignerResult][]</td>
+<td>An object containing the structured results, accessible by thematic ID and relevant distance.</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="raises-3" class="level4 doc-section doc-section-raises">
+<h4 class="doc-section doc-section-raises anchored" data-anchor-id="raises-3">Raises</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td><a href="`ValueError`">ValueError</a></td>
+<td>If <code>relevant_distances</code> is None or empty. If any provided <code>thematic_ids</code> are not found in the loaded thematic data.</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="notes-7" class="level4 doc-section doc-section-notes">
+<h4 class="doc-section doc-section-notes anchored" data-anchor-id="notes-7">Notes</h4>
+<p>The processing flow involves distributing geometry-distance pairs across available worker threads:</p>
+<div class="cell" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<pre class="mermaid mermaid-js">graph TD
+    Start[Process Call] --&gt; Check{Valid IDs?}
+    Check -- Yes --&gt; Parallel{max_workers &gt; 0?}
+    Parallel -- Yes --&gt; Workers[ThreadPoolExecutor]
+    Parallel -- No --&gt; Serial[Single Thread]
+    Workers --&gt; Proc[Geometry Processor]
+    Serial --&gt; Proc
+    Proc --&gt; Result[AlignerResult]
+</pre>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
+</section>
+<section id="examples-7" class="level4 doc-section doc-section-examples">
+<h4 class="doc-section doc-section-examples anchored" data-anchor-id="examples-7">Examples</h4>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> aligner.process(relevant_distances<span class="op">=</span>[<span class="dv">0</span>, <span class="fl">0.5</span>, <span class="fl">1.0</span>], max_workers<span class="op">=</span><span class="dv">4</span>)</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>brdr.aligner.AlignerResult <span class="bu">object</span> at ...<span class="op">&gt;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 
 
+</section>
 </section>
 </section>
 </section>
@@ -944,4 +1754,4 @@ diff_metric (enum, optional): A enum thjat determines the method how differences
 
 
 
-</body></html>
+<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/reference/Aligner.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>

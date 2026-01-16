@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Karel Dieussaert">
+<meta name="dcterms.date" content="2026-01-07">
+<meta name="description" content="example how a DictLoader is used to load a Dictionary of thematic data">
+
+<title>DictLoader – BRDR - Aligning borders</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-f1aadacce99040138bbb613f9330654f.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-b79b1fcb1424b07627426b9f3ef330b1.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
+</head>
+
+<body class="nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a href="../index.html" class="navbar-brand navbar-brand-logo">
+    <img src="../static/logo.svg" alt="" class="navbar-logo light-content">
+    <img src="../static/logo.svg" alt="" class="navbar-logo dark-content">
+    </a>
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">BRDR - Aligning borders</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../index.html"> <i class="bi bi-house-fill" role="img">
+</i> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../reference/index.html"> 
+<span class="menu-text">Reference</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../examples.html"> 
+<span class="menu-text">Examples</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../qa.html"> 
+<span class="menu-text">Q &amp; A</span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#dictloader" id="toc-dictloader" class="nav-link active" data-scroll-target="#dictloader">DictLoader</a></li>
+  </ul>
+<div class="toc-actions"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/examples/example_dictloader.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">DictLoader</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">Loader</div>
+  </div>
+  </div>
+
+<div>
+  <div class="description">
+    example how a DictLoader is used to load a Dictionary of thematic data
+  </div>
+</div>
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Karel Dieussaert </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">January 7, 2026</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="dictloader" class="level1">
+<h1>DictLoader</h1>
+<p>This example shows a basic Loader example of the Aligner</p>
+<div id="a4eea355" class="cell" data-execution_count="1">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.aligner <span class="im">import</span> Aligner</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.be.grb.enums <span class="im">import</span> GRBType</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.be.grb.loader <span class="im">import</span> GRBActualLoader</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.geometry_utils <span class="im">import</span> geom_from_wkt</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.loader <span class="im">import</span> DictLoader</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="va">__name__</span> <span class="op">==</span> <span class="st">"__main__"</span>:</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co">    Example to load dat with a DictLoader, and also adding the properties to the result</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co">    """</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="co"># CREATE AN ALIGNER</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    aligner <span class="op">=</span> Aligner(crs<span class="op">=</span><span class="st">"EPSG:31370"</span>)</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    <span class="co"># ADD A THEMATIC POLYGON TO THEMATIC DICTIONARY and LOAD into Aligner</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    <span class="bu">id</span> <span class="op">=</span> <span class="st">"my_theme_id"</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    wkt <span class="op">=</span> <span class="st">"MULTIPOLYGON (((141894.30860000103712082 192030.99359999969601631, 141895.30039999634027481 192030.43499999865889549, 141916.94680000096559525 192018.24240000173449516, 141935.11959999799728394 192008.00629999861121178, 141938.46660000085830688 192006.36679999902844429, 141938.01630000025033951 192004.09310000017285347, 141936.13579999655485153 191997.07739999890327454, 141927.83190000057220459 191974.37330000102519989, 141924.48290000110864639 191964.26909999921917915, 141918.48789999634027481 191946.18219999969005585, 141897.54580000042915344 191892.38010000064969063, 141885.81229999661445618 191863.05810000002384186, 141883.73430000245571136 191858.32620000094175339, 141881.57930000126361847 191851.27149999886751175, 141880.02970000356435776 191844.1534000001847744, 141875.37430000305175781 191822.76999999955296516, 141875.30219999700784683 191822.43849999830126762, 141875.31379999965429306 191822.42839999869465828, 141875.32599999755620956 191822.41780000180006027, 141873.66679999977350235 191810.330400001257658, 141873.53939999639987946 191810.47140000015497208, 141824.16929999738931656 191865.09059999883174896, 141807.49130000174045563 191883.54179999977350235, 141806.4221000000834465 191884.39990000054240227, 141804.12879999727010727 191884.68789999932050705, 141802.18280000239610672 191884.19500000029802322, 141799.86169999837875366 191882.65430000051856041, 141797.43410000205039978 191879.70760000124573708, 141796.65850000083446503 191879.23550000041723251, 141795.6005999967455864 191879.14139999821782112, 141793.61129999905824661 191879.65769999846816063, 141791.29720000177621841 191881.41699999943375587, 141775.49679999798536301 191898.58630000054836273, 141762.63560000061988831 191912.02459999918937683, 141746.34480000287294388 191931.99890000000596046, 141739.71980000287294388 191941.33379999920725822, 141718.17260000109672546 191963.87099999934434891, 141707.33889999985694885 191974.1517999991774559, 141691.99570000171661377 191990.56419999897480011, 141682.7752000018954277 191999.544599998742342, 141680.59319999814033508 192001.8539000004529953, 141677.57880000025033951 192009.98910000175237656, 141677.57880000025033951 192024.72419999912381172, 141687.39810000360012054 192032.38650000095367432, 141710.51529999822378159 192048.2443000003695488, 141718.70740000158548355 192054.53130000084638596, 141792.93550000339746475 192111.49830000102519989, 141790.39050000160932541 192115.83139999955892563, 141771.93940000236034393 192145.56280000135302544, 141756.72280000150203705 192171.94390000030398369, 141750.73979999870061874 192185.24599999934434891, 141746.87189999967813492 192192.59640000015497208, 141744.20000000298023224 192197.03090000152587891, 141741.65730000287294388 192203.05490000173449516, 141738.98480000346899033 192211.15890000015497208, 141736.27549999952316284 192222.19130000099539757, 141734.4122999981045723 192232.36960000172257423, 141734.01650000363588333 192233.20839999988675117, 141733.4156000018119812 192233.86070000007748604, 141732.60769999772310257 192234.36529999971389771, 141731.69009999930858612 192234.72720000147819519, 141730.37650000303983688 192234.86820000037550926, 141727.74570000171661377 192234.72109999880194664, 141708.45470000058412552 192234.2791999988257885, 141680.76659999787807465 192234.02210000157356262, 141656.07289999723434448 192234.38520000129938126, 141629.07209999859333038 192233.29850000143051147, 141618.51850000023841858 192231.88439999893307686, 141603.34749999642372131 192228.10990000143647194, 141597.26340000331401825 192226.65670000016689301, 141592.5292000025510788 192225.30229999870061874, 141568.39479999989271164 192219.11100000143051147, 141554.37330000102519989 192214.54509999975562096, 141541.26389999687671661 192208.97210000082850456, 141529.27139999717473984 192202.5982000008225441, 141527.42339999973773956 192207.54980000108480453, 141526.95019999891519547 192208.81769999861717224, 141538.93559999763965607 192213.12829999998211861, 141551.88490000367164612 192218.77100000157952309, 141563.40359999984502792 192223.01000000163912773, 141568.94730000197887421 192224.56370000168681145, 141588.22190000116825104 192230.68310000002384186, 141599.65079999715089798 192233.4813000001013279, 141604.27549999952316284 192234.52360000088810921, 141612.59619999676942825 192236.39869999885559082, 141625.6671999990940094 192238.60940000042319298, 141640.7581000030040741 192239.92980000004172325, 141687.70180000364780426 192239.60280000045895576, 141708.04810000211000443 192239.78669999912381172, 141725.32699999958276749 192239.62020000070333481, 141736.44510000199079514 192239.40599999949336052, 141738.10999999940395355 192233.08529999852180481, 141744.46729999780654907 192208.94959999993443489, 141747.24490000307559967 192201.90359999984502792, 141750.76910000294446945 192194.79340000078082085, 141757.62960000336170197 192183.66059999912977219, 141765.30849999934434891 192168.3214000016450882, 141766.5877000018954277 192166.07369999960064888, 141779.35530000180006027 192173.02180000022053719, 141801.67239999771118164 192199.32169999927282333, 141831.40259999781847 192121.48229999840259552, 141831.68190000206232071 192121.63430000096559525, 141839.40439999848604202 192125.83700000122189522, 141847.05669999867677689 192105.80189999938011169, 141848.41929999738931656 192102.23440000042319298, 141852.30349999666213989 192092.06469999998807907, 141856.9464000016450882 192074.37240000069141388, 141855.61249999701976776 192070.44669999927282333, 141854.58449999988079071 192067.42040000110864639, 141851.04050000011920929 192056.98910000175237656, 141853.14169999957084656 192055.68459999933838844, 141855.8546999990940094 192053.98660000041127205, 141857.53270000219345093 192052.94280000030994415, 141865.36980000138282776 192048.06769999861717224, 141878.53230000287294388 192039.87979999929666519, 141877.30830000340938568 192037.69469999894499779, 141888.70970000326633453 192031.27279999852180481, 141889.19900000095367432 192031.21249999850988388, 141890.32779999822378159 192033.23580000177025795, 141894.30860000103712082 192030.99359999969601631),(141798.70589999854564667 192111.06799999997019768, 141801.00859999656677246 192106.89739999920129776, 141829.50010000169277191 192122.21880000084638596, 141800.99939999729394913 192196.83920000120997429, 141781.65139999985694885 192173.08870000019669533, 141767.0609000027179718 192165.24260000139474869, 141773.47720000147819519 192153.96849999949336052, 141785.42890000343322754 192135.11470000073313713, 141798.70589999854564667 192111.06799999997019768)))"</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    thematic_dict <span class="op">=</span> {<span class="bu">id</span>: geom_from_wkt(wkt)}</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    loader <span class="op">=</span> DictLoader(data_dict<span class="op">=</span>thematic_dict)</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    aligner.load_thematic_data(loader)</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Load reference data: The actual GRB-parcels</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    loader <span class="op">=</span> GRBActualLoader(grb_type<span class="op">=</span>GRBType.ADP, partition<span class="op">=</span><span class="dv">1000</span>, aligner<span class="op">=</span>aligner)</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>    aligner.load_reference_data(loader)</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>    <span class="co"># EXECUTE THE ALIGNMENT</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>    relevant_distance <span class="op">=</span> <span class="dv">5</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>    aligner_result <span class="op">=</span> aligner.process(relevant_distances<span class="op">=</span>[relevant_distance])</span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>    process_results <span class="op">=</span> aligner_result.get_results(aligner<span class="op">=</span>aligner)</span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>    <span class="co"># PRINT RESULTS IN WKT</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"result: "</span> <span class="op">+</span> process_results[<span class="bu">id</span>][relevant_distance][<span class="st">"result"</span>].wkt)</span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(</span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>        <span class="st">"added area: "</span> <span class="op">+</span> process_results[<span class="bu">id</span>][relevant_distance][<span class="st">"result_diff_plus"</span>].wkt</span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(</span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>        <span class="st">"removed area: "</span> <span class="op">+</span> process_results[<span class="bu">id</span>][relevant_distance][<span class="st">"result_diff_min"</span>].wkt</span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>    )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>result: MULTIPOLYGON (((141793.03305738285 192111.57318755027, 141790.3904695799 192115.8313674, 141771.93939757044 192145.56282341923, 141756.72275755982 192171.94387944016, 141750.7398455493 192185.2460234514, 141746.87194155 192192.59642345, 141742.82794304754 192200.28146594105, 141741.65728554007 192203.0549194593, 141739.89092246076 192208.41111370703, 141741.73062030482 192209.46040323336, 141750.76909355 192194.79341545, 141757.6296375507 192183.66061543886, 141765.30848556166 192168.32135143687, 141766.5828628447 192166.08220142793, 141767.06086818798 192165.24256983973, 141773.4771895606 192153.96845541894, 141785.4289335803 192135.1146954095, 141796.82158037843 192114.48072135754, 141797.44501794243 192113.35157246463, 141797.60589956064 192113.06018915444, 141798.28997375924 192111.8212172532, 141798.70586158 192111.0679753901, 141801.0038013616 192106.90600920998, 141801.6800913187 192105.68115173615, 141801.83878959 192105.39373539, 141831.4026264999 192121.48230970738, 141831.6818585496 192121.634309734, 141839.40442161 192125.8370634101, 141847.05670962 192105.80186339008, 141848.41933292866 192102.23450520015, 141852.3034936202 192092.0647113792, 141856.94637363 192074.37242337025, 141855.6125496299 192070.44666336008, 141854.5844539097 192067.42036021277, 141851.04045362 192056.98912736, 141852.39097125817 192056.15064807926, 141853.1417016185 192055.68455135095, 141854.7287057269 192054.69134007988, 141855.85472564306 192053.9866313356, 141857.53274162 192052.94279135, 141865.36978304185 192048.0676644248, 141866.81699864636 192047.1673787629, 141866.85261363 192047.1452233501, 141876.4258150617 192041.1901092554, 141878.53229363996 192039.87975133993, 141877.30829364 192037.69466334017, 141888.31859764 192031.49306334008, 141888.70970164993 192031.27277534, 141889.19904564018 192031.21248734, 141890.32781365007 192033.23578333991, 141894.3086136501 192030.99360734, 141895.30042165008 192030.43495134008, 141916.94675767008 192018.24237533, 141935.11955768114 192008.0063433195, 141938.46662968 192006.36679132, 141938.01632567964 192004.09312731825, 141936.13581368045 191997.07744731105, 141927.83194167062 191974.37331930175, 141924.4854072258 191964.27673489143, 141924.4828872273 191964.26913198843, 141918.4878776708 191946.182215282, 141897.54579764695 191892.38010323196, 141885.81229364063 191863.05811922147, 141883.7343416403 191858.32621522073, 141881.57933363982 191851.27149521885, 141880.02970324864 191844.153422599, 141875.3021755949 191822.43851153212, 141875.3254736129 191822.41380685786, 141873.66682164 191810.33043919006, 141873.53940063194 191810.47136385995, 141824.16934979084 191865.09056700877, 141807.49126958975 191883.54183124026, 141806.4220855899 191884.39994324007, 141804.12877357993 191884.68794324, 141802.18278958995 191884.19501524014, 141799.86170159004 191882.65427923997, 141797.43405357964 191879.70759122973, 141796.65850158 191879.23552723, 141795.60058157754 191879.14144723074, 141793.61126957982 191879.6576712401, 141791.29722157962 191881.41703124024, 141775.4967735719 191898.58631124764, 141762.63558956096 191912.02464724876, 141746.34477355 191931.99891927, 141739.71981353982 191941.33383128035, 141718.17261353089 191963.87104728923, 141707.3389495192 191974.1517513007, 141691.99571750825 191990.5641673119, 141682.7752375 191999.5446473201, 141680.5932215 192001.85389532015, 141677.57882149992 192009.98906332042, 141677.57882149992 192024.7241673399, 141687.3980854999 192032.38650334, 141710.5152695301 192048.24429535, 141718.70739026685 192054.5313297759, 141749.1093688275 192077.86358368513, 141751.58060556688 192074.77973901018, 141791.9401655799 192108.53645538993, 141790.96320244708 192109.984659987, 141792.9354935801 192111.49831139, 141793.03305738285 192111.57318755027)), ((141725.3270455372 192239.62016747976, 141736.44512554 192239.40602347982, 141737.61955949193 192234.94725314045, 141737.64666152475 192234.8443595378, 141738.78980980895 192230.5043660842, 141733.4156215401 192233.86067948, 141732.60768554022 192234.36525547988, 141731.69005354 192234.72723948, 141731.4883200514 192234.8068185435, 141731.04332745058 192234.79662609258, 141730.37651752948 192234.86816748008, 141727.74573353713 192234.7210954799, 141708.45472552654 192234.2792394801, 141680.76659750368 192234.0220874799, 141656.07290149166 192234.38522348, 141629.07206946905 192233.29850347992, 141618.5185334608 192231.88435948017, 141603.34752545008 192228.10989548, 141597.26342945182 192226.65671147034, 141592.5292214508 192225.30234347016, 141568.39482142948 192219.1109834698, 141554.3732534101 192214.54509547, 141547.59936119211 192212.33929130126, 141541.2639414099 192208.97210346008, 141529.2713654 192202.5982154602, 141527.42342940008 192207.54976746, 141526.95021872703 192208.8177373759, 141533.91939805186 192211.32418877794, 141538.93562139958 192213.12826346981, 141551.88486940946 192218.77101546992, 141563.40358942084 192223.00999147023, 141568.94726942235 192224.5636554708, 141588.22189343965 192230.68307947982, 141599.6508214521 192233.48128748054, 141604.2754954486 192234.52358471838, 141612.59616546106 192236.39866348018, 141625.66720547026 192238.6093514799, 141640.75814947 192239.92979947993, 141687.70182951 192239.60275947992, 141708.04813351537 192239.7866954799, 141719.13516967124 192239.67984257417, 141725.3270455372 192239.62016747976)))
+added area: GEOMETRYCOLLECTION EMPTY
+removed area: MULTIPOLYGON (((141751.58060556688 192074.77973901018, 141749.10938305568 192077.86356592987, 141790.96320994748 192109.98464886873, 141791.9401655799 192108.53645538993, 141751.58060556688 192074.77973901018)), ((141792.93549358012 192111.49831138997, 141790.75651614694 192115.20822342104, 141790.77155240465 192115.21730295772, 141793.03305738285 192111.57318755027, 141792.93549358012 192111.49831138997)), ((141801.6723999977 192199.32169999927, 141831.40260148828 192121.48229609613, 141801.83878959 192105.39373539, 141801.6800913187 192105.68115173615, 141801.00856517133 192106.8973812718, 141829.5001000017 192122.21880000085, 141800.9993999973 192196.8392000012, 141781.65139999986 192173.0887000002, 141767.06086249847 192165.24257983334, 141766.5877020916 192166.0737011368, 141779.3553000018 192173.02180000022, 141801.6723999977 192199.32169999927)), ((141742.88068583191 192200.15653360618, 141742.89109347828 192200.16145755255, 141746.75789507607 192192.81315251102, 141746.74550845352 192192.8061695695, 141744.20000000298 192197.03090000153, 141742.88068583191 192200.15653360618)), ((141541.3799938568 192209.03378372776, 141547.59936119211 192212.33929130126, 141554.2501284672 192214.5050019014, 141554.25409109317 192214.49442252837, 141541.38488562324 192209.02353278152, 141541.3799938568 192209.03378372776)), ((141750.71698525207 192194.8985433813, 141750.70753692367 192194.89330513956, 141741.73062030482 192209.46040323336, 141739.8909476443 192208.4111280707, 141738.98480000347 192211.15890000015, 141736.27549999952 192222.191300001, 141734.4122999981 192232.36960000172, 141734.01650000364 192233.2083999999, 141733.41561533514 192233.86068335516, 141738.78981405136 192230.50436343474, 141744.4672999978 192208.94959999993, 141747.24490000308 192201.90359999985, 141750.71698525207 192194.8985433813)), ((141731.6901736623 192234.72719209458, 141731.09726907214 192234.79083364972, 141731.09756480512 192234.79786838643, 141731.4883200514 192234.8068185435, 141731.6901736623 192234.72719209458)))</code></pre>
+</div>
+</div>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/examples/example_dictloader.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer><hr>
+<p><a href="../examples.html">← Back to examples - overview</a></p>
+
+
+
+
+</body></html>

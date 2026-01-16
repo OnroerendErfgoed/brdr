@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>dictloader – BRDR - Aligning borders</title>
+<title>networkgeometryprocessor – BRDR - Aligning borders</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -103,6 +103,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     "search-label": "Search"
   }
 }</script>
+<script src="../site_libs/quarto-diagram/mermaid.min.js"></script>
+<script src="../site_libs/quarto-diagram/mermaid-init.js"></script>
+<link href="../site_libs/quarto-diagram/mermaid.css" rel="stylesheet">
 
 
 </head>
@@ -156,7 +159,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/Loader.html">Loaders</a></li><li class="breadcrumb-item"><a href="../reference/DictLoader.html">DictLoader</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/BaseProcessor.html">Processors</a></li><li class="breadcrumb-item"><a href="../reference/NetworkGeometryProcessor.html">NetworkGeometryProcessor</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
     </div>
@@ -237,7 +240,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/DictLoader.html" class="sidebar-item-text sidebar-link active">
+  <a href="../reference/DictLoader.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">DictLoader</span></a>
   </div>
 </li>
@@ -302,7 +305,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/NetworkGeometryProcessor.html" class="sidebar-item-text sidebar-link">
+  <a href="../reference/NetworkGeometryProcessor.html" class="sidebar-item-text sidebar-link active">
  <span class="menu-text">NetworkGeometryProcessor</span></a>
   </div>
 </li>
@@ -540,32 +543,47 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#brdr.loader.DictLoader" id="toc-brdr.loader.DictLoader" class="nav-link active" data-scroll-target="#brdr.loader.DictLoader">DictLoader</a>
+  <li><a href="#brdr.processor.NetworkGeometryProcessor" id="toc-brdr.processor.NetworkGeometryProcessor" class="nav-link active" data-scroll-target="#brdr.processor.NetworkGeometryProcessor">NetworkGeometryProcessor</a>
   <ul class="collapse">
+  <li><a href="#attributes" id="toc-attributes" class="nav-link" data-scroll-target="#attributes">Attributes</a></li>
   <li><a href="#methods" id="toc-methods" class="nav-link" data-scroll-target="#methods">Methods</a>
   <ul class="collapse">
-  <li><a href="#brdr.loader.DictLoader.load_data" id="toc-brdr.loader.DictLoader.load_data" class="nav-link" data-scroll-target="#brdr.loader.DictLoader.load_data">load_data</a></li>
+  <li><a href="#brdr.processor.NetworkGeometryProcessor.process" id="toc-brdr.processor.NetworkGeometryProcessor.process" class="nav-link" data-scroll-target="#brdr.processor.NetworkGeometryProcessor.process">process</a></li>
   </ul></li>
   </ul></li>
   </ul>
-<div class="toc-actions"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/reference/DictLoader.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
+<div class="toc-actions"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/reference/NetworkGeometryProcessor.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
 <!-- main -->
-<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/Loader.html">Loaders</a></li><li class="breadcrumb-item"><a href="../reference/DictLoader.html">DictLoader</a></li></ol></nav></header>
+<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/BaseProcessor.html">Processors</a></li><li class="breadcrumb-item"><a href="../reference/NetworkGeometryProcessor.html">NetworkGeometryProcessor</a></li></ol></nav></header>
 
 
 
 
-<section id="brdr.loader.DictLoader" class="level1">
-<h1>DictLoader</h1>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>loader.DictLoader(</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    data_dict,</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    data_dict_properties<span class="op">=</span>{},</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    data_dict_source<span class="op">=</span>{<span class="st">'source_url'</span>: <span class="va">None</span>},</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    is_reference<span class="op">=</span><span class="va">False</span>,</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Loader that accepts data directly from Python dictionaries.</p>
-<p>Useful for integrating with existing in-memory data structures.</p>
+<section id="brdr.processor.NetworkGeometryProcessor" class="level1">
+<h1>NetworkGeometryProcessor</h1>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>processor.NetworkGeometryProcessor(config, feedback<span class="op">=</span><span class="va">None</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Processor that aligns geometries based on a linear network.</p>
+<p>This processor decomposes polygons into their exterior and interior linear rings and aligns these boundaries to the linear elements (lines and points) found in the reference dataset.</p>
+<section id="attributes" class="level2 doc-section doc-section-attributes">
+<h2 class="doc-section doc-section-attributes anchored" data-anchor-id="attributes">Attributes</h2>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>processor_id</td>
+<td><a href="`brdr.enums.ProcessorID`">ProcessorID</a></td>
+<td>The unique identifier for this processor (ProcessorID.NETWORK).</td>
+</tr>
+</tbody>
+</table>
+</section>
 <section id="methods" class="level2">
 <h2 class="anchored" data-anchor-id="methods">Methods</h2>
 <table class="caption-top table">
@@ -577,17 +595,117 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
-<td><a href="#brdr.loader.DictLoader.load_data">load_data</a></td>
-<td>Executes the standard loading process.</td>
+<td><a href="#brdr.processor.NetworkGeometryProcessor.process">process</a></td>
+<td>Aligns the boundaries of the input geometry to a reference network.</td>
 </tr>
 </tbody>
 </table>
-<section id="brdr.loader.DictLoader.load_data" class="level3">
-<h3 class="anchored" data-anchor-id="brdr.loader.DictLoader.load_data">load_data</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>loader.DictLoader.load_data()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Executes the standard loading process.</p>
+<section id="brdr.processor.NetworkGeometryProcessor.process" class="level3">
+<h3 class="anchored" data-anchor-id="brdr.processor.NetworkGeometryProcessor.process">process</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>processor.NetworkGeometryProcessor.process(</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    input_geometry,</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    reference_data,</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    mitre_limit,</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    correction_distance,</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    relevant_distance,</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">**</span>kwargs,</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Aligns the boundaries of the input geometry to a reference network.</p>
+<p>The process buffers the input to find relevant network elements, processes exterior and interior rings separately, and reconstructs the polygon after alignment.</p>
+<section id="parameters" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>input_geometry</td>
+<td><a href="`shapely.geometry.base.BaseGeometry`">BaseGeometry</a></td>
+<td>The thematic geometry (Polygon or MultiPolygon) to align.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td>reference_data</td>
+<td><a href="`brdr.feature_data.AlignerFeatureCollection`">AlignerFeatureCollection</a></td>
+<td>The reference dataset, specifically using its <code>elements</code> property.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="odd">
+<td>mitre_limit</td>
+<td><a href="`float`">float</a></td>
+<td>Mitre limit for buffering operations.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td>correction_distance</td>
+<td><a href="`float`">float</a></td>
+<td>Distance used for cleaning and noise reduction.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="odd">
+<td>relevant_distance</td>
+<td><a href="`float`">float</a></td>
+<td>The maximum distance to search for network elements.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td>**kwargs</td>
+<td><a href="`typing.Any`">Any</a></td>
+<td>Additional arguments passed to the processor.</td>
+<td><code>{}</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="returns" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns">Returns</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td><a href="`brdr.typings.ProcessResult`">ProcessResult</a></td>
+<td>A dictionary containing the reconstructed and cleaned polygon.</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="notes" class="level4 doc-section doc-section-notes">
+<h4 class="doc-section doc-section-notes anchored" data-anchor-id="notes">Notes</h4>
+<p>The network processing follows a “deconstruct-align-reconstruct” flow:</p>
+<div class="cell" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<pre class="mermaid mermaid-js">graph TD
+    In[Input Polygon] --&gt; Decon[Deconstruct: Exterior &amp; Interiors]
+    Decon --&gt; Buff[Buffer Input to Find Network]
+    Buff --&gt; Align[Align Segments to Network Elements]
+    Align --&gt; Recon[Reconstruct Polygon Rings]
+    Recon --&gt; Post[Post-processing &amp; Sliver Removal]
+    Post --&gt; End[Final ProcessResult]
+</pre>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
 
 
+</section>
 </section>
 </section>
 </section>
@@ -998,4 +1116,4 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 
-<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/reference/DictLoader.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>
+<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/reference/NetworkGeometryProcessor.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>

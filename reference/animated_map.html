@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>dictloader – BRDR - Aligning borders</title>
+<title>animated_map – BRDR - Aligning borders</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -156,7 +156,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/Loader.html">Loaders</a></li><li class="breadcrumb-item"><a href="../reference/DictLoader.html">DictLoader</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/show_map.html">Visualization-functions (optional by pip install brdr[viz])</a></li><li class="breadcrumb-item"><a href="../reference/animated_map.html">animated_map</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
     </div>
@@ -237,7 +237,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/DictLoader.html" class="sidebar-item-text sidebar-link active">
+  <a href="../reference/DictLoader.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">DictLoader</span></a>
   </div>
 </li>
@@ -518,7 +518,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/animated_map.html" class="sidebar-item-text sidebar-link">
+  <a href="../reference/animated_map.html" class="sidebar-item-text sidebar-link active">
  <span class="menu-text">animated_map</span></a>
   </div>
 </li>
@@ -540,55 +540,120 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#brdr.loader.DictLoader" id="toc-brdr.loader.DictLoader" class="nav-link active" data-scroll-target="#brdr.loader.DictLoader">DictLoader</a>
+  <li><a href="#brdr.viz.animated_map" id="toc-brdr.viz.animated_map" class="nav-link active" data-scroll-target="#brdr.viz.animated_map">animated_map</a>
   <ul class="collapse">
-  <li><a href="#methods" id="toc-methods" class="nav-link" data-scroll-target="#methods">Methods</a>
-  <ul class="collapse">
-  <li><a href="#brdr.loader.DictLoader.load_data" id="toc-brdr.loader.DictLoader.load_data" class="nav-link" data-scroll-target="#brdr.loader.DictLoader.load_data">load_data</a></li>
-  </ul></li>
+  <li><a href="#parameters" id="toc-parameters" class="nav-link" data-scroll-target="#parameters">Parameters</a></li>
+  <li><a href="#returns" id="toc-returns" class="nav-link" data-scroll-target="#returns">Returns</a></li>
+  <li><a href="#notes" id="toc-notes" class="nav-link" data-scroll-target="#notes">Notes</a></li>
   </ul></li>
   </ul>
-<div class="toc-actions"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/reference/DictLoader.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
+<div class="toc-actions"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/reference/animated_map.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
 <!-- main -->
-<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/Loader.html">Loaders</a></li><li class="breadcrumb-item"><a href="../reference/DictLoader.html">DictLoader</a></li></ol></nav></header>
+<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/show_map.html">Visualization-functions (optional by pip install brdr[viz])</a></li><li class="breadcrumb-item"><a href="../reference/animated_map.html">animated_map</a></li></ol></nav></header>
 
 
 
 
-<section id="brdr.loader.DictLoader" class="level1">
-<h1>DictLoader</h1>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>loader.DictLoader(</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    data_dict,</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    data_dict_properties<span class="op">=</span>{},</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    data_dict_source<span class="op">=</span>{<span class="st">'source_url'</span>: <span class="va">None</span>},</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    is_reference<span class="op">=</span><span class="va">False</span>,</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Loader that accepts data directly from Python dictionaries.</p>
-<p>Useful for integrating with existing in-memory data structures.</p>
-<section id="methods" class="level2">
-<h2 class="anchored" data-anchor-id="methods">Methods</h2>
+<section id="brdr.viz.animated_map" class="level1">
+<h1>animated_map</h1>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>viz.animated_map(</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    aligner_results,</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    dict_thematic,</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    dict_reference,</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    xlim,</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    ylim,</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    interval,</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    filename,</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Create a synchronized animation of map changes and area statistics.</p>
+<p>This function generates a side-by-side animation: the left panel shows the geometric alignment on a map (zoomed to thematic data), while the right panel plots the percentage of area change as a function of the ‘relevant distance’ parameter.</p>
+<section id="parameters" class="level2 doc-section doc-section-parameters">
+<h2 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="caption-top table">
 <thead>
 <tr class="header">
 <th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>aligner_results</td>
+<td><a href="`dict`">dict</a></td>
+<td>A nested dictionary structured as <code>{theme_id: {rel_dist: ProcessResult}}</code>.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td>dict_thematic</td>
+<td><a href="`dict`">dict</a></td>
+<td>Dictionary containing the original thematic geometries.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="odd">
+<td>dict_reference</td>
+<td><a href="`dict`">dict</a></td>
+<td>Dictionary containing the reference geometries used for alignment.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td>xlim</td>
+<td><a href="`float`">float</a></td>
+<td>The maximum value for the X-axis (relevant distance) in the trend plot.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="odd">
+<td>ylim</td>
+<td><a href="`float`">float</a></td>
+<td>The maximum value for the Y-axis (% area change) in the trend plot.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td>interval</td>
+<td><a href="`int`">int</a></td>
+<td>Delay between frames in milliseconds.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="odd">
+<td>filename</td>
+<td><a href="`str`">str</a></td>
+<td>The output path/name for the saved animation (e.g., ‘analysis.gif’).</td>
+<td><em>required</em></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="returns" class="level2 doc-section doc-section-returns">
+<h2 class="doc-section doc-section-returns anchored" data-anchor-id="returns">Returns</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 7%">
+<col style="width: 7%">
+<col style="width: 84%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td><a href="#brdr.loader.DictLoader.load_data">load_data</a></td>
-<td>Executes the standard loading process.</td>
+<td></td>
+<td>None</td>
+<td>The function saves the animation to the specified <code>filename</code> and displays the plot.</td>
 </tr>
 </tbody>
 </table>
-<section id="brdr.loader.DictLoader.load_data" class="level3">
-<h3 class="anchored" data-anchor-id="brdr.loader.DictLoader.load_data">load_data</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>loader.DictLoader.load_data()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Executes the standard loading process.</p>
-
-
 </section>
+<section id="notes" class="level2 doc-section doc-section-notes">
+<h2 class="doc-section doc-section-notes anchored" data-anchor-id="notes">Notes</h2>
+<p>To prevent “stray lines” in the trend plot during animation loops, the data tracking lists are cleared whenever the animation restarts at the first distance frame.</p>
+
+
 </section>
 </section>
 
@@ -998,4 +1063,4 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 
-<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/reference/DictLoader.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>
+<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/reference/animated_map.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>

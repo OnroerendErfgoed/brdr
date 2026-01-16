@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.8.25">
+<meta name="generator" content="quarto-1.8.27">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -37,10 +37,10 @@ ul.task-list li input[type="checkbox"] {
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-969ddfa49e00a70eb3423444dbc81f6c.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-f1aadacce99040138bbb613f9330654f.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-66637f7aac715e5a0db970eb374460cc.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-b79b1fcb1424b07627426b9f3ef330b1.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -94,17 +94,21 @@ ul.task-list li input[type="checkbox"] {
           <div class="collapse navbar-collapse" id="navbarCollapse">
             <ul class="navbar-nav navbar-nav-scroll me-auto">
   <li class="nav-item">
-    <a class="nav-link active" href="../index.html" aria-current="page"> <i class="bi bi-house-fill" role="img">
+    <a class="nav-link" href="../index.html"> <i class="bi bi-house-fill" role="img">
 </i> 
 <span class="menu-text">Home</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="../reference/index.html"> 
+    <a class="nav-link active" href="../reference/index.html" aria-current="page"> 
 <span class="menu-text">Reference</span></a>
   </li>  
   <li class="nav-item">
     <a class="nav-link" href="../examples.html"> 
 <span class="menu-text">Examples</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../qa.html"> 
+<span class="menu-text">Q &amp; A</span></a>
   </li>  
 </ul>
           </div> <!-- /navcollapse -->
@@ -127,10 +131,6 @@ ul.task-list li input[type="checkbox"] {
 <div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
 <!-- sidebar -->
   <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
-    <div class="pt-lg-2 mt-2 text-left sidebar-header">
-      <a href="../index.html" class="sidebar-logo-link">
-      </a>
-      </div>
     <div class="sidebar-menu-container"> 
     <ul class="list-unstyled mt-1">
         <li class="sidebar-item">
@@ -154,17 +154,46 @@ ul.task-list li input[type="checkbox"] {
  <span class="menu-text">Aligner</span></a>
   </div>
 </li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/AlignerResult.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">AlignerResult</span></a>
+  </div>
+</li>
       </ul>
   </li>
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
             <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
- <span class="menu-text">Loaders</span></a>
+ <span class="menu-text">AlignerFeatures</span></a>
           <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
       </div>
       <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/AlignerFeatureCollection.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">AlignerFeatureCollection</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/AlignerFeature.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">AlignerFeature</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
+ <span class="menu-text">Loaders</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../reference/Loader.html" class="sidebar-item-text sidebar-link">
@@ -195,11 +224,276 @@ ul.task-list li input[type="checkbox"] {
  <span class="menu-text">GeoJsonUrlLoader</span></a>
   </div>
 </li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/OGCFeatureAPIReferenceLoader.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">OGCFeatureAPIReferenceLoader</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/WFSReferenceLoader.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">WFSReferenceLoader</span></a>
+  </div>
+</li>
       </ul>
   </li>
         <li class="sidebar-item sidebar-item-section">
-      <span class="sidebar-item-text sidebar-link text-start">
- <span class="menu-text">GRB</span></span>
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
+ <span class="menu-text">Processors</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/BaseProcessor.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">BaseProcessor</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/AlignerGeometryProcessor.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">AlignerGeometryProcessor</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/DieussaertGeometryProcessor.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">DieussaertGeometryProcessor</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/NetworkGeometryProcessor.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">NetworkGeometryProcessor</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/SnapGeometryProcessor.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">SnapGeometryProcessor</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/TopologyProcessor.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">TopologyProcessor</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true">
+ <span class="menu-text">Enumerators</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/FullReferenceStrategy.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">FullReferenceStrategy</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/AlignerResultType.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">AlignerResultType</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/OpenDomainStrategy.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">OpenDomainStrategy</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/DiffMetric.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">DiffMetric</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/ProcessRemark.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">ProcessRemark</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/Evaluation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Evaluation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/SnapStrategy.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">SnapStrategy</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/PredictionStrategy.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">PredictionStrategy</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/ProcessorID.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">ProcessorID</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="true">
+ <span class="menu-text">Typings</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-6" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/ProcessResult.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">ProcessResult</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" role="navigation" aria-expanded="true">
+ <span class="menu-text">Configs</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-7" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/ProcessorConfig.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">ProcessorConfig</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/AlignerConfig.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">AlignerConfig</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-8" role="navigation" aria-expanded="true">
+ <span class="menu-text">GRB (Flanders-specific)</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-8" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-8" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/loader.GRBActualLoader.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">loader.GRBActualLoader</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/loader.GRBFiscalParcelLoader.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">loader.GRBFiscalParcelLoader</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/loader.GRBSpecificDateParcelLoader.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">loader.GRBSpecificDateParcelLoader</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/grb.update_featurecollection_to_actual_grb.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">grb.update_featurecollection_to_actual_grb</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/utils.is_grb_changed.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">utils.is_grb_changed</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/utils.get_affected_ids_by_grb_change.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">utils.get_affected_ids_by_grb_change</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/enums.GRBType.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">enums.GRBType</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-9" role="navigation" aria-expanded="true">
+ <span class="menu-text">OSM</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-9" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-9" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/loader.OSMLoader.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">loader.OSMLoader</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-10" role="navigation" aria-expanded="true">
+ <span class="menu-text">Visualization-functions (optional by pip install brdr[viz])</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-10" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-10" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/show_map.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">show_map</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/plot_difference_by_relevant_distance.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">plot_difference_by_relevant_distance</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/animated_map.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">animated_map</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/print_observation_of_aligner_results.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">print_observation_of_aligner_results</span></a>
+  </div>
+</li>
+      </ul>
   </li>
     </ul>
     </div>
@@ -214,11 +508,18 @@ ul.task-list li input[type="checkbox"] {
   <li><a href="#function-reference" id="toc-function-reference" class="nav-link active" data-scroll-target="#function-reference">Function reference</a>
   <ul class="collapse">
   <li><a href="#aligner" id="toc-aligner" class="nav-link" data-scroll-target="#aligner">Aligner</a></li>
+  <li><a href="#alignerfeatures" id="toc-alignerfeatures" class="nav-link" data-scroll-target="#alignerfeatures">AlignerFeatures</a></li>
   <li><a href="#loaders" id="toc-loaders" class="nav-link" data-scroll-target="#loaders">Loaders</a></li>
-  <li><a href="#grb" id="toc-grb" class="nav-link" data-scroll-target="#grb">GRB</a></li>
+  <li><a href="#processors" id="toc-processors" class="nav-link" data-scroll-target="#processors">Processors</a></li>
+  <li><a href="#enumerators" id="toc-enumerators" class="nav-link" data-scroll-target="#enumerators">Enumerators</a></li>
+  <li><a href="#typings" id="toc-typings" class="nav-link" data-scroll-target="#typings">Typings</a></li>
+  <li><a href="#configs" id="toc-configs" class="nav-link" data-scroll-target="#configs">Configs</a></li>
+  <li><a href="#grb-flanders-specific" id="toc-grb-flanders-specific" class="nav-link" data-scroll-target="#grb-flanders-specific">GRB (Flanders-specific)</a></li>
+  <li><a href="#osm" id="toc-osm" class="nav-link" data-scroll-target="#osm">OSM</a></li>
+  <li><a href="#visualization-functions-optional-by-pip-install-brdrviz" id="toc-visualization-functions-optional-by-pip-install-brdrviz" class="nav-link" data-scroll-target="#visualization-functions-optional-by-pip-install-brdrviz">Visualization-functions (optional by pip install brdr[viz])</a></li>
   </ul></li>
   </ul>
-</nav>
+<div class="toc-actions"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/reference/index.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"></header>
@@ -235,7 +536,27 @@ ul.task-list li input[type="checkbox"] {
 <tbody>
 <tr class="odd">
 <td><a href="../reference/Aligner.html#brdr.aligner.Aligner">Aligner</a></td>
-<td>This class is used to compare and align the thematic data with the reference data.</td>
+<td>Compares and aligns thematic geospatial data against a set of reference data.</td>
+</tr>
+<tr class="even">
+<td><a href="../reference/AlignerResult.html#brdr.aligner.AlignerResult">AlignerResult</a></td>
+<td>Stores and processes the results from the alignment operation.</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="alignerfeatures" class="level2">
+<h2 class="anchored" data-anchor-id="alignerfeatures">AlignerFeatures</h2>
+<p>Classes for the thematic and reference data to be used by the Aligner</p>
+<table class="caption-top table">
+<tbody>
+<tr class="odd">
+<td><a href="../reference/AlignerFeatureCollection.html#brdr.feature_data.AlignerFeatureCollection">AlignerFeatureCollection</a></td>
+<td>A collection of AlignerFeature objects with spatial indexing and utility properties.</td>
+</tr>
+<tr class="even">
+<td><a href="../reference/AlignerFeature.html#brdr.feature_data.AlignerFeature">AlignerFeature</a></td>
+<td>A container for a single thematic or reference feature within the aligner.</td>
 </tr>
 </tbody>
 </table>
@@ -247,30 +568,210 @@ ul.task-list li input[type="checkbox"] {
 <tbody>
 <tr class="odd">
 <td><a href="../reference/Loader.html#brdr.loader.Loader">Loader</a></td>
-<td></td>
+<td>Abstract base class for all data loaders.</td>
 </tr>
 <tr class="even">
 <td><a href="../reference/DictLoader.html#brdr.loader.DictLoader">DictLoader</a></td>
-<td></td>
+<td>Loader that accepts data directly from Python dictionaries.</td>
 </tr>
 <tr class="odd">
 <td><a href="../reference/GeoJsonLoader.html#brdr.loader.GeoJsonLoader">GeoJsonLoader</a></td>
-<td></td>
+<td>Base class for loaders dealing with GeoJSON-formatted data.</td>
 </tr>
 <tr class="even">
 <td><a href="../reference/GeoJsonFileLoader.html#brdr.loader.GeoJsonFileLoader">GeoJsonFileLoader</a></td>
-<td></td>
+<td>Loads GeoJSON data from a local file system.</td>
 </tr>
 <tr class="odd">
 <td><a href="../reference/GeoJsonUrlLoader.html#brdr.loader.GeoJsonUrlLoader">GeoJsonUrlLoader</a></td>
+<td>Loads GeoJSON data from a remote URL via HTTP GET.</td>
+</tr>
+<tr class="even">
+<td><a href="../reference/OGCFeatureAPIReferenceLoader.html#brdr.loader.OGCFeatureAPIReferenceLoader">OGCFeatureAPIReferenceLoader</a></td>
+<td>Loader for OGC API - Features services.</td>
+</tr>
+<tr class="odd">
+<td><a href="../reference/WFSReferenceLoader.html#brdr.loader.WFSReferenceLoader">WFSReferenceLoader</a></td>
+<td>Loader for OGC Web Feature Service (WFS) version 2.0.0.</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="processors" class="level2">
+<h2 class="anchored" data-anchor-id="processors">Processors</h2>
+<p>Processor algorithms</p>
+<table class="caption-top table">
+<tbody>
+<tr class="odd">
+<td><a href="../reference/BaseProcessor.html#brdr.processor.BaseProcessor">BaseProcessor</a></td>
+<td>Abstract base class for geometric alignment processors.</td>
+</tr>
+<tr class="even">
+<td><a href="../reference/AlignerGeometryProcessor.html#brdr.processor.AlignerGeometryProcessor">AlignerGeometryProcessor</a></td>
+<td>Processor responsible for aligning thematic geometries to reference data.</td>
+</tr>
+<tr class="odd">
+<td><a href="../reference/DieussaertGeometryProcessor.html#brdr.processor.DieussaertGeometryProcessor">DieussaertGeometryProcessor</a></td>
+<td>Processor implementing the Dieussaert area-based alignment algorithm.</td>
+</tr>
+<tr class="even">
+<td><a href="../reference/NetworkGeometryProcessor.html#brdr.processor.NetworkGeometryProcessor">NetworkGeometryProcessor</a></td>
+<td>Processor that aligns geometries based on a linear network.</td>
+</tr>
+<tr class="odd">
+<td><a href="../reference/SnapGeometryProcessor.html#brdr.processor.SnapGeometryProcessor">SnapGeometryProcessor</a></td>
+<td>Processor that aligns geometries by snapping them to the reference data.</td>
+</tr>
+<tr class="even">
+<td><a href="../reference/TopologyProcessor.html#brdr.processor.TopologyProcessor">TopologyProcessor</a></td>
+<td>Processor that aligns geometries while preserving topological relationships.</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="enumerators" class="level2">
+<h2 class="anchored" data-anchor-id="enumerators">Enumerators</h2>
+<p>Enums used in the brdr package.</p>
+<table class="caption-top table">
+<tbody>
+<tr class="odd">
+<td><a href="../reference/FullReferenceStrategy.html#brdr.enums.FullReferenceStrategy">FullReferenceStrategy</a></td>
+<td>Strategy for handling reference data coverage.</td>
+</tr>
+<tr class="even">
+<td><a href="../reference/AlignerResultType.html#brdr.enums.AlignerResultType">AlignerResultType</a></td>
+<td>Format of the output dictionary.</td>
+</tr>
+<tr class="odd">
+<td><a href="../reference/OpenDomainStrategy.html#brdr.enums.OpenDomainStrategy">OpenDomainStrategy</a></td>
+<td>Strategies for processing thematic areas not covered by reference data.</td>
+</tr>
+<tr class="even">
+<td><a href="../reference/DiffMetric.html#brdr.enums.DiffMetric">DiffMetric</a></td>
+<td>Metrics to quantify the change between thematic and reference data.</td>
+</tr>
+<tr class="odd">
+<td><a href="../reference/ProcessRemark.html#brdr.enums.ProcessRemark">ProcessRemark</a></td>
+<td>Status remarks added to processed features for auditing and debugging.</td>
+</tr>
+<tr class="even">
+<td><a href="../reference/Evaluation.html#brdr.enums.Evaluation">Evaluation</a></td>
+<td>Classification of the alignment quality and reliability.</td>
+</tr>
+<tr class="odd">
+<td><a href="../reference/SnapStrategy.html#brdr.enums.SnapStrategy">SnapStrategy</a></td>
+<td>Geometric priority during snapping.</td>
+</tr>
+<tr class="even">
+<td><a href="../reference/PredictionStrategy.html#brdr.enums.PredictionStrategy">PredictionStrategy</a></td>
+<td>Determines which prediction is selected as the primary result.</td>
+</tr>
+<tr class="odd">
+<td><a href="../reference/ProcessorID.html#brdr.enums.ProcessorID">ProcessorID</a></td>
+<td>Unique identifiers for the available alignment algorithms.</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="typings" class="level2">
+<h2 class="anchored" data-anchor-id="typings">Typings</h2>
+<p>Typings used in ‘brdr’</p>
+<table class="caption-top table">
+<tbody>
+<tr class="odd">
+<td><a href="../reference/ProcessResult.html#brdr.typings.ProcessResult">ProcessResult</a></td>
+<td>A dictionary structure representing the output of a geometric alignment process.</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="configs" class="level2">
+<h2 class="anchored" data-anchor-id="configs">Configs</h2>
+<p>Configs used in ‘brdr’ Aligner &amp; Processor</p>
+<table class="caption-top table">
+<tbody>
+<tr class="odd">
+<td><a href="../reference/ProcessorConfig.html#brdr.configs.ProcessorConfig">ProcessorConfig</a></td>
+<td>Configuration for the geometric preprocessing of polygons in the brdr pipeline.</td>
+</tr>
+<tr class="even">
+<td><a href="../reference/AlignerConfig.html#brdr.configs.AlignerConfig">AlignerConfig</a></td>
+<td>Configuration for the alignment and correction of spatial boundaries.</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="grb-flanders-specific" class="level2">
+<h2 class="anchored" data-anchor-id="grb-flanders-specific">GRB (Flanders-specific)</h2>
+<p>GRB (Flanders-specific) classes,methods, enumerators,…</p>
+<table class="caption-top table">
+<tbody>
+<tr class="odd">
+<td><a href="../reference/loader.GRBActualLoader.html#brdr.be.grb.loader.GRBActualLoader">loader.GRBActualLoader</a></td>
+<td>Loader for the most recent version of GRB (Grootschalig Referentie Bestand).</td>
+</tr>
+<tr class="even">
+<td><a href="../reference/loader.GRBFiscalParcelLoader.html#brdr.be.grb.loader.GRBFiscalParcelLoader">loader.GRBFiscalParcelLoader</a></td>
+<td>Loader for fiscal parcel data (Adpf) for a specific year.</td>
+</tr>
+<tr class="odd">
+<td><a href="../reference/loader.GRBSpecificDateParcelLoader.html#brdr.be.grb.loader.GRBSpecificDateParcelLoader">loader.GRBSpecificDateParcelLoader</a></td>
+<td>Loader for GRB parcel situations on a specific historical date.</td>
+</tr>
+<tr class="even">
+<td><a href="../reference/grb.update_featurecollection_to_actual_grb.html#brdr.be.grb.grb.update_featurecollection_to_actual_grb">grb.update_featurecollection_to_actual_grb</a></td>
+<td>Update a thematic feature collection to the most recent version of the GRB.</td>
+</tr>
+<tr class="odd">
+<td><a href="../reference/utils.is_grb_changed.html#brdr.be.grb.utils.is_grb_changed">utils.is_grb_changed</a></td>
+<td>checks if a geometry is possibly affected by changes in the reference layer</td>
+</tr>
+<tr class="even">
+<td><a href="../reference/utils.get_affected_ids_by_grb_change.html#brdr.be.grb.utils.get_affected_ids_by_grb_change">utils.get_affected_ids_by_grb_change</a></td>
+<td>Get a list of affected IDs by GRB-changes in a</td>
+</tr>
+<tr class="odd">
+<td><a href="../reference/enums.GRBType.html#brdr.be.grb.enums.GRBType">enums.GRBType</a></td>
 <td></td>
 </tr>
 </tbody>
 </table>
 </section>
-<section id="grb" class="level2">
-<h2 class="anchored" data-anchor-id="grb">GRB</h2>
-<p>GRB specific loaders - grb.GRBActualLoader - grb.GRBFiscalParcelLoader - grb.GRBSpecificDateParcelLoader</p>
+<section id="osm" class="level2">
+<h2 class="anchored" data-anchor-id="osm">OSM</h2>
+<p>OpenStreetMap (OSM) classes,methods, enumerators,…</p>
+<table class="caption-top table">
+<tbody>
+<tr class="odd">
+<td><a href="../reference/loader.OSMLoader.html#brdr.osm.loader.OSMLoader">loader.OSMLoader</a></td>
+<td>Loader for OpenStreetMap (OSM) features based on specific tags.</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="visualization-functions-optional-by-pip-install-brdrviz" class="level2">
+<h2 class="anchored" data-anchor-id="visualization-functions-optional-by-pip-install-brdrviz">Visualization-functions (optional by pip install brdr[viz])</h2>
+<p>OpenStreetMap (OSM) classes,methods, enumerators,…</p>
+<table class="caption-top table">
+<tbody>
+<tr class="odd">
+<td><a href="../reference/show_map.html#brdr.viz.show_map">show_map</a></td>
+<td>Display a grid of maps showing alignment results across different distances.</td>
+</tr>
+<tr class="even">
+<td><a href="../reference/plot_difference_by_relevant_distance.html#brdr.viz.plot_difference_by_relevant_distance">plot_difference_by_relevant_distance</a></td>
+<td>Plot geometric differences across multiple features as a line graph.</td>
+</tr>
+<tr class="odd">
+<td><a href="../reference/animated_map.html#brdr.viz.animated_map">animated_map</a></td>
+<td>Create a synchronized animation of map changes and area statistics.</td>
+</tr>
+<tr class="even">
+<td><a href="../reference/print_observation_of_aligner_results.html#brdr.viz.print_observation_of_aligner_results">print_observation_of_aligner_results</a></td>
+<td>Print a detailed comparison analysis for alignment results.</td>
+</tr>
+</tbody>
+</table>
 
 
 </section>
@@ -682,4 +1183,4 @@ ul.task-list li input[type="checkbox"] {
 
 
 
-</body></html>
+<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/reference/index.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>

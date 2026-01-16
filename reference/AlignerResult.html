@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>dictloader – BRDR - Aligning borders</title>
+<title>alignerresult – BRDR - Aligning borders</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -103,6 +103,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     "search-label": "Search"
   }
 }</script>
+<script src="../site_libs/quarto-diagram/mermaid.min.js"></script>
+<script src="../site_libs/quarto-diagram/mermaid-init.js"></script>
+<link href="../site_libs/quarto-diagram/mermaid.css" rel="stylesheet">
 
 
 </head>
@@ -156,7 +159,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/Loader.html">Loaders</a></li><li class="breadcrumb-item"><a href="../reference/DictLoader.html">DictLoader</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/Aligner.html">Aligner</a></li><li class="breadcrumb-item"><a href="../reference/AlignerResult.html">AlignerResult</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
     </div>
@@ -191,7 +194,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/AlignerResult.html" class="sidebar-item-text sidebar-link">
+  <a href="../reference/AlignerResult.html" class="sidebar-item-text sidebar-link active">
  <span class="menu-text">AlignerResult</span></a>
   </div>
 </li>
@@ -237,7 +240,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/DictLoader.html" class="sidebar-item-text sidebar-link active">
+  <a href="../reference/DictLoader.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">DictLoader</span></a>
   </div>
 </li>
@@ -540,32 +543,82 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#brdr.loader.DictLoader" id="toc-brdr.loader.DictLoader" class="nav-link active" data-scroll-target="#brdr.loader.DictLoader">DictLoader</a>
+  <li><a href="#brdr.aligner.AlignerResult" id="toc-brdr.aligner.AlignerResult" class="nav-link active" data-scroll-target="#brdr.aligner.AlignerResult">AlignerResult</a>
   <ul class="collapse">
+  <li><a href="#attributes" id="toc-attributes" class="nav-link" data-scroll-target="#attributes">Attributes</a></li>
+  <li><a href="#notes" id="toc-notes" class="nav-link" data-scroll-target="#notes">Notes</a></li>
+  <li><a href="#examples" id="toc-examples" class="nav-link" data-scroll-target="#examples">Examples</a></li>
   <li><a href="#methods" id="toc-methods" class="nav-link" data-scroll-target="#methods">Methods</a>
   <ul class="collapse">
-  <li><a href="#brdr.loader.DictLoader.load_data" id="toc-brdr.loader.DictLoader.load_data" class="nav-link" data-scroll-target="#brdr.loader.DictLoader.load_data">load_data</a></li>
+  <li><a href="#brdr.aligner.AlignerResult.get_results" id="toc-brdr.aligner.AlignerResult.get_results" class="nav-link" data-scroll-target="#brdr.aligner.AlignerResult.get_results">get_results</a></li>
+  <li><a href="#brdr.aligner.AlignerResult.get_results_as_geojson" id="toc-brdr.aligner.AlignerResult.get_results_as_geojson" class="nav-link" data-scroll-target="#brdr.aligner.AlignerResult.get_results_as_geojson">get_results_as_geojson</a></li>
+  <li><a href="#brdr.aligner.AlignerResult.save_results" id="toc-brdr.aligner.AlignerResult.save_results" class="nav-link" data-scroll-target="#brdr.aligner.AlignerResult.save_results">save_results</a></li>
   </ul></li>
   </ul></li>
   </ul>
-<div class="toc-actions"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/reference/DictLoader.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
+<div class="toc-actions"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/reference/AlignerResult.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
 <!-- main -->
-<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/Loader.html">Loaders</a></li><li class="breadcrumb-item"><a href="../reference/DictLoader.html">DictLoader</a></li></ol></nav></header>
+<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/Aligner.html">Aligner</a></li><li class="breadcrumb-item"><a href="../reference/AlignerResult.html">AlignerResult</a></li></ol></nav></header>
 
 
 
 
-<section id="brdr.loader.DictLoader" class="level1">
-<h1>DictLoader</h1>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>loader.DictLoader(</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    data_dict,</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    data_dict_properties<span class="op">=</span>{},</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    data_dict_source<span class="op">=</span>{<span class="st">'source_url'</span>: <span class="va">None</span>},</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    is_reference<span class="op">=</span><span class="va">False</span>,</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Loader that accepts data directly from Python dictionaries.</p>
-<p>Useful for integrating with existing in-memory data structures.</p>
+<section id="brdr.aligner.AlignerResult" class="level1">
+<h1>AlignerResult</h1>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>aligner.AlignerResult(process_results)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Stores and processes the results from the alignment operation.</p>
+<p>This class manages the lifecycle of alignment results, including enrichment with geometric metrics (like area or length change), filtering by result type, and exporting to GeoJSON format.</p>
+<section id="attributes" class="level2 doc-section doc-section-attributes">
+<h2 class="doc-section doc-section-attributes anchored" data-anchor-id="attributes">Attributes</h2>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>results</td>
+<td><a href="`typing.Dict`">Dict</a>[<a href="`ThematicId`">ThematicId</a>, <a href="`typing.Dict`">Dict</a>[<a href="`float`">float</a>, <a href="`typing.Optional`">Optional</a>[<a href="`brdr.typings.ProcessResult`">ProcessResult</a>]]]</td>
+<td>A nested dictionary where the outer key is the theme ID and the inner key is the relevant distance used during processing.</td>
+</tr>
+<tr class="even">
+<td>metadata</td>
+<td><a href="`typing.Optional`">Optional</a>[<a href="`typing.Any`">Any</a>]</td>
+<td>Optional metadata about the overall alignment operation.</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="notes" class="level2 doc-section doc-section-notes">
+<h2 class="doc-section doc-section-notes anchored" data-anchor-id="notes">Notes</h2>
+<p>The class acts as a post-processor. It takes the raw output from the geometric engines and calculates semantic differences before exporting.</p>
+<div class="cell" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<pre class="mermaid mermaid-js">graph TD
+    Raw[Raw Process Results] --&gt; AR[AlignerResult]
+    AR --&gt; |get_results| Enriched[Enriched with Area/Length Metrics]
+    Enriched --&gt; |get_results_as_geojson| GeoJSON[GeoJSON FeatureCollection]
+    GeoJSON --&gt; |save_results| Disk[Local .geojson files]
+</pre>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
+</section>
+<section id="examples" class="level2 doc-section doc-section-examples">
+<h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> <span class="co"># Initializing and saving results</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> result_obj <span class="op">=</span> AlignerResult(raw_results)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> result_obj.save_results(aligner, path<span class="op">=</span><span class="st">"./output_folder"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
 <section id="methods" class="level2">
 <h2 class="anchored" data-anchor-id="methods">Methods</h2>
 <table class="caption-top table">
@@ -577,17 +630,242 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
-<td><a href="#brdr.loader.DictLoader.load_data">load_data</a></td>
-<td>Executes the standard loading process.</td>
+<td><a href="#brdr.aligner.AlignerResult.get_results">get_results</a></td>
+<td>Retrieves results enriched with geometric metrics and filtered by type.</td>
+</tr>
+<tr class="even">
+<td><a href="#brdr.aligner.AlignerResult.get_results_as_geojson">get_results_as_geojson</a></td>
+<td>Converts the results into a GeoJSON FeatureCollection format.</td>
+</tr>
+<tr class="odd">
+<td><a href="#brdr.aligner.AlignerResult.save_results">save_results</a></td>
+<td>Exports the results as multiple GeoJSON files to a directory.</td>
 </tr>
 </tbody>
 </table>
-<section id="brdr.loader.DictLoader.load_data" class="level3">
-<h3 class="anchored" data-anchor-id="brdr.loader.DictLoader.load_data">load_data</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>loader.DictLoader.load_data()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Executes the standard loading process.</p>
+<section id="brdr.aligner.AlignerResult.get_results" class="level3">
+<h3 class="anchored" data-anchor-id="brdr.aligner.AlignerResult.get_results">get_results</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>aligner.AlignerResult.get_results(</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    aligner,</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    result_type<span class="op">=</span>AlignerResultType.PROCESSRESULTS,</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Retrieves results enriched with geometric metrics and filtered by type.</p>
+<p>This method mutates the stored <code>ProcessResult</code> objects by adding calculated difference metrics (e.g., symmetrical area change) to their properties.</p>
+<section id="parameters" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>aligner</td>
+<td><a href="`brdr.aligner.Aligner`">Aligner</a></td>
+<td>The ‘Aligner’ object used to access thematic data and comparison logic.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td>result_type</td>
+<td><a href="`brdr.enums.AlignerResultType`">AlignerResultType</a></td>
+<td>Filters the results based on status. Defaults to PROCESSRESULTS.</td>
+<td><code>AlignerResultType.PROCESSRESULTS</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="returns" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns">Returns</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td><a href="`typing.Dict`">Dict</a>[<a href="`ThematicId`">ThematicId</a>, <a href="`typing.Dict`">Dict</a>[<a href="`float`">float</a>, <a href="`typing.Optional`">Optional</a>[<a href="`brdr.typings.ProcessResult`">ProcessResult</a>]]]</td>
+<td>A dictionary of filtered and enriched results.</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="raises" class="level4 doc-section doc-section-raises">
+<h4 class="doc-section doc-section-raises anchored" data-anchor-id="raises">Raises</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td><a href="`ValueError`">ValueError</a></td>
+<td>If an unsupported <code>result_type</code> is provided.</td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="brdr.aligner.AlignerResult.get_results_as_geojson" class="level3">
+<h3 class="anchored" data-anchor-id="brdr.aligner.AlignerResult.get_results_as_geojson">get_results_as_geojson</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>aligner.AlignerResult.get_results_as_geojson(</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    aligner,</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    result_type<span class="op">=</span>AlignerResultType.PROCESSRESULTS,</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    add_metadata<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    add_original_attributes<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Converts the results into a GeoJSON FeatureCollection format.</p>
+<section id="parameters-1" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-1">Parameters</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>aligner</td>
+<td><a href="`brdr.aligner.Aligner`">Aligner</a></td>
+<td>The ‘Aligner’ object providing CRS and thematic metadata.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td>result_type</td>
+<td><a href="`brdr.enums.AlignerResultType`">AlignerResultType</a></td>
+<td>The type of results to export. Defaults to PROCESSRESULTS.</td>
+<td><code>AlignerResultType.PROCESSRESULTS</code></td>
+</tr>
+<tr class="odd">
+<td>add_metadata</td>
+<td><a href="`bool`">bool</a></td>
+<td>If True, includes the descriptive comparison observation in properties.</td>
+<td><code>False</code></td>
+</tr>
+<tr class="even">
+<td>add_original_attributes</td>
+<td><a href="`bool`">bool</a></td>
+<td>If True, includes original thematic attributes in the output.</td>
+<td><code>False</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="returns-1" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-1">Returns</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td><a href="`typing.Dict`">Dict</a>[<a href="`str`">str</a>, <a href="`typing.Any`">Any</a>]</td>
+<td>A dictionary representing a GeoJSON FeatureCollection.</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="raises-1" class="level4 doc-section doc-section-raises">
+<h4 class="doc-section doc-section-raises anchored" data-anchor-id="raises-1">Raises</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td><a href="`ValueError`">ValueError</a></td>
+<td>If <code>self.results</code> is empty or None.</td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="brdr.aligner.AlignerResult.save_results" class="level3">
+<h3 class="anchored" data-anchor-id="brdr.aligner.AlignerResult.save_results">save_results</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>aligner.AlignerResult.save_results(</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    aligner,</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    path,</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    result_type<span class="op">=</span>AlignerResultType.PROCESSRESULTS,</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    add_metadata<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    add_original_attributes<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Exports the results as multiple GeoJSON files to a directory.</p>
+<p>Creates separate files for original results, differences, and specific area changes (added/removed).</p>
+<section id="parameters-2" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-2">Parameters</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>aligner</td>
+<td><a href="`brdr.aligner.Aligner`">Aligner</a></td>
+<td>The ‘Aligner’ object for spatial context.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td>path</td>
+<td><a href="`str`">str</a></td>
+<td>Target directory path where files will be created.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="odd">
+<td>result_type</td>
+<td><a href="`brdr.enums.AlignerResultType`">AlignerResultType</a></td>
+<td>Type of results to export. Defaults to PROCESSRESULTS.</td>
+<td><code>AlignerResultType.PROCESSRESULTS</code></td>
+</tr>
+<tr class="even">
+<td>add_metadata</td>
+<td><a href="`bool`">bool</a></td>
+<td>Whether to include alignment observations in the output.</td>
+<td><code>False</code></td>
+</tr>
+<tr class="odd">
+<td>add_original_attributes</td>
+<td><a href="`bool`">bool</a></td>
+<td>Whether to include original feature attributes.</td>
+<td><code>False</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="notes-1" class="level4 doc-section doc-section-notes">
+<h4 class="doc-section doc-section-notes anchored" data-anchor-id="notes-1">Notes</h4>
+<p>The output files follow the naming convention: <code>{result_type}_{name}.geojson</code>.</p>
 
 
+</section>
 </section>
 </section>
 </section>
@@ -998,4 +1276,4 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 
-<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/reference/DictLoader.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>
+<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/reference/AlignerResult.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>

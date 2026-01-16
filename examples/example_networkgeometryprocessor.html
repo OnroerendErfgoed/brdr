@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Karel Dieussaert">
+<meta name="dcterms.date" content="2026-01-07">
+<meta name="description" content="Simple example to get started">
+
+<title>NetworkGeometryProcessor – BRDR - Aligning borders</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-f1aadacce99040138bbb613f9330654f.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-b79b1fcb1424b07627426b9f3ef330b1.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
+</head>
+
+<body class="nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a href="../index.html" class="navbar-brand navbar-brand-logo">
+    <img src="../static/logo.svg" alt="" class="navbar-logo light-content">
+    <img src="../static/logo.svg" alt="" class="navbar-logo dark-content">
+    </a>
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">BRDR - Aligning borders</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../index.html"> <i class="bi bi-house-fill" role="img">
+</i> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../reference/index.html"> 
+<span class="menu-text">Reference</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../examples.html"> 
+<span class="menu-text">Examples</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../qa.html"> 
+<span class="menu-text">Q &amp; A</span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#networkgeometryprocessor" id="toc-networkgeometryprocessor" class="nav-link active" data-scroll-target="#networkgeometryprocessor">NetworkGeometryProcessor</a></li>
+  </ul>
+<div class="toc-actions"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/examples/example_networkgeometryprocessor.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">NetworkGeometryProcessor</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">NetworkGeometryProcessor</div>
+    <div class="quarto-category">Prediction</div>
+    <div class="quarto-category">Graph</div>
+  </div>
+  </div>
+
+<div>
+  <div class="description">
+    Simple example to get started
+  </div>
+</div>
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Karel Dieussaert </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">January 7, 2026</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="networkgeometryprocessor" class="level1">
+<h1>NetworkGeometryProcessor</h1>
+<p>This example shows an example how a processor (NetworkGeometryProcessor) can be added to the aligner. The aligner makes predictions based on the result from this processor. In this case NetworkGeometryProcessor is used. This is a slower processor as DieussaertProcessor, but can be used more generic for all kinds of geometrytypes: Polygon/LibeString/Point - to - Polygon/LibeString/Point.</p>
+<div id="77620a64" class="cell" data-execution_count="1">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.aligner <span class="im">import</span> Aligner</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.be.grb.enums <span class="im">import</span> GRBType</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.be.grb.loader <span class="im">import</span> GRBActualLoader</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.configs <span class="im">import</span> ProcessorConfig</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.enums <span class="im">import</span> AlignerResultType</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.geometry_utils <span class="im">import</span> geom_from_wkt</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.loader <span class="im">import</span> DictLoader</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.processor <span class="im">import</span> NetworkGeometryProcessor</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.viz <span class="im">import</span> plot_difference_by_relevant_distance, show_map</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>wkt <span class="op">=</span> <span class="st">"MULTIPOLYGON (((161124.34599999999045394 192109.59909999999217689, 161168.89799999998649582 192116.24609999998938292, 161193.2410000000090804 192119.87810000000172295, 161209.3779999999969732 192122.2851000000082422, 161301.39799999998649582 192136.21809999999823049, 161331.3720000000030268 192140.75609999999869615, 161333.79800000000977889 192162.08809999999357387, 161337.36100000000442378 192190.08609999998589046, 161340.79999999998835847 192217.1010999999998603, 161289.46599999998579733 192225.79409999999916181, 161292.97899999999208376 192242.98009999998612329, 161302.7559999999939464 192241.45209999999497086, 161310.06700000001001172 192277.30910000001313165, 161310.77600000001257285 192280.7890999999945052, 161307.41599999999743886 192281.32409999999799766, 161308.2559999999939464 192285.75409999999101274, 161291.07000000000698492 192289.80210000000079162, 161294.72800000000279397 192307.19709999999031425, 161286.91599999999743886 192307.39009999998961575, 161271.16300000000046566 192309.70809999998891726, 161271.12599999998928979 192310.10310000000754371, 161269.97500000000582077 192322.45410000000265427, 161267.09099999998579733 192353.4101000000082422, 161269.3219999999855645 192359.60910000000149012, 161250.23999999999068677 192360.83710000000428408, 161261.48999999999068677 192355.92110000000684522, 161263.70499999998719431 192321.40810000000055879, 161236.57800000000861473 192316.75109999999403954, 161206.75800000000162981 192311.63109999999869615, 161203.84299999999348074 192311.13109999999869615, 161177.42100000000209548 192306.5951000000059139, 161186.53400000001420267 192247.45209999999497086, 161139.78800000000046566 192240.76809999998658895, 161140.12100000001373701 192238.20809999998891726, 161124.34599999999045394 192109.59909999999217689)))"</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>dict_theme <span class="op">=</span> {<span class="st">"id_wkt"</span>: geom_from_wkt(wkt)}</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>config <span class="op">=</span> ProcessorConfig()</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="co"># config.od_strategy = OpenDomainStrategy.EXCLUDE</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="co"># processor= DieussaertGeometryProcessor(config=config)</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>processor <span class="op">=</span> NetworkGeometryProcessor(config<span class="op">=</span>config)</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>aligner <span class="op">=</span> Aligner(crs<span class="op">=</span><span class="st">"EPSG:31370"</span>, processor<span class="op">=</span>processor)</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>loader <span class="op">=</span> DictLoader(dict_theme)</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>aligner.load_thematic_data(loader)</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>loader <span class="op">=</span> GRBActualLoader(grb_type<span class="op">=</span>GRBType.ADP, partition<span class="op">=</span><span class="dv">1000</span>, aligner<span class="op">=</span>aligner)</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>aligner.load_reference_data(loader)</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>series <span class="op">=</span> np.arange(<span class="dv">0</span>, <span class="dv">310</span>, <span class="dv">10</span>, dtype<span class="op">=</span><span class="bu">int</span>) <span class="op">/</span> <span class="dv">100</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a><span class="co"># predict which relevant distances are interesting to propose as resulting geometry</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>aligner_result <span class="op">=</span> aligner.predict(</span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>    relevant_distances<span class="op">=</span>series,</span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a><span class="co"># aligner_result = aligner.process(relevant_distances=[0,1,2,3,4],)</span></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a><span class="co"># aligner_result = aligner.process(relevant_distances=[1],)</span></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>dict_predictions <span class="op">=</span> aligner_result.get_results(</span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>    aligner<span class="op">=</span>aligner, result_type<span class="op">=</span>AlignerResultType.PREDICTIONS</span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a><span class="co"># SHOW results of the predictions</span></span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a>fcs <span class="op">=</span> aligner_result.get_results_as_geojson(add_metadata<span class="op">=</span><span class="va">False</span>, aligner<span class="op">=</span>aligner)</span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a>diffs_dict <span class="op">=</span> aligner.get_difference_metrics_for_thematic_data(</span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a>    dict_processresults<span class="op">=</span>aligner_result.results, thematic_data<span class="op">=</span>aligner.thematic_data</span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a>reference_geometries <span class="op">=</span> {</span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a>    key: feat.geometry <span class="cf">for</span> key, feat <span class="kw">in</span> aligner.reference_data.features.items()</span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> fcs <span class="kw">is</span> <span class="va">None</span> <span class="kw">or</span> <span class="st">"result"</span> <span class="kw">not</span> <span class="kw">in</span> fcs:</span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"empty predictions"</span>)</span>
+<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span>:</span>
+<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(fcs[<span class="st">"result"</span>])</span>
+<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> key <span class="kw">in</span> dict_predictions:</span>
+<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a>        plot_difference_by_relevant_distance({key: diffs_dict[key]})</span>
+<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a>        show_map(</span>
+<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a>            {key: dict_predictions[key]},</span>
+<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a>            {key: aligner.thematic_data.features[key].geometry},</span>
+<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a>            reference_geometries,</span>
+<span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a>        )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>{"crs": {"properties": {"name": "http://www.opengis.net/def/crs/EPSG/0/31370"}, "type": "name"}, "features": [{"geometry": {"coordinates": [[[161124.346, 192109.5991], [161168.898, 192116.2461], [161193.241, 192119.8781], [161209.378, 192122.2851], [161301.398, 192136.2181], [161331.372, 192140.7561], [161333.798, 192162.0881], [161337.361, 192190.0861], [161340.8, 192217.1011], [161289.466, 192225.7941], [161292.979, 192242.9801], [161302.756, 192241.4521], [161310.067, 192277.3091], [161310.776, 192280.7891], [161307.416, 192281.3241], [161308.256, 192285.7541], [161291.07, 192289.8021], [161294.728, 192307.1971], [161286.916, 192307.3901], [161271.163, 192309.7081], [161271.126, 192310.1031], [161269.975, 192322.4541], [161267.091, 192353.4101], [161269.322, 192359.6091], [161250.24, 192360.8371], [161261.49, 192355.9211], [161263.705, 192321.4081], [161236.578, 192316.7511], [161206.758, 192311.6311], [161203.843, 192311.1311], [161177.421, 192306.5951], [161186.534, 192247.4521], [161139.788, 192240.7681], [161140.121, 192238.2081], [161124.346, 192109.5991]]], "type": "Polygon"}, "id": "id_wkt", "properties": {"brdr_area": 31594.917091998537, "brdr_diff_area_index": 0, "brdr_diff_area_index_perc": 0, "brdr_diff_length_index": 0, "brdr_diff_length_index_perc": 0, "brdr_id": "id_wkt", "brdr_nr_calculations": 31, "brdr_perimeter": 916.2373493861767, "brdr_relevant_distance": 0.0, "brdr_remark": ["resulting geometry equal to original geometry"], "brdr_shape_index": 0.47294550420130754, "brdr_stability": false, "brdr_sym_diff_area_index": 0, "brdr_sym_diff_area_index_perc": 0}, "type": "Feature"}, {"geometry": {"coordinates": [[[161291.272495, 192289.754404], [161301.411721, 192287.366205], [161301.39693, 192287.266953], [161301.998139, 192287.22808], [161302.599347, 192287.189208], [161302.584556, 192287.089955], [161307.113789, 192286.023137], [161307.212035, 192285.999996], [161307.31028, 192285.976855], [161308.256, 192285.7541], [161307.416, 192281.3241], [161310.776, 192280.7891], [161310.067001, 192277.309103], [161309.892862, 192276.455035], [161309.872859, 192276.356931], [161309.852856, 192276.258827], [161307.245981, 192263.473335], [161307.147347, 192263.490126], [161306.937943, 192261.962554], [161306.728539, 192260.434982], [161306.629906, 192260.451778], [161302.756, 192241.4521], [161292.979, 192242.9801], [161289.466, 192225.7941], [161290.633564, 192225.596382], [161290.732193, 192225.57968], [161290.830822, 192225.562978], [161340.8, 192217.1011], [161340.733186, 192216.576244], [161340.720558, 192216.477044], [161340.70793, 192216.377845], [161339.956827, 192210.477572], [161339.944199, 192210.378373], [161339.931571, 192210.279173], [161338.668396, 192200.356322], [161338.655765, 192200.257105], [161338.643135, 192200.157889], [161337.361, 192190.0861], [161333.798, 192162.0881], [161331.372, 192140.7561], [161301.398, 192136.2181], [161277.311535, 192132.571102], [161277.208817, 192132.55555], [161277.1061, 192132.539997], [161223.021408, 192124.350886], [161222.918688, 192124.335333], [161222.815969, 192124.31978], [161218.432279, 192123.656033], [161218.432877, 192123.554984], [161217.737118, 192123.651917], [161217.737718, 192123.550868], [161210.055371, 192122.387663], [161209.953073, 192122.372173], [161209.850773, 192122.356684], [161209.378, 192122.2851], [161193.241, 192119.8781], [161170.681382, 192116.512182], [161170.579184, 192116.496934], [161170.476986, 192116.481686], [161168.898, 192116.2461], [161125.090378, 192109.710158], [161124.988205, 192109.694915], [161124.886032, 192109.679671], [161124.346, 192109.5991], [161128.227887, 192141.246999], [161128.327241, 192141.235622], [161128.962324, 192147.23465], [161129.597407, 192153.233678], [161129.696766, 192153.22234], [161137.475726, 192216.641951], [161137.488502, 192216.746104], [161137.501277, 192216.850256], [161138.753814, 192227.061826], [161138.766588, 192227.165974], [161138.779363, 192227.270121], [161139.171823, 192230.469736], [161139.272539, 192230.469462], [161139.223329, 192230.889648], [161139.174119, 192231.309834], [161139.274834, 192231.309557], [161140.121, 192238.2081], [161139.788, 192240.7681], [161186.534, 192247.4521], [161181.646147, 192279.174065], [161181.744755, 192279.190758], [161181.245843, 192281.897351], [161181.128167, 192282.535737], [161180.5116, 192285.880575], [161180.610211, 192285.89725], [161177.421, 192306.5951], [161178.586902, 192306.795256], [161178.685468, 192306.812178], [161178.784034, 192306.829099], [161203.842997, 192311.1311], [161206.757995, 192311.631099], [161208.312036, 192311.897923], [161208.410653, 192311.914855], [161208.50927, 192311.931788], [161236.578, 192316.7511], [161236.944912, 192316.814089], [161236.962198, 192316.715594], [161237.945747, 192316.891016], [161252.145407, 192319.423619], [161262.779411, 192321.320264], [161262.861877, 192321.263358], [161263.705, 192321.4081], [161261.49, 192355.9211], [161258.047981, 192357.425186], [161257.99081, 192357.341038], [161257.79432, 192357.53603], [161257.59783, 192357.731022], [161257.540658, 192357.646874], [161250.24, 192360.8371], [161254.334012, 192360.573635], [161254.365361, 192360.671824], [161254.546227, 192360.559978], [161254.727092, 192360.448132], [161254.758442, 192360.546321], [161267.437791, 192359.730356], [161267.450804, 192359.829726], [161268.196801, 192359.681511], [161268.709139, 192359.57972], [161268.942846, 192359.533293], [161268.955854, 192359.632663], [161269.322, 192359.6091], [161269.305488, 192359.56322], [161269.279059, 192359.466504], [161269.259818, 192359.436323], [161269.015768, 192359.053516], [161269.106084, 192359.009161], [161267.091, 192353.4101], [161269.975, 192322.4541], [161271.125999, 192310.103114], [161271.136128, 192309.994976], [161271.145581, 192309.894058], [161271.155034, 192309.79314], [161271.163, 192309.7081], [161286.916, 192307.3901], [161294.369907, 192307.205947], [161294.471207, 192307.203444], [161294.572507, 192307.200942], [161294.728, 192307.1971], [161293.174027, 192299.807444], [161293.075955, 192299.827014], [161292.161651, 192294.993262], [161291.247347, 192290.15951], [161291.149277, 192290.17909], [161291.07, 192289.8021], [161291.175062, 192289.777354], [161291.272495, 192289.754404]]], "type": "Polygon"}, "id": "id_wkt", "properties": {"brdr_area": 31594.504535967557, "brdr_diff_area_index": 0.4, "brdr_diff_area_index_perc": 0.0, "brdr_diff_length_index": 2.2, "brdr_diff_length_index_perc": 0.2, "brdr_id": "id_wkt", "brdr_nr_calculations": 31, "brdr_perimeter": 918.4822861370965, "brdr_relevant_distance": 0.1, "brdr_remark": [], "brdr_shape_index": 0.4706302555487045, "brdr_stability": false, "brdr_sym_diff_area_index": 2.9, "brdr_sym_diff_area_index_perc": 0.0}, "type": "Feature"}, {"geometry": {"coordinates": [[[161170.374787, 192116.466438], [161168.898, 192116.2461], [161125.192549, 192109.725402], [161124.988205, 192109.694915], [161124.78386, 192109.664427], [161124.346, 192109.5991], [161127.493445, 192135.259306], [161127.692158, 192135.236595], [161128.962324, 192147.23465], [161130.23249, 192159.232706], [161130.431206, 192159.210018], [161137.462951, 192216.537799], [161137.488502, 192216.746104], [161137.514052, 192216.954408], [161138.741039, 192226.957679], [161138.766588, 192227.165974], [161138.792138, 192227.37427], [161139.120318, 192230.049827], [161139.321749, 192230.049277], [161139.223329, 192230.889648], [161139.124909, 192231.730019], [161139.32634, 192231.72947], [161140.121, 192238.2081], [161139.788, 192240.7681], [161186.534, 192247.4521], [161182.164128, 192275.81239], [161182.361349, 192275.845745], [161181.245843, 192281.897351], [161181.128167, 192282.535737], [161179.895034, 192289.225413], [161180.092255, 192289.258761], [161177.421, 192306.5951], [161178.488337, 192306.778335], [161178.685468, 192306.812178], [161178.882599, 192306.84602], [161203.842997, 192311.1311], [161206.757995, 192311.631099], [161208.213419, 192311.880991], [161208.410653, 192311.914855], [161208.607887, 192311.94872], [161221.687268, 192314.194408], [161221.721727, 192313.997398], [161226.529043, 192314.854792], [161230.632723, 192315.586696], [161237.945747, 192316.891016], [161252.145407, 192319.423619], [161262.779411, 192321.320264], [161262.975901, 192321.282933], [161263.705, 192321.4081], [161261.49, 192355.9211], [161258.301641, 192357.314342], [161258.1873, 192357.146045], [161257.79432, 192357.53603], [161257.401341, 192357.926015], [161257.286999, 192357.757718], [161250.24, 192360.8371], [161254.121796, 192360.587292], [161254.184495, 192360.78367], [161254.546227, 192360.559978], [161254.907958, 192360.336285], [161254.970658, 192360.532664], [161266.678788, 192359.779201], [161266.704807, 192359.97794], [161268.196801, 192359.681511], [161268.709139, 192359.57972], [161269.279059, 192359.466504], [161269.259818, 192359.436323], [161268.915923, 192358.896904], [161268.771729, 192358.670739], [161268.95236, 192358.582028], [161267.091, 192353.4101], [161269.975, 192322.4541], [161271.125999, 192310.103114], [161271.126675, 192310.095893], [161271.145581, 192309.894058], [161271.390932, 192309.876714], [161271.369293, 192309.677745], [161286.916, 192307.3901], [161294.268607, 192307.20845], [161294.471207, 192307.203444], [161294.673807, 192307.198439], [161294.728, 192307.1971], [161294.1864, 192304.62161], [161293.990259, 192304.660765], [161292.161651, 192294.993262], [161291.175062, 192289.777354], [161291.369927, 192289.731455], [161300.825308, 192287.504329], [161300.795722, 192287.305825], [161301.998139, 192287.22808], [161303.200556, 192287.150335], [161303.170972, 192286.95183], [161307.015544, 192286.046278], [161307.212035, 192285.999996], [161307.408525, 192285.953715], [161308.256, 192285.7541], [161307.416, 192281.3241], [161310.776, 192280.7891], [161310.067001, 192277.309103], [161309.912865, 192276.55314], [161309.872859, 192276.356931], [161309.832854, 192276.160723], [161307.554017, 192264.984104], [161307.356751, 192265.017698], [161306.937943, 192261.962554], [161306.519135, 192258.90741], [161306.321869, 192258.941003], [161302.756, 192241.4521], [161292.979, 192242.9801], [161289.466, 192225.7941], [161290.534935, 192225.613085], [161290.732193, 192225.57968], [161290.929452, 192225.546276], [161340.8, 192217.1011], [161340.745814, 192216.675443], [161340.720558, 192216.477044], [161340.695302, 192216.278646], [161339.969455, 192210.576772], [161339.944199, 192210.378373], [161339.918943, 192210.179974], [161338.681026, 192200.455539], [161338.655765, 192200.257105], [161338.630505, 192200.058672], [161337.361, 192190.0861], [161333.798, 192162.0881], [161331.372, 192140.7561], [161301.398, 192136.2181], [161277.414251, 192132.586655], [161277.208817, 192132.55555], [161277.003383, 192132.524444], [161223.124126, 192124.366439], [161222.918688, 192124.335333], [161222.71325, 192124.304227], [161218.779561, 192123.708616], [161218.780757, 192123.506518], [161218.084997, 192123.60345], [161217.389238, 192123.700383], [161217.390436, 192123.498285], [161210.15767, 192122.403152], [161209.953073, 192122.372173], [161209.748475, 192122.341195], [161209.378, 192122.2851], [161193.241, 192119.8781], [161170.783581, 192116.527431], [161170.579184, 192116.496934], [161170.374787, 192116.466438]]], "type": "Polygon"}, "id": "id_wkt", "properties": {"brdr_area": 31591.534509369925, "brdr_diff_area_index": 3.4, "brdr_diff_area_index_perc": 0.0, "brdr_diff_length_index": 3.8, "brdr_diff_length_index_perc": 0.4, "brdr_id": "id_wkt", "brdr_nr_calculations": 31, "brdr_perimeter": 920.054523586666, "brdr_relevant_distance": 0.2, "brdr_remark": [], "brdr_shape_index": 0.4689790642165271, "brdr_stability": false, "brdr_sym_diff_area_index": 10.1, "brdr_sym_diff_area_index_perc": 0.0}, "type": "Feature"}, {"geometry": {"coordinates": [[[161170.272589, 192116.45119], [161168.898, 192116.2461], [161125.294722, 192109.740646], [161124.988205, 192109.694915], [161124.681687, 192109.649183], [161124.346, 192109.5991], [161126.759002, 192129.271608], [161127.057075, 192129.237567], [161128.962324, 192147.23465], [161130.867573, 192165.231734], [161131.165647, 192165.197702], [161137.450176, 192216.433647], [161137.488502, 192216.746104], [161137.526827, 192217.05856], [161138.728264, 192226.85353], [161138.766588, 192227.165974], [161138.804912, 192227.478417], [161139.068812, 192229.629916], [161139.370959, 192229.629091], [161139.075699, 192232.150205], [161139.377846, 192232.149378], [161140.121, 192238.2081], [161139.788, 192240.7681], [161186.534, 192247.4521], [161182.682114, 192272.450681], [161182.977943, 192272.500732], [161181.245843, 192281.897351], [161181.128167, 192282.535737], [161179.278467, 192292.57025], [161179.574295, 192292.620305], [161177.421, 192306.5951], [161178.389771, 192306.761414], [161178.685468, 192306.812178], [161178.981165, 192306.862941], [161203.842997, 192311.1311], [161206.318028, 192311.555633], [161206.369668, 192311.26011], [161208.449416, 192311.630213], [161217.777619, 192313.29396], [161226.529043, 192314.854792], [161230.632723, 192315.586696], [161237.945747, 192316.891016], [161252.145407, 192319.423619], [161262.779411, 192321.320264], [161263.078446, 192321.300537], [161263.705, 192321.4081], [161261.49, 192355.9211], [161258.555303, 192357.203498], [161258.38379, 192356.951053], [161257.79432, 192357.53603], [161257.204851, 192358.121007], [161257.033338, 192357.868562], [161250.24, 192360.8371], [161253.90958, 192360.600948], [161254.003629, 192360.895517], [161254.546227, 192360.559978], [161255.079379, 192360.23028], [161255.182874, 192360.519007], [161265.919777, 192359.828046], [161265.95881, 192360.126155], [161268.196801, 192359.681511], [161268.709139, 192359.57972], [161269.279059, 192359.466504], [161269.259818, 192359.436323], [161268.915923, 192358.896904], [161268.527697, 192358.287983], [161268.798644, 192358.154916], [161267.091, 192353.4101], [161269.975, 192322.4541], [161271.117266, 192310.196817], [161271.145581, 192309.894058], [161272.712921, 192309.783265], [161272.680458, 192309.484811], [161286.916, 192307.3901], [161294.167307, 192307.210952], [161294.471207, 192307.203444], [161292.161651, 192294.993262], [161291.175062, 192289.777354], [161291.46736, 192289.708506], [161300.23889, 192287.642455], [161300.194514, 192287.344697], [161301.998139, 192287.22808], [161303.284563, 192287.144904], [161303.801795, 192287.111455], [161303.757416, 192286.813699], [161306.917299, 192286.069418], [161307.212035, 192285.999996], [161307.50677, 192285.930574], [161308.256, 192285.7541], [161307.416, 192281.3241], [161309.575406, 192280.980266], [161309.53752, 192280.682519], [161309.766867, 192280.660616], [161309.903534, 192280.928019], [161310.776, 192280.7891], [161310.067001, 192277.309103], [161309.932868, 192276.651244], [161309.872859, 192276.356931], [161309.812851, 192276.062618], [161307.862053, 192266.494879], [161307.566155, 192266.54527], [161306.937943, 192261.962554], [161306.309731, 192257.379838], [161306.013832, 192257.430227], [161302.756, 192241.4521], [161292.979, 192242.9801], [161289.466, 192225.7941], [161290.436305, 192225.629787], [161290.732193, 192225.57968], [161291.028081, 192225.529574], [161340.8, 192217.1011], [161340.758442, 192216.774643], [161340.720558, 192216.477044], [161340.682674, 192216.179446], [161339.982083, 192210.675971], [161339.944199, 192210.378373], [161339.906315, 192210.080775], [161338.693656, 192200.554757], [161338.655765, 192200.257105], [161338.617875, 192199.959455], [161337.361, 192190.0861], [161333.798, 192162.0881], [161331.372, 192140.7561], [161301.398, 192136.2181], [161277.516968, 192132.602208], [161277.208817, 192132.55555], [161276.900667, 192132.508892], [161223.226845, 192124.381992], [161222.918688, 192124.335333], [161222.610531, 192124.288674], [161219.12684, 192123.761199], [161219.128637, 192123.458051], [161218.084997, 192123.60345], [161217.041358, 192123.748849], [161217.043153, 192123.445702], [161210.259969, 192122.418641], [161209.953073, 192122.372173], [161209.646176, 192122.325705], [161209.378, 192122.2851], [161193.241, 192119.8781], [161170.885778, 192116.542679], [161170.579184, 192116.496934], [161170.272589, 192116.45119]]], "type": "Polygon"}, "id": "id_wkt", "properties": {"brdr_area": 31587.371194756066, "brdr_diff_area_index": 7.5, "brdr_diff_area_index_perc": 0.0, "brdr_diff_length_index": 5.8, "brdr_diff_length_index_perc": 0.6, "brdr_id": "id_wkt", "brdr_nr_calculations": 31, "brdr_perimeter": 922.0490711014104, "brdr_relevant_distance": 0.3, "brdr_remark": [], "brdr_shape_index": 0.46689075955598797, "brdr_stability": false, "brdr_sym_diff_area_index": 21.8, "brdr_sym_diff_area_index_perc": 0.1}, "type": "Feature"}, {"geometry": {"coordinates": [[[161268.915923, 192358.896904], [161268.283665, 192357.905226], [161268.644926, 192357.727799], [161267.091, 192353.4101], [161269.975, 192322.4541], [161271.107862, 192310.29773], [161271.145581, 192309.894058], [161274.034909, 192309.689816], [161273.991636, 192309.291876], [161286.916, 192307.3901], [161294.066008, 192307.213455], [161294.471207, 192307.203444], [161292.161651, 192294.993262], [161291.175062, 192289.777354], [161291.564792, 192289.685556], [161299.652472, 192287.78058], [161299.593305, 192287.38357], [161301.998139, 192287.22808], [161303.284563, 192287.144904], [161304.40304, 192287.072575], [161304.34387, 192286.675565], [161306.819054, 192286.092559], [161307.212035, 192285.999996], [161307.605014, 192285.907434], [161308.256, 192285.7541], [161307.416, 192281.3241], [161307.998919, 192281.231284], [161307.948414, 192280.834287], [161309.766867, 192280.660616], [161310.087634, 192280.898706], [161310.776, 192280.7891], [161310.067001, 192277.309104], [161309.95287, 192276.749347], [161309.872859, 192276.356931], [161309.792848, 192275.964514], [161308.17009, 192268.005653], [161307.775559, 192268.072842], [161306.937943, 192261.962554], [161306.100326, 192255.852267], [161305.705795, 192255.919451], [161302.756, 192241.4521], [161292.979, 192242.9801], [161292.725648, 192241.740671], [161292.999443, 192241.450311], [161292.825088, 192240.229835], [161292.4308, 192240.298241], [161289.466, 192225.7941], [161290.337676, 192225.646489], [161290.732193, 192225.57968], [161291.12671, 192225.512872], [161340.8, 192217.1011], [161340.77107, 192216.873842], [161340.720558, 192216.477044], [161340.670046, 192216.080246], [161339.994711, 192210.77517], [161339.944199, 192210.378373], [161339.893687, 192209.981575], [161338.706287, 192200.653974], [161338.655765, 192200.257105], [161338.605244, 192199.860237], [161337.361, 192190.0861], [161333.798, 192162.0881], [161331.372, 192140.7561], [161301.398, 192136.2181], [161277.619685, 192132.61776], [161277.208817, 192132.55555], [161276.79795, 192132.493339], [161223.329564, 192124.397545], [161222.918688, 192124.335333], [161222.507812, 192124.273121], [161219.474123, 192123.813782], [161219.476516, 192123.409585], [161218.084997, 192123.60345], [161216.693478, 192123.797316], [161216.695872, 192123.393119], [161210.362268, 192122.434131], [161209.953073, 192122.372173], [161209.543877, 192122.310216], [161209.378, 192122.2851], [161193.241, 192119.8781], [161170.987977, 192116.557927], [161170.579184, 192116.496934], [161170.170391, 192116.435942], [161168.898, 192116.2461], [161125.396895, 192109.75589], [161124.988205, 192109.694915], [161124.579514, 192109.633939], [161124.346, 192109.5991], [161126.024561, 192123.283925], [161126.421992, 192123.238539], [161128.962324, 192147.23465], [161131.502656, 192171.230761], [161131.90008, 192171.185327], [161137.437401, 192216.329495], [161137.488502, 192216.746104], [161137.539602, 192217.162712], [161138.71549, 192226.749383], [161138.766588, 192227.165974], [161138.817687, 192227.582565], [161139.017307, 192229.210009], [161139.420169, 192229.208906], [161139.223329, 192230.889648], [161139.026489, 192232.57039], [161139.429352, 192232.569291], [161140.121, 192238.2081], [161139.788, 192240.7681], [161186.534, 192247.4521], [161183.200095, 192269.089006], [161183.594536, 192269.155719], [161181.245843, 192281.897352], [161181.128167, 192282.535737], [161178.6619, 192295.915088], [161179.056338, 192295.981823], [161177.421, 192306.5951], [161178.291206, 192306.744493], [161178.685468, 192306.812178], [161179.079731, 192306.879863], [161190.20559, 192308.789896], [161190.274479, 192308.395871], [161208.449416, 192311.630213], [161217.777619, 192313.29396], [161226.529043, 192314.854792], [161230.632723, 192315.586696], [161237.945747, 192316.891016], [161252.145407, 192319.423619], [161262.779411, 192321.320264], [161263.179857, 192321.317947], [161263.705, 192321.4081], [161261.49, 192355.9211], [161258.808964, 192357.092653], [161258.58028, 192356.756061], [161257.008361, 192358.315999], [161256.779677, 192357.979406], [161250.24, 192360.8371], [161253.697365, 192360.614605], [161253.822764, 192361.007363], [161254.546227, 192360.559978], [161255.079379, 192360.23028], [161255.368322, 192360.507073], [161265.160767, 192359.876891], [161265.212813, 192360.274369], [161268.196801, 192359.681511], [161268.709139, 192359.57972], [161269.279059, 192359.466504], [161269.259818, 192359.436323], [161268.915923, 192358.896904]]], "type": "Polygon"}, "id": "id_wkt", "properties": {"brdr_area": 31582.170140565217, "brdr_diff_area_index": 12.7, "brdr_diff_area_index_perc": 0.0, "brdr_diff_length_index": 8.2, "brdr_diff_length_index_perc": 0.9, "brdr_id": "id_wkt", "brdr_nr_calculations": 31, "brdr_perimeter": 924.439018840476, "brdr_relevant_distance": 0.4, "brdr_remark": [], "brdr_shape_index": 0.4644032998363184, "brdr_stability": false, "brdr_sym_diff_area_index": 38.4, "brdr_sym_diff_area_index_perc": 0.1}, "type": "Feature"}, {"geometry": {"coordinates": [[[161170.068193, 192116.420694], [161168.898, 192116.2461], [161125.499067, 192109.771134], [161124.988205, 192109.694915], [161124.477342, 192109.618696], [161124.346, 192109.5991], [161125.290122, 192117.296252], [161125.786909, 192117.239511], [161128.962324, 192147.23465], [161132.137738, 192177.229789], [161132.634521, 192177.173005], [161137.424626, 192216.225343], [161137.488502, 192216.746104], [161137.552377, 192217.266864], [161138.702715, 192226.645235], [161138.766588, 192227.165974], [161138.830461, 192227.686713], [161138.965801, 192228.790095], [161139.469379, 192228.78872], [161139.223329, 192230.889648], [161138.977279, 192232.990576], [161139.480857, 192232.9892], [161140.121, 192238.2081], [161139.788, 192240.7681], [161186.534, 192247.4521], [161183.718081, 192265.727297], [161184.21113, 192265.810707], [161181.245843, 192281.897351], [161181.128167, 192282.535737], [161178.045334, 192299.259926], [161178.538382, 192299.343334], [161177.421, 192306.5951], [161178.19264, 192306.727571], [161178.685468, 192306.812178], [161178.770899, 192306.348744], [161180.718995, 192306.695367], [161182.994707, 192307.10036], [161184.679443, 192307.4002], [161208.449416, 192311.630213], [161217.777619, 192313.29396], [161226.529043, 192314.854792], [161230.632723, 192315.586696], [161237.945747, 192316.891016], [161252.145407, 192319.423619], [161262.779411, 192321.320264], [161263.278739, 192321.334922], [161263.705, 192321.4081], [161261.49, 192355.9211], [161259.062624, 192356.981809], [161258.77677, 192356.561068], [161257.79432, 192357.53603], [161256.811871, 192358.510992], [161256.526015, 192358.090251], [161250.24, 192360.8371], [161253.485149, 192360.628262], [161253.641898, 192361.119209], [161254.546227, 192360.559978], [161255.079379, 192360.23028], [161255.520131, 192360.497303], [161264.401763, 192359.925736], [161264.466816, 192360.422584], [161268.196801, 192359.681511], [161268.709139, 192359.57972], [161269.279059, 192359.466504], [161269.259818, 192359.436323], [161268.915923, 192358.896904], [161268.039633, 192357.52247], [161268.49121, 192357.300689], [161267.091, 192353.4101], [161269.975, 192322.4541], [161271.098458, 192310.398642], [161271.145581, 192309.894058], [161275.356898, 192309.596366], [161275.3028, 192309.098943], [161286.916, 192307.3901], [161293.964708, 192307.215958], [161294.471207, 192307.203444], [161292.161651, 192294.993262], [161291.175062, 192289.777354], [161291.662223, 192289.662607], [161299.066054, 192287.918705], [161298.992097, 192287.422442], [161301.998139, 192287.22808], [161303.284563, 192287.144904], [161305.004284, 192287.033694], [161304.930319, 192286.537433], [161306.720809, 192286.1157], [161307.212035, 192285.999996], [161307.70326, 192285.884293], [161308.256, 192285.7541], [161307.427791, 192281.386284], [161306.834388, 192280.940682], [161309.766867, 192280.660616], [161310.216552, 192280.878179], [161310.776, 192280.7891], [161310.067001, 192277.309103], [161309.972873, 192276.847452], [161309.872859, 192276.356931], [161309.772845, 192275.86641], [161308.478128, 192269.516433], [161307.984964, 192269.600413], [161305.890922, 192254.324695], [161305.397761, 192254.40869], [161302.756, 192241.4521], [161292.979, 192242.9801], [161292.75527, 192241.885589], [161292.999443, 192241.450311], [161292.588197, 192238.571608], [161292.095335, 192238.657109], [161289.466, 192225.7941], [161290.239047, 192225.663191], [161290.732193, 192225.57968], [161291.22534, 192225.49617], [161340.8, 192217.1011], [161340.783698, 192216.973042], [161340.720558, 192216.477044], [161340.657418, 192215.981047], [161340.00734, 192210.874371], [161339.944199, 192210.378373], [161339.881059, 192209.882375], [161338.718917, 192200.753191], [161338.655765, 192200.257105], [161338.592614, 192199.76102], [161337.361, 192190.0861], [161333.798, 192162.0881], [161331.372, 192140.7561], [161301.398, 192136.2181], [161277.722402, 192132.633313], [161277.208817, 192132.55555], [161276.695233, 192132.477786], [161223.432283, 192124.413097], [161222.918688, 192124.335333], [161222.405094, 192124.257568], [161219.821406, 192123.866365], [161219.824396, 192123.361118], [161218.084997, 192123.60345], [161216.345599, 192123.845782], [161216.348592, 192123.340536], [161210.464567, 192122.44962], [161209.953073, 192122.372173], [161209.441578, 192122.294727], [161209.378, 192122.2851], [161193.241, 192119.8781], [161171.090175, 192116.573175], [161170.579184, 192116.496934], [161170.068193, 192116.420694]]], "type": "Polygon"}, "id": "id_wkt", "properties": {"brdr_area": 31578.271183765486, "brdr_diff_area_index": 16.6, "brdr_diff_area_index_perc": 0.1, "brdr_diff_length_index": 10.9, "brdr_diff_length_index_perc": 1.2, "brdr_id": "id_wkt", "brdr_nr_calculations": 31, "brdr_perimeter": 927.1086668389571, "brdr_relevant_distance": 0.5, "brdr_remark": [], "brdr_shape_index": 0.4616756103831053, "brdr_stability": false, "brdr_sym_diff_area_index": 57.3, "brdr_sym_diff_area_index_perc": 0.2}, "type": "Feature"}, {"geometry": {"coordinates": [[[161268.915923, 192358.896904], [161267.795601, 192357.139713], [161268.337493, 192356.873575], [161267.091, 192353.4101], [161269.975, 192322.4541], [161271.089054, 192310.499556], [161271.145581, 192309.894058], [161276.678886, 192309.502917], [161276.613964, 192308.906009], [161286.916, 192307.3901], [161293.863408, 192307.21846], [161294.471207, 192307.203444], [161292.161651, 192294.993262], [161291.175062, 192289.777354], [161291.759656, 192289.639658], [161298.479642, 192288.056829], [161298.390888, 192287.461315], [161301.998139, 192287.22808], [161303.284563, 192287.144904], [161305.605528, 192286.994813], [161305.516774, 192286.399299], [161306.622564, 192286.13884], [161307.212035, 192285.999996], [161307.801506, 192285.861152], [161308.256, 192285.7541], [161307.4465, 192281.484953], [161306.734417, 192280.95023], [161309.766867, 192280.660616], [161310.332366, 192280.859738], [161310.776, 192280.7891], [161310.067001, 192277.309104], [161309.992876, 192276.945556], [161309.872859, 192276.356931], [161309.752843, 192275.768306], [161308.786163, 192271.027197], [161308.194368, 192271.127985], [161306.937943, 192261.962554], [161305.681518, 192252.797123], [161305.089724, 192252.897914], [161302.756, 192241.4521], [161292.979, 192242.9801], [161292.780193, 192242.007515], [161292.999443, 192241.450311], [161292.351305, 192236.913382], [161291.75987, 192237.015977], [161289.466, 192225.7941], [161290.140418, 192225.679893], [161290.732193, 192225.57968], [161291.323969, 192225.479468], [161340.8, 192217.1011], [161340.796326, 192217.072241], [161340.720558, 192216.477044], [161340.64479, 192215.881847], [161340.511113, 192214.831755], [161341.105794, 192214.75193], [161340.927315, 192213.486727], [161340.509523, 192210.525319], [161340.479123, 192210.309895], [161339.931539, 192205.792583], [161339.258185, 192200.238075], [161339.249534, 192200.170115], [161338.655765, 192200.257105], [161338.579984, 192199.661803], [161337.361, 192190.0861], [161333.798, 192162.0881], [161332.458494, 192150.309721], [161333.054307, 192150.238896], [161331.960019, 192141.419911], [161331.808384, 192140.21533], [161331.269774, 192140.740623], [161301.398, 192136.2181], [161277.825119, 192132.648866], [161277.208817, 192132.55555], [161276.592516, 192132.462234], [161223.535002, 192124.42865], [161222.918688, 192124.335333], [161222.302375, 192124.242015], [161220.168685, 192123.918947], [161220.172276, 192123.312652], [161218.084997, 192123.60345], [161215.997719, 192123.894249], [161216.001309, 192123.287953], [161210.566866, 192122.465109], [161209.953077, 192122.372174], [161209.339289, 192122.279326], [161193.241, 192119.8781], [161171.192373, 192116.588423], [161170.579184, 192116.496934], [161169.965995, 192116.405446], [161168.898, 192116.2461], [161125.60124, 192109.786377], [161124.988205, 192109.694915], [161124.375169, 192109.603452], [161124.346, 192109.5991], [161124.555682, 192111.30858], [161125.151825, 192111.240472], [161125.180307, 192111.509511], [161128.962324, 192147.23465], [161132.772821, 192183.228817], [161133.368962, 192183.160689], [161137.411851, 192216.121191], [161137.488502, 192216.746104], [161137.565153, 192217.371017], [161138.689941, 192226.541087], [161138.766588, 192227.165974], [161138.843236, 192227.790861], [161138.914295, 192228.370185], [161139.518589, 192228.368535], [161139.223329, 192230.889648], [161138.928068, 192233.410761], [161139.532362, 192233.409109], [161140.121, 192238.2081], [161139.788, 192240.7681], [161186.534, 192247.4521], [161184.236068, 192262.365588], [161184.827724, 192262.465694], [161181.245843, 192281.897352], [161181.128167, 192282.535737], [161177.428767, 192302.604764], [161178.020427, 192302.704845], [161177.421, 192306.5951], [161178.094074, 192306.71065], [161178.685468, 192306.812178], [161178.770899, 192306.348744], [161180.718995, 192306.695368], [161182.994707, 192307.10036], [161184.679443, 192307.4002], [161208.449416, 192311.630213], [161217.777619, 192313.29396], [161226.529043, 192314.854792], [161230.632723, 192315.586696], [161237.945747, 192316.891016], [161252.145407, 192319.423619], [161262.779411, 192321.320264], [161263.378684, 192321.35208], [161263.705, 192321.4081], [161261.49, 192355.9211], [161259.316285, 192356.870965], [161258.973259, 192356.366076], [161257.79432, 192357.53603], [161256.615381, 192358.705984], [161256.272354, 192358.201095], [161250.24, 192360.8371], [161253.272933, 192360.641919], [161253.526867, 192361.190344], [161254.546227, 192360.559978], [161255.079379, 192360.23028], [161255.408954, 192359.903217], [161255.671941, 192360.487534], [161263.642752, 192359.974581], [161263.720818, 192360.570799], [161268.196801, 192359.681511], [161268.709139, 192359.57972], [161269.279059, 192359.466504], [161269.259818, 192359.436323], [161268.915923, 192358.896904]]], "type": "Polygon"}, "id": "id_wkt", "properties": {"brdr_area": 31593.796440039187, "brdr_diff_area_index": 1.1, "brdr_diff_area_index_perc": 0.0, "brdr_diff_length_index": 16.2, "brdr_diff_length_index_perc": 1.8, "brdr_id": "id_wkt", "brdr_nr_calculations": 31, "brdr_perimeter": 932.4146362551451, "brdr_relevant_distance": 0.6, "brdr_remark": [], "brdr_shape_index": 0.45666057113707986, "brdr_stability": false, "brdr_sym_diff_area_index": 87.7, "brdr_sym_diff_area_index_perc": 0.3}, "type": "Feature"}, {"geometry": {"coordinates": [[[161138.86279, 192227.950276], [161140.121, 192238.2081], [161139.788, 192240.7681], [161186.534, 192247.4521], [161177.421, 192306.5951], [161203.842972, 192311.131095], [161206.75746, 192311.631007], [161206.757997, 192311.631099], [161236.577996, 192316.751099], [161263.705, 192321.4081], [161261.49, 192355.9211], [161250.24, 192360.8371], [161269.322, 192359.6091], [161267.091, 192353.4101], [161269.975, 192322.454104], [161271.125999, 192310.103109], [161271.163, 192309.7081], [161286.916, 192307.3901], [161294.728, 192307.1971], [161291.07, 192289.8021], [161308.256, 192285.7541], [161307.416, 192281.3241], [161310.776, 192280.7891], [161310.067006, 192277.309129], [161302.756, 192241.4521], [161292.979, 192242.9801], [161289.466, 192225.7941], [161340.8, 192217.1011], [161337.361001, 192190.086107], [161333.798, 192162.0881], [161331.372, 192140.7561], [161301.398004, 192136.218101], [161209.378, 192122.2851], [161193.241007, 192119.878101], [161168.898, 192116.2461], [161124.346, 192109.5991], [161138.856011, 192227.895009], [161138.86279, 192227.950276]]], "type": "Polygon"}, "id": "id_wkt", "properties": {"brdr_area": 31594.91709190924, "brdr_diff_area_index": 0, "brdr_diff_area_index_perc": 0, "brdr_diff_length_index": 0, "brdr_diff_length_index_perc": 0, "brdr_id": "id_wkt", "brdr_nr_calculations": 31, "brdr_perimeter": 916.2373493885609, "brdr_relevant_distance": 0.7, "brdr_remark": [], "brdr_shape_index": 0.4729455041975094, "brdr_stability": false, "brdr_sym_diff_area_index": 0, "brdr_sym_diff_area_index_perc": 0}, "type": "Feature"}, {"geometry": {"coordinates": [[[161268.915923, 192358.896904], [161267.307537, 192356.3742], [161268.030061, 192356.01935], [161267.139634, 192353.545232], [161266.330348, 192353.659007], [161266.492549, 192351.209549], [161267.290092, 192351.273103], [161269.975, 192322.4541], [161271.070246, 192310.701382], [161271.145581, 192309.894058], [161279.322863, 192309.316019], [161279.236307, 192308.520141], [161286.916, 192307.3901], [161293.660808, 192307.223466], [161294.471207, 192307.203444], [161292.161651, 192294.993262], [161291.175062, 192289.777354], [161291.954521, 192289.59376], [161297.306809, 192288.333079], [161297.188471, 192287.53906], [161301.998139, 192287.22808], [161303.284563, 192287.144904], [161306.552336, 192286.933585], [161306.551898, 192286.920042], [161303.305932, 192286.920042], [161306.562098, 192286.153083], [161307.203543, 192286.001996], [161307.997996, 192285.81487], [161308.256, 192285.7541], [161307.724565, 192282.951412], [161306.931696, 192283.064196], [161306.729875, 192280.950664], [161309.766867, 192280.660616], [161310.550859, 192280.824948], [161310.776, 192280.7891], [161310.067001, 192277.309104], [161310.032882, 192277.141765], [161309.872859, 192276.356931], [161309.712837, 192275.572098], [161309.402238, 192274.048756], [161308.613176, 192274.183129], [161306.937943, 192261.962554], [161305.26271, 192249.741979], [161304.47365, 192249.876362], [161302.756, 192241.4521], [161292.979, 192242.9801], [161292.825914, 192242.231184], [161292.999443, 192241.450311], [161291.877523, 192233.596928], [161291.088944, 192233.733728], [161289.466, 192225.7941], [161289.943159, 192225.713297], [161290.732193, 192225.57968], [161291.521227, 192225.446064], [161336.644204, 192217.804851], [161336.526627, 192217.013372], [161340.720558, 192216.477044], [161341.250879, 192216.409226], [161341.338003, 192216.398023], [161340.927315, 192213.486727], [161340.509523, 192210.525319], [161340.479123, 192210.309895], [161339.931539, 192205.792583], [161339.249939, 192200.170055], [161339.080851, 192198.807303], [161338.808659, 192196.613895], [161338.597523, 192194.912199], [161337.842515, 192188.827655], [161337.633491, 192187.142983], [161337.265107, 192184.174279], [161336.984339, 192181.911687], [161334.510163, 192161.972103], [161334.275348, 192160.079627], [161334.244243, 192159.829194], [161333.273363, 192152.004295], [161331.960019, 192141.419911], [161331.782426, 192140.009121], [161331.064279, 192140.709512], [161301.398, 192136.2181], [161278.030553, 192132.679971], [161277.208817, 192132.55555], [161276.387082, 192132.431128], [161223.74044, 192124.459756], [161222.918688, 192124.335333], [161222.096937, 192124.210909], [161220.863249, 192124.024113], [161220.868035, 192123.215719], [161218.084997, 192123.60345], [161215.301959, 192123.991181], [161215.306747, 192123.182788], [161210.771464, 192122.496088], [161209.953092, 192122.372176], [161209.134743, 192122.248816], [161193.241, 192119.8781], [161171.39677, 192116.618919], [161170.579184, 192116.496934], [161169.761598, 192116.37495], [161168.898, 192116.2461], [161125.805585, 192109.816865], [161124.988205, 192109.694915], [161125.180307, 192111.509511], [161128.962324, 192147.23465], [161134.042987, 192195.226873], [161134.837843, 192195.136051], [161137.3863, 192215.912886], [161137.488502, 192216.746104], [161137.590703, 192217.579321], [161138.664391, 192226.332792], [161138.766588, 192227.165974], [161139.59159, 192227.320924], [161139.61701, 192227.528164], [161139.223329, 192230.889648], [161138.829648, 192234.251132], [161139.635374, 192234.24893], [161140.121, 192238.2081], [161139.788, 192240.7681], [161186.534, 192247.4521], [161185.272035, 192255.642204], [161186.060911, 192255.775668], [161181.245843, 192281.897352], [161181.128167, 192282.535737], [161176.570503, 192307.260794], [161177.504062, 192306.60936], [161177.896943, 192306.676808], [161178.685468, 192306.812178], [161178.770899, 192306.348744], [161180.718995, 192306.695368], [161182.994707, 192307.10036], [161184.679443, 192307.4002], [161208.449416, 192311.630213], [161217.777619, 192313.29396], [161226.529043, 192314.854792], [161230.632723, 192315.586696], [161237.945747, 192316.891016], [161252.145407, 192319.423619], [161262.779411, 192321.320264], [161263.576735, 192321.38608], [161263.705, 192321.4081], [161261.49, 192355.9211], [161259.823607, 192356.649277], [161259.366239, 192355.976091], [161257.79432, 192357.53603], [161256.222401, 192359.095969], [161255.765032, 192358.422784], [161250.24, 192360.8371], [161252.848466, 192360.669235], [161253.099243, 192361.454752], [161253.526865, 192361.190345], [161254.546227, 192360.559978], [161255.079379, 192360.23028], [161255.624911, 192359.688905], [161255.975562, 192360.467995], [161262.124739, 192360.072271], [161262.228824, 192360.867228], [161268.196801, 192359.681511], [161268.709139, 192359.57972], [161269.279059, 192359.466504], [161269.259818, 192359.436323], [161268.915923, 192358.896904]]], "type": "Polygon"}, "id": "id_wkt", "properties": {"brdr_area": 31630.77374963042, "brdr_diff_area_index": 35.9, "brdr_diff_area_index_perc": 0.1, "brdr_diff_length_index": 26.8, "brdr_diff_length_index_perc": 2.9, "brdr_id": "id_wkt", "brdr_nr_calculations": 31, "brdr_perimeter": 943.0543781037443, "brdr_relevant_distance": 0.8, "brdr_remark": [], "brdr_shape_index": 0.4469368960568271, "brdr_stability": false, "brdr_sym_diff_area_index": 159.7, "brdr_sym_diff_area_index_perc": 0.5}, "type": "Feature"}, {"geometry": {"coordinates": [[[161186.534, 192247.4521], [161177.421, 192306.5951], [161203.842965, 192311.131094], [161206.75796, 192311.631093], [161236.517641, 192316.740736], [161236.577995, 192316.751099], [161263.705, 192321.4081], [161261.49, 192355.9211], [161250.24, 192360.8371], [161269.322, 192359.6091], [161267.091, 192353.4101], [161269.974999, 192322.454106], [161271.12599, 192310.103209], [161271.163, 192309.7081], [161286.916, 192307.3901], [161294.728, 192307.1971], [161291.07, 192289.8021], [161308.256, 192285.7541], [161307.416, 192281.3241], [161310.776, 192280.7891], [161310.067007, 192277.309136], [161302.756, 192241.4521], [161292.979, 192242.9801], [161289.466, 192225.7941], [161340.8, 192217.1011], [161337.361001, 192190.086109], [161333.798, 192162.0881], [161331.372, 192140.7561], [161301.398002, 192136.2181], [161209.378, 192122.2851], [161193.241008, 192119.878101], [161168.898, 192116.2461], [161124.346, 192109.5991], [161140.121, 192238.2081], [161139.788, 192240.7681], [161186.534, 192247.4521]]], "type": "Polygon"}, "id": "id_wkt", "properties": {"brdr_area": 31594.917092011834, "brdr_diff_area_index": 0, "brdr_diff_area_index_perc": 0, "brdr_diff_length_index": 0, "brdr_diff_length_index_perc": 0, "brdr_id": "id_wkt", "brdr_nr_calculations": 31, "brdr_perimeter": 916.2373493856483, "brdr_prediction_count": 2, "brdr_prediction_score": 2.5, "brdr_relevant_distance": 0.9, "brdr_remark": [], "brdr_shape_index": 0.47294550420205206, "brdr_stability": true, "brdr_sym_diff_area_index": 0, "brdr_sym_diff_area_index_perc": 0}, "type": "Feature"}, {"geometry": {"coordinates": [[[161308.129294, 192285.085879], [161307.416, 192281.3241], [161310.776, 192280.7891], [161310.067008, 192277.30914], [161302.756, 192241.4521], [161292.979, 192242.9801], [161289.466, 192225.7941], [161340.8, 192217.1011], [161337.361001, 192190.08611], [161333.798, 192162.0881], [161331.372, 192140.7561], [161301.398004, 192136.218101], [161209.378, 192122.2851], [161193.24101, 192119.878102], [161168.898, 192116.2461], [161124.346, 192109.5991], [161140.121, 192238.2081], [161139.788, 192240.7681], [161186.534, 192247.4521], [161177.421, 192306.5951], [161203.842962, 192311.131093], [161206.757956, 192311.631093], [161236.560844, 192316.748154], [161236.577994, 192316.751099], [161263.705, 192321.4081], [161261.49, 192355.9211], [161250.24, 192360.8371], [161269.322, 192359.6091], [161267.091, 192353.4101], [161269.974999, 192322.454107], [161271.125989, 192310.103218], [161271.125999, 192310.10311], [161271.163, 192309.7081], [161286.916, 192307.3901], [161294.728, 192307.1971], [161291.07, 192289.8021], [161307.212035, 192285.999996], [161308.194486, 192285.768589], [161308.256, 192285.7541], [161308.129294, 192285.085879]]], "type": "Polygon"}, "id": "id_wkt", "properties": {"brdr_area": 31594.917092002368, "brdr_diff_area_index": 0, "brdr_diff_area_index_perc": 0, "brdr_diff_length_index": 0, "brdr_diff_length_index_perc": 0, "brdr_id": "id_wkt", "brdr_nr_calculations": 31, "brdr_perimeter": 916.2373493865019, "brdr_relevant_distance": 1.0, "brdr_remark": [], "brdr_shape_index": 0.47294550420102904, "brdr_stability": false, "brdr_sym_diff_area_index": 0, "brdr_sym_diff_area_index_perc": 0}, "type": "Feature"}, {"geometry": {"coordinates": [[[161255.004051, 192358.755316], [161250.24, 192360.8371], [161252.21182, 192360.710206], [161252.556697, 192361.790287], [161253.05032, 192361.485002], [161253.526865, 192361.190345], [161254.546227, 192360.559978], [161255.079379, 192360.23028], [161255.094415, 192360.5247], [161269.322, 192359.6091], [161267.091, 192353.4101], [161269.974999, 192322.454107], [161271.077473, 192310.62383], [161271.125988, 192310.10323], [161271.125999, 192310.10311], [161271.163, 192309.7081], [161286.916, 192307.3901], [161294.728, 192307.1971], [161291.07, 192289.8021], [161308.256, 192285.7541], [161307.416, 192281.3241], [161310.776, 192280.7891], [161310.067009, 192277.309144], [161302.756, 192241.4521], [161292.979, 192242.9801], [161289.466, 192225.7941], [161340.8, 192217.1011], [161337.361001, 192190.086111], [161333.798, 192162.0881], [161331.372, 192140.7561], [161301.398004, 192136.218101], [161209.378, 192122.2851], [161193.241011, 192119.878102], [161168.898, 192116.2461], [161124.346, 192109.5991], [161140.121, 192238.2081], [161139.788, 192240.7681], [161186.534, 192247.4521], [161177.421, 192306.5951], [161203.842958, 192311.131093], [161206.756578, 192311.630856], [161206.757952, 192311.631092], [161236.577994, 192316.751099], [161263.705, 192321.4081], [161261.49, 192355.9211], [161255.004051, 192358.755316], [161255.004051, 192358.755316]]], "type": "Polygon"}, "id": "id_wkt", "properties": {"brdr_area": 31596.122692815905, "brdr_diff_area_index": 1.2, "brdr_diff_area_index_perc": 0.0, "brdr_diff_length_index": 1.5, "brdr_diff_length_index_perc": 0.2, "brdr_id": "id_wkt", "brdr_nr_calculations": 31, "brdr_perimeter": 917.7434679668697, "brdr_relevant_distance": 1.1, "brdr_remark": [], "brdr_shape_index": 0.4714124536493581, "brdr_stability": false, "brdr_sym_diff_area_index": 1.4, "brdr_sym_diff_area_index_perc": 0.0}, "type": "Feature"}, {"geometry": {"coordinates": [[[161203.842956, 192311.131092], [161206.756319, 192311.630812], [161206.757997, 192311.631099], [161236.539559, 192316.7445], [161236.577993, 192316.751099], [161263.705, 192321.4081], [161261.49, 192355.9211], [161254.761319, 192358.861384], [161250.24, 192360.8371], [161251.999623, 192360.723861], [161252.375853, 192361.902132], [161253.05032, 192361.485002], [161253.526865, 192361.190345], [161254.546227, 192360.559978], [161255.079379, 192360.23028], [161255.14953, 192360.521153], [161269.322, 192359.6091], [161267.091, 192353.4101], [161269.974999, 192322.454107], [161271.073653, 192310.664817], [161271.107429, 192310.30238], [161271.125999, 192310.103109], [161271.163, 192309.7081], [161286.916, 192307.3901], [161294.728, 192307.1971], [161291.07, 192289.8021], [161308.256, 192285.7541], [161307.416, 192281.3241], [161310.776, 192280.7891], [161310.226246, 192278.090733], [161310.06701, 192277.309147], [161302.756, 192241.4521], [161292.979, 192242.9801], [161289.466, 192225.7941], [161340.8, 192217.1011], [161337.361, 192190.0861], [161333.798, 192162.0881], [161331.372, 192140.7561], [161301.398005, 192136.218101], [161209.378, 192122.2851], [161193.241012, 192119.878102], [161168.898, 192116.2461], [161124.346, 192109.5991], [161140.121, 192238.2081], [161139.788, 192240.7681], [161186.534, 192247.4521], [161177.421, 192306.5951], [161203.842956, 192311.131092]]], "type": "Polygon"}, "id": "id_wkt", "properties": {"brdr_area": 31596.359083565334, "brdr_diff_area_index": 1.4, "brdr_diff_area_index_perc": 0.0, "brdr_diff_length_index": 1.6, "brdr_diff_length_index_perc": 0.2, "brdr_id": "id_wkt", "brdr_nr_calculations": 31, "brdr_perimeter": 917.7957210663335, "brdr_relevant_distance": 1.2, "brdr_remark": [], "brdr_shape_index": 0.47136230362053877, "brdr_stability": false, "brdr_sym_diff_area_index": 1.6, "brdr_sym_diff_area_index_perc": 0.0}, "type": "Feature"}, {"geometry": {"coordinates": [[[161290.939885, 192307.290688], [161294.728, 192307.1971], [161291.07, 192289.8021], [161308.256, 192285.7541], [161307.416, 192281.3241], [161310.776, 192280.7891], [161310.06701, 192277.309151], [161302.756, 192241.4521], [161292.979, 192242.9801], [161289.466, 192225.7941], [161340.8, 192217.1011], [161337.361002, 192190.086112], [161333.798, 192162.0881], [161331.372, 192140.7561], [161301.398005, 192136.218101], [161209.378, 192122.2851], [161193.241013, 192119.878102], [161168.898002, 192116.2461], [161124.346, 192109.5991], [161140.121, 192238.2081], [161139.788, 192240.7681], [161186.534, 192247.4521], [161177.421, 192306.5951], [161203.842951, 192311.131092], [161206.757944, 192311.63109], [161236.504992, 192316.738565], [161236.577993, 192316.751099], [161263.705, 192321.4081], [161261.49, 192355.9211], [161250.24, 192360.8371], [161269.322, 192359.6091], [161267.091, 192353.4101], [161269.974999, 192322.454109], [161271.069789, 192310.706283], [161271.125986, 192310.103254], [161271.125999, 192310.10311], [161271.163, 192309.7081], [161286.916, 192307.3901], [161289.037622, 192307.337684], [161290.986779, 192308.589926], [161290.939885, 192307.290688]]], "type": "Polygon"}, "id": "id_wkt", "properties": {"brdr_area": 31596.15394050648, "brdr_diff_area_index": 1.2, "brdr_diff_area_index_perc": 0.0, "brdr_diff_length_index": 1.7, "brdr_diff_length_index_perc": 0.2, "brdr_id": "id_wkt", "brdr_nr_calculations": 31, "brdr_perimeter": 917.9513383790202, "brdr_relevant_distance": 1.3, "brdr_remark": [], "brdr_shape_index": 0.47119944078520204, "brdr_stability": false, "brdr_sym_diff_area_index": 1.2, "brdr_sym_diff_area_index_perc": 0.0}, "type": "Feature"}, {"geometry": {"coordinates": [[[161250.24, 192360.8371], [161251.575229, 192360.751173], [161252.320147, 192361.936584], [161253.05032, 192361.485002], [161253.526865, 192361.190345], [161254.546227, 192360.559978], [161255.079379, 192360.23028], [161255.285888, 192360.512378], [161269.322, 192359.6091], [161267.091, 192353.4101], [161269.956447, 192322.653247], [161271.109369, 192310.281564], [161271.125985, 192310.103266], [161271.125999, 192310.103109], [161271.163, 192309.7081], [161286.916, 192307.3901], [161294.728, 192307.1971], [161291.07, 192289.8021], [161308.256, 192285.7541], [161307.416, 192281.3241], [161310.776, 192280.7891], [161310.067011, 192277.309155], [161302.756, 192241.4521], [161292.979, 192242.9801], [161289.466, 192225.7941], [161340.8, 192217.1011], [161337.361002, 192190.086114], [161333.798, 192162.0881], [161331.372, 192140.7561], [161301.398, 192136.2181], [161209.378, 192122.2851], [161193.241, 192119.8781], [161168.898, 192116.2461], [161124.346, 192109.5991], [161140.121, 192238.2081], [161139.788, 192240.7681], [161186.534, 192247.4521], [161177.421, 192306.5951], [161203.842948, 192311.131091], [161206.754371, 192311.630478], [161206.757997, 192311.631099], [161236.577992, 192316.751099], [161263.705, 192321.4081], [161261.49, 192355.9211], [161254.243067, 192359.087849], [161250.24, 192360.8371]]], "type": "Polygon"}, "id": "id_wkt", "properties": {"brdr_area": 31596.639988379466, "brdr_diff_area_index": 1.7, "brdr_diff_area_index_perc": 0.0, "brdr_diff_length_index": 1.3, "brdr_diff_length_index_perc": 0.1, "brdr_id": "id_wkt", "brdr_nr_calculations": 31, "brdr_perimeter": 917.5128584786564, "brdr_relevant_distance": 1.4, "brdr_remark": [], "brdr_shape_index": 0.4716571768004321, "brdr_stability": false, "brdr_sym_diff_area_index": 1.9, "brdr_sym_diff_area_index_perc": 0.0}, "type": "Feature"}, {"geometry": {"coordinates": [[[161292.976781, 192242.969244], [161289.466, 192225.7941], [161340.8, 192217.1011], [161337.361, 192190.0861], [161334.032184, 192163.928313], [161333.798, 192162.0881], [161331.372, 192140.7561], [161301.398005, 192136.218101], [161209.378, 192122.2851], [161193.241, 192119.8781], [161168.898, 192116.2461], [161124.346, 192109.5991], [161140.121, 192238.2081], [161139.788, 192240.7681], [161186.534, 192247.4521], [161177.421, 192306.5951], [161203.842944, 192311.13109], [161206.756158, 192311.630784], [161206.757997, 192311.631099], [161236.577992, 192316.751099], [161263.705, 192321.4081], [161261.49, 192355.9211], [161250.24, 192360.8371], [161269.322, 192359.6091], [161267.091, 192353.4101], [161269.975, 192322.4541], [161271.125999, 192310.103109], [161271.163, 192309.7081], [161286.916, 192307.3901], [161294.728, 192307.1971], [161291.07, 192289.8021], [161308.256, 192285.7541], [161307.416, 192281.3241], [161310.776, 192280.7891], [161310.532576, 192279.594298], [161310.067012, 192277.309158], [161302.756, 192241.4521], [161293.95489, 192242.827583], [161292.999443, 192241.450311], [161292.976781, 192242.969244]]], "type": "Polygon"}, "id": "id_wkt", "properties": {"brdr_area": 31595.66379368122, "brdr_diff_area_index": 0.7, "brdr_diff_area_index_perc": 0.0, "brdr_diff_length_index": 2.2, "brdr_diff_length_index_perc": 0.2, "brdr_id": "id_wkt", "brdr_nr_calculations": 31, "brdr_perimeter": 918.433867217055, "brdr_relevant_distance": 1.5, "brdr_remark": [], "brdr_shape_index": 0.47069714924395784, "brdr_stability": false, "brdr_sym_diff_area_index": 0.7, "brdr_sym_diff_area_index_perc": 0.0}, "type": "Feature"}, {"geometry": {"coordinates": [[[161250.24, 192360.8371], [161251.220228, 192360.774019], [161252.320147, 192361.936584], [161253.05032, 192361.485002], [161253.526867, 192361.190344], [161253.348613, 192360.637049], [161269.322, 192359.6091], [161267.091, 192353.4101], [161269.975, 192322.4541], [161271.125999, 192310.103109], [161271.163, 192309.7081], [161286.916, 192307.3901], [161294.728, 192307.1971], [161291.07, 192289.8021], [161308.256, 192285.7541], [161307.416, 192281.3241], [161310.776, 192280.7891], [161310.067013, 192277.309162], [161302.756, 192241.4521], [161292.979, 192242.9801], [161289.466, 192225.7941], [161340.8, 192217.1011], [161337.361002, 192190.086117], [161333.798, 192162.0881], [161331.372, 192140.7561], [161301.398, 192136.2181], [161209.378, 192122.2851], [161193.241015, 192119.878102], [161168.898, 192116.2461], [161124.346, 192109.5991], [161140.121, 192238.2081], [161139.788, 192240.7681], [161186.534, 192247.4521], [161177.421, 192306.5951], [161203.84294, 192311.13109], [161206.756699, 192311.630877], [161206.757997, 192311.631099], [161236.577992, 192316.751099], [161263.705, 192321.4081], [161261.49, 192355.9211], [161253.021484, 192359.621653], [161250.24, 192360.8371]]], "type": "Polygon"}, "id": "id_wkt", "properties": {"brdr_area": 31596.62993398444, "brdr_diff_area_index": 1.7, "brdr_diff_area_index_perc": 0.0, "brdr_diff_length_index": 1.5, "brdr_diff_length_index_perc": 0.2, "brdr_id": "id_wkt", "brdr_nr_calculations": 31, "brdr_perimeter": 917.7051120337965, "brdr_relevant_distance": 1.6, "brdr_remark": [], "brdr_shape_index": 0.4714594289436507, "brdr_stability": false, "brdr_sym_diff_area_index": 1.7, "brdr_sym_diff_area_index_perc": 0.0}, "type": "Feature"}, {"geometry": {"coordinates": [[[161250.24, 192360.8371], [161251.05958, 192360.784357], [161252.320147, 192361.936584], [161253.050323, 192361.485], [161252.704743, 192360.678484], [161269.322, 192359.6091], [161267.091, 192353.4101], [161269.974999, 192322.454111], [161271.125999, 192310.103109], [161271.163, 192309.7081], [161286.916, 192307.3901], [161294.728, 192307.1971], [161291.07, 192289.8021], [161308.256, 192285.7541], [161307.416, 192281.3241], [161310.776, 192280.7891], [161310.14903, 192277.711731], [161310.067013, 192277.309166], [161302.756, 192241.4521], [161292.979, 192242.9801], [161289.466, 192225.7941], [161340.8, 192217.1011], [161337.361, 192190.0861], [161333.798, 192162.0881], [161331.372, 192140.7561], [161301.398007, 192136.218101], [161209.378, 192122.2851], [161193.241016, 192119.878102], [161168.898, 192116.2461], [161124.346, 192109.5991], [161140.121, 192238.2081], [161139.788, 192240.7681], [161186.534, 192247.4521], [161177.421, 192306.5951], [161203.842937, 192311.131089], [161206.755235, 192311.630626], [161206.757997, 192311.631099], [161236.556204, 192316.747358], [161236.577991, 192316.751098], [161263.705, 192321.4081], [161261.49, 192355.9211], [161252.373276, 192359.904906], [161250.24, 192360.8371]]], "type": "Polygon"}, "id": "id_wkt", "properties": {"brdr_area": 31596.304100269983, "brdr_diff_area_index": 1.4, "brdr_diff_area_index_perc": 0.0, "brdr_diff_length_index": 1.8, "brdr_diff_length_index_perc": 0.2, "brdr_id": "id_wkt", "brdr_nr_calculations": 31, "brdr_perimeter": 918.0325765492697, "brdr_relevant_distance": 1.7, "brdr_remark": [], "brdr_shape_index": 0.471118289056263, "brdr_stability": false, "brdr_sym_diff_area_index": 1.4, "brdr_sym_diff_area_index_perc": 0.0}, "type": "Feature"}, {"geometry": {"coordinates": [[[161250.239999, 192360.8371], [161250.726215, 192360.80581], [161250.728663, 192360.805653], [161250.898929, 192360.794696], [161252.320147, 192361.936584], [161251.909492, 192360.729662], [161269.322, 192359.6091], [161267.091, 192353.4101], [161269.974999, 192322.454113], [161271.117923, 192310.189775], [161271.125979, 192310.103321], [161271.125999, 192310.103112], [161271.163, 192309.7081], [161286.916, 192307.3901], [161294.728, 192307.1971], [161291.07, 192289.8021], [161308.256, 192285.7541], [161307.416, 192281.3241], [161310.776, 192280.7891], [161310.067014, 192277.309169], [161302.756, 192241.4521], [161292.979, 192242.9801], [161289.466, 192225.7941], [161340.8, 192217.1011], [161337.361002, 192190.086119], [161333.798, 192162.0881], [161331.372, 192140.7561], [161301.398005, 192136.218101], [161209.378, 192122.2851], [161193.241019, 192119.878103], [161168.898, 192116.2461], [161124.346, 192109.5991], [161140.121, 192238.2081], [161139.788, 192240.7681], [161186.534, 192247.4521], [161177.421, 192306.5951], [161203.842934, 192311.131089], [161206.755145, 192311.63061], [161206.757924, 192311.631087], [161236.577989, 192316.751098], [161263.705, 192321.4081], [161261.49, 192355.9211], [161251.739227, 192360.181972], [161250.239999, 192360.8371]]], "type": "Polygon"}, "id": "id_wkt", "properties": {"brdr_area": 31595.540309598506, "brdr_diff_area_index": 0.6, "brdr_diff_area_index_perc": 0.0, "brdr_diff_length_index": 2.1, "brdr_diff_length_index_perc": 0.2, "brdr_id": "id_wkt", "brdr_nr_calculations": 31, "brdr_perimeter": 918.322687403589, "brdr_relevant_distance": 1.8, "brdr_remark": [], "brdr_shape_index": 0.47080928914608944, "brdr_stability": false, "brdr_sym_diff_area_index": 0.6, "brdr_sym_diff_area_index_perc": 0.0}, "type": "Feature"}, {"geometry": {"coordinates": [[[161250.24, 192360.8371], [161250.722454, 192360.806052], [161250.738281, 192360.805034], [161252.320147, 192361.936584], [161251.418982, 192360.761228], [161269.322, 192359.6091], [161267.091, 192353.4101], [161269.974999, 192322.454112], [161271.105799, 192310.319875], [161271.125979, 192310.103325], [161271.125999, 192310.10311], [161271.163, 192309.7081], [161286.916, 192307.3901], [161294.728, 192307.1971], [161291.07, 192289.8021], [161308.256, 192285.7541], [161307.416, 192281.3241], [161310.776, 192280.7891], [161310.067015, 192277.309173], [161302.756, 192241.4521], [161292.979, 192242.9801], [161289.466, 192225.7941], [161340.8, 192217.1011], [161337.361002, 192190.086119], [161333.798, 192162.0881], [161331.372, 192140.7561], [161301.398006, 192136.218101], [161209.378, 192122.2851], [161193.241019, 192119.878103], [161168.898, 192116.2461], [161124.346, 192109.5991], [161140.121, 192238.2081], [161139.788, 192240.7681], [161186.534, 192247.4521], [161177.421, 192306.5951], [161203.84293, 192311.131088], [161206.757096, 192311.630945], [161206.757919, 192311.631086], [161236.577989, 192316.751098], [161263.705, 192321.4081], [161261.49, 192355.9211], [161251.16668, 192360.432161], [161250.24, 192360.8371]]], "type": "Polygon"}, "id": "id_wkt", "properties": {"brdr_area": 31595.33686288184, "brdr_diff_area_index": 0.4, "brdr_diff_area_index_perc": 0.0, "brdr_diff_length_index": 2.7, "brdr_diff_length_index_perc": 0.3, "brdr_id": "id_wkt", "brdr_nr_calculations": 31, "brdr_perimeter": 918.9812255625792, "brdr_relevant_distance": 1.9, "brdr_remark": [], "brdr_shape_index": 0.47013174367562527, "brdr_stability": false, "brdr_sym_diff_area_index": 0.4, "brdr_sym_diff_area_index_perc": 0.0}, "type": "Feature"}, {"geometry": {"coordinates": [[[161250.24, 192360.8371], [161250.297833, 192360.833378], [161250.484334, 192360.821376], [161250.577631, 192360.815372], [161252.308363, 192361.929001], [161252.30987, 192361.927058], [161251.07592, 192360.783305], [161269.322, 192359.6091], [161267.091, 192353.4101], [161269.975, 192322.4541], [161271.125999, 192310.103109], [161271.163, 192309.7081], [161274.702347, 192309.187297], [161286.916, 192307.3901], [161294.728, 192307.1971], [161291.07, 192289.8021], [161308.256, 192285.7541], [161307.416, 192281.3241], [161310.776, 192280.7891], [161310.067016, 192277.309177], [161302.756, 192241.4521], [161292.979, 192242.9801], [161289.466, 192225.7941], [161340.8, 192217.1011], [161337.361, 192190.0861], [161333.798, 192162.0881], [161331.372, 192140.7561], [161301.398008, 192136.218101], [161209.378, 192122.2851], [161193.241, 192119.8781], [161169.34442, 192116.312706], [161168.898003, 192116.2461], [161124.346, 192109.5991], [161140.121, 192238.2081], [161139.788, 192240.7681], [161186.534, 192247.4521], [161177.421, 192306.5951], [161203.842926, 192311.131087], [161206.755024, 192311.630589], [161206.757997, 192311.631099], [161236.57799, 192316.751098], [161263.705, 192321.4081], [161261.49, 192355.9211], [161250.568305, 192360.693638], [161250.24, 192360.8371]]], "type": "Polygon"}, "id": "id_wkt", "properties": {"brdr_area": 31595.22435674417, "brdr_diff_area_index": 0.3, "brdr_diff_area_index_perc": 0.0, "brdr_diff_length_index": 3.2, "brdr_diff_length_index_perc": 0.4, "brdr_id": "id_wkt", "brdr_nr_calculations": 31, "brdr_perimeter": 919.481046657889, "brdr_relevant_distance": 2.0, "brdr_remark": [], "brdr_shape_index": 0.46961909211663083, "brdr_stability": false, "brdr_sym_diff_area_index": 0.3, "brdr_sym_diff_area_index_perc": 0.0}, "type": "Feature"}, {"geometry": {"coordinates": [[[161250.24, 192360.8371], [161250.416982, 192360.825711], [161252.201835, 192361.867525], [161252.208083, 192361.857791], [161250.713089, 192360.806655], [161252.092096, 192360.717911], [161269.322, 192359.6091], [161267.091, 192353.4101], [161269.974999, 192322.454113], [161271.102744, 192310.352653], [161271.107419, 192310.302486], [161271.125999, 192310.103109], [161271.163, 192309.7081], [161286.916, 192307.3901], [161294.728, 192307.1971], [161291.07, 192289.8021], [161308.256, 192285.7541], [161307.416, 192281.3241], [161310.776, 192280.7891], [161310.458855, 192279.232449], [161310.067016, 192277.30918], [161302.756, 192241.4521], [161292.979, 192242.9801], [161289.466, 192225.7941], [161340.8, 192217.1011], [161337.361003, 192190.086121], [161333.798, 192162.0881], [161331.372, 192140.7561], [161301.398, 192136.2181], [161209.378, 192122.2851], [161193.24102, 192119.878103], [161169.028016, 192116.265499], [161168.898, 192116.2461], [161124.346, 192109.5991], [161140.121, 192238.2081], [161139.788, 192240.7681], [161186.534, 192247.4521], [161177.421, 192306.5951], [161203.842922, 192311.131087], [161206.756264, 192311.630802], [161206.757997, 192311.631099], [161236.567423, 192316.749284], [161236.577988, 192316.751098], [161263.705, 192321.4081], [161261.49, 192355.9211], [161250.563619, 192360.695686], [161250.24, 192360.8371]]], "type": "Polygon"}, "id": "id_wkt", "properties": {"brdr_area": 31595.098901677677, "brdr_diff_area_index": 0.2, "brdr_diff_area_index_perc": 0.0, "brdr_diff_length_index": 3.6, "brdr_diff_length_index_perc": 0.4, "brdr_id": "id_wkt", "brdr_nr_calculations": 31, "brdr_perimeter": 919.8463932586685, "brdr_relevant_distance": 2.1, "brdr_remark": [], "brdr_shape_index": 0.46924425429186617, "brdr_stability": false, "brdr_sym_diff_area_index": 0.2, "brdr_sym_diff_area_index_perc": 0.0}, "type": "Feature"}, {"geometry": {"coordinates": [[[161193.428943, 192119.906141], [161169.016027, 192116.26371], [161168.898, 192116.2461], [161124.346, 192109.5991], [161140.121, 192238.2081], [161139.788, 192240.7681], [161186.534, 192247.4521], [161177.421, 192306.5951], [161203.842919, 192311.131086], [161206.756646, 192311.630868], [161206.757997, 192311.631099], [161236.577989, 192316.751098], [161263.705, 192321.4081], [161261.49, 192355.9211], [161250.24, 192360.8371], [161269.322, 192359.6091], [161267.091, 192353.4101], [161269.974999, 192322.454115], [161271.081674, 192310.578752], [161271.125976, 192310.103361], [161271.125999, 192310.10311], [161271.163, 192309.7081], [161286.916, 192307.3901], [161294.728, 192307.1971], [161291.07, 192289.8021], [161308.256, 192285.7541], [161307.416, 192281.3241], [161310.776, 192280.7891], [161310.067017, 192277.309184], [161302.756, 192241.4521], [161292.979, 192242.9801], [161289.466, 192225.7941], [161340.8, 192217.1011], [161337.361, 192190.0861], [161333.880428, 192162.735815], [161333.798, 192162.0881], [161331.372, 192140.7561], [161301.398009, 192136.218101], [161222.918688, 192124.335333], [161222.746195, 192122.954055], [161218.084997, 192123.60345], [161209.378, 192122.2851], [161193.428944, 192119.906134], [161193.428943, 192119.906141]]], "type": "Polygon"}, "id": "id_wkt", "properties": {"brdr_area": 31598.192302371393, "brdr_diff_area_index": 3.3, "brdr_diff_area_index_perc": 0.0, "brdr_diff_length_index": 1.2, "brdr_diff_length_index_perc": 0.1, "brdr_id": "id_wkt", "brdr_nr_calculations": 31, "brdr_perimeter": 917.4467947058812, "brdr_prediction_count": 2, "brdr_prediction_score": 20.0, "brdr_relevant_distance": 2.2, "brdr_remark": [], "brdr_shape_index": 0.47174828111998424, "brdr_stability": true, "brdr_sym_diff_area_index": 3.3, "brdr_sym_diff_area_index_perc": 0.0}, "type": "Feature"}, {"geometry": {"coordinates": [[[161218.084997, 192123.60345], [161209.378, 192122.2851], [161193.241, 192119.8781], [161169.309961, 192116.307565], [161168.898004, 192116.246101], [161124.346, 192109.5991], [161140.121, 192238.2081], [161139.788, 192240.7681], [161186.534, 192247.4521], [161177.421, 192306.5951], [161203.842915, 192311.131085], [161206.754864, 192311.630562], [161206.757997, 192311.631099], [161236.577987, 192316.751098], [161263.705, 192321.4081], [161261.49, 192355.9211], [161250.24, 192360.8371], [161269.322, 192359.6091], [161267.091, 192353.4101], [161269.974999, 192322.454116], [161271.107416, 192310.302514], [161271.125999, 192310.103109], [161271.163, 192309.7081], [161286.916, 192307.3901], [161294.728, 192307.1971], [161291.07, 192289.8021], [161308.256, 192285.7541], [161307.416, 192281.3241], [161310.776, 192280.7891], [161310.067018, 192277.309188], [161302.756, 192241.4521], [161292.979, 192242.9801], [161289.466, 192225.7941], [161340.8, 192217.1011], [161337.361003, 192190.086123], [161333.798, 192162.0881], [161331.372, 192140.7561], [161301.398007, 192136.218101], [161222.918688, 192124.335333], [161222.746195, 192122.954055], [161218.084997, 192123.60345]]], "type": "Polygon"}, "id": "id_wkt", "properties": {"brdr_area": 31598.192303078125, "brdr_diff_area_index": 3.3, "brdr_diff_area_index_perc": 0.0, "brdr_diff_length_index": 1.2, "brdr_diff_length_index_perc": 0.1, "brdr_id": "id_wkt", "brdr_nr_calculations": 31, "brdr_perimeter": 917.446787144112, "brdr_relevant_distance": 2.3, "brdr_remark": [], "brdr_shape_index": 0.4717482889070118, "brdr_stability": true, "brdr_sym_diff_area_index": 3.3, "brdr_sym_diff_area_index_perc": 0.0}, "type": "Feature"}, {"geometry": {"coordinates": [[[161218.084997, 192123.60345], [161210.547334, 192122.462152], [161209.378, 192122.2851], [161193.241, 192119.8781], [161169.446981, 192116.328008], [161168.898002, 192116.2461], [161124.346, 192109.5991], [161140.121, 192238.2081], [161139.788, 192240.7681], [161186.534, 192247.4521], [161177.421, 192306.5951], [161203.842912, 192311.131085], [161206.75642, 192311.630829], [161206.757997, 192311.631099], [161236.570482, 192316.749809], [161236.577988, 192316.751098], [161263.705, 192321.4081], [161261.49, 192355.9211], [161250.24, 192360.8371], [161269.322, 192359.6091], [161267.091, 192353.4101], [161269.975, 192322.4541], [161271.125999, 192310.103109], [161271.163, 192309.7081], [161286.916, 192307.3901], [161294.728, 192307.1971], [161291.07, 192289.8021], [161308.256, 192285.7541], [161307.416, 192281.3241], [161310.776, 192280.7891], [161310.067019, 192277.309192], [161302.756, 192241.4521], [161292.979, 192242.9801], [161289.466, 192225.7941], [161340.8, 192217.1011], [161337.386259, 192190.284525], [161333.919376, 192163.041873], [161333.798, 192162.0881], [161331.372, 192140.7561], [161301.398, 192136.2181], [161225.587885, 192124.739483], [161222.918688, 192124.335333], [161222.746195, 192122.954055], [161218.084997, 192123.60345]]], "type": "Polygon"}, "id": "id_wkt", "properties": {"brdr_area": 31598.192411873923, "brdr_diff_area_index": 3.3, "brdr_diff_area_index_perc": 0.0, "brdr_diff_length_index": 1.2, "brdr_diff_length_index_perc": 0.1, "brdr_id": "id_wkt", "brdr_nr_calculations": 31, "brdr_perimeter": 917.4467871440147, "brdr_relevant_distance": 2.4, "brdr_remark": [], "brdr_shape_index": 0.4717482905313894, "brdr_stability": true, "brdr_sym_diff_area_index": 3.3, "brdr_sym_diff_area_index_perc": 0.0}, "type": "Feature"}, {"geometry": {"coordinates": [[[161218.084997, 192123.60345], [161209.378, 192122.2851], [161207.053408, 192121.938363], [161193.241025, 192119.878104], [161168.898, 192116.2461], [161124.346, 192109.5991], [161140.121, 192238.2081], [161139.788, 192240.7681], [161186.534, 192247.4521], [161177.421, 192306.5951], [161203.842908, 192311.131084], [161206.756753, 192311.630886], [161206.757997, 192311.631099], [161236.577987, 192316.751098], [161263.705, 192321.4081], [161261.49, 192355.9211], [161250.24, 192360.8371], [161269.322, 192359.6091], [161267.091, 192353.4101], [161269.974998, 192322.454116], [161271.125999, 192310.103109], [161271.163, 192309.7081], [161286.916, 192307.3901], [161294.728, 192307.1971], [161291.07, 192289.8021], [161308.256, 192285.7541], [161307.416, 192281.3241], [161310.776, 192280.7891], [161310.067019, 192277.309195], [161302.756, 192241.4521], [161292.979, 192242.9801], [161289.466, 192225.7941], [161340.8, 192217.1011], [161337.361003, 192190.086125], [161333.913423, 192162.995089], [161333.798, 192162.0881], [161331.372, 192140.7561], [161301.398, 192136.2181], [161222.918688, 192124.335333], [161222.746195, 192122.954055], [161218.084997, 192123.60345]]], "type": "Polygon"}, "id": "id_wkt", "properties": {"brdr_area": 31598.192303062202, "brdr_diff_area_index": 3.3, "brdr_diff_area_index_perc": 0.0, "brdr_diff_length_index": 1.2, "brdr_diff_length_index_perc": 0.1, "brdr_id": "id_wkt", "brdr_nr_calculations": 31, "brdr_perimeter": 917.4467871441532, "brdr_relevant_distance": 2.5, "brdr_remark": [], "brdr_shape_index": 0.47174828890673176, "brdr_stability": true, "brdr_sym_diff_area_index": 3.3, "brdr_sym_diff_area_index_perc": 0.0}, "type": "Feature"}, {"geometry": {"coordinates": [[[161218.084997, 192123.60345], [161209.378, 192122.2851], [161193.241026, 192119.878104], [161168.898, 192116.2461], [161124.346, 192109.5991], [161140.121, 192238.2081], [161139.788, 192240.7681], [161186.534, 192247.4521], [161177.421, 192306.5951], [161203.842905, 192311.131084], [161206.755173, 192311.630615], [161206.757894, 192311.631082], [161206.757997, 192311.631099], [161236.577985, 192316.751097], [161263.705, 192321.4081], [161261.49, 192355.9211], [161250.24, 192360.8371], [161269.322, 192359.6091], [161267.091, 192353.4101], [161269.974998, 192322.454116], [161271.122999, 192310.135301], [161271.125971, 192310.103408], [161271.125999, 192310.103109], [161271.163, 192309.7081], [161286.916, 192307.3901], [161294.728, 192307.1971], [161291.07, 192289.8021], [161308.256, 192285.7541], [161307.416, 192281.3241], [161310.776, 192280.7891], [161310.06702, 192277.309199], [161302.756, 192241.4521], [161292.979, 192242.9801], [161289.466, 192225.7941], [161340.8, 192217.1011], [161337.361003, 192190.086126], [161333.798, 192162.0881], [161331.372, 192140.7561], [161301.398009, 192136.218101], [161222.918688, 192124.335333], [161222.746195, 192122.954055], [161218.084997, 192123.60345]]], "type": "Polygon"}, "id": "id_wkt", "properties": {"brdr_area": 31598.19230306292, "brdr_diff_area_index": 3.3, "brdr_diff_area_index_perc": 0.0, "brdr_diff_length_index": 1.2, "brdr_diff_length_index_perc": 0.1, "brdr_id": "id_wkt", "brdr_nr_calculations": 31, "brdr_perimeter": 917.4467871441636, "brdr_relevant_distance": 2.6, "brdr_remark": [], "brdr_shape_index": 0.47174828890673176, "brdr_stability": true, "brdr_sym_diff_area_index": 3.3, "brdr_sym_diff_area_index_perc": 0.0}, "type": "Feature"}, {"geometry": {"coordinates": [[[161203.842902, 192311.131083], [161206.757563, 192311.631025], [161206.757997, 192311.631099], [161236.577986, 192316.751098], [161263.705, 192321.4081], [161261.49, 192355.9211], [161250.24, 192360.8371], [161269.322, 192359.6091], [161267.091, 192353.4101], [161269.975, 192322.4541], [161271.125999, 192310.103109], [161271.163, 192309.7081], [161286.916, 192307.3901], [161294.728, 192307.1971], [161291.07, 192289.8021], [161308.256, 192285.7541], [161307.416, 192281.3241], [161310.776, 192280.7891], [161310.067021, 192277.309203], [161302.756, 192241.4521], [161292.979, 192242.9801], [161289.466, 192225.7941], [161340.8, 192217.1011], [161337.361003, 192190.086127], [161333.798, 192162.0881], [161332.082635, 192147.004764], [161331.372, 192140.7561], [161309.64325, 192137.466413], [161301.398, 192136.2181], [161224.849761, 192124.627722], [161222.918688, 192124.335333], [161222.746195, 192122.954055], [161218.084997, 192123.60345], [161209.378, 192122.2851], [161193.241, 192119.8781], [161169.25059, 192116.298707], [161168.898003, 192116.2461], [161124.346, 192109.5991], [161140.121, 192238.2081], [161139.788, 192240.7681], [161186.534, 192247.4521], [161177.421, 192306.5951], [161203.842902, 192311.131083]]], "type": "Polygon"}, "id": "id_wkt", "properties": {"brdr_area": 31598.192303029427, "brdr_diff_area_index": 3.3, "brdr_diff_area_index_perc": 0.0, "brdr_diff_length_index": 1.2, "brdr_diff_length_index_perc": 0.1, "brdr_id": "id_wkt", "brdr_nr_calculations": 31, "brdr_perimeter": 917.4467871441142, "brdr_relevant_distance": 2.7, "brdr_remark": [], "brdr_shape_index": 0.4717482889062826, "brdr_stability": true, "brdr_sym_diff_area_index": 3.3, "brdr_sym_diff_area_index_perc": 0.0}, "type": "Feature"}, {"geometry": {"coordinates": [[[161218.084997, 192123.60345], [161209.378, 192122.2851], [161193.241, 192119.8781], [161169.373123, 192116.316989], [161168.898001, 192116.2461], [161124.346, 192109.5991], [161140.121, 192238.2081], [161139.788, 192240.7681], [161186.534, 192247.4521], [161177.421, 192306.5951], [161203.842897, 192311.131082], [161206.757237, 192311.630969], [161206.757997, 192311.631099], [161236.561541, 192316.748274], [161236.577984, 192316.751097], [161263.705, 192321.4081], [161261.49, 192355.9211], [161250.24, 192360.8371], [161269.322, 192359.6091], [161267.091, 192353.4101], [161269.974998, 192322.454119], [161271.125999, 192310.103109], [161271.163, 192309.7081], [161286.916, 192307.3901], [161294.728, 192307.1971], [161291.07, 192289.8021], [161308.256, 192285.7541], [161307.416, 192281.3241], [161310.776, 192280.7891], [161310.067022, 192277.309207], [161302.756, 192241.4521], [161292.979, 192242.9801], [161289.466, 192225.7941], [161340.8, 192217.1011], [161337.361004, 192190.086128], [161333.838982, 192162.410138], [161333.798, 192162.0881], [161331.372, 192140.7561], [161301.398008, 192136.218101], [161222.918688, 192124.335333], [161222.746195, 192122.954055], [161218.084997, 192123.60345]]], "type": "Polygon"}, "id": "id_wkt", "properties": {"brdr_area": 31598.192303024298, "brdr_diff_area_index": 3.3, "brdr_diff_area_index_perc": 0.0, "brdr_diff_length_index": 1.2, "brdr_diff_length_index_perc": 0.1, "brdr_id": "id_wkt", "brdr_nr_calculations": 31, "brdr_perimeter": 917.4467871439704, "brdr_relevant_distance": 2.8, "brdr_remark": [], "brdr_shape_index": 0.47174828890635395, "brdr_stability": true, "brdr_sym_diff_area_index": 3.3, "brdr_sym_diff_area_index_perc": 0.0}, "type": "Feature"}, {"geometry": {"coordinates": [[[161218.084997, 192123.60345], [161209.378, 192122.2851], [161202.980484, 192121.330844], [161193.241029, 192119.878104], [161168.898001, 192116.2461], [161124.346, 192109.5991], [161140.121, 192238.2081], [161139.788, 192240.7681], [161186.534, 192247.4521], [161177.421, 192306.5951], [161203.842894, 192311.131082], [161206.755798, 192311.630722], [161206.757997, 192311.631099], [161236.560161, 192316.748037], [161236.577984, 192316.751097], [161263.705, 192321.4081], [161261.49, 192355.9211], [161256.873626, 192357.938353], [161250.24, 192360.8371], [161268.23403, 192359.679115], [161269.322, 192359.6091], [161267.091, 192353.4101], [161267.532947, 192348.666371], [161269.975, 192322.4541], [161271.115322, 192310.217687], [161271.125967, 192310.103452], [161271.125999, 192310.103109], [161271.163, 192309.7081], [161286.916, 192307.3901], [161294.728, 192307.1971], [161291.07, 192289.8021], [161308.256, 192285.7541], [161307.416, 192281.3241], [161310.776, 192280.7891], [161310.067022, 192277.30921], [161302.756, 192241.4521], [161292.979, 192242.9801], [161289.466, 192225.7941], [161340.8, 192217.1011], [161337.361004, 192190.086129], [161333.798, 192162.0881], [161331.372, 192140.7561], [161301.39801, 192136.218102], [161222.918688, 192124.335333], [161222.746195, 192122.954055], [161218.084997, 192123.60345]]], "type": "Polygon"}, "id": "id_wkt", "properties": {"brdr_area": 31598.19230302506, "brdr_diff_area_index": 3.3, "brdr_diff_area_index_perc": 0.0, "brdr_diff_length_index": 1.2, "brdr_diff_length_index_perc": 0.1, "brdr_id": "id_wkt", "brdr_nr_calculations": 31, "brdr_perimeter": 917.4467871438708, "brdr_relevant_distance": 2.9, "brdr_remark": [], "brdr_shape_index": 0.47174828890646764, "brdr_stability": true, "brdr_sym_diff_area_index": 3.3, "brdr_sym_diff_area_index_perc": 0.0}, "type": "Feature"}, {"geometry": {"coordinates": [[[161203.842883, 192311.13108], [161206.756473, 192311.630838], [161206.757997, 192311.631099], [161236.573146, 192316.750267], [161236.577984, 192316.751097], [161263.705, 192321.4081], [161261.49, 192355.9211], [161250.24, 192360.8371], [161260.07843, 192360.203959], [161269.322, 192359.6091], [161267.091, 192353.4101], [161269.975, 192322.4541], [161271.085562, 192310.537025], [161271.107409, 192310.302595], [161271.125999, 192310.103109], [161271.163, 192309.7081], [161286.916, 192307.3901], [161294.728, 192307.1971], [161291.07, 192289.8021], [161308.256, 192285.7541], [161307.416, 192281.3241], [161310.776, 192280.7891], [161310.067023, 192277.309214], [161302.756, 192241.4521], [161292.979, 192242.9801], [161289.466, 192225.7941], [161340.8, 192217.1011], [161337.361, 192190.0861], [161333.798, 192162.0881], [161331.372, 192140.7561], [161301.39801, 192136.218102], [161222.918688, 192124.335333], [161222.746195, 192122.954055], [161218.084997, 192123.60345], [161209.378, 192122.2851], [161193.24103, 192119.878104], [161169.158736, 192116.285002], [161168.898, 192116.2461], [161124.346, 192109.5991], [161140.121, 192238.2081], [161139.788, 192240.7681], [161186.534, 192247.4521], [161177.421, 192306.5951], [161203.842883, 192311.13108]]], "type": "Polygon"}, "id": "id_wkt", "properties": {"brdr_area": 31598.192302997, "brdr_diff_area_index": 3.3, "brdr_diff_area_index_perc": 0.0, "brdr_diff_length_index": 1.2, "brdr_diff_length_index_perc": 0.1, "brdr_id": "id_wkt", "brdr_nr_calculations": 31, "brdr_perimeter": 917.4467871439481, "brdr_relevant_distance": 3.0, "brdr_remark": [], "brdr_shape_index": 0.4717482889059693, "brdr_stability": false, "brdr_sym_diff_area_index": 3.3, "brdr_sym_diff_area_index_perc": 0.0}, "type": "Feature"}], "type": "FeatureCollection"}</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="example_networkgeometryprocessor_files/figure-html/cell-2-output-2.png" width="816" height="523" class="figure-img"></p>
+<figcaption>Prediction with NetworkGeometryProcessor</figcaption>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/brdr/viz.py:77: UserWarning: The GeoSeries you are attempting to plot is composed of empty geometries. Nothing has been displayed.
+  gpd.GeoSeries(list(results_diff_pos.values())).plot(
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/brdr/viz.py:80: UserWarning: The GeoSeries you are attempting to plot is composed of empty geometries. Nothing has been displayed.
+  gpd.GeoSeries(list(results_diff_neg.values())).plot(
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/brdr/viz.py:80: UserWarning: The GeoSeries you are attempting to plot is composed of empty geometries. Nothing has been displayed.
+  gpd.GeoSeries(list(results_diff_neg.values())).plot(</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="example_networkgeometryprocessor_files/figure-html/cell-2-output-4.png" width="953" height="357" class="figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/examples/example_networkgeometryprocessor.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer><hr>
+<p><a href="../examples.html">← Back to examples - overview</a></p>
+
+
+
+
+</body></html>

@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>BRDR - Aligning borders</title>
+<title>qa – BRDR - Aligning borders</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -19,41 +19,6 @@ ul.task-list li input[type="checkbox"] {
   width: 0.8em;
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
-}
-/* CSS for syntax highlighting */
-html { -webkit-text-size-adjust: 100%; }
-pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
-pre > code.sourceCode > span:empty { height: 1.2em; }
-.sourceCode { overflow: visible; }
-code.sourceCode > span { color: inherit; text-decoration: inherit; }
-div.sourceCode { margin: 1em 0; }
-pre.sourceCode { margin: 0; }
-@media screen {
-div.sourceCode { overflow: auto; }
-}
-@media print {
-pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
-}
-pre.numberSource code
-  { counter-reset: source-line 0; }
-pre.numberSource code > span
-  { position: relative; left: -4em; counter-increment: source-line; }
-pre.numberSource code > span > a:first-child::before
-  { content: counter(source-line);
-    position: relative; left: -1em; text-align: right; vertical-align: baseline;
-    border: none; display: inline-block;
-    -webkit-touch-callout: none; -webkit-user-select: none;
-    -khtml-user-select: none; -moz-user-select: none;
-    -ms-user-select: none; user-select: none;
-    padding: 0 4px; width: 4em;
-  }
-pre.numberSource { margin-left: 3em;  padding-left: 4px; }
-div.sourceCode
-  {   }
-@media screen {
-pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
 }
 </style>
 
@@ -103,10 +68,36 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     "search-label": "Search"
   }
 }</script>
-<script src="site_libs/quarto-diagram/mermaid.min.js"></script>
-<script src="site_libs/quarto-diagram/mermaid-init.js"></script>
-<link href="site_libs/quarto-diagram/mermaid.css" rel="stylesheet">
 
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
 
 </head>
 
@@ -132,7 +123,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
           <div class="collapse navbar-collapse" id="navbarCollapse">
             <ul class="navbar-nav navbar-nav-scroll me-auto">
   <li class="nav-item">
-    <a class="nav-link active" href="./index.html" aria-current="page"> <i class="bi bi-house-fill" role="img">
+    <a class="nav-link" href="./index.html"> <i class="bi bi-house-fill" role="img">
 </i> 
 <span class="menu-text">Home</span></a>
   </li>  
@@ -145,7 +136,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span class="menu-text">Examples</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./qa.html"> 
+    <a class="nav-link active" href="./qa.html" aria-current="page"> 
 <span class="menu-text">Q &amp; A</span></a>
   </li>  
 </ul>
@@ -164,34 +155,17 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#brdr" id="toc-brdr" class="nav-link active" data-scroll-target="#brdr"><code>brdr</code></a>
+  <li><a href="#qa" id="toc-qa" class="nav-link active" data-scroll-target="#qa"><code>Q&amp;A</code></a>
   <ul class="collapse">
-  <li><a href="#quick-links" id="toc-quick-links" class="nav-link" data-scroll-target="#quick-links">Quick links:</a></li>
-  <li><a href="#description" id="toc-description" class="nav-link" data-scroll-target="#description">Description</a>
-  <ul class="collapse">
-  <li><a href="#intro" id="toc-intro" class="nav-link" data-scroll-target="#intro">Intro</a></li>
-  <li><a href="#example" id="toc-example" class="nav-link" data-scroll-target="#example">Example</a></li>
-  <li><a href="#possible-application-fields" id="toc-possible-application-fields" class="nav-link" data-scroll-target="#possible-application-fields">Possible application fields</a></li>
-  </ul></li>
-  <li><a href="#installation" id="toc-installation" class="nav-link" data-scroll-target="#installation">Installation</a></li>
-  <li><a href="#api-reference" id="toc-api-reference" class="nav-link" data-scroll-target="#api-reference">API reference</a></li>
-  <li><a href="#code-examples" id="toc-code-examples" class="nav-link" data-scroll-target="#code-examples">Code examples</a></li>
-  <li><a href="#scheme" id="toc-scheme" class="nav-link" data-scroll-target="#scheme">Scheme</a></li>
-  <li><a href="#workflow" id="toc-workflow" class="nav-link" data-scroll-target="#workflow">Workflow</a></li>
-  <li><a href="#the-brdr--processing-algorithm" id="toc-the-brdr--processing-algorithm" class="nav-link" data-scroll-target="#the-brdr--processing-algorithm">The <code>brdr</code>- processing algorithm</a></li>
-  <li><a href="#development" id="toc-development" class="nav-link" data-scroll-target="#development">Development</a>
-  <ul class="collapse">
-  <li><a href="#pip-compile" id="toc-pip-compile" class="nav-link" data-scroll-target="#pip-compile">pip-compile</a></li>
-  <li><a href="#tests" id="toc-tests" class="nav-link" data-scroll-target="#tests">tests</a></li>
-  <li><a href="#docker" id="toc-docker" class="nav-link" data-scroll-target="#docker">Docker</a></li>
-  </ul></li>
-  <li><a href="#brdr-for-qgis-brdrq-plugin" id="toc-brdr-for-qgis-brdrq-plugin" class="nav-link" data-scroll-target="#brdr-for-qgis-brdrq-plugin">brdr for QGIS: brdrQ-plugin</a></li>
-  <li><a href="#motivation-citation" id="toc-motivation-citation" class="nav-link" data-scroll-target="#motivation-citation">Motivation &amp; citation</a></li>
-  <li><a href="#comments-and-contributions" id="toc-comments-and-contributions" class="nav-link" data-scroll-target="#comments-and-contributions">Comments and contributions</a></li>
-  <li><a href="#acknowledgement" id="toc-acknowledgement" class="nav-link" data-scroll-target="#acknowledgement">Acknowledgement</a></li>
+  <li><a href="#where-can-brdr-be-used-for" id="toc-where-can-brdr-be-used-for" class="nav-link" data-scroll-target="#where-can-brdr-be-used-for">Where can ‘brdr’ be used for?</a></li>
+  <li><a href="#does-brdr-support-multiple-coordinate-systems-crs" id="toc-does-brdr-support-multiple-coordinate-systems-crs" class="nav-link" data-scroll-target="#does-brdr-support-multiple-coordinate-systems-crs">Does ‘brdr’ support multiple coordinate systems (CRS)?</a></li>
+  <li><a href="#which-geometry-types-are-supported" id="toc-which-geometry-types-are-supported" class="nav-link" data-scroll-target="#which-geometry-types-are-supported">Which geometry types are supported?</a></li>
+  <li><a href="#how-to-choose-the-best-processor-for-my-data" id="toc-how-to-choose-the-best-processor-for-my-data" class="nav-link" data-scroll-target="#how-to-choose-the-best-processor-for-my-data">How to choose the best Processor for my data?</a></li>
+  <li><a href="#does-brdr-support-3d-geometries-mz-coordinates" id="toc-does-brdr-support-3d-geometries-mz-coordinates" class="nav-link" data-scroll-target="#does-brdr-support-3d-geometries-mz-coordinates">Does ‘brdr’ support 3D geometries ( &amp; M/Z-coordinates)?</a></li>
+  <li><a href="#is-topology-preserved-between-the-thematic-geometries-input" id="toc-is-topology-preserved-between-the-thematic-geometries-input" class="nav-link" data-scroll-target="#is-topology-preserved-between-the-thematic-geometries-input">Is topology preserved between the thematic geometries (input) ?</a></li>
   </ul></li>
   </ul>
-<div class="toc-actions"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/index.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
+<div class="toc-actions"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/qa.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"></header>
@@ -199,47 +173,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 
-<section id="brdr" class="level1">
-<h1><code>brdr</code></h1>
-<p>a Python library to assist in realigning geometries (OGC Simple Features) to reference borders</p>
-<!-- badges: start -->
-<div class="quarto-figure quarto-figure-center">
-<figure class="figure">
-<p><img src="https://img.shields.io/pypi/v/brdr.png" class="img-fluid figure-img"></p>
-<figcaption>PyPI - Version</figcaption>
-</figure>
-</div>
-<div class="quarto-figure quarto-figure-center">
-<figure class="figure">
-<p><a href="https://doi.org/10.5281/zenodo.11385644"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.11385644.svg" class="img-fluid figure-img"></a></p>
-<figcaption>DOI</figcaption>
-</figure>
-</div>
-<!-- badges: end -->
-<section id="quick-links" class="level2">
-<h2 class="anchored" data-anchor-id="quick-links">Quick links:</h2>
+<section id="qa" class="level1">
+<h1><code>Q&amp;A</code></h1>
+<section id="where-can-brdr-be-used-for" class="level2">
+<h2 class="anchored" data-anchor-id="where-can-brdr-be-used-for">Where can ‘brdr’ be used for?</h2>
 <ul>
-<li><a href="./reference/index.html">API reference documentation</a></li>
-<li><a href="./examples.html">Examples</a></li>
-</ul>
-</section>
-<section id="description" class="level2">
-<h2 class="anchored" data-anchor-id="description">Description</h2>
-<section id="intro" class="level3">
-<h3 class="anchored" data-anchor-id="intro">Intro</h3>
-<p><code>brdr</code> is a Python package that assists in aligning geometric boundaries to reference boundaries. This is an important task in geographic data management to enhance data quality.</p>
-<ul>
-<li>In the context of geographic data management, it is important to have accurate and consistent boundaries for a variety of applications such as calculating areas, analyzing spatial relationships, and visualizing and querying geographic information.</li>
-<li><code>brdr</code> can be used to align boundaries from new data to reference data, ensuring that the boundaries are accurate and consistent.</li>
-</ul>
-</section>
-<section id="example" class="level3">
-<h3 class="anchored" data-anchor-id="example">Example</h3>
-<p>The animated gif below shows the main principle of ‘brdr’: * The visualizatuion on the left: * the original thematic geometry (blue), * A reference layer (yellow-black). * The resulting geometry after alignment with <code>brdr</code> (green)** * The graphic on the right: * X-as: Relevant distance (~distance that change is allowed), that increases * Y-as: Change (%) of the resulting geometry</p>
-<p><strong>brdr</strong> will ‘detect’ stable situations that result in one or more predictions. <img src="figures/animation.gif" class="img-fluid"></p>
-</section>
-<section id="possible-application-fields" class="level3">
-<h3 class="anchored" data-anchor-id="possible-application-fields">Possible application fields</h3>
+<li>Short answer: All kinds of Geodata quality assurance: validation, correction, alignment, actualization, (auto-)updates, …</li>
+<li>Long answer:
 <ul>
 <li>Geodata-management:
 <ul>
@@ -251,173 +191,50 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </ul></li>
 <li>Data-Analysis: Investigate the pattern in deviation and change between thematic and reference boundaries</li>
 <li>Update-detection: Investigate the descriptive formula before and after alignment to check for (automatic) alignment of geodata</li>
-<li>…</li>
-</ul>
-</section>
-</section>
-<section id="installation" class="level2">
-<h2 class="anchored" data-anchor-id="installation">Installation</h2>
-<p>You can install the latest release of <code>brdr</code> from <a href="https://github.com/OnroerendErfgoed/brdr/">GitHub</a> or <a href="https://pypi.org/project/brdr/">PyPi</a>:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pip install brdr</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</section>
-<section id="api-reference" class="level2">
-<h2 class="anchored" data-anchor-id="api-reference">API reference</h2>
-<p>See <a href="./reference/index.html">API Reference</a></p>
-</section>
-<section id="code-examples" class="level2">
-<h2 class="anchored" data-anchor-id="code-examples">Code examples</h2>
-<p>See <a href="./examples.html">Examples</a></p>
-</section>
-<section id="scheme" class="level2">
-<h2 class="anchored" data-anchor-id="scheme">Scheme</h2>
-<div class="cell" data-layout-align="default">
-<div class="cell-output-display">
-<div>
-<p></p><figure class="figure"><p></p>
-<div>
-<pre class="mermaid mermaid-js">classDiagram
-    class Aligner {
-        +CRS crs
-        +Processor processor
-        +load_thematic_data(data)
-        +load_reference_data(data)
-        +process()
-        +predict()
-        +evaluate()
-    }
-
-    class Processor {
-        +process(geometry)
-    }
-
-    class AlignerResult {
-        +get_results()
-    }
-
-    Aligner "1" --* "1" Processor : uses
-    Aligner "1" --&gt; "*" AlignerResult : generates
-</pre>
-</div>
-<p></p></figure><p></p>
-</div>
-</div>
-</div>
-</section>
-<section id="workflow" class="level2">
-<h2 class="anchored" data-anchor-id="workflow">Workflow</h2>
-<p>To use <code>brdr</code>, These are the minimal steps to execute:</p>
-<ul>
-<li>Create a Aligner-class
-<ul>
-<li>Load thematic data</li>
-<li>Load reference data</li>
-</ul></li>
-<li>Process (or predict or evaluate) the thematic data</li>
-<li>ProcessResults are returned:
-<ul>
-<li>Resulting geometry</li>
-<li>Differences: parts that are ‘different’ from the original geometry (positive or negative)</li>
-<li>Positive differences: parts that are added to the original geometry</li>
-<li>Negative differences: parts that are removed form the original geometry</li>
 </ul></li>
 </ul>
 </section>
-<section id="the-brdr--processing-algorithm" class="level2">
-<h2 class="anchored" data-anchor-id="the-brdr--processing-algorithm">The <code>brdr</code>- processing algorithm</h2>
-<p>When using <strong>brdr</strong> to make predictions, every original geometry is processed using the <strong>brdr</strong>-algorithm:</p>
-<p>This algorithm is based on 2 main principles:</p>
+<section id="does-brdr-support-multiple-coordinate-systems-crs" class="level2">
+<h2 class="anchored" data-anchor-id="does-brdr-support-multiple-coordinate-systems-crs">Does ‘brdr’ support multiple coordinate systems (CRS)?</h2>
 <ul>
-<li>Principle of intentionality: Thematic boundaries can consciously or unconsciously deviate from the reference borders. The algorithm should keep notice of that.</li>
-<li>Selective spatial conservation of shape: The resulting geometry should re-use the shape of the reference borders where aligned is of relevance.</li>
-</ul>
-<p>The figure below shows a schematic overview of the algorithm: <img src="figures/algorithm.png" class="img-fluid"></p>
-<p>The algorithm can be split into 3 main phases:</p>
-<ul>
-<li>Initialisation:
-<ul>
-<li>Deciding which reference polygons are candidate-polygons to re-use its shape. The reference candidate polygons are selected based on spatial intersection with the thematic geometry.</li>
-</ul></li>
-<li>Processing:
-<ul>
-<li>Process all candidate-reference polygons one-by-one</li>
-<li>Calculate relevant zones for each candidate-reference-polygon
-<ul>
-<li>relevant intersections: zones that must be present in the final result</li>
-<li>relevant differences: zones that must be excluded from the final result <img src="figures/relevant_zones.png" class="img-fluid"></li>
-</ul></li>
-<li>Evaluate each candidate based on their relative zones: which parts must be kept and which parts must be excluded <img src="figures/evaluate_candidates.png" class="img-fluid"></li>
-<li>Union all kept parts to recompose a resulting geometry</li>
-</ul></li>
-<li>Post-processing:
-<ul>
-<li>Validation/correction of differences between the original input geometry and the composed intermediate resulting geometry after processing the algorithm</li>
-<li>Technical validation of inner holes and multipolygons that are created by processing the algorithm</li>
-<li>Clean-up slivers</li>
-<li>Make the resulting geometry valid</li>
-</ul></li>
-<li><strong>RESULT</strong>:
-<ul>
-<li>A new resulting output geometry, aligned to the reference-polygons</li>
-</ul></li>
-</ul>
-<p>A more in-depth description of the algorithm can be found in the following article (in dutch):</p>
-<ul>
-<li>Dieussaert, K., Vanvinckenroye, M., Vermeyen, M., &amp; Van Daele, K. (2024). Grenzen verleggen. Automatische correcties van geografische afbakeningen op verschuivende onderlagen <em>Onderzoeksrapporten Agentschap Onroerend Erfgoed</em>, <a href="https://doi.org/10.55465/SXCW6218" class="uri">https://doi.org/10.55465/SXCW6218</a>.</li>
+<li>Short answer: Yes</li>
+<li>Long answer: Yes it does. When creating a aligner you can define the crs you want to use. This has to be a projected coordinate system with units in <strong>meter</strong>. When loading data, you have to provide the data in this CRS. When on-the-fly dataloaders are used, they will try to download the data in the provided crs if available. if not available, an error is returned.</li>
 </ul>
 </section>
-<section id="development" class="level2">
-<h2 class="anchored" data-anchor-id="development">Development</h2>
-<section id="pip-compile" class="level3">
-<h3 class="anchored" data-anchor-id="pip-compile">pip-compile</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="va">PIP_COMPILE_ARGS</span><span class="op">=</span><span class="st">"-v --strip-extras --no-header --resolver=backtracking --no-emit-options --no-emit-find-links"</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">pip-compile</span> <span class="va">$PIP_COMPILE_ARGS</span></span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="ex">pip-compile</span> <span class="va">$PIP_COMPILE_ARGS</span> <span class="at">-o</span> requirements-dev.txt <span class="at">--all-extras</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</section>
-<section id="tests" class="level3">
-<h3 class="anchored" data-anchor-id="tests">tests</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>python <span class="op">-</span> m</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>pytest <span class="op">-</span> <span class="op">-</span>cov <span class="op">=</span> brdr</span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>tests <span class="op">/</span> <span class="op">--</span>cov <span class="op">-</span> report</span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>term <span class="op">-</span> missing</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</section>
-<section id="docker" class="level3">
-<h3 class="anchored" data-anchor-id="docker">Docker</h3>
-<p>As an example-usage (proof-of-concept), a Dockerfile is created to set up a GRB-specific webservice that ‘predicts’ one or multiple actual geometries for a input-geometry based on the reference source GRB. This webservice is based on ‘brdr’.</p>
-<p>This POC can be found at <a href="https://github.com/dieuska/brdr-webservice">brdr-webservice (GRB-actualisator)</a>.</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode bat code-with-copy"><code class="sourceCode dosbat"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>docker build <span class="at">-f</span> Dockerfile . <span class="at">-t</span> grb_webservice</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>docker run -<span class="at">-rm</span> <span class="at">-p</span> 80:80 -<span class="at">-name</span> grb_webservice grb_webservice</span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>example can be found at: http:/<span class="at">/localhost:</span>80<span class="at">/docs</span>#<span class="at">/default/actualiser_actualiser_post</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</section>
-</section>
-<section id="brdr-for-qgis-brdrq-plugin" class="level2">
-<h2 class="anchored" data-anchor-id="brdr-for-qgis-brdrq-plugin">brdr for QGIS: brdrQ-plugin</h2>
-<p>An implementation of <code>brdr</code> for QGIS can be found at <a href="https://github.com/OnroerendErfgoed/brdrQ/">GitHub-brdrQ</a>. This QGIS-plugin provides a User Interface to align thematic data to a reference layer, showing the results in the QGIS Table of Contents.</p>
-</section>
-<section id="motivation-citation" class="level2">
-<h2 class="anchored" data-anchor-id="motivation-citation">Motivation &amp; citation</h2>
-<p>A more in-depth description of the algorithm can be found in the following article (in dutch):</p>
+<section id="which-geometry-types-are-supported" class="level2">
+<h2 class="anchored" data-anchor-id="which-geometry-types-are-supported">Which geometry types are supported?</h2>
 <ul>
-<li>Dieussaert, K., Vanvinckenroye, M., Vermeyen, M., &amp; Van Daele, K. (2024). Grenzen verleggen. Automatische correcties van geografische afbakeningen op verschuivende onderlagen <em>Onderzoeksrapporten Agentschap Onroerend Erfgoed</em>, <a href="https://doi.org/10.55465/SXCW6218" class="uri">https://doi.org/10.55465/SXCW6218</a>.</li>
+<li>Short answer: (Multi-)Points, (Multi-)LineStrings, and (Multi-)Polygons.</li>
+<li>Long answer: <strong>brdr</strong> was initially started to align thematic (Multi-)Polygons to reference (Multi-)Polygons. Afterwards processors are added to also support (multi-)linestrings and (multi-)Points.</li>
 </ul>
 </section>
-<section id="comments-and-contributions" class="level2">
-<h2 class="anchored" data-anchor-id="comments-and-contributions">Comments and contributions</h2>
-<p>We would love to hear from you and your experiences with <code>brdr</code> or its sister project <a href="https://github.com/OnroerendErfgoed/brdrQ"><code>brdrQ</code></a>. The <a href="https://github.com/OnroerendErfgoed/brdr/discussions/">discussions forum</a> is the place to be when:</p>
+<section id="how-to-choose-the-best-processor-for-my-data" class="level2">
+<h2 class="anchored" data-anchor-id="how-to-choose-the-best-processor-for-my-data">How to choose the best Processor for my data?</h2>
 <ul>
-<li>You have any questions on using <code>brdr</code> or <code>brdrQ</code> or their applicability to your use cases</li>
-<li>Want to share your experiences with the library</li>
-<li>Have any suggestions for improvements or feature requests</li>
+<li>Short answer: AlignerGeometryProcessor (default) checks the type of your thematic &amp; reference-data and uses the other Processors underneath. DieussaertGeometryProcessor is a quicker algoritm for aligning Polygons to Polygons. NetworkGeometryPorcessor can be used for all combinations of geometries (Points, Lines, Polygons), but has a longer calculation time.</li>
+<li>Long answer:
+<ul>
+<li>AlignerGeometryProcessor (default) is a wrapper around DieussaertGeometryProcessor &amp; NetworkGeometryProcessor. It checks the geometry-types and uses the DieussaertGeometryProcessor if possible, otherwise NetworkGeometryProcessor.</li>
+<li>DieussaertGeometryProcessor: It is a using an algorithm based on buffers, relevant intersections and relevant differences. This is a quick algorithm, but can only be used to align polygon-to-polygon. For most of these cases this is the best option, in some edge cases some detail of the polygon can be simplified.</li>
+<li>NetworkGeometryProcessor: It is using an algorithm based on graphs/networks. This is the most generic processor as this can be used for all point-line-polygon combinations. However he calculation is much slower than Dieussaertprocessor.</li>
+<li>TopologyProcessor: This is an experimental processor and is a special usage of the NetworkGeometryProcessor. The thematic input geometries are ‘converted’ to their topolgical arcs, and these arcs are aligned with the NetworkGeometryProcessor. Afterwards the arcs are re-combined to get a result that keeps a topological relation with its neighbours.</li>
 </ul>
-<p>If you have discovered a bug in the <code>brdr</code> library you can report it here:</p>
-<p><a href="https://github.com/OnroerendErfgoed/brdr/issues" class="uri">https://github.com/OnroerendErfgoed/brdr/issues</a></p>
-<p>We try to keep the list of issues as clean as possible. If you’re unsure whether something is a bug, or whether the bug is in <code>brdr</code> or <code>brdrQ</code>, we encourage you to go through the <a href="https://github.com/OnroerendErfgoed/brdr/discussions">discussions forum</a> first.</p>
+Summary; if you have polygon-to-polygon, start with DieussaertProcessor and see if these results fits your goal. If not, try NetworkGeometryProcessor</li>
+</ul>
 </section>
-<section id="acknowledgement" class="level2">
-<h2 class="anchored" data-anchor-id="acknowledgement">Acknowledgement</h2>
-<p>This software was created by <a href="https://athumi.be/en/">Athumi</a>, the Flemish data utility company, and <a href="https://www.onroerenderfgoed.be/flanders-heritage-agency">Flanders Heritage Agency</a>.</p>
-<p><img src="figures/athumi_logo-250x84.png" class="img-fluid" alt="https://athumi.be/en/"> <img src="figures/Vlaanderen_is_erfgoed-250x97.png" class="img-fluid" alt="https://www.onroerenderfgoed.be/flanders-heritage-agency"></p>
+<section id="does-brdr-support-3d-geometries-mz-coordinates" class="level2">
+<h2 class="anchored" data-anchor-id="does-brdr-support-3d-geometries-mz-coordinates">Does ‘brdr’ support 3D geometries ( &amp; M/Z-coordinates)?</h2>
+<ul>
+<li>Short answer: No, it is currently 2D-only. (3D and M-Z values are not supported)</li>
+<li>Long answer: The library is optimized for 2D alignment. If you provide geometries with M- or Z-coordinates, the alignment will be calculated based on the <span class="math inline">\(X\)</span> and <span class="math inline">\(Y\)</span> planes. M/Z-values are stripped.</li>
+</ul>
+</section>
+<section id="is-topology-preserved-between-the-thematic-geometries-input" class="level2">
+<h2 class="anchored" data-anchor-id="is-topology-preserved-between-the-thematic-geometries-input">Is topology preserved between the thematic geometries (input) ?</h2>
+<ul>
+<li>Short answer: No, but…</li>
+<li>Long answer: Every thematic input geometry is processed individually to find a result/prediction. So there is no topology preserved between multiple thematic input geometries. However there is a TopologyGeometryProcessor (experimental) that searches for predictions for every thematic geometry, while trying to preserve topology between these geometries.</li>
+</ul>
 
 
 </section>
@@ -829,4 +646,4 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 
-<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/index.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>
+<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/qa.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>
