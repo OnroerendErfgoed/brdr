@@ -4,8 +4,8 @@ Core loading infrastructure for the brdr engine.
 This module provides the base `Loader` abstract class and various implementations
 for loading spatial data from dictionaries, GeoJSON files, URLs, and OGC services.
 """
-
 import json
+import os
 import uuid
 import xml.etree.ElementTree as ET
 from abc import ABC
@@ -236,7 +236,7 @@ class GeoJsonFileLoader(GeoJsonLoader):
         super().__init__(
             _input=_input,
             source=path_to_file,
-            source_url=f"file://{os.path.abspath(path)}",
+            source_url=f"file://{os.path.abspath(path_to_file)}",
             id_property=id_property,
             is_reference=is_reference,
         )
