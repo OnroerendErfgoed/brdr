@@ -5,7 +5,7 @@ from pathlib import Path
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-from shapely import wkt
+from shapely import wkt, GeometryCollection
 
 from brdr.aligner import Aligner
 from brdr.be.grb.enums import GRBType
@@ -96,12 +96,15 @@ def get_false_positive_grb_parcels_dataframe(
     """
 
     # 1. Initialize counters
+    starttime = datetime.now()
     metrics = {
         "area_limit": area_limit,
         "total_count": 0,
         "success_ids": [],
         "skipped_ids": [],
         "failed_ids": [],
+        "starttime": starttime,
+        "endtime": starttime,
     }
     # if not area_limit==inf:
     #     metrics ["area_limit"] = area_limit
@@ -135,10 +138,10 @@ def get_false_positive_grb_parcels_dataframe(
     metrics["total_count"] = len(features)
     print(f"Nr of features: {metrics['total_count']}")
     count = 0
-    processed_data = []
+
     for f in features:
         count += 1
-        print(f"Processing feature {count}/{metrics['total_count']}")
+        print(f"{datetime.now()}: Processing feature {count}/{metrics['total_count']}")
         try:
             key = f["properties"][id_name]
             geom = geojson_geometry_to_shapely(f["geometry"])
@@ -167,8 +170,7 @@ def get_false_positive_grb_parcels_dataframe(
                 loader = DictLoader(data_dict=dict_reference)
                 aligner.load_reference_data(loader)
             aligner.load_reference_data(loader)
-
-            dict_original_wkt[key] = geom.wkt
+            dict_original_wkt = geom.wkt
             # COVERAGE ANALYSIS
             coverage_data = get_coverage_data(
                 aligner, geom, percentages=[0, 1, 5, 10, 50, 90, 95, 99, 100]
@@ -282,6 +284,9 @@ def get_false_positive_grb_parcels_dataframe(
                 raise KeyError(f"Error - No key found")
             metrics["failed_ids"].append(key)
             print(f"Error processing feature {key}: {e}")
+            dict_prediction_wkt[key]= GeometryCollection().wkt
+            dict_fp_wkt[key]= GeometryCollection().wkt
+            dict_doubt_wkt[key]= GeometryCollection().wkt
 
     # Combine in dataframe
     df = pd.DataFrame(
@@ -311,6 +316,9 @@ def get_false_positive_grb_parcels_dataframe(
     # Set index to column 'id'
     df.reset_index(inplace=True)
     df.rename(columns={"index": id_name}, inplace=True)
+    now =datetime.now()
+    metrics ["endtime"] = now
+    metrics ["total_time"] = now - starttime
 
     return df, metrics
 
@@ -458,6 +466,9 @@ def export_metrics(metrics, path, filename=METRICS_TXT):
     with open(file_path, "a", encoding="utf-8") as f:
         f.write("\nDetailed Processing Report\n")
         f.write("=" * 45 + "\n")
+        f.write(f"\nStart time: {metrics['starttime']}\n")
+        f.write(f"\nEnd time: {metrics['endtime']}\n")
+        f.write(f"\nTotal time: {metrics['total_time']}\n")
         f.write(f"\nArea limit: {metrics['area_limit']}\n")
         f.write(f"\nNameDate: {dataset_date}\n")
         f.write(f"\nArea limit: {metrics['area_limit']}\n")
@@ -485,7 +496,7 @@ def export_analysis_results(
     metrics=None,
     column_name=FP_ESIMATION_COLUMN_NAME,
     tolerance=2,
-    wkt_columns=[BRDR_WKT, FALSE_POSITIVE_WKT, DOUBT_WKT],
+    wkt_columns=[ORIGINAL_WKT,BRDR_WKT, FALSE_POSITIVE_WKT, DOUBT_WKT],
 ):
     if df is None:
         df = pd.read_csv(path / FP_ANALYSIS_CSV_NAME)
