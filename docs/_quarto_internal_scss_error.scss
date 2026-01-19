@@ -1,4 +1,4 @@
-// quarto-scss-analysis-annotation { "quarto-version": "1.8.25" }
+// quarto-scss-analysis-annotation { "quarto-version": "1.8.26" }
 
 // quarto-scss-analysis-annotation { "origin": "'use' section from format" }
 
@@ -5289,9 +5289,24 @@ $grid-default-toc-mid-body: minmax(
 @import "utilities/api";
 // scss-docs-end import-stack
 
-@import "spacer";
-@import "tab-fill";
-@import "color-utilities";
+// color-contrast() was introduced in Bootstrap 5.
+// We include our own version for a few reasons:
+// 1. Easily turn off warnings options(bslib.color_contrast_warnings=F)
+// 2. Allow Bootstrap 3 & 4 to use color-contrast() in variable definitions
+// 3. Allow Bootstrap 3 & 4 to use bs_get_contrast()
+
+// Also note that color-contrast() lives in sass-utils since projects like Quarto
+// and flexdashboard currently assume it exists there....
+@import "../sass-utils/color-contrast.scss";
+
+
+@function is-css-variable($x) {
+  @if (type-of($x) != string) {
+    @return false;
+  } @else {
+    @return str-slice($x, 1, 6) == 'var(--';
+  }
+}
 
 $bslib-enable-color-utilities: $bootstrap-version >= 5 !default;
 
@@ -5368,25 +5383,6 @@ $bslib-enable-color-utilities: $bootstrap-version >= 5 !default;
   }
 }
 
-// color-contrast() was introduced in Bootstrap 5.
-// We include our own version for a few reasons:
-// 1. Easily turn off warnings options(bslib.color_contrast_warnings=F)
-// 2. Allow Bootstrap 3 & 4 to use color-contrast() in variable definitions
-// 3. Allow Bootstrap 3 & 4 to use bs_get_contrast()
-
-// Also note that color-contrast() lives in sass-utils since projects like Quarto
-// and flexdashboard currently assume it exists there....
-@import "../sass-utils/color-contrast.scss";
-
-
-@function is-css-variable($x) {
-  @if (type-of($x) != string) {
-    @return false;
-  } @else {
-    @return str-slice($x, 1, 6) == 'var(--';
-  }
-}
-
 $spacer: 1rem !default;
 
 :root {
@@ -5418,6 +5414,10 @@ $spacer: 1rem !default;
 .html-fill-container > .html-fill-item.bslib-mb-spacing {
   margin-bottom: 0;
 }
+@import "spacer";
+@import "tab-fill";
+@import "color-utilities";
+
 .tab-content {
   // Workaround for pkgdown's CSS to make tab-pane all a consistent height
   // https://github.com/r-lib/pkgdown/blob/956f07/inst/BS5/assets/pkgdown.scss#L342-L355
@@ -5437,24 +5437,335 @@ $spacer: 1rem !default;
   }
 }
 
-.accordion {
-  .accordion-header {
-    @include bootstrap-heading($h2-font-size);
-    margin-bottom: 0;
+$bslib-value-box-enable-border: "auto" !default; // "auto" | "never" | "always"
+$bslib-value-box-enable-shadow: $enable-shadows !default;
+$bslib-value-box-horizontal-break-point: 300px;
+
+:root {
+  --bslib-value-box-shadow: #{if($bslib-value-box-enable-shadow, #{$box-shadow}, none)};
+  // value box border width is set to "-auto-yes" when the card has .border-auto
+  // or "-auto-no" by default. These cards all use "-baseline", where the border
+  // can be disabled entirely by setting $bslib-value-box-enable-border: "never"
+  // or --bslib-value-box-border-width-baseline: 0. In "auto" mode, the border
+  // is disabled without the border-auto class, or disabled if shadow is enabled.
+  --bslib-value-box-border-width-auto-yes: #{if($bslib-value-box-enable-shadow, 0, var(--bslib-value-box-border-width-baseline))};
+  --bslib-value-box-border-width-auto-no: #{if($bslib-value-box-enable-border == "auto", 0, var(--bslib-value-box-border-width-baseline))};
+  --bslib-value-box-border-width-baseline: #{if($bslib-value-box-enable-border == "never", 0, $card-border-width)};
+}
+
+// CSS variables that start with --- (3 dashes instead of 2) are private vars
+// that are set by user arguments in the R calls. The CSS properties below only
+// apply to the default value box style; the standard way to theme individual
+// value boxes is with CSS classes on the value box container.
+// :root {
+//   --bslib-value-box-color:;
+//   --bslib-value-box-bg:;
+//   --bslib-value-box-border-color:;
+// }
+
+.bslib-value-box {
+  &.card {
+    // .card also sets box-shadow by default, likely to an empty css variable
+    box-shadow: var(--bslib-value-box-shadow);
   }
-  .accordion-icon:not(:empty) {
-    margin-right: 0.75rem;
-    display: flex; /* Without flex, the height/alignment is messed up */
+
+  border-width: var(--bslib-value-box-border-width-auto-no, var(--bslib-value-box-border-width-baseline));
+  &.border-auto {
+    border-width: var(--bslib-value-box-border-width-auto-yes, var(--bslib-value-box-border-width-baseline));
   }
-  .accordion-button:not(.collapsed) {
-    box-shadow: none;
-    // This none overrides the box-shadow applied to
-    // .accordion-button:focus (and, as a result, non-collapsed buttons
-    // won't show a visual indication of focus, #488).
-    // So, repeat the .accordion-button:focus below to give it a
-    // higher priority.
-    &:focus {
-      box-shadow: var(--#{$prefix}accordion-btn-focus-box-shadow);
+
+  &.default {
+    --bslib-value-box-bg-default: var(--bs-card-bg, #{$body-bg});
+    --bslib-value-box-border-color-default: var(--bs-card-border-color, #{$card-border-color});
+    color: var(--bslib-value-box-color);
+    background-color: var(--bslib-value-box-bg, var(--bslib-value-box-bg-default));
+    border-color: var(--bslib-value-box-border-color, var(--bslib-value-box-border-color-default));
+  }
+
+  container-name: bslib-value-box;
+  container-type: inline-size;
+
+  .value-box-grid {
+    display: grid;
+    grid-template-areas: "left right";
+    align-items: center;
+    overflow: hidden;
+  }
+
+  .value-box-showcase {
+    height: 100%;
+    max-height: var(---bslib-value-box-showcase-max-h, 100%);
+    &, > .html-fill-item {
+      width: 100%;
+    }
+  }
+
+  &[data-full-screen="true"] {
+    .value-box-showcase {
+      max-height: var(---bslib-value-box-showcase-max-h-fs, 100%);
+    }
+  }
+
+  // When value boxes get too small, we lay them out vertically using a container query.
+  // But we don't need this for mobile, where we have one box per row. This media query
+  // is the inverse of `@include media-breakpoint-down(sm)` but that mixin doesn't work
+  // inside nested queries.
+  @media screen and (min-width: breakpoint-max(sm, $grid-breakpoints)) {
+    @container bslib-value-box (max-width: #{$bslib-value-box-horizontal-break-point}) {
+      &:not(.showcase-bottom) .value-box-grid {
+        // override specificity of showcase layouts for small value boxes
+        grid-template-columns: 1fr !important;
+        grid-template-rows: auto auto;
+        grid-template-areas:
+          "top"
+          "bottom";
+
+        .value-box-showcase {
+          grid-area: top !important;
+        }
+
+        .value-box-area {
+          grid-area: bottom !important;
+          justify-content: end;
+        }
+      }
+    }
+  }
+
+  // Should also be fillable/fill (i.e., d-flex; flex: 1)
+  .value-box-area {
+    justify-content: center;
+    padding: 1.5rem 1rem;
+    font-size: .9rem;
+    font-weight: 500;
+    * {
+      margin-bottom: 0;
+      margin-top: 0;
+    }
+  }
+
+  .value-box-title {
+    @include bootstrap-heading-font-and-spacing($h6-font-size);
+    // add a non-breaking space to ensure it's not 0 height
+    &:empty::after {
+      content: '\00a0 ';
+    }
+  }
+
+  .value-box-value {
+    @include bootstrap-heading-font-and-spacing($h2-font-size);
+    // add a non-breaking space to ensure it's not 0 height
+    &:empty::after {
+      content: '\00a0 ';
+    }
+  }
+
+  // Should also be fillable/fill (i.e., d-flex; flex: 1)
+  .value-box-showcase {
+    align-items: center;
+    justify-content: center;
+    margin-top: auto;
+    margin-bottom: auto;
+    padding: 1rem;
+
+    .bi, .fa, .fab, .fas, .far {
+      opacity: .85;
+      min-width: 50px;
+      max-width: 125%;
+    }
+    // We set font size because {bsicons}/{fontawesome} both
+    // set height/width to 1em by default (as an inline style)
+     .bi, .fa, .fab, .fas, .far { font-size: 4rem; }
+  }
+
+
+  &.showcase-top-right {
+    .value-box-grid {
+      grid-template-columns: 1fr var(---bslib-value-box-showcase-w, 50%);
+
+      .value-box-showcase {
+        grid-area: right;
+        margin-left: auto;
+        align-self: start;
+        align-items: end;
+        padding-left: 0;
+        padding-bottom: 0;
+      }
+
+      .value-box-area {
+        grid-area: left;
+        align-self: end;
+      }
+    }
+
+    &[data-full-screen="true"] {
+      .value-box-grid {
+        grid-template-columns: auto var(---bslib-value-box-showcase-w-fs, 1fr);
+        > div {
+          align-self: center;
+        }
+      }
+    }
+
+    &:not([data-full-screen="true"]) {
+      .value-box-showcase {
+        margin-top: 0;
+      }
+
+      @container bslib-value-box (max-width: #{$bslib-value-box-horizontal-break-point}) {
+        .value-box-grid {
+          .value-box-showcase { // reset padding on showcase_container
+            padding-left: 1rem;
+          }
+        }
+      }
+    }
+  }
+
+  &.showcase-left-center {
+    .value-box-grid {
+      grid-template-columns: var(---bslib-value-box-showcase-w, 30%) auto;
+    }
+
+    &[data-full-screen="true"] {
+      .value-box-grid {
+        grid-template-columns: var(---bslib-value-box-showcase-w-fs, 1fr) auto;
+      }
+    }
+
+    &:not([data-fill-screen="true"]) {
+      .value-box-grid {
+        .value-box-showcase {
+          grid-area: left;
+        }
+
+        .value-box-area {
+          grid-area: right;
+        }
+      }
+    }
+  }
+
+  &.showcase-bottom {
+    .value-box-grid {
+      grid-template-columns: 1fr;
+      grid-template-rows: 1fr var(---bslib-value-box-showcase-h, auto);
+      grid-template-areas:
+          "top"
+          "bottom";
+      overflow: hidden;
+
+      .value-box-showcase {
+        grid-area: bottom;
+        padding: 0;
+        margin: 0;
+      }
+
+      .value-box-area {
+        grid-area: top;
+      }
+    }
+
+    &[data-full-screen="true"] {
+      .value-box-grid {
+        grid-template-rows: 1fr var(---bslib-value-box-showcase-h-fs, 2fr);
+
+        .value-box-showcase {
+          padding: 1rem;
+        }
+      }
+    }
+  }
+}
+
+@include color-mode(dark) {
+  .bslib-value-box {
+    // Bootstrap doesn't have a dark shadow, but the default isn't quite right
+    --bslib-value-box-shadow: 0 0.5rem 1rem rgb(0 0 0 / 50%);
+  }
+}
+
+/* CSS behind nav_spacer() */
+@mixin nav-spacer() {
+  .nav:not(.nav-hidden) {
+    /* Make sure nav container is flexbox (they aren't in BS3) */
+    display: flex !important;
+    display: -webkit-flex !important;
+    // Logic for horizontal nav (e.g., navset_tab(), etc)
+    &:not(.nav-stacked):not(.flex-column) {
+      float: none !important;
+      > .bslib-nav-spacer {
+        margin-left: auto !important;
+      }
+      /* .form-inline doesn't vertically align in BS3? */
+      > .form-inline {
+        margin-top: auto;
+        margin-bottom: auto;
+      }
+    }
+    // Logic for vertical nav (e.g., navset_pill_list())
+    &.nav-stacked {
+      flex-direction: column;
+      -webkit-flex-direction: column;
+      height: 100%;
+      > .bslib-nav-spacer {
+        margin-top: auto !important;
+      }
+    }
+  }
+}
+
+/* BS4+ uses this mixin for configurable breakpoints */
+@if mixin-exists("media-breakpoint-up") {
+  @include media-breakpoint-up(sm) {
+    @include nav-spacer();
+  }
+} @else {
+  /* BS3 default navbar breakpoint */
+  @media (min-width: 768px) {
+    @include nav-spacer();
+  }
+}
+
+.bslib-grid {
+  display: grid !important;
+  gap: var(--bslib-spacer, 1rem);
+  height: var(--bslib-grid-height);
+  &.grid {
+    // Don't let intrinsic width of a column affect the width of grid cols
+    grid-template-columns: repeat(var(--bs-columns, 12), minmax(0, 1fr));
+    // For some reason, Bootstrap sets `grid-template-rows: 1fr` by default, which
+    // is problematic for a multi-row filling layout. This fixes it...
+    // > page_fillable(layout_columns(c(12, 12), plotly::plot_ly(), plotly::plot_ly()))
+    grid-template-rows: unset;
+    grid-auto-rows: var(--bslib-grid--row-heights);
+    @include bslib-breakpoints-css-vars('bslib-grid--row-heights', map-keys($grid-breakpoints));
+  }
+
+  & > * > .shiny-input-container {
+    width: 100%;
+  }
+}
+
+.bslib-grid-item {
+  grid-column: auto/span 1;
+}
+
+@include media-breakpoint-down(md) {
+  // collapse all columns to a single column below medium (by default only)
+  .bslib-grid-item {
+    grid-column: 1 / -1;
+  }
+}
+
+@include media-breakpoint-down(sm) {
+  // with each "row" taking its natural height
+  .bslib-grid {
+    grid-template-columns: 1fr !important;
+    height: var(--bslib-grid-height-mobile);
+    &.grid {
+      height: unset !important;
+      grid-auto-rows: var(--bslib-grid--row-heights--xs, auto);
     }
   }
 }
@@ -5613,91 +5924,6 @@ $spacer: 1rem !default;
   }
 }
 
-.bslib-grid {
-  display: grid !important;
-  gap: var(--bslib-spacer, 1rem);
-  height: var(--bslib-grid-height);
-  &.grid {
-    // Don't let intrinsic width of a column affect the width of grid cols
-    grid-template-columns: repeat(var(--bs-columns, 12), minmax(0, 1fr));
-    // For some reason, Bootstrap sets `grid-template-rows: 1fr` by default, which
-    // is problematic for a multi-row filling layout. This fixes it...
-    // > page_fillable(layout_columns(c(12, 12), plotly::plot_ly(), plotly::plot_ly()))
-    grid-template-rows: unset;
-    grid-auto-rows: var(--bslib-grid--row-heights);
-    @include bslib-breakpoints-css-vars('bslib-grid--row-heights', map-keys($grid-breakpoints));
-  }
-
-  & > * > .shiny-input-container {
-    width: 100%;
-  }
-}
-
-.bslib-grid-item {
-  grid-column: auto/span 1;
-}
-
-@include media-breakpoint-down(md) {
-  // collapse all columns to a single column below medium (by default only)
-  .bslib-grid-item {
-    grid-column: 1 / -1;
-  }
-}
-
-@include media-breakpoint-down(sm) {
-  // with each "row" taking its natural height
-  .bslib-grid {
-    grid-template-columns: 1fr !important;
-    height: var(--bslib-grid-height-mobile);
-    &.grid {
-      height: unset !important;
-      grid-auto-rows: var(--bslib-grid--row-heights--xs, auto);
-    }
-  }
-}
-
-/* CSS behind nav_spacer() */
-@mixin nav-spacer() {
-  .nav:not(.nav-hidden) {
-    /* Make sure nav container is flexbox (they aren't in BS3) */
-    display: flex !important;
-    display: -webkit-flex !important;
-    // Logic for horizontal nav (e.g., navset_tab(), etc)
-    &:not(.nav-stacked):not(.flex-column) {
-      float: none !important;
-      > .bslib-nav-spacer {
-        margin-left: auto !important;
-      }
-      /* .form-inline doesn't vertically align in BS3? */
-      > .form-inline {
-        margin-top: auto;
-        margin-bottom: auto;
-      }
-    }
-    // Logic for vertical nav (e.g., navset_pill_list())
-    &.nav-stacked {
-      flex-direction: column;
-      -webkit-flex-direction: column;
-      height: 100%;
-      > .bslib-nav-spacer {
-        margin-top: auto !important;
-      }
-    }
-  }
-}
-
-/* BS4+ uses this mixin for configurable breakpoints */
-@if mixin-exists("media-breakpoint-up") {
-  @include media-breakpoint-up(sm) {
-    @include nav-spacer();
-  }
-} @else {
-  /* BS3 default navbar breakpoint */
-  @media (min-width: 768px) {
-    @include nav-spacer();
-  }
-}
-
 html {
   height: 100%;
 }
@@ -5714,6 +5940,26 @@ html {
   .bslib-page-fill {
     height: var(--bslib-page-fill-mobile-height, auto);
   }
+}
+
+$bslib-page-sidebar-title-bg: if($navbar-bg, $navbar-bg, $dark) !default;
+$bslib-page-sidebar-title-color: color-contrast($bslib-page-sidebar-title-bg) !default;
+$bslib-sidebar-padding: $spacer * 1.5 !default;
+
+:root {
+  --bslib-page-sidebar-title-bg: #{$bslib-page-sidebar-title-bg};
+  --bslib-page-sidebar-title-color: #{$bslib-page-sidebar-title-color};
+}
+
+.bslib-page-title {
+  background-color: var(--bslib-page-sidebar-title-bg);
+  color: var(--bslib-page-sidebar-title-color);
+  font-size: $h4-font-size;
+  font-weight: 300;
+  padding: var(--bslib-spacer, 1rem);
+  padding-left: $bslib-sidebar-padding;
+  margin-bottom: 0;
+  border-bottom: $border-width solid $border-color;
 }
 
 .navbar+.container-fluid {
@@ -5755,26 +6001,6 @@ html {
 .navbar+div>.bslib-sidebar-layout {
   border-top: var(--bslib-sidebar-border);
 }
-$bslib-page-sidebar-title-bg: if($navbar-bg, $navbar-bg, $dark) !default;
-$bslib-page-sidebar-title-color: color-contrast($bslib-page-sidebar-title-bg) !default;
-$bslib-sidebar-padding: $spacer * 1.5 !default;
-
-:root {
-  --bslib-page-sidebar-title-bg: #{$bslib-page-sidebar-title-bg};
-  --bslib-page-sidebar-title-color: #{$bslib-page-sidebar-title-color};
-}
-
-.bslib-page-title {
-  background-color: var(--bslib-page-sidebar-title-bg);
-  color: var(--bslib-page-sidebar-title-color);
-  font-size: $h4-font-size;
-  font-weight: 300;
-  padding: var(--bslib-spacer, 1rem);
-  padding-left: $bslib-sidebar-padding;
-  margin-bottom: 0;
-  border-bottom: $border-width solid $border-color;
-}
-
 $bslib-sidebar-bg: rgba(var(--bs-emphasis-color-rgb, 0,0,0), 0.05) !default;
 $bslib-sidebar-fg: var(--bs-emphasis-color, black) !default;
 $bslib-sidebar-toggle-bg: rgba(var(--bs-emphasis-color-rgb, 0,0,0), 0.1) !default;
@@ -6118,251 +6344,25 @@ $bslib-sidebar-column-sidebar: Min(calc(100% - var(--bslib-sidebar-icon-size)), 
   }
 }
 
-$bslib-value-box-enable-border: "auto" !default; // "auto" | "never" | "always"
-$bslib-value-box-enable-shadow: $enable-shadows !default;
-$bslib-value-box-horizontal-break-point: 300px;
-
-:root {
-  --bslib-value-box-shadow: #{if($bslib-value-box-enable-shadow, #{$box-shadow}, none)};
-  // value box border width is set to "-auto-yes" when the card has .border-auto
-  // or "-auto-no" by default. These cards all use "-baseline", where the border
-  // can be disabled entirely by setting $bslib-value-box-enable-border: "never"
-  // or --bslib-value-box-border-width-baseline: 0. In "auto" mode, the border
-  // is disabled without the border-auto class, or disabled if shadow is enabled.
-  --bslib-value-box-border-width-auto-yes: #{if($bslib-value-box-enable-shadow, 0, var(--bslib-value-box-border-width-baseline))};
-  --bslib-value-box-border-width-auto-no: #{if($bslib-value-box-enable-border == "auto", 0, var(--bslib-value-box-border-width-baseline))};
-  --bslib-value-box-border-width-baseline: #{if($bslib-value-box-enable-border == "never", 0, $card-border-width)};
-}
-
-// CSS variables that start with --- (3 dashes instead of 2) are private vars
-// that are set by user arguments in the R calls. The CSS properties below only
-// apply to the default value box style; the standard way to theme individual
-// value boxes is with CSS classes on the value box container.
-// :root {
-//   --bslib-value-box-color:;
-//   --bslib-value-box-bg:;
-//   --bslib-value-box-border-color:;
-// }
-
-.bslib-value-box {
-  &.card {
-    // .card also sets box-shadow by default, likely to an empty css variable
-    box-shadow: var(--bslib-value-box-shadow);
+.accordion {
+  .accordion-header {
+    @include bootstrap-heading($h2-font-size);
+    margin-bottom: 0;
   }
-
-  border-width: var(--bslib-value-box-border-width-auto-no, var(--bslib-value-box-border-width-baseline));
-  &.border-auto {
-    border-width: var(--bslib-value-box-border-width-auto-yes, var(--bslib-value-box-border-width-baseline));
+  .accordion-icon:not(:empty) {
+    margin-right: 0.75rem;
+    display: flex; /* Without flex, the height/alignment is messed up */
   }
-
-  &.default {
-    --bslib-value-box-bg-default: var(--bs-card-bg, #{$body-bg});
-    --bslib-value-box-border-color-default: var(--bs-card-border-color, #{$card-border-color});
-    color: var(--bslib-value-box-color);
-    background-color: var(--bslib-value-box-bg, var(--bslib-value-box-bg-default));
-    border-color: var(--bslib-value-box-border-color, var(--bslib-value-box-border-color-default));
-  }
-
-  container-name: bslib-value-box;
-  container-type: inline-size;
-
-  .value-box-grid {
-    display: grid;
-    grid-template-areas: "left right";
-    align-items: center;
-    overflow: hidden;
-  }
-
-  .value-box-showcase {
-    height: 100%;
-    max-height: var(---bslib-value-box-showcase-max-h, 100%);
-    &, > .html-fill-item {
-      width: 100%;
+  .accordion-button:not(.collapsed) {
+    box-shadow: none;
+    // This none overrides the box-shadow applied to
+    // .accordion-button:focus (and, as a result, non-collapsed buttons
+    // won't show a visual indication of focus, #488).
+    // So, repeat the .accordion-button:focus below to give it a
+    // higher priority.
+    &:focus {
+      box-shadow: var(--#{$prefix}accordion-btn-focus-box-shadow);
     }
-  }
-
-  &[data-full-screen="true"] {
-    .value-box-showcase {
-      max-height: var(---bslib-value-box-showcase-max-h-fs, 100%);
-    }
-  }
-
-  // When value boxes get too small, we lay them out vertically using a container query.
-  // But we don't need this for mobile, where we have one box per row. This media query
-  // is the inverse of `@include media-breakpoint-down(sm)` but that mixin doesn't work
-  // inside nested queries.
-  @media screen and (min-width: breakpoint-max(sm, $grid-breakpoints)) {
-    @container bslib-value-box (max-width: #{$bslib-value-box-horizontal-break-point}) {
-      &:not(.showcase-bottom) .value-box-grid {
-        // override specificity of showcase layouts for small value boxes
-        grid-template-columns: 1fr !important;
-        grid-template-rows: auto auto;
-        grid-template-areas:
-          "top"
-          "bottom";
-
-        .value-box-showcase {
-          grid-area: top !important;
-        }
-
-        .value-box-area {
-          grid-area: bottom !important;
-          justify-content: end;
-        }
-      }
-    }
-  }
-
-  // Should also be fillable/fill (i.e., d-flex; flex: 1)
-  .value-box-area {
-    justify-content: center;
-    padding: 1.5rem 1rem;
-    font-size: .9rem;
-    font-weight: 500;
-    * {
-      margin-bottom: 0;
-      margin-top: 0;
-    }
-  }
-
-  .value-box-title {
-    @include bootstrap-heading-font-and-spacing($h6-font-size);
-    // add a non-breaking space to ensure it's not 0 height
-    &:empty::after {
-      content: '\00a0 ';
-    }
-  }
-
-  .value-box-value {
-    @include bootstrap-heading-font-and-spacing($h2-font-size);
-    // add a non-breaking space to ensure it's not 0 height
-    &:empty::after {
-      content: '\00a0 ';
-    }
-  }
-
-  // Should also be fillable/fill (i.e., d-flex; flex: 1)
-  .value-box-showcase {
-    align-items: center;
-    justify-content: center;
-    margin-top: auto;
-    margin-bottom: auto;
-    padding: 1rem;
-
-    .bi, .fa, .fab, .fas, .far {
-      opacity: .85;
-      min-width: 50px;
-      max-width: 125%;
-    }
-    // We set font size because {bsicons}/{fontawesome} both
-    // set height/width to 1em by default (as an inline style)
-     .bi, .fa, .fab, .fas, .far { font-size: 4rem; }
-  }
-
-
-  &.showcase-top-right {
-    .value-box-grid {
-      grid-template-columns: 1fr var(---bslib-value-box-showcase-w, 50%);
-
-      .value-box-showcase {
-        grid-area: right;
-        margin-left: auto;
-        align-self: start;
-        align-items: end;
-        padding-left: 0;
-        padding-bottom: 0;
-      }
-
-      .value-box-area {
-        grid-area: left;
-        align-self: end;
-      }
-    }
-
-    &[data-full-screen="true"] {
-      .value-box-grid {
-        grid-template-columns: auto var(---bslib-value-box-showcase-w-fs, 1fr);
-        > div {
-          align-self: center;
-        }
-      }
-    }
-
-    &:not([data-full-screen="true"]) {
-      .value-box-showcase {
-        margin-top: 0;
-      }
-
-      @container bslib-value-box (max-width: #{$bslib-value-box-horizontal-break-point}) {
-        .value-box-grid {
-          .value-box-showcase { // reset padding on showcase_container
-            padding-left: 1rem;
-          }
-        }
-      }
-    }
-  }
-
-  &.showcase-left-center {
-    .value-box-grid {
-      grid-template-columns: var(---bslib-value-box-showcase-w, 30%) auto;
-    }
-
-    &[data-full-screen="true"] {
-      .value-box-grid {
-        grid-template-columns: var(---bslib-value-box-showcase-w-fs, 1fr) auto;
-      }
-    }
-
-    &:not([data-fill-screen="true"]) {
-      .value-box-grid {
-        .value-box-showcase {
-          grid-area: left;
-        }
-
-        .value-box-area {
-          grid-area: right;
-        }
-      }
-    }
-  }
-
-  &.showcase-bottom {
-    .value-box-grid {
-      grid-template-columns: 1fr;
-      grid-template-rows: 1fr var(---bslib-value-box-showcase-h, auto);
-      grid-template-areas:
-          "top"
-          "bottom";
-      overflow: hidden;
-
-      .value-box-showcase {
-        grid-area: bottom;
-        padding: 0;
-        margin: 0;
-      }
-
-      .value-box-area {
-        grid-area: top;
-      }
-    }
-
-    &[data-full-screen="true"] {
-      .value-box-grid {
-        grid-template-rows: 1fr var(---bslib-value-box-showcase-h-fs, 2fr);
-
-        .value-box-showcase {
-          padding: 1rem;
-        }
-      }
-    }
-  }
-}
-
-@include color-mode(dark) {
-  .bslib-value-box {
-    // Bootstrap doesn't have a dark shadow, but the default isn't quite right
-    --bslib-value-box-shadow: 0 0.5rem 1rem rgb(0 0 0 / 50%);
   }
 }
 

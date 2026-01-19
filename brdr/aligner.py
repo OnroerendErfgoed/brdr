@@ -569,29 +569,37 @@ def aligner_metadata_decorator(f):
             processor_id = aligner.processor.processor_id.value
             processor_name = type(aligner.processor).__name__
             reference_data = aligner.reference_data
-            reference_features = reference_data.features.values()
-            reference_geometries = [
-                {
-                    # "id": feature.data_id,
-                    "id": feature.brdr_id,
-                    "type": f"geo:{feature.geometry.geom_type}",
-                    "version_date": reference_data.source.get(VERSION_DATE, ""),
-                    "derived_from": {
-                        "id": feature.data_id,
-                        "type": "geo:Feature",
-                        "source": reference_data.source.get("source_url", ""),
-                    },
-                }
-                for feature in reference_features
-            ]
             stack = inspect.stack()
             f_locals = stack[0][0].f_locals
 
-            for thematic_id, rd, result in [
-                (thematic_id, rd, res)
-                for thematic_id, rd_res in response.results.items()
-                for rd, res in rd_res.items()
-            ]:
+            for thematic_id, rd_res in response.results.items():
+                for rd, result in rd_res.items():
+                    # Filter to only include overlapping reference features if available
+                    if result.get("observation") and "overlapping_reference_ids" in result["observation"]:
+                        overlapping_ids = result["observation"]["overlapping_reference_ids"]
+                        reference_features = [
+                            reference_data.features[ref_id]
+                            for ref_id in overlapping_ids
+                            if ref_id in reference_data.features
+                        ]
+                    else:
+                        # Fallback to all features for backward compatibility
+                        reference_features = reference_data.features.values()
+                
+                reference_geometries = [
+                    {
+                        # "id": feature.data_id,
+                        "id": feature.brdr_id,
+                        "type": f"geo:{feature.geometry.geom_type}",
+                        "version_date": reference_data.source.get(VERSION_DATE, ""),
+                        "derived_from": {
+                            "id": feature.data_id,
+                            "type": "geo:Feature",
+                            "source": reference_data.source.get("source_url", ""),
+                        },
+                    }
+                    for feature in reference_features
+                ]
                 thematic_feature = aligner.thematic_data.features[thematic_id]
                 feature_of_interest_id = thematic_feature.brdr_id  # TODO (emrys?)
                 result_urn = urn_from_geom(result["result"])
@@ -1578,6 +1586,8 @@ class Aligner:
             self.reference_data.tree.query(geometry)
         ).tolist()
         intersected = []
+        overlapping_reference_ids = []
+        
         for key_ref in ref_intersections:
             geom = None
             version_date = None
@@ -1594,6 +1604,10 @@ class Aligner:
                 perc = 0
             if perc < 0.01:
                 continue
+            
+            # Track this as an overlapping reference
+            overlapping_reference_ids.append(key_ref)
+            
             # Add a last_version_date if available in properties
             reference_feature = self.reference_data.features.get(key_ref)
             if (
@@ -1635,6 +1649,7 @@ class Aligner:
                 )
 
         dict_observation["full"] = full_total
+        dict_observation["overlapping_reference_ids"] = overlapping_reference_ids
         if last_version_date is not None:
             dict_observation[LAST_VERSION_DATE] = last_version_date.strftime(
                 DATE_FORMAT
