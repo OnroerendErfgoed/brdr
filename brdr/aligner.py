@@ -372,11 +372,19 @@ def _get_metadata_observations_from_process_result(
         "result_time": observation_time,
     }
 
+    # PERFORMANCE OPTIMIZATION: Create reference lookup dictionary for O(1) access
+    ref_lookup = {ref["derived_from"]["id"]: ref for ref in actuation_metadata["reference_geometries"]}
+
     def get_reference_from_actuation(ref_id):
-        for ref in actuation_metadata["reference_geometries"]:
-            if ref["derived_from"]["id"] == ref_id:
-                return ref
-        raise ValueError("reference geometry not found in actuation metadata")
+        # PERFORMANCE OPTIMIZATION: Use dictionary lookup instead of linear search
+        try:
+            return ref_lookup[ref_id]
+        except KeyError:
+            # Fallback to original linear search for backward compatibility
+            for ref in actuation_metadata["reference_geometries"]:
+                if ref["derived_from"]["id"] == ref_id:
+                    return ref
+            raise ValueError(f"reference geometry not found in actuation metadata: {ref_id}")
 
     observations = []
     for ref_id, observations_dict in observation["reference_features"].items():

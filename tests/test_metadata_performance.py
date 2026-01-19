@@ -201,3 +201,51 @@ class TestMetadataPerformance:
                             
                     break
             break
+
+    def test_reference_lookup_optimization(self):
+        """Test that the reference lookup optimization works correctly."""
+        config = AlignerConfig(log_metadata=True, add_observations=True)
+        aligner = Aligner(config=config)
+        
+        # Create thematic and reference data with multiple features
+        thematic_dict = {
+            'theme_id_1': from_wkt('POLYGON ((0 0, 0 10, 10 10, 10 0, 0 0))')
+        }
+        reference_dict = {
+            'ref_id_1': from_wkt('POLYGON ((0 1, 0 9, 9 9, 9 1, 0 1))'),  # Overlaps
+            'ref_id_2': from_wkt('POLYGON ((1 1, 1 8, 8 8, 8 1, 1 1))'),  # Overlaps
+            'ref_id_3': from_wkt('POLYGON ((20 20, 20 25, 25 25, 25 20, 20 20))'),  # Does not overlap
+        }
+        
+        aligner.load_thematic_data(DictLoader(thematic_dict))
+        aligner.load_reference_data(DictLoader(reference_dict))
+        
+        # Process with metadata logging enabled
+        result = aligner.process([1])
+        
+        # Verify that observations are generated correctly with the optimization
+        for thematic_id, rd_res in result.results.items():
+            for rd, res in rd_res.items():
+                if 'metadata' in res and 'observations' in res['metadata']:
+                    observations = res['metadata']['observations']
+                    
+                    # Should have observations for the overlapping references
+                    assert len(observations) > 0
+                    
+                    # Verify that observations reference the correct features
+                    ref_ids_in_observations = set()
+                    for obs in observations:
+                        if 'has_feature_of_interest' in obs:
+                            feature_of_interest = obs['has_feature_of_interest']
+                            assert feature_of_interest is not None
+                            # Check that it's a valid reference (can be dict for ref features or string URN for result)
+                            if isinstance(feature_of_interest, dict):
+                                assert 'id' in feature_of_interest
+                                ref_ids_in_observations.add(feature_of_interest['id'])
+                            # String URNs are valid for result references
+                    
+                    # Should have observations for both overlapping references
+                    assert len(ref_ids_in_observations) >= 2
+                    
+                    break
+            break
