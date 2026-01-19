@@ -569,7 +569,12 @@ def aligner_metadata_decorator(f):
             processor_id = aligner.processor.processor_id.value
             processor_name = type(aligner.processor).__name__
             reference_data = aligner.reference_data
+            # TODO - if you process a full province, all these parcels will be written to metadata. Shouldn't we only take the reference-features underneath? Better to use
+            # reference_intersections_ids = reference_data.items.take(
+            #     reference_data.tree.query(geom)
+            # ).tolist()
             reference_features = reference_data.features.values()
+
             reference_geometries = [
                 {
                     # "id": feature.data_id,

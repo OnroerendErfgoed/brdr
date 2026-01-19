@@ -220,7 +220,7 @@ class AlignerFeatureCollection:
     @property
     def items(self):
         """
-        A Numpy array containing all feature identifiers (ThematicIds).
+        A Numpy array containing all feature identifiers (ReferenceIds).
 
         This property provides a high-performance bridge to Numpy operations,
         allowing for vectorized indexing and fast lookups of feature keys.
