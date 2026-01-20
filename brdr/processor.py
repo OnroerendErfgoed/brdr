@@ -1602,10 +1602,14 @@ class NetworkGeometryProcessor(BaseProcessor):
                     points.append(geom)
                 elif isinstance(geom, (LineString, MultiLineString)):
                     lines.append(geom)
+                elif isinstance(geom, (Polygon, MultiPolygon)):
+                    lines.append(geom.boundary)
                 else:
                     TypeError("Geometrytype not valid at this stage")
-
             return to_multi(safe_unary_union(lines)), to_multi(safe_unary_union(points))
+
+        if isinstance(reference_intersection, (Polygon, MultiPolygon)):
+            return to_multi(reference_intersection.boundary), MultiPoint()
 
         raise TypeError(
             "Reference could not be interpreted by NetworkGeometryProcessor"
@@ -1845,7 +1849,6 @@ class TopologyProcessor(BaseProcessor):
 
         # Get all unique arcs that make up this feature
         arcs_to_process = flatten_iter(self.id_to_arcs[id_thematic])
-
         processor = NetworkGeometryProcessor(config=self.config, feedback=self.feedback)
         process_results = {}
 

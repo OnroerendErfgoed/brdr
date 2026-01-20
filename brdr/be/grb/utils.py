@@ -257,6 +257,7 @@ def get_collection_grb_actual(
     collection = get_collection_by_partition(
         url=url, params=params, geometry=geometry, partition=partition, crs=crs
     )
+    # TODO possibility to only return features that actually hit the unioned geometry, so the reference-data is not overloaded with features that are not relevant? Or maybe in a former/later step?
     return collection, name_reference_id
 
 

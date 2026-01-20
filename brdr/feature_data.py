@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Dict
 
 import numpy as np
 from geojson import FeatureCollection
@@ -147,6 +147,7 @@ class AlignerFeatureCollection:
         self._tree = None
         self._elements = None
         self._items = None
+        self._reference_lookup = None
 
     def __getitem__(self, key: InputId):
         return self.features[key]
@@ -220,7 +221,7 @@ class AlignerFeatureCollection:
     @property
     def items(self):
         """
-        A Numpy array containing all feature identifiers (ThematicIds).
+        A Numpy array containing all feature identifiers (ReferenceIds).
 
         This property provides a high-performance bridge to Numpy operations,
         allowing for vectorized indexing and fast lookups of feature keys.
@@ -276,6 +277,29 @@ class AlignerFeatureCollection:
             geoms = [f.geometry for f in self.features.values()]
             self._tree = STRtree(geoms)
         return self._tree
+
+    @property
+    def reference_lookup(self) -> Dict[Any, Any]:
+        """
+        A Dictionary Lookup table with the mapping of brdr_id and data_id, that can be used to derive the ID when creating metadata
+
+        Returns
+        -------
+        Dict
+            A Dictionary Lookup table
+
+        Raises
+        ------
+        ValueError
+            If the collection is not marked as a reference dataset
+        """
+        if not self.is_reference:
+            raise ValueError("FeatureCollection is not a reference dataset")
+        if self._reference_lookup is None:
+            self._reference_lookup = {
+                f.data_id: f.brdr_id for f in self.features.values()
+            }  # TODO - check if correct?
+        return self._reference_lookup
 
     def to_geojson(self, geom_attributes=False):
         """
