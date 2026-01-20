@@ -1,4 +1,3 @@
-import inspect
 import json
 import logging
 import os
@@ -358,7 +357,7 @@ class AlignerResult:
 
 
 def _get_metadata_observations_from_process_result(
-    processResult: ProcessResult,
+    processResult: ProcessResult,reference_lookup: Dict[any, any],
 ) -> List[Dict]:
     observation = processResult["observation"]
     actuation_metadata = processResult["metadata"]["actuation"]
@@ -371,23 +370,10 @@ def _get_metadata_observations_from_process_result(
         "made_by_sensor": sensor_uuid.urn,
         "result_time": observation_time,
     }
-    # PERFORMANCE OPTIMIZATION: Create reference lookup dictionary for O(1) access
-    ref_lookup = {ref["derived_from"]["id"]: ref for ref in actuation_metadata["reference_geometries"]}
-    #TODO - possibility to cache this in AlignerFeatureCollection?
-    def get_reference_from_actuation(ref_id):
-        # PERFORMANCE OPTIMIZATION: Use dictionary lookup instead of linear search
-        try:
-            return ref_lookup[ref_id]
-        except KeyError:
-            # Fallback to original linear search for backward compatibility
-            for ref in actuation_metadata["reference_geometries"]:
-                if ref["derived_from"]["id"] == ref_id:
-                    return ref
-            raise ValueError(f"reference geometry not found in actuation metadata: {ref_id}")
 
     observations = []
     for ref_id, observations_dict in observation["reference_features"].items():
-        reference = get_reference_from_actuation(ref_id)
+        reference = reference_lookup[ref_id]
         if area := observations_dict.get("area"):
             observations.append(
                 {
@@ -616,8 +602,9 @@ def aligner_metadata_decorator(f):
                 },
             }
             if process_result["observation"]:
+                ref_lookup = reference_data.reference_lookup
                 process_result["metadata"]["observations"] = (
-                    _get_metadata_observations_from_process_result(process_result)
+                    _get_metadata_observations_from_process_result(process_result,ref_lookup)
                 )
 
         return process_result
