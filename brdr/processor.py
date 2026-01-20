@@ -1849,7 +1849,6 @@ class TopologyProcessor(BaseProcessor):
 
         # Get all unique arcs that make up this feature
         arcs_to_process = flatten_iter(self.id_to_arcs[id_thematic])
-
         processor = NetworkGeometryProcessor(config=self.config, feedback=self.feedback)
         process_results = {}
 

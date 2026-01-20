@@ -229,9 +229,7 @@ def _topojson_id_to_arcs(topojson):
             for geometry in geo_collection["geometries"]:
                 # Check if the geometry has both an 'id' and an 'arcs' definition
                 if "id" in geometry and "arcs" in geometry:
-                    # Convert the ID to a string for consistent dictionary keys
-                    original_id = str(geometry["id"])
-
+                    original_id = geometry["id"]
                     # The 'arcs' data defines the geometry's shape using indices
                     # into the global TopoJSON arcs array. It can be an array of
                     # indices (LineString/Polygon) or an array of arrays of indices
