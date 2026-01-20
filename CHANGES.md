@@ -184,3 +184,9 @@
 
 - small fixes for missing paths and styling
 - fixed examples for documentation and added documention link
+
+# 0.15.2
+
+- Performance fix for generating metadata
+- Fix for TopologyProcessor processing with integer-Ids
+- Fix for NetworkGeometryProcessor
