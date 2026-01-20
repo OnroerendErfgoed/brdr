@@ -24,7 +24,7 @@ from shapely.geometry.base import BaseGeometry
 from brdr import __version__
 from brdr.configs import AlignerConfig
 from brdr.configs import ProcessorConfig
-from brdr.constants import AREA_CHANGE, METADATA_FIELD_NAME
+from brdr.constants import AREA_CHANGE, METADATA_FIELD_NAME, MAX_REFERENCE_BUFFER
 from brdr.constants import AREA_PERCENTAGE_CHANGE
 from brdr.constants import DATE_FORMAT
 from brdr.constants import DEFAULT_CRS
@@ -561,29 +561,24 @@ def _reverse_metadata_observations_to_brdr_observation(metadata: List[Dict]) -> 
 
     return result
 
-
 def aligner_metadata_decorator(f):
-    def inner_func(aligner, *args, **kwargs):
-        assert isinstance(aligner, Aligner)
-        response: AlignerResult = f(aligner, *args, **kwargs)
+    def inner_func(thematic_id,geometry, relevant_distance,aligner, *args, **kwargs):
+        process_result: ProcessResult = f(thematic_id,geometry, relevant_distance,aligner, *args, **kwargs)
         if aligner.add_observations:
-            for thematic_id, rd_res in response.results.items():
-                for rd, res in rd_res.items():
-                    res["observation"] = aligner.compare_to_reference(res.get("result"))
+            process_result["observation"] = aligner.compare_to_reference(process_result.get("result"))
         if aligner.log_metadata:
             # generate uuid for actuation
             actuation_id = uuid.uuid4()
             processor_id = aligner.processor.processor_id.value
             processor_name = type(aligner.processor).__name__
             reference_data = aligner.reference_data
-            # TODO - if you process a full province, all these parcels will be written to metadata. Shouldn't we only take the reference-features underneath? Better to use
-            # reference_intersections_ids = reference_data.items.take(
-            #     reference_data.tree.query(geom)
-            # ).tolist()
-            reference_features = reference_data.features.values()
-
-            reference_geometries = [
-                {
+            reference_intersections_ids = reference_data.items.take(
+                reference_data.tree.query(buffer_pos(geometry,MAX_REFERENCE_BUFFER))
+            ).tolist() #TODO possible to optimize?
+            reference_geometries =[]
+            for ref_id in reference_intersections_ids:
+                feature = reference_data.features[ref_id]
+                feat_dict =                 {
                     # "id": feature.data_id,
                     "id": feature.brdr_id,
                     "type": f"geo:{feature.geometry.geom_type}",
@@ -594,46 +589,38 @@ def aligner_metadata_decorator(f):
                         "source": reference_data.source.get("source_url", ""),
                     },
                 }
-                for feature in reference_features
-            ]
-            stack = inspect.stack()
-            f_locals = stack[0][0].f_locals
+                reference_geometries.append( feat_dict)
 
-            for thematic_id, rd, result in [
-                (thematic_id, rd, res)
-                for thematic_id, rd_res in response.results.items()
-                for rd, res in rd_res.items()
-            ]:
-                thematic_feature = aligner.thematic_data.features[thematic_id]
-                feature_of_interest_id = thematic_feature.brdr_id  # TODO (emrys?)
-                result_urn = urn_from_geom(result["result"])
-                result["metadata"] = {}
-                result["metadata"]["actuation"] = {
-                    "id": actuation_id.urn,
-                    "type": "sosa:Actuation",
-                    "reference_geometries": reference_geometries,
-                    "changes": "geo:hasGeometry",
-                    "sosa:hasFeatureOfInterest": {"id": feature_of_interest_id},
-                    "result": result_urn,
-                    "procedure": {
-                        "id": processor_id,
-                        "implementedBy": processor_name,
-                        "type": "sosa:Procedure",
-                        "ssn:hasInput": [
-                            {
-                                "id": "brdr:relevant_distance",
-                                "type": "ssn:Input",
-                                "input_value": {"type": "xsd:integer", "value": rd},
-                            },
-                        ],
-                    },
-                }
-                if result["observation"]:
-                    result["metadata"]["observations"] = (
-                        _get_metadata_observations_from_process_result(result)
-                    )
+            thematic_feature = aligner.thematic_data.features[thematic_id]
+            feature_of_interest_id = thematic_feature.brdr_id  # TODO (emrys?)
+            result_urn = urn_from_geom(process_result["result"])
+            process_result["metadata"] = {}
+            process_result["metadata"]["actuation"] = {
+                "id": actuation_id.urn,
+                "type": "sosa:Actuation",
+                "reference_geometries": reference_geometries,
+                "changes": "geo:hasGeometry",
+                "sosa:hasFeatureOfInterest": {"id": feature_of_interest_id},
+                "result": result_urn,
+                "procedure": {
+                    "id": processor_id,
+                    "implementedBy": processor_name,
+                    "type": "sosa:Procedure",
+                    "ssn:hasInput": [
+                        {
+                            "id": "brdr:relevant_distance",
+                            "type": "ssn:Input",
+                            "input_value": {"type": "xsd:integer", "value": relevant_distance},
+                        },
+                    ],
+                },
+            }
+            if process_result["observation"]:
+                process_result["metadata"]["observations"] = (
+                    _get_metadata_observations_from_process_result(process_result)
+                )
 
-        return response
+        return process_result
 
     return inner_func
 
@@ -815,7 +802,6 @@ class Aligner:
         self.reference_data.crs = self.crs
         self.reference_data.is_reference = True
 
-    @aligner_metadata_decorator
     def process(
         self,
         relevant_distances: Iterable[float] = None,
@@ -891,15 +877,15 @@ class Aligner:
 
         process_results: dict[InputId, dict[float, ProcessResult | None]] = {}
         futures = {}
-
-        def process_geom_for_rd(geometry, relevant_distance):
-            return self.processor.process(
-                correction_distance=self.correction_distance,
-                reference_data=self.reference_data,
-                mitre_limit=self.mitre_limit,
+        @aligner_metadata_decorator
+        def process_geom_for_rd(thematic_id,geometry, relevant_distance,aligner=self):
+            return aligner.processor.process(
+                correction_distance=aligner.correction_distance,
+                reference_data=aligner.reference_data,
+                mitre_limit=aligner.mitre_limit,
                 input_geometry=geometry,
                 relevant_distance=relevant_distance,
-                thematic_data=self.thematic_data,
+                thematic_data=aligner.thematic_data,
             )
 
         def run_process(executor: ThreadPoolExecutor = None):
@@ -914,9 +900,9 @@ class Aligner:
                     try:
                         fn = process_geom_for_rd
                         if executor:
-                            futures[(thematic_id, rd)] = executor.submit(fn, geom, rd)
+                            futures[(thematic_id, rd)] = executor.submit(fn, thematic_id,geom, rd,self)
                         else:
-                            process_results[thematic_id][rd] = fn(geom, rd)
+                            process_results[thematic_id][rd] = fn(thematic_id,geom, rd,self)
                     except ValueError as e:
                         self.logger.feedback_warning(
                             f"error for thematic id {str(thematic_id)} processed with "
@@ -1772,6 +1758,7 @@ class Aligner:
             DIFF_PERCENTAGE_FIELD_NAME: None,
             DIFF_AREA_FIELD_NAME: None,
         }
+        # TODO: threading?
         actual_brdr_observation = observation or self.compare_to_reference(
             geom_predicted
         )

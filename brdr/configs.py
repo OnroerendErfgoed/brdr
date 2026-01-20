@@ -92,14 +92,15 @@ class AlignerConfig:
     max_workers : int, optional
         The maximum number of parallel worker threads/processes to use.
         If None, the system determines the optimal count.
-    log_metadata : bool, default True
-        If True, detailed metadata about the alignment process will be
-        recorded in the logs.
+    log_metadata : bool, default False
+        If True, detailed metadata about the alignment process will be added to ProcessResult
+    add_observations : bool, default False
+        If True, observations of the resulting geometry are added to metadata.
     """
 
     correction_distance: float = 0.01
     diff_metric: DiffMetric = DiffMetric.SYMMETRICAL_AREA_CHANGE
     mitre_limit: float = 10
     max_workers: int = None
-    log_metadata: bool = True
-    add_observations: bool = True
+    log_metadata: bool = False
+    add_observations: bool = False
