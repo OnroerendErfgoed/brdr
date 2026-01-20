@@ -296,7 +296,9 @@ class AlignerFeatureCollection:
         if not self.is_reference:
             raise ValueError("FeatureCollection is not a reference dataset")
         if self._reference_lookup is None:
-            self._reference_lookup = {f.data_id: f.brdr_id for f in self.features.values()}#TODO - check if correct?
+            self._reference_lookup = {
+                f.data_id: f.brdr_id for f in self.features.values()
+            }  # TODO - check if correct?
         return self._reference_lookup
 
     def to_geojson(self, geom_attributes=False):
