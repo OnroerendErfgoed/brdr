@@ -1229,9 +1229,10 @@ class Aligner:
         >>> # Evaluate with a limit of 1 best prediction per feature
         >>> results = aligner.evaluate(thematic_ids=["id_01"],full_reference_strategy=FullReferenceStrategy.ONLY_FULL_REFERENCE,max_predictions=1)
         """
-
+        calculate_zeros = True # boolean to check if we need to add al zero-rd results to the evaluations
         if thematic_ids is None:
             thematic_ids = self.thematic_data.features.keys()
+            calculate_zeros = False # when all thematic features will be calculated, there is no need to calculate the zeros for all seperately
         if any(
             id_to_evaluate not in self.thematic_data.features.keys()
             for id_to_evaluate in thematic_ids
@@ -1247,11 +1248,7 @@ class Aligner:
             raise ValueError(
                 "Evaluation cannot be executed when 0 is not available in the array of relevant distances"
             )
-        # Calculate the ZERO-situation for all
-        aligner_result_zero = self.process(
-            relevant_distances=[0],
-        )
-        process_results_zero = aligner_result_zero.get_results(aligner=self)
+
 
         aligner_result = self.predict(
             thematic_ids=thematic_ids,
@@ -1262,10 +1259,16 @@ class Aligner:
         process_results_predictions = aligner_result.get_results(
             aligner=self, result_type=AlignerResultType.PREDICTIONS
         )
-        process_results = deep_merge(
-            process_results_zero,
-            process_results,
-        )
+        if calculate_zeros:
+            # Calculate the ZERO-situation for all, only when the predict is not done for all thematic ids
+            aligner_result_zero = self.process(
+                relevant_distances=[0],
+            )
+            process_results_zero = aligner_result_zero.get_results(aligner=self)
+            process_results = deep_merge(
+                process_results_zero,
+                process_results,
+            )
         process_results_temp_predictions = deepcopy(process_results_predictions)
         process_results_evaluated = deepcopy(process_results)
 
