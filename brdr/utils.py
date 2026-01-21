@@ -642,7 +642,7 @@ def get_collection_by_partition(
     if collection:
         unique_features = deduplicate_features(features_list)
         collection["features"] = unique_features
-    #TODO; only return fatures that intersect with the 'geometry'?
+    # TODO; only return fatures that intersect with the 'geometry'?
 
     return collection
 

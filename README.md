@@ -61,37 +61,9 @@ In the animated gif below you can see the core of 'brdr' in action:
 
 ### Functionalities
 
-`brdr` provides a variety of functionalities in the Aligner-class to assist in aligning boundaries, including:
+`brdr` provides a variety of functionalities in the Aligner-class to assist in aligning boundaries, including data-loaders, processors to make predictions and export-functionalities. Besides the generic functionalities, a range of Flanders-specific functionalities are provided.
+The API reference and examples can be found at: [Documentation & API Reference](https://onroerenderfgoed.github.io/brdr/)
 
-* Loaders:
-    * aligner.load_thematic_data():Loading thematic data ((Multi-)Polygons) as a dictionary (DictLoader) or geojson (
-      GeoJsonFileLoader,GeoJsonUrlLoader)
-    * aligner.load_reference_data():Loading reference data ((Multi-)Polygons) as a dictionary (DictLoader) or geojson (
-      GeoJsonFileLoader,GeoJsonUrlLoader)
-
-* Processors:
-    * aligner.process(): Align thematic boundaries to reference boundaries with a specific relevant
-      distance or a range of relevant distances
-    * aligner.predictor(): Searches all 'stable' (=predicted) processresults in a range of relevant distances
-    * aligner.get_brdr_formula(): Calculating a descriptive formula of a thematic boundary based on a reference layer
-    * aligner.evaluate(): Compares & evaluates input geometries with another version and adds a EVALUATION_FIELD_NAME
-* Exporters:
-    * aligner.get_results_as_geojson(): Returns a collection of geojson-dictionaries with the processresults (resulting
-      geometry, differences,...): This can be used for all processresults or only the 'predicted' results
-    * aligner.get_input_as_geojson(): Returns a geojson-featurecollection from input-dictionaries (thematic or
-      reference)
-    * aligner.save_results(): Exports the resulting geojson-files to a specified path:This can be used for all
-      processresults or only the 'predicted' results
-
-Besides the generic functionalities, a range of Flanders-specific functionalities are provided:
-
-* Loaders:
-    * GRBActualLoader: Loading actual GRB (parcels, buildings)
-    * GRBFiscalParcelLoader: Loading fiscal GRB-parcels of a specific year
-* Processors:
-    * grb.get_geoms_affected_by_grb_change(): get thematic geometries that are possibly affected by GRB-changes during a
-      specific timespan
-    * grb.update_to_actual_grb(): aligns the boundaries of thematic features to the actual GRB-boundaries
 
 ### Possible application fields
 

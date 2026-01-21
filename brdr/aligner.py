@@ -357,7 +357,8 @@ class AlignerResult:
 
 
 def _get_metadata_observations_from_process_result(
-    processResult: ProcessResult,reference_lookup: Dict[any, any],
+    processResult: ProcessResult,
+    reference_lookup: Dict[any, any],
 ) -> List[Dict]:
     observation = processResult["observation"]
     actuation_metadata = processResult["metadata"]["actuation"]
@@ -547,11 +548,16 @@ def _reverse_metadata_observations_to_brdr_observation(metadata: List[Dict]) -> 
 
     return result
 
+
 def aligner_metadata_decorator(f):
-    def inner_func(thematic_id,geometry, relevant_distance,aligner, *args, **kwargs):
-        process_result: ProcessResult = f(thematic_id,geometry, relevant_distance,aligner, *args, **kwargs)
+    def inner_func(thematic_id, geometry, relevant_distance, aligner, *args, **kwargs):
+        process_result: ProcessResult = f(
+            thematic_id, geometry, relevant_distance, aligner, *args, **kwargs
+        )
         if aligner.add_observations:
-            process_result["observation"] = aligner.compare_to_reference(process_result.get("result"))
+            process_result["observation"] = aligner.compare_to_reference(
+                process_result.get("result")
+            )
         if aligner.log_metadata:
             # generate uuid for actuation
             actuation_id = uuid.uuid4()
@@ -559,12 +565,12 @@ def aligner_metadata_decorator(f):
             processor_name = type(aligner.processor).__name__
             reference_data = aligner.reference_data
             reference_intersections_ids = reference_data.items.take(
-                reference_data.tree.query(buffer_pos(geometry,MAX_REFERENCE_BUFFER))
-            ).tolist() #TODO possible to optimize?
-            reference_geometries =[]
+                reference_data.tree.query(buffer_pos(geometry, MAX_REFERENCE_BUFFER))
+            ).tolist()  # TODO possible to optimize?
+            reference_geometries = []
             for ref_id in reference_intersections_ids:
                 feature = reference_data.features[ref_id]
-                feat_dict =                 {
+                feat_dict = {
                     # "id": feature.data_id,
                     "id": feature.brdr_id,
                     "type": f"geo:{feature.geometry.geom_type}",
@@ -575,7 +581,7 @@ def aligner_metadata_decorator(f):
                         "source": reference_data.source.get("source_url", ""),
                     },
                 }
-                reference_geometries.append( feat_dict)
+                reference_geometries.append(feat_dict)
 
             thematic_feature = aligner.thematic_data.features[thematic_id]
             feature_of_interest_id = thematic_feature.brdr_id  # TODO (emrys?)
@@ -596,7 +602,10 @@ def aligner_metadata_decorator(f):
                         {
                             "id": "brdr:relevant_distance",
                             "type": "ssn:Input",
-                            "input_value": {"type": "xsd:integer", "value": relevant_distance},
+                            "input_value": {
+                                "type": "xsd:integer",
+                                "value": relevant_distance,
+                            },
                         },
                     ],
                 },
@@ -604,7 +613,9 @@ def aligner_metadata_decorator(f):
             if process_result["observation"]:
                 ref_lookup = reference_data.reference_lookup
                 process_result["metadata"]["observations"] = (
-                    _get_metadata_observations_from_process_result(process_result,ref_lookup)
+                    _get_metadata_observations_from_process_result(
+                        process_result, ref_lookup
+                    )
                 )
 
         return process_result
@@ -864,8 +875,9 @@ class Aligner:
 
         process_results: dict[InputId, dict[float, ProcessResult | None]] = {}
         futures = {}
+
         @aligner_metadata_decorator
-        def process_geom_for_rd(thematic_id,geometry, relevant_distance,aligner=self):
+        def process_geom_for_rd(thematic_id, geometry, relevant_distance, aligner=self):
             return aligner.processor.process(
                 correction_distance=aligner.correction_distance,
                 reference_data=aligner.reference_data,
@@ -887,9 +899,13 @@ class Aligner:
                     try:
                         fn = process_geom_for_rd
                         if executor:
-                            futures[(thematic_id, rd)] = executor.submit(fn, thematic_id,geom, rd,self)
+                            futures[(thematic_id, rd)] = executor.submit(
+                                fn, thematic_id, geom, rd, self
+                            )
                         else:
-                            process_results[thematic_id][rd] = fn(thematic_id,geom, rd,self)
+                            process_results[thematic_id][rd] = fn(
+                                thematic_id, geom, rd, self
+                            )
                     except ValueError as e:
                         self.logger.feedback_warning(
                             f"error for thematic id {str(thematic_id)} processed with "

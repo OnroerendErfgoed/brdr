@@ -284,9 +284,9 @@ def get_false_positive_grb_parcels_dataframe(
                 raise KeyError(f"Error - No key found")
             metrics["failed_ids"].append(key)
             print(f"Error processing feature {key}: {e}")
-            dict_prediction_wkt[key]= GeometryCollection().wkt
-            dict_fp_wkt[key]= GeometryCollection().wkt
-            dict_doubt_wkt[key]= GeometryCollection().wkt
+            dict_prediction_wkt[key] = GeometryCollection().wkt
+            dict_fp_wkt[key] = GeometryCollection().wkt
+            dict_doubt_wkt[key] = GeometryCollection().wkt
 
     # Combine in dataframe
     df = pd.DataFrame(
@@ -316,9 +316,9 @@ def get_false_positive_grb_parcels_dataframe(
     # Set index to column 'id'
     df.reset_index(inplace=True)
     df.rename(columns={"index": id_name}, inplace=True)
-    now =datetime.now()
-    metrics ["endtime"] = now
-    metrics ["total_time"] = now - starttime
+    now = datetime.now()
+    metrics["endtime"] = now
+    metrics["total_time"] = now - starttime
 
     return df, metrics
 
@@ -496,7 +496,7 @@ def export_analysis_results(
     metrics=None,
     column_name=FP_ESIMATION_COLUMN_NAME,
     tolerance=2,
-    wkt_columns=[ORIGINAL_WKT,BRDR_WKT, FALSE_POSITIVE_WKT, DOUBT_WKT],
+    wkt_columns=[ORIGINAL_WKT, BRDR_WKT, FALSE_POSITIVE_WKT, DOUBT_WKT],
 ):
     if df is None:
         df = pd.read_csv(path / FP_ANALYSIS_CSV_NAME)
