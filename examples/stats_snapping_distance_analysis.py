@@ -31,7 +31,7 @@ result = result.sort_values(
 print(result)
 
 plt.scatter(result["max"], result["area"] / 1000)
-plt.show()
+plt.show(block=False)
 # profile = ProfileReport(result)
 # profile.to_file('test.html')
 
@@ -84,14 +84,14 @@ ax = result.hist(
 #
 #     #x.tick_params(axis='x', rotation=0)
 # #
-plt.show()
+plt.show(block=False)
 
 result_bplt = result.boxplot(
     column="distance", by=["strategy", "full_percentage", "big_area"]
 )
 
 result_bplt.plot()
-plt.show()
+plt.show(block=False)
 
 # CODE to create stats.csv
 # time = str(time.time())

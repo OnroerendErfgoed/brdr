@@ -734,6 +734,10 @@ class DieussaertGeometryProcessor(BaseProcessor):
             Post --> End[ProcessResult]
         ```
         """
+        if not isinstance(input_geometry, (Polygon, MultiPolygon)):
+            raise ValueError(
+                "Dieussaert algorithm can only be used when input geometry is polygon or multipolygon."
+            )
         self.check_area_limit(input_geometry)
         if (
             not self.config.multi_as_single_modus

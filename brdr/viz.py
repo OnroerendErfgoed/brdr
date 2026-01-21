@@ -156,7 +156,7 @@ def show_map(
 
         ax.set_title(f"Relevant distance: {dist} m")
 
-    plt.show()
+    plt.show(block=False)
 
 
 def animated_map(
@@ -282,7 +282,7 @@ def animated_map(
             logging.error(f"Failed to save animation: {e}")
 
     plt.tight_layout()
-    plt.show()
+    plt.show(block=False)
 
 
 def print_observation_of_aligner_results(aligner_results, aligner):
@@ -395,7 +395,7 @@ def plot_difference_by_relevant_distance(
         plt.savefig(path)
         print(f"Plot saved to: {path}")
 
-    plt.show()
+    plt.show(block=False)
 
 
 def _processresult_to_dicts(process_results):
