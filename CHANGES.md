@@ -190,3 +190,9 @@
 - Performance fix for generating metadata
 - Fix for TopologyProcessor processing with integer-Ids
 - Fix for NetworkGeometryProcessor
+
+# 0.15.3
+
+- Added observation_properties to process_result
+- Fix for GRB Updater
+- Fix for Reference Loaders when no thematic data is loaded
