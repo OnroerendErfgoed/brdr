@@ -112,7 +112,9 @@ class GRBActualLoader(GeoJsonLoader):
             to calling this method.
         """
         if not self.aligner.thematic_data:
-            raise ValueError( "Reference could not be loaded. Please load thematic data first")
+            raise ValueError(
+                "Reference could not be loaded. Please load thematic data first"
+            )
         geom_union = buffer_pos(
             self.aligner.thematic_data.union, GRB_MAX_REFERENCE_BUFFER
         )
@@ -191,7 +193,9 @@ class GRBFiscalParcelLoader(GeoJsonLoader):
             If thematic data is missing from the aligner.
         """
         if not self.aligner.thematic_data:
-            raise ValueError( "Reference could not be loaded. Please load thematic data first")
+            raise ValueError(
+                "Reference could not be loaded. Please load thematic data first"
+            )
         geom_union = buffer_pos(
             self.aligner.thematic_data.union, GRB_MAX_REFERENCE_BUFFER
         )
@@ -284,13 +288,17 @@ class GRBSpecificDateParcelLoader(GeoJsonLoader):
             If thematic data has not been loaded into the aligner.
         """
         if not self.aligner.thematic_data:
-            raise ValueError("Reference could not be loaded. Please load thematic data first")
+            raise ValueError(
+                "Reference could not be loaded. Please load thematic data first"
+            )
 
         geom_union = buffer_pos(
             self.aligner.thematic_data.union, GRB_MAX_REFERENCE_BUFFER
         )
         if geom_union is None or geom_union.is_empty:
-            raise ValueError("Reference could not be loaded. Please load thematic data first")
+            raise ValueError(
+                "Reference could not be loaded. Please load thematic data first"
+            )
         collection = get_collection_grb_parcels_by_date(
             date=self.date,
             geometry=geom_union,

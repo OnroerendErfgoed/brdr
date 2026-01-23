@@ -562,7 +562,7 @@ def aligner_metadata_decorator(f):
             observation_props = aligner.get_observation_properties(process_result)
             props = process_result["properties"]
             props.update(observation_props)
-            process_result["properties"]=props
+            process_result["properties"] = props
 
         if aligner.log_metadata:
             # generate uuid for actuation
@@ -1167,10 +1167,10 @@ class Aligner:
         >>> # Evaluate with a limit of 1 best prediction per feature
         >>> results = aligner.evaluate(thematic_ids=["id_01"],full_reference_strategy=FullReferenceStrategy.ONLY_FULL_REFERENCE,max_predictions=1)
         """
-        calculate_zeros = True # boolean to check if we need to add al zero-rd results to the evaluations
+        calculate_zeros = True  # boolean to check if we need to add al zero-rd results to the evaluations
         if thematic_ids is None:
             thematic_ids = self.thematic_data.features.keys()
-            calculate_zeros = False # when all thematic features will be calculated, there is no need to calculate the zeros for all seperately
+            calculate_zeros = False  # when all thematic features will be calculated, there is no need to calculate the zeros for all seperately
         if any(
             id_to_evaluate not in self.thematic_data.features.keys()
             for id_to_evaluate in thematic_ids
@@ -1267,7 +1267,9 @@ class Aligner:
                 distances = []
                 predictions = []
                 observation_match = False
-                base_brdr_observation = self._get_brdr_observation_from_properties(id_theme=theme_id,base_metadata_field=metadata_field,
+                base_brdr_observation = self._get_brdr_observation_from_properties(
+                    id_theme=theme_id,
+                    base_metadata_field=metadata_field,
                 )
                 for dist in sorted(dict_predictions_results.keys()):
                     props = deepcopy(
@@ -1289,22 +1291,22 @@ class Aligner:
                         continue
                     if (
                         props[EVALUATION_FIELD_NAME]
-                        in (Evaluation.TO_CHECK_NO_PREDICTION,Evaluation.NOT_EVALUATED)
+                        in (Evaluation.TO_CHECK_NO_PREDICTION, Evaluation.NOT_EVALUATED)
                         and props[PREDICTION_COUNT] == 1
                     ):
                         props[EVALUATION_FIELD_NAME] = Evaluation.PREDICTION_UNIQUE
                         # TODO can we add continue here? No, because this can get overwriten by prediction_unique_full
                     elif (
                         props[EVALUATION_FIELD_NAME]
-                        in (Evaluation.TO_CHECK_NO_PREDICTION,Evaluation.NOT_EVALUATED)
+                        in (Evaluation.TO_CHECK_NO_PREDICTION, Evaluation.NOT_EVALUATED)
                         and props[PREDICTION_COUNT] > 1
                     ):
                         props[EVALUATION_FIELD_NAME] = (
                             Evaluation.TO_CHECK_PREDICTION_MULTI
                         )
-                    elif (
-                        props[EVALUATION_FIELD_NAME]
-                        not in (Evaluation.TO_CHECK_NO_PREDICTION,Evaluation.NOT_EVALUATED)
+                    elif props[EVALUATION_FIELD_NAME] not in (
+                        Evaluation.TO_CHECK_NO_PREDICTION,
+                        Evaluation.NOT_EVALUATED,
                     ):
                         # this prediction has a equality based on observation so the rest is not checked anymore
                         observation_match = True
@@ -1416,18 +1418,16 @@ class Aligner:
         relevant_distance = round(0, RELEVANT_DISTANCE_DECIMALS)
         try:
             process_result = process_results_evaluated[theme_id][relevant_distance]
-            props = deepcopy(
-                process_result["properties"]
-            )
+            props = deepcopy(process_result["properties"])
         except:
-            process_result = {"result":original_geometry}
+            process_result = {"result": original_geometry}
             props = {}
         base_brdr_observation = self._get_brdr_observation_from_properties(
             id_theme=theme_id,
             base_metadata_field=metadata_field,
         )
         props_evaluation = self.get_observation_comparison_properties(
-            process_result = process_result,
+            process_result=process_result,
             base_brdr_observation=base_brdr_observation,
         )
         props.update(props_evaluation)
@@ -1685,6 +1685,7 @@ class Aligner:
             )
 
         return diffs
+
     def get_observation_properties(
         self,
         process_result,
@@ -1696,9 +1697,9 @@ class Aligner:
         properties = {
             FULL_ACTUAL_FIELD_NAME: None,
         }
-        actual_brdr_observation = process_result.get("observation") or self.compare_to_reference(
-            geom_process_result
-        )
+        actual_brdr_observation = process_result.get(
+            "observation"
+        ) or self.compare_to_reference(geom_process_result)
         process_result["observation"] = actual_brdr_observation
         if (
             actual_brdr_observation is None
@@ -1732,9 +1733,9 @@ class Aligner:
         props = self.get_observation_properties(process_result)
         properties.update(props)
 
-        actual_brdr_observation = process_result.get("observation") or self.compare_to_reference(
-            geom_process_result
-        )
+        actual_brdr_observation = process_result.get(
+            "observation"
+        ) or self.compare_to_reference(geom_process_result)
         if (
             actual_brdr_observation is None
             or geom_process_result is None
@@ -1839,7 +1840,9 @@ class Aligner:
             properties[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
         return properties
 
-    def _get_brdr_observation_from_properties(self,id_theme:Any, base_metadata_field: str) -> dict:
+    def _get_brdr_observation_from_properties(
+        self, id_theme: Any, base_metadata_field: str
+    ) -> dict:
         try:
             base_metadata = json.loads(
                 self.thematic_data.features.get(id_theme).properties[

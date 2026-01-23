@@ -14,7 +14,8 @@ from brdr.constants import (
     DATE_FORMAT,
     BASE_OBSERVATION_FIELD_NAME,
     DEFAULT_CRS,
-    METADATA_FIELD_NAME, EVALUATION_FIELD_NAME,
+    METADATA_FIELD_NAME,
+    EVALUATION_FIELD_NAME,
 )
 from brdr.enums import FullReferenceStrategy, AlignerResultType, Evaluation
 from brdr.loader import GeoJsonLoader
@@ -203,13 +204,10 @@ def update_featurecollection_to_actual_grb(
         max_predictions=max_predictions,
         multi_to_best_prediction=multi_to_best_prediction,
     )
-    for k,v in aligner_result.results.items():
+    for k, v in aligner_result.results.items():
         if k in affected_and_not_changed:
             for dist in v.keys():
-                v[dist]["properties"][EVALUATION_FIELD_NAME]=Evaluation.NO_CHANGE
-
-
-
+                v[dist]["properties"][EVALUATION_FIELD_NAME] = Evaluation.NO_CHANGE
 
     return aligner_result.get_results_as_geojson(
         aligner=aligner,
