@@ -298,7 +298,7 @@ class AlignerFeatureCollection:
         if self._reference_lookup is None:
             self._reference_lookup = {
                 f.data_id: f.brdr_id for f in self.features.values()
-            }  # TODO - check if correct?
+            }
         return self._reference_lookup
 
     def to_geojson(self, geom_attributes=False):

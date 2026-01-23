@@ -61,6 +61,10 @@ class BRKLoader(GeoJsonLoader):
         geom_union = buffer_pos(
             self.aligner.thematic_data.union, BRK_MAX_REFERENCE_BUFFER
         )
+        if geom_union is None or geom_union.is_empty:
+            raise ValueError(
+                "Reference could not be loaded. Please load thematic data first"
+            )
 
         collection, id_property = get_collection_brk(
             brk_type=self.brk_type,

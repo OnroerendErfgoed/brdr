@@ -558,6 +558,12 @@ def aligner_metadata_decorator(f):
             process_result["observation"] = aligner.compare_to_reference(
                 process_result.get("result")
             )
+            # add observation properties to the properties
+            observation_props = aligner.get_observation_properties(process_result)
+            props = process_result["properties"]
+            props.update(observation_props)
+            process_result["properties"] = props
+
         if aligner.log_metadata:
             # generate uuid for actuation
             actuation_id = uuid.uuid4()
@@ -890,7 +896,7 @@ class Aligner:
         def run_process(executor: ThreadPoolExecutor = None):
             for thematic_id in thematic_ids:
                 geom = self.thematic_data.features.get(thematic_id).geometry
-                self.logger.feedback_info(
+                self.logger.feedback_debug(
                     f"thematic id {str(thematic_id)} processed with "
                     f"relevant distances (m) [{str(relevant_distances)}]"
                 )
@@ -1031,83 +1037,15 @@ class Aligner:
             )
         rd_prediction = list(set(rd_prediction))
         rd_prediction = sorted(rd_prediction)
-        process_all_at_once = True
-        if process_all_at_once:
-            aligner_result = self.process(
-                thematic_ids=thematic_ids,
-                relevant_distances=rd_prediction,
-            )
-            process_results = aligner_result.results
 
-        # else:
-        #     process_results = {}
-        #     futures={}
-        #
-        #     def _predict_geom(theme_id,geom,_rd_prediction):
-        #
-        #         def _check_interval_stability(
-        #             res_start: ProcessResult, res_end: ProcessResult
-        #         ) -> bool:
-        #
-        #             return geometric_equality(
-        #                 res_start["result"],
-        #                 res_end["result"],
-        #                 correction_distance=self.correction_distance,
-        #                 mitre_limit=self.mitre_limit,
-        #             )
-        #
-        #         def _process_result(_theme_id, _relevant_distances):
-        #             aligner_result = self.process(
-        #                 thematic_ids=[_theme_id],
-        #                 relevant_distances=_relevant_distances,
-        #                 max_workers=self.max_workers)
-        #             return aligner_result.results[_theme_id][_relevant_distances[0]]
-        #
-        #         def _process_wrapper(x: float):
-        #             return _process_result(_theme_id=theme_id, _relevant_distances=[x])
-        #
-        #         non_stable_points, cache = recursive_stepwise_interval_check(
-        #             f_value=_process_wrapper,
-        #             f_condition=_check_interval_stability,
-        #             discrete_list=_rd_prediction,
-        #             initial_sample_size=3,
-        #         )
-        #         interpolated_cache = create_full_interpolated_dataset(_rd_prediction, cache)
-        #         return interpolated_cache
-        #
-        #     def run_prediction(executor: ThreadPoolExecutor = None):
-        #
-        #         for key in thematic_ids:
-        #             geom=self.thematic_data.features.get(key).geometry
-        #             self.logger.feedback_info(
-        #                 f"thematic id {str(key)} predictions calculated with "
-        #                 f"relevant distances (m) [{str(relevant_distances)}]"
-        #             )
-        #             process_results[key] = {}
-        #             try:
-        #                 fn = _predict_geom
-        #                 if executor:
-        #                     futures[key] = executor.submit(fn, key,geom,rd_prediction)
-        #                 else:
-        #                     process_results[key] = fn(key,geom,rd_prediction)
-        #             except ValueError as e:
-        #                 self.logger.feedback_warning(
-        #                     f"error for thematic id {str(key)} processed with "
-        #                     f"relevant distances (m) [{str(relevant_distances)}]"
-        #                 )
-        #                 process_results[key] = None
-        #                 self.logger.feedback_warning(str(e))
-        #
-        #     if self.max_workers == -1:
-        #         run_prediction()
-        #     else:
-        #         with ThreadPoolExecutor(self.max_workers) as prediction_executor:
-        #             run_prediction(prediction_executor)
-        #             self.logger.feedback_debug("waiting all started thematic calculations")
-        #             wait(list(futures.values()))
-        #             for thematic_id, future in futures.items():
-        #                 process_results[thematic_id] = future.result()
+        # Get aligner_result for all relevant_distances
+        aligner_result = self.process(
+            thematic_ids=thematic_ids,
+            relevant_distances=rd_prediction,
+        )
+        process_results = aligner_result.results
 
+        # Search for predictions
         if diff_metric is None:
             diff_metric = self.diff_metric
         diffs_dict = {}
@@ -1229,9 +1167,10 @@ class Aligner:
         >>> # Evaluate with a limit of 1 best prediction per feature
         >>> results = aligner.evaluate(thematic_ids=["id_01"],full_reference_strategy=FullReferenceStrategy.ONLY_FULL_REFERENCE,max_predictions=1)
         """
-
+        calculate_zeros = True  # boolean to check if we need to add al zero-rd results to the evaluations
         if thematic_ids is None:
             thematic_ids = self.thematic_data.features.keys()
+            calculate_zeros = False  # when all thematic features will be calculated, there is no need to calculate the zeros for all seperately
         if any(
             id_to_evaluate not in self.thematic_data.features.keys()
             for id_to_evaluate in thematic_ids
@@ -1247,11 +1186,6 @@ class Aligner:
             raise ValueError(
                 "Evaluation cannot be executed when 0 is not available in the array of relevant distances"
             )
-        # Calculate the ZERO-situation for all
-        aligner_result_zero = self.process(
-            relevant_distances=[0],
-        )
-        process_results_zero = aligner_result_zero.get_results(aligner=self)
 
         aligner_result = self.predict(
             thematic_ids=thematic_ids,
@@ -1262,10 +1196,16 @@ class Aligner:
         process_results_predictions = aligner_result.get_results(
             aligner=self, result_type=AlignerResultType.PREDICTIONS
         )
-        process_results = deep_merge(
-            process_results_zero,
-            process_results,
-        )
+        if calculate_zeros:
+            # Calculate the ZERO-situation for all, only when the predict is not done for all thematic ids
+            aligner_result_zero = self.process(
+                relevant_distances=[0],
+            )
+            process_results_zero = aligner_result_zero.get_results(aligner=self)
+            process_results = deep_merge(
+                process_results_zero,
+                process_results,
+            )
         process_results_temp_predictions = deepcopy(process_results_predictions)
         process_results_evaluated = deepcopy(process_results)
 
@@ -1302,7 +1242,7 @@ class Aligner:
                         Evaluation.TO_CHECK_NO_PREDICTION,
                     )
                     continue
-                # Check if prediction_scores are available to do the evaluatrion
+                # Check if prediction_scores are available to do the evaluation
                 prediction_score_available = True
                 for dist in process_results_temp_predictions[theme_id]:
                     if (
@@ -1327,15 +1267,17 @@ class Aligner:
                 distances = []
                 predictions = []
                 observation_match = False
+                base_brdr_observation = self._get_brdr_observation_from_properties(
+                    id_theme=theme_id,
+                    base_metadata_field=metadata_field,
+                )
                 for dist in sorted(dict_predictions_results.keys()):
                     props = deepcopy(
                         process_results_evaluated[theme_id][dist]["properties"]
                     )
-                    props_evaluation = self._evaluate(
-                        id_theme=theme_id,
-                        geom_predicted=dict_predictions_results[dist]["result"],
-                        base_metadata_field=metadata_field,
-                        observation=dict_predictions_results[dist].get("observation"),
+                    props_evaluation = self.get_observation_comparison_properties(
+                        process_result=dict_predictions_results[dist],
+                        base_brdr_observation=base_brdr_observation,
                     )
                     props.update(props_evaluation)
 
@@ -1349,21 +1291,22 @@ class Aligner:
                         continue
                     if (
                         props[EVALUATION_FIELD_NAME]
-                        == Evaluation.TO_CHECK_NO_PREDICTION
+                        in (Evaluation.TO_CHECK_NO_PREDICTION, Evaluation.NOT_EVALUATED)
                         and props[PREDICTION_COUNT] == 1
                     ):
                         props[EVALUATION_FIELD_NAME] = Evaluation.PREDICTION_UNIQUE
+                        # TODO can we add continue here? No, because this can get overwriten by prediction_unique_full
                     elif (
                         props[EVALUATION_FIELD_NAME]
-                        == Evaluation.TO_CHECK_NO_PREDICTION
+                        in (Evaluation.TO_CHECK_NO_PREDICTION, Evaluation.NOT_EVALUATED)
                         and props[PREDICTION_COUNT] > 1
                     ):
                         props[EVALUATION_FIELD_NAME] = (
                             Evaluation.TO_CHECK_PREDICTION_MULTI
                         )
-                    elif (
-                        props[EVALUATION_FIELD_NAME]
-                        != Evaluation.TO_CHECK_NO_PREDICTION
+                    elif props[EVALUATION_FIELD_NAME] not in (
+                        Evaluation.TO_CHECK_NO_PREDICTION,
+                        Evaluation.NOT_EVALUATED,
                     ):
                         # this prediction has a equality based on observation so the rest is not checked anymore
                         observation_match = True
@@ -1474,15 +1417,18 @@ class Aligner:
     ) -> Any:
         relevant_distance = round(0, RELEVANT_DISTANCE_DECIMALS)
         try:
-            props = deepcopy(
-                process_results_evaluated[theme_id][relevant_distance]["properties"]
-            )
+            process_result = process_results_evaluated[theme_id][relevant_distance]
+            props = deepcopy(process_result["properties"])
         except:
+            process_result = {"result": original_geometry}
             props = {}
-        props_evaluation = self._evaluate(
+        base_brdr_observation = self._get_brdr_observation_from_properties(
             id_theme=theme_id,
-            geom_predicted=original_geometry,
             base_metadata_field=metadata_field,
+        )
+        props_evaluation = self.get_observation_comparison_properties(
+            process_result=process_result,
+            base_brdr_observation=base_brdr_observation,
         )
         props.update(props_evaluation)
         props[EVALUATION_FIELD_NAME] = evaluation
@@ -1740,19 +1686,42 @@ class Aligner:
 
         return diffs
 
-    def _evaluate(
+    def get_observation_properties(
         self,
-        id_theme,
-        geom_predicted,
-        base_metadata_field=METADATA_FIELD_NAME,
-        observation=None,
+        process_result,
     ):
         """
-        function that evaluates a predicted geometry and returns a properties-dictionary
+        function that returns the properties of the actual observation.
         """
+        geom_process_result = process_result["result"]
+        properties = {
+            FULL_ACTUAL_FIELD_NAME: None,
+        }
+        actual_brdr_observation = process_result.get(
+            "observation"
+        ) or self.compare_to_reference(geom_process_result)
+        process_result["observation"] = actual_brdr_observation
+        if (
+            actual_brdr_observation is None
+            or geom_process_result is None
+            or geom_process_result.is_empty
+        ):
+            return properties
+        properties[FULL_ACTUAL_FIELD_NAME] = actual_brdr_observation["full"]
+        return properties
+
+    def get_observation_comparison_properties(
+        self,
+        process_result,
+        base_brdr_observation=None,
+    ):
+        """
+        function that returns the properties of the actual observation.
+        If there is also a base_brdr_observation of the original geometry provided, also comparison-properties are added.
+        """
+        geom_process_result = process_result["result"]
         threshold_od_percentage = 1
         properties = {
-            # METADATA_FIELD_NAME: "",
             EVALUATION_FIELD_NAME: Evaluation.TO_CHECK_NO_PREDICTION,
             FULL_BASE_FIELD_NAME: None,
             FULL_ACTUAL_FIELD_NAME: None,
@@ -1761,31 +1730,18 @@ class Aligner:
             DIFF_PERCENTAGE_FIELD_NAME: None,
             DIFF_AREA_FIELD_NAME: None,
         }
-        # TODO: threading?
-        actual_brdr_observation = observation or self.compare_to_reference(
-            geom_predicted
-        )
+        props = self.get_observation_properties(process_result)
+        properties.update(props)
+
+        actual_brdr_observation = process_result.get(
+            "observation"
+        ) or self.compare_to_reference(geom_process_result)
         if (
             actual_brdr_observation is None
-            or geom_predicted is None
-            or geom_predicted.is_empty
+            or geom_process_result is None
+            or geom_process_result.is_empty
         ):
-            properties[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
-            properties[FULL_ACTUAL_FIELD_NAME] = False
             return properties
-        properties[FULL_ACTUAL_FIELD_NAME] = actual_brdr_observation["full"]
-
-        try:
-            base_metadata = json.loads(
-                self.thematic_data.features.get(id_theme).properties[
-                    base_metadata_field
-                ]
-            )
-            base_brdr_observation = _reverse_metadata_observations_to_brdr_observation(
-                base_metadata
-            )
-        except:
-            base_brdr_observation = None
 
         if not is_brdr_observation(base_brdr_observation):
             properties[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
@@ -1883,3 +1839,19 @@ class Aligner:
         else:
             properties[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
         return properties
+
+    def _get_brdr_observation_from_properties(
+        self, id_theme: Any, base_metadata_field: str
+    ) -> dict:
+        try:
+            base_metadata = json.loads(
+                self.thematic_data.features.get(id_theme).properties[
+                    base_metadata_field
+                ]
+            )
+            base_brdr_observation = _reverse_metadata_observations_to_brdr_observation(
+                base_metadata
+            )
+        except:
+            base_brdr_observation = None
+        return base_brdr_observation

@@ -89,6 +89,10 @@ class OSMLoader(DictLoader):
         geom_union = buffer_pos(
             self.aligner.thematic_data.union, OSM_MAX_REFERENCE_BUFFER
         )
+        if geom_union is None or geom_union.is_empty:
+            raise ValueError(
+                "Reference could not be loaded. Please load thematic data first"
+            )
 
         # 2. Transform to WGS84 for OSMNX query
         gdf = gpd.GeoDataFrame(geometry=[geom_union], crs=self.aligner.crs)

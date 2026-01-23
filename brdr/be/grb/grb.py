@@ -15,8 +15,9 @@ from brdr.constants import (
     BASE_OBSERVATION_FIELD_NAME,
     DEFAULT_CRS,
     METADATA_FIELD_NAME,
+    EVALUATION_FIELD_NAME,
 )
-from brdr.enums import FullReferenceStrategy, AlignerResultType
+from brdr.enums import FullReferenceStrategy, AlignerResultType, Evaluation
 from brdr.loader import GeoJsonLoader
 from brdr.logger import Logger
 
@@ -139,16 +140,16 @@ def update_featurecollection_to_actual_grb(
                         if last_version_date is None or lvd < last_version_date:
                             last_version_date = lvd
                 except Exception:
-                    logger.feedback_info(
+                    logger.feedback_debug(
                         f"Problem with {LAST_VERSION_DATE}. No brdr_observation (- json-attribute-field) loaded for id {id_theme}"
                     )
             else:
-                logger.feedback_info(
+                logger.feedback_debug(
                     f"No brdr_observation (- json-attribute-field) loaded for id {str(id_theme)}"
                 )
                 last_version_date = None
         except:
-            logger.feedback_info(
+            logger.feedback_debug(
                 f"No brdr_observation (- json-attribute-field) loaded for id {str(id_theme)}"
             )
             last_version_date = None
@@ -187,9 +188,12 @@ def update_featurecollection_to_actual_grb(
     )
     process_results = aligner_result.get_results(aligner=aligner)
     affected_and_changeable = []
+    affected_and_not_changed = []
     for k, v in process_results.items():
-        if v[max_distance_for_actualisation]["result_diff"].is_empty:
+        if not v[max_distance_for_actualisation]["result_diff"].is_empty:
             affected_and_changeable.append(k)
+        else:
+            affected_and_not_changed.append(k)
 
     # EXECUTE evaluation
     aligner_result = aligner.evaluate(
@@ -200,6 +204,10 @@ def update_featurecollection_to_actual_grb(
         max_predictions=max_predictions,
         multi_to_best_prediction=multi_to_best_prediction,
     )
+    for k, v in aligner_result.results.items():
+        if k in affected_and_not_changed:
+            for dist in v.keys():
+                v[dist]["properties"][EVALUATION_FIELD_NAME] = Evaluation.NO_CHANGE
 
     return aligner_result.get_results_as_geojson(
         aligner=aligner,

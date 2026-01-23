@@ -370,6 +370,10 @@ class OGCFeatureAPIReferenceLoader(GeoJsonLoader):
             raise ValueError(f"Unsupported CRS. Supported: {supported_crs}")
 
         geom_union = buffer_pos(self.aligner.thematic_data.union, MAX_REFERENCE_BUFFER)
+        if geom_union is None or geom_union.is_empty:
+            raise ValueError(
+                "Reference could not be loaded. Please load thematic data first"
+            )
         ogcfeature_url = f"{collection_url}/items?"
         params = {"limit": self.limit, "crs": from_crs(self.aligner.crs), "f": "json"}
 
@@ -477,6 +481,10 @@ class WFSReferenceLoader(GeoJsonLoader):
             raise ValueError(f"Unsupported CRS. Supported: {supported_crs}")
 
         geom_union = buffer_pos(self.aligner.thematic_data.union, MAX_REFERENCE_BUFFER)
+        if geom_union is None or geom_union.is_empty:
+            raise ValueError(
+                "Reference could not be loaded. Please load thematic data first"
+            )
         params = {
             "SERVICE": "WFS",
             "REQUEST": "GetFeature",
