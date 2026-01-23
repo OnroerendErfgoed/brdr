@@ -81,7 +81,10 @@ class BeCadastralParcelLoader(GeoJsonLoader):
         if not self.aligner.thematic_data:
             raise ValueError("Thematic data not loaded")
         geom_union = buffer_pos(self.aligner.thematic_data.union, MAX_REFERENCE_BUFFER)
-
+        if geom_union is None or geom_union.is_empty:
+            raise ValueError(
+                "Reference could not be loaded. Please load thematic data first"
+            )
         collection, id_property = get_collection_cadastral(
             geometry=geom_union,
             crs=self.aligner.crs,
