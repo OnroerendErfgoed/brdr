@@ -188,7 +188,7 @@ def update_featurecollection_to_actual_grb(
     process_results = aligner_result.get_results(aligner=aligner)
     affected_and_changeable = []
     for k, v in process_results.items():
-        if v[max_distance_for_actualisation]["result_diff"].is_empty:
+        if not v[max_distance_for_actualisation]["result_diff"].is_empty:
             affected_and_changeable.append(k)
 
     # EXECUTE evaluation
