@@ -139,16 +139,16 @@ def update_featurecollection_to_actual_grb(
                         if last_version_date is None or lvd < last_version_date:
                             last_version_date = lvd
                 except Exception:
-                    logger.feedback_info(
+                    logger.feedback_debug(
                         f"Problem with {LAST_VERSION_DATE}. No brdr_observation (- json-attribute-field) loaded for id {id_theme}"
                     )
             else:
-                logger.feedback_info(
+                logger.feedback_debug(
                     f"No brdr_observation (- json-attribute-field) loaded for id {str(id_theme)}"
                 )
                 last_version_date = None
         except:
-            logger.feedback_info(
+            logger.feedback_debug(
                 f"No brdr_observation (- json-attribute-field) loaded for id {str(id_theme)}"
             )
             last_version_date = None

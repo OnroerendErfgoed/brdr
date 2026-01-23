@@ -896,7 +896,7 @@ class Aligner:
         def run_process(executor: ThreadPoolExecutor = None):
             for thematic_id in thematic_ids:
                 geom = self.thematic_data.features.get(thematic_id).geometry
-                self.logger.feedback_info(
+                self.logger.feedback_debug(
                     f"thematic id {str(thematic_id)} processed with "
                     f"relevant distances (m) [{str(relevant_distances)}]"
                 )
