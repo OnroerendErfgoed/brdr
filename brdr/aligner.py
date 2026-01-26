@@ -23,7 +23,12 @@ from shapely.geometry.base import BaseGeometry
 from brdr import __version__
 from brdr.configs import AlignerConfig
 from brdr.configs import ProcessorConfig
-from brdr.constants import AREA_CHANGE, METADATA_FIELD_NAME, MAX_REFERENCE_BUFFER
+from brdr.constants import (
+    AREA_CHANGE,
+    METADATA_FIELD_NAME,
+    MAX_REFERENCE_BUFFER,
+    OBSERVATION_FIELD_NAME,
+)
 from brdr.constants import AREA_PERCENTAGE_CHANGE
 from brdr.constants import DATE_FORMAT
 from brdr.constants import DEFAULT_CRS
@@ -561,6 +566,7 @@ def aligner_metadata_decorator(f):
             # add observation properties to the properties
             observation_props = aligner.get_observation_properties(process_result)
             props = process_result["properties"]
+            props[OBSERVATION_FIELD_NAME] = process_result["observation"] #adding the raw brdr_observation?!
             props.update(observation_props)
             process_result["properties"] = props
 
