@@ -13,11 +13,6 @@ click==8.1.7
     # via
     #   black
     #   pip-tools
-colorama==0.4.6
-    # via
-    #   build
-    #   click
-    #   pytest
 contourpy==1.2.1
     # via matplotlib
 coverage==7.6.4
@@ -29,12 +24,9 @@ flake8==7.1.1
 fonttools==4.51.0
     # via matplotlib
 geojson==3.2.0
+    # via brdr (pyproject.toml)
+geopandas==1.1.2
     # via
-    #   brdr
-    #   brdr (pyproject.toml)
-geopandas==1.1.0
-    # via
-    #   brdr
     #   brdr (pyproject.toml)
     #   osmnx
 hatchling==1.28.0
@@ -59,7 +51,6 @@ mypy-extensions==1.0.0
     #   mypy
 networkx==3.6.1
     # via
-    #   brdr
     #   brdr (pyproject.toml)
     #   osmnx
 numpy==1.26.4
@@ -73,9 +64,7 @@ numpy==1.26.4
     #   shapely
     #   topojson
 osmnx==2.0.7
-    # via
-    #   brdr
-    #   brdr (pyproject.toml)
+    # via brdr (pyproject.toml)
 packaging==24.2
     # via
     #   black
@@ -119,7 +108,6 @@ pyparsing==3.1.2
     # via matplotlib
 pyproj==3.7.2
     # via
-    #   brdr
     #   brdr (pyproject.toml)
     #   geopandas
 pyproject-hooks==1.0.0
@@ -128,13 +116,10 @@ pyproject-hooks==1.0.0
     #   pip-tools
 pytest==8.3.4
     # via
-    #   brdr
     #   brdr (pyproject.toml)
     #   pytest-cov
 pytest-cov==6.0.0
-    # via
-    #   brdr
-    #   brdr (pyproject.toml)
+    # via brdr (pyproject.toml)
 python-dateutil==2.9.0.post0
     # via
     #   matplotlib
@@ -147,17 +132,13 @@ pyyaml==6.0.1
     # via responses
 requests==2.32.4
     # via
-    #   brdr
     #   brdr (pyproject.toml)
     #   osmnx
     #   responses
 responses==0.25.6
-    # via
-    #   brdr
-    #   brdr (pyproject.toml)
+    # via brdr (pyproject.toml)
 shapely==2.1.2
     # via
-    #   brdr
     #   brdr (pyproject.toml)
     #   geopandas
     #   osmnx
@@ -165,13 +146,9 @@ shapely==2.1.2
 six==1.16.0
     # via python-dateutil
 toml==0.10.2
-    # via
-    #   brdr
-    #   brdr (pyproject.toml)
+    # via brdr (pyproject.toml)
 topojson==1.10
-    # via
-    #   brdr
-    #   brdr (pyproject.toml)
+    # via brdr (pyproject.toml)
 trove-classifiers==2024.5.22
     # via hatchling
 types-requests==2.32.4.20250913
