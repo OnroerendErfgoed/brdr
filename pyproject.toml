@@ -32,7 +32,7 @@ dependencies = [
     "networkx~=3.6",
     "pyproj~=3.7",
     "osmnx~=2.0",
-    "geopandas~=1.1.2"
+    "geopandas~=1.1, >=1.1.2",
 ]
 [project.urls]
 Documentation = "https://github.com/OnroerendErfgoed/brdr/blob/main/README.md"
