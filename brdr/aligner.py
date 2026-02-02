@@ -688,8 +688,9 @@ class Aligner:
     --------
     >>> from brdr.aligner import Aligner
     >>> aligner = Aligner(crs="EPSG:31370")
-    >>> aligner.load_thematic_data(my_features)
-    >>> results = aligner.align(relevant_distances=[0.5, 1.0])
+    >>> aligner.load_thematic_data(...)
+    >>> aligner.load_reference_data(...)
+    >>> results = aligner.process(relevant_distances=[0, 0.5, 1.0])
     """
 
     def __init__(
