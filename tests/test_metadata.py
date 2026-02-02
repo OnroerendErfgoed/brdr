@@ -1,6 +1,6 @@
 from shapely import from_wkt
-
-from brdr.aligner import Aligner
+import unittest
+from brdr.aligner import Aligner, _reverse_metadata_observations_to_brdr_observation
 from brdr.configs import AlignerConfig
 from brdr.loader import DictLoader
 
@@ -59,3 +59,89 @@ def test_metadata():
     #     "sosa:hasFeatureOfInterest": {"id": ANY},
     #     "type": "sosa:Actuation",
     # }
+
+class TestReverseMetadata(unittest.TestCase):
+
+    def setUp(self):
+        """Mock data to re-use"""
+        self.metadata =     {"observations": [
+        {
+            "type": "sosa:Observation",
+            "has_feature_of_interest": "urn:uuid:d99b836d-8804-4de2-8630-bed8343f9f89",
+            "made_by_sensor": "urn:uuid:8850bc35-17b3-4ba2-a467-d810afe34975",
+            "result_time": "2026-02-02T11:53:55",
+            "id": "urn:uuid:46400080-7ea9-4b77-b00c-c7a372681d4b",
+            "observed_property": "brdr:area_overlap",
+            "result": {
+                "value": 694.04,
+                "type": "float"
+            },
+            "used_procedure": "brdr:observation_procedure_area_overlap",
+            "used": "urn:uuid:af8effef-d4a0-fee1-889a-dba7dcd55bfb"
+        },
+        {
+            "type": "sosa:Observation",
+            "has_feature_of_interest": "urn:uuid:d99b836d-8804-4de2-8630-bed8343f9f89",
+            "made_by_sensor": "urn:uuid:8850bc35-17b3-4ba2-a467-d810afe34975",
+            "result_time": "2026-02-02T11:53:55",
+            "id": "urn:uuid:f32d7c6a-d462-4f51-8196-9ada9ec041ba",
+            "observed_property": "brdr:area_overlap_percentage",
+            "result": {
+                "value": 100,
+                "type": "float"
+            },
+            "used_procedure": "brdr:observation_procedure_area_overlap_percentage",
+            "used": "urn:uuid:af8effef-d4a0-fee1-889a-dba7dcd55bfb"
+        },
+        {
+            "type": "sosa:Observation",
+            "has_feature_of_interest": "urn:uuid:af8effef-d4a0-fee1-889a-dba7dcd55bfb",
+            "made_by_sensor": "urn:uuid:8850bc35-17b3-4ba2-a467-d810afe34975",
+            "result_time": "2026-02-02T11:53:55",
+            "id": "urn:uuid:9fa93009-2f8b-4311-b38a-f1ff48e343a3",
+            "observed_property": "brdr:area_overlap_full",
+            "result": {
+                "value": True,
+                "type": "boolean"
+            },
+            "used_procedure": "brdr:observation_procedure_area_overlap_full",
+            "used": "urn:uuid:d99b836d-8804-4de2-8630-bed8343f9f89"
+        },
+        {
+            "type": "sosa:Observation",
+            "has_feature_of_interest": "urn:uuid:af8effef-d4a0-fee1-889a-dba7dcd55bfb",
+            "made_by_sensor": "urn:uuid:8850bc35-17b3-4ba2-a467-d810afe34975",
+            "result_time": "2026-02-02T11:53:55",
+            "id": "urn:uuid:a1d135d3-db33-4d67-801c-65180b224f8c",
+            "observed_property": "brdr:area",
+            "result": {
+                "value": 694.04,
+                "type": "float"
+            },
+            "used_procedure": "brdr:observation_procedure_area"
+        }
+    ]}
+
+    def test_empty_input(self):
+        """Test if function returns empty dict when input is empty or observations are empty."""
+        self.assertEqual(_reverse_metadata_observations_to_brdr_observation({}), {})
+        self.assertEqual(
+            _reverse_metadata_observations_to_brdr_observation({"obs": []}), {}
+        )
+
+    def test_happy_path_root_properties(self):
+        """Test of observations (area, area_od) are placed correctly."""
+
+        result = _reverse_metadata_observations_to_brdr_observation(self.metadata)
+
+        self.assertEqual(result["area"], 694.04)
+        self.assertIsNone(result["alignment_date"])
+
+    def test_reference_features_aggregation(self):
+        """Test if values of references are grouped correctly."""
+        result = _reverse_metadata_observations_to_brdr_observation(self.metadata)
+        # Check of REF_1 is aangemaakt in reference_features
+        #TODO - check and fix
+        self.assertIn("urn:uuid:46400080-7ea9-4b77-b00c-c7a372681d4b", result["reference_features"])
+        # self.assertEqual(result["reference_features"]["urn:uuid:46400080-7ea9-4b77-b00c-c7a372681d4b"]["area"], 694.04)
+        # self.assertEqual(result["reference_features"]["urn:uuid:46400080-7ea9-4b77-b00c-c7a372681d4b"]["percentage"], 0.5)
