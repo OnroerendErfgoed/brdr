@@ -480,6 +480,7 @@ def _reverse_metadata_observations_to_brdr_observation(metadata: List[Dict]) -> 
     checking for the presence of a 'ref_id' that differs from the primary
     result interest ID.
     """
+    #TODO - this function has to be improved
     if not metadata or not "observations" in metadata:
         return {}
 
@@ -504,7 +505,7 @@ def _reverse_metadata_observations_to_brdr_observation(metadata: List[Dict]) -> 
         prop = obs.get("observed_property")
         result_val = obs.get("result", {}).get("value")
         used = obs.get("used", {})
-        ref_id = used.get("id")
+        ref_id = obs.get("id")
 
         # 1. Restore global values (area, area_od, full at root level)
         if prop == "brdr:area":
@@ -1850,14 +1851,10 @@ class Aligner:
         self, id_theme: Any, base_metadata_field: str
     ) -> dict:
         try:
-            base_metadata = json.loads(
-                self.thematic_data.features.get(id_theme).properties[
-                    base_metadata_field
-                ]
-            )
+            base_metadata = self.thematic_data.features.get(id_theme).properties[
+                    base_metadata_field ]
             base_brdr_observation = _reverse_metadata_observations_to_brdr_observation(
-                base_metadata
-            )
+                base_metadata )
         except:
             base_brdr_observation = None
         return base_brdr_observation

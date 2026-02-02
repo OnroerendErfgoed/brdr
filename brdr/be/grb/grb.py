@@ -124,8 +124,9 @@ def update_featurecollection_to_actual_grb(
     for id_theme, feature in aligner.thematic_data.features.items():
         try:
             if not base_metadata_field is None:
-                base_observation_string = feature.properties[base_metadata_field]
-                base_observation = json.loads(base_observation_string)
+
+                base_observation = feature.properties[base_metadata_field]
+                #base_observation = json.loads(base_observation_string)
 
                 logger.feedback_debug("observation: " + str(base_observation))
                 try:
@@ -199,7 +200,7 @@ def update_featurecollection_to_actual_grb(
     aligner_result = aligner.evaluate(
         relevant_distances=relevant_distances,
         thematic_ids=affected_and_changeable,
-        metadata_field=BASE_OBSERVATION_FIELD_NAME,
+        metadata_field=base_metadata_field,
         full_reference_strategy=full_reference_strategy,
         max_predictions=max_predictions,
         multi_to_best_prediction=multi_to_best_prediction,

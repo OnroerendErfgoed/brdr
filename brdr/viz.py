@@ -7,6 +7,7 @@ from pprint import pprint
 import geopandas as gpd
 import numpy as np
 from shapely.geometry import Point, LineString
+from shapely.geometry.multilinestring import MultiLineString
 
 from brdr.constants import DEFAULT_CRS
 from brdr.typings import ProcessResult
@@ -52,41 +53,69 @@ def _make_map(ax, processresult, thematic_dict, reference_dict):
         ax.set_xlim(bounds[0] - padding, bounds[2] + padding)
         ax.set_ylim(bounds[1] - padding, bounds[3] + padding)
 
-        # 1. Plot Reference Data (wordt nu 'afgesneden' door bovenstaande limieten)
+        # 1. Plot Reference Data
+        reference_has_polygons = any(gs_reference.geom_type.isin(["Polygon", "MultiPolygon"]))
+        if reference_has_polygons:
+            color="lightgray"
+        else:
+            color="black"
         gs_reference.plot(
-            ax=ax, color="#FFF8C9", edgecolor="black", linewidth=2.0, zorder=1
+            ax=ax,color=color, edgecolor="black", linewidth=2.0, zorder=1
         )
 
-        # 2. Plot Resulting Geometry
-        gs_results.plot(
-            ax=ax, alpha=0.8, color="none", edgecolor="green", linewidth=5.0, zorder=2
-        )
+        # 2. Plot Resulting Geometry (Lijnen hebben geen vulling, dus we focussen op edgecolor)
+        results_has_polygons = any(gs_results.geom_type.isin(["Polygon", "MultiPolygon"]))
+        if results_has_polygons:
+            color="none"
+        else:
+            color="green"
+        gs_results.plot(ax=ax, color=color, edgecolor="green", linewidth=2.0, zorder=2)
 
         # 3. Plot Original (Thematic) Data
+        thematic_has_polygons = any(gs_thematic.geom_type.isin(["Polygon", "MultiPolygon"]))
+        if thematic_has_polygons:
+            color="none"
+        else:
+            color="#0000FF"
         gs_thematic.plot(
             ax=ax,
-            alpha=0.6,
-            color="none",
+            color=color,
             edgecolor="#0000FF",
             linewidth=3.0,
             linestyle="dashdot",
             zorder=3,
         )
 
-        # 4. Plot Differences
-        gpd.GeoSeries(list(results_diff_pos.values())).plot(
-            ax=ax, color="none", edgecolor="green", hatch="+", zorder=4
-        )
-        gpd.GeoSeries(list(results_diff_neg.values())).plot(
-            ax=ax, color="none", edgecolor="red", hatch="+", zorder=5
-        )
+        # 4. Plot Differences (Generiek maken voor lijnen)
+        for diff_data, color in [
+            (results_diff_pos, "green"),
+            (results_diff_neg, "red"),
+        ]:
+            if diff_data:
+                gs_diff = gpd.GeoSeries(list(diff_data.values()))
+                # Gebruik hatch alleen als er Polygonen in de series zitten
+                has_polygons = any(gs_diff.geom_type.isin(["Polygon", "MultiPolygon"]))
+
+                gs_diff.plot(
+                    ax=ax,
+                    color=(color if not has_polygons else "none"),
+                    edgecolor=color,
+                    hatch="+" if has_polygons else None,  # Alleen hatch bij polygonen
+                    linewidth=(
+                        2.0 if not has_polygons else 1.0
+                    ),  # Dikkere lijn voor LineStrings
+                    zorder=5,
+                )
 
         # Legenda
-        legend_patch_res = Patch(facecolor="none", edgecolor="green", label="Result")
+        legend_patch_res = Patch(facecolor="green",hatch="+", edgecolor="green", label="Result")
         legend_patch_ori = Patch(
-            facecolor="none", edgecolor="blue", label="Original", linestyle="dashdot"
+            facecolor="blue", edgecolor="blue",hatch="+", label="Original", linestyle="dashdot"
         )
-        ax.legend(handles=[legend_patch_res, legend_patch_ori])
+        legend_patch_removed = Patch(
+            facecolor="red", edgecolor="red",hatch="+", label="Removed", linestyle="dashdot"
+        )
+        ax.legend(handles=[legend_patch_res, legend_patch_ori,legend_patch_removed])
 
     except Exception as e:
         logging.error(f"make_map: Error while making map: {e}")
@@ -256,9 +285,16 @@ def animated_map(
         theme_id = list(dict_results_by_distance[frame_dist].keys())[0]
         entry = dict_results_by_distance[frame_dist][theme_id]
 
-        area_diff = entry["result_diff"].area
-        area_total = entry["result"].area
-        percentage = 100 * area_diff / area_total if area_total != 0 else 0
+        if isinstance(entry["result"],(LineString,MultiLineString)):
+
+            original_length= dict_thematic[theme_id].length
+            result_length = entry["result"].length
+            diff_length = abs(result_length - original_length)
+            percentage = 100 * diff_length / original_length if original_length != 0 else 0
+        else:
+            area_diff = entry["result_diff"].area
+            area_total = entry["result"].area
+            percentage = 100 * area_diff / area_total if area_total != 0 else 0
 
         # Append new data points
         x_vals.append(frame_dist)
