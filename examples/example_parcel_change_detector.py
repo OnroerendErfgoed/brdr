@@ -10,7 +10,7 @@ from brdr.constants import (
     RELEVANT_DISTANCE_FIELD_NAME,
     OBSERVATION_FIELD_NAME,
 )
-from brdr.utils import write_geojson
+from brdr.utils import write_featurecollection_to_geojson
 
 if __name__ == "__main__":
     """
@@ -94,7 +94,7 @@ fcs = update_featurecollection_to_actual_grb(
     max_distance_for_actualisation=max_distance_for_actualisation,
 )
 
-write_geojson(
+write_featurecollection_to_geojson(
     os.path.join("output/", "parcel_change_detector_with.geojson"), fcs["result"]
 )
 

@@ -5,12 +5,13 @@ import math
 import os.path
 import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime, date
+from decimal import Decimal
 
 import numpy as np
 import requests
 from geojson import Feature
 from geojson import FeatureCollection
-from geojson import dump
 from pyproj import CRS
 from shapely import GeometryCollection
 from shapely import make_valid
@@ -128,18 +129,30 @@ def _feature_from_geom(
     return Feature(geometry=geom, id=feature_id, properties=properties)
 
 
-def write_geojson(path_to_file, geojson):
+def serialize_featurecollection(featurecollection):
+    for feature in featurecollection["features"]:
+        props = feature["properties"]
+        for key, value in props.items():
+            if isinstance(value, (dict, list)):
+                props[key] = json.dumps(value, ensure_ascii=False)
+            if isinstance(value, (datetime, date)):
+                props[key] = value.isoformat()
+            if isinstance(value, Decimal):
+                props[key] = float(value)
+
+def write_featurecollection_to_geojson(path_to_file, featurecollection):
     """
-    Write a GeoJSON object to a file.
+    Write a featurecollection object to a geojson-file.
 
     Args:
         path_to_file (str): Path to the output file.
-        geojson (FeatureCollection): The GeoJSON object to write.
+        featurecollection (FeatureCollection): The featurecollection object to write.
     """
+    serialize_featurecollection(featurecollection)
     parent = os.path.dirname(path_to_file)
     os.makedirs(parent, exist_ok=True)
-    with open(path_to_file, "w") as f:
-        dump(geojson, f, default=str)
+    with open(path_to_file, "w",encoding='utf-8') as f:
+        json.dump(featurecollection, f,  indent=2)
 
 
 def flatten_iter(lst):
@@ -642,7 +655,7 @@ def get_collection_by_partition(
     if collection:
         unique_features = deduplicate_features(features_list)
         collection["features"] = unique_features
-    # TODO; only return fatures that intersect with the 'geometry'?
+    # TODO; only return features that intersect with the 'geometry'?
 
     return collection
 

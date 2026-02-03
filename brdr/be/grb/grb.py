@@ -125,18 +125,20 @@ def update_featurecollection_to_actual_grb(
         try:
             if not base_metadata_field is None:
 
-                base_observation = feature.properties[base_metadata_field]
-                #base_observation = json.loads(base_observation_string)
+                base_metadata = feature.properties[base_metadata_field]
+                if isinstance(base_metadata,str):
+                    base_metadata = json.loads(base_metadata)
 
-                logger.feedback_debug("observation: " + str(base_observation))
+                logger.feedback_debug("observation: " + str(base_metadata))
+                #TODO - this not available in base_metadata?
                 try:
                     logger.feedback_debug(str(feature.properties))
                     if (
-                        LAST_VERSION_DATE in base_observation
-                        and base_observation[LAST_VERSION_DATE] is not None
-                        and base_observation[LAST_VERSION_DATE] != ""
+                        LAST_VERSION_DATE in base_metadata
+                        and base_metadata[LAST_VERSION_DATE] is not None
+                        and base_metadata[LAST_VERSION_DATE] != ""
                     ):
-                        str_lvd = base_observation[LAST_VERSION_DATE]
+                        str_lvd = base_metadata[LAST_VERSION_DATE]
                         lvd = datetime.strptime(str_lvd, DATE_FORMAT).date()
                         if last_version_date is None or lvd < last_version_date:
                             last_version_date = lvd

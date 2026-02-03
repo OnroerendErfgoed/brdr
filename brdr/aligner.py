@@ -82,7 +82,7 @@ from brdr.utils import get_geometry_difference_metrics_from_processresult
 from brdr.utils import get_geometry_difference_metrics_from_processresults
 from brdr.utils import is_brdr_observation
 from brdr.utils import urn_from_geom
-from brdr.utils import write_geojson
+from brdr.utils import write_featurecollection_to_geojson
 
 ###################
 
@@ -310,7 +310,7 @@ class AlignerResult:
                         continue
                     prop_dictionary[theme_id][relevant_distance][
                         METADATA_FIELD_NAME
-                    ] = json.dumps(metadata_result)
+                    ]  = metadata_result
 
         return get_geojsons_from_process_results(
             results,
@@ -358,7 +358,7 @@ class AlignerResult:
         )
         for name, fc in fcs.items():
             file_name = f"{result_type.value}_{name}.geojson"
-            write_geojson(os.path.join(path, file_name), fc)
+            write_featurecollection_to_geojson(os.path.join(path, file_name), fc)
 
 
 def _get_metadata_observations_from_process_result(
@@ -480,7 +480,7 @@ def _reverse_metadata_observations_to_brdr_observation(metadata: List[Dict]) -> 
     checking for the presence of a 'ref_id' that differs from the primary
     result interest ID.
     """
-    #TODO - this function has to be improved
+    # TODO - this function has to be improved
     if not metadata or not "observations" in metadata:
         return {}
 
@@ -567,7 +567,9 @@ def aligner_metadata_decorator(f):
             # add observation properties to the properties
             observation_props = aligner.get_observation_properties(process_result)
             props = process_result["properties"]
-            props[OBSERVATION_FIELD_NAME] = process_result["observation"] #adding the raw brdr_observation?!
+            props[OBSERVATION_FIELD_NAME] = process_result[
+                "observation"
+            ]  # adding the raw brdr_observation?!
             props.update(observation_props)
             process_result["properties"] = props
 
@@ -1853,9 +1855,11 @@ class Aligner:
     ) -> dict:
         try:
             base_metadata = self.thematic_data.features.get(id_theme).properties[
-                    base_metadata_field ]
+                base_metadata_field
+            ]
             base_brdr_observation = _reverse_metadata_observations_to_brdr_observation(
-                base_metadata )
+                base_metadata
+            )
         except:
             base_brdr_observation = None
         return base_brdr_observation
