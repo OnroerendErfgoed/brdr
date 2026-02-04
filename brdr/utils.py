@@ -157,59 +157,6 @@ def write_featurecollection_to_geopackage(output_path, featurecollection,  layer
                 #,overwrite_layer=True
                 )
 
-
-def get_serialization_plan(features):
-    """
-    Scant de features om te bepalen welke keys transformatie nodig hebben.
-    """
-    plan = {}
-    keys_to_check = set()
-    if features:
-        # Pak alle mogelijke keys uit de eerste feature (of scan de hele set indien nodig)
-        keys_to_check = set(features[0]["properties"].keys())
-
-    for feature in features:
-        if not keys_to_check:
-            break
-
-        props = feature["properties"]
-        found_for_this_feature = set()
-
-        for key in keys_to_check:
-            val = props.get(key)
-            if val is not None:
-                # Bepaal welke transformatie nodig is
-                if isinstance(val, (dict, list)):
-                    plan[key] = lambda v: json.dumps(v, ensure_ascii=False)
-                elif isinstance(val, (datetime, date)):
-                    plan[key] = lambda v: v.isoformat()
-                elif isinstance(val, Decimal):
-                    plan[key] = lambda v: float(v)
-
-                found_for_this_feature.add(key)
-
-        keys_to_check -= found_for_this_feature
-
-    return plan
-
-
-def serialize_featurecollection_fast(featurecollection):
-    features = featurecollection.get("features", [])
-    if not features:
-        return
-
-    # 1. Maak het plan (eenmalige kost)
-    plan = get_serialization_plan(features)
-
-    # 2. Voer alleen de noodzakelijke transformaties uit
-    # We loopen alleen over de keys die in het plan staan
-    for feature in features:
-        props = feature["properties"]
-        for key, transform_func in plan.items():
-            val = props.get(key)
-            if val is not None:
-                props[key] = transform_func(val)
-
 def geojson_serializor(obj):
     if isinstance(obj, (datetime, date)):
         return obj.isoformat()

@@ -43,7 +43,7 @@ class AlignerFeature:
     --------
     >>> from shapely.geometry import Point
     >>> feature = AlignerFeature(
-    ...     brdr_id="feat_01",
+    ...     brdr_id="urn:uuid:aa4c4b22-33e1-49db-b349-b55f63f1b86f",
     ...     geometry=Point(0, 0),
     ...     properties={"type": "boundary"}
     ... )
