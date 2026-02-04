@@ -8,6 +8,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, date
 from decimal import Decimal
 
+import geopandas as gpd
 import numpy as np
 import requests
 from geojson import Feature
@@ -129,30 +130,117 @@ def _feature_from_geom(
     return Feature(geometry=geom, id=feature_id, properties=properties)
 
 
-def serialize_featurecollection(featurecollection):
-    for feature in featurecollection["features"]:
+def write_featurecollection_to_geopackage(output_path, featurecollection,  layer_name="resulting_layer"):
+    # 1. Change to GeoDataFrame
+    crs_name = featurecollection.get("crs", {}).get("properties", {}).get("name")
+    gdf = gpd.GeoDataFrame.from_features(featurecollection, crs=crs_name)
+
+    # 2. Set CRS
+    if gdf.crs is None:
+        gdf.set_crs(DEFAULT_CRS, inplace=True)
+
+    # 3. serialize dicts and lists to string
+    for col in gdf.columns:
+        if col == "geometry":
+            continue
+
+        sample = gdf[col].dropna().iloc[0] if not gdf[col].dropna().empty else None
+        if isinstance(sample, (dict, list)):
+            gdf[col] = gdf[col].apply(
+                lambda x: json.dumps(x, ensure_ascii=False) if x is not None else None
+            )
+
+    # Write to geopackage
+    gdf.to_file(output_path, driver="GPKG", layer=layer_name,
+                #mode="a",
+                engine="pyogrio"
+                #,overwrite_layer=True
+                )
+
+
+def get_serialization_plan(features):
+    """
+    Scant de features om te bepalen welke keys transformatie nodig hebben.
+    """
+    plan = {}
+    keys_to_check = set()
+    if features:
+        # Pak alle mogelijke keys uit de eerste feature (of scan de hele set indien nodig)
+        keys_to_check = set(features[0]["properties"].keys())
+
+    for feature in features:
+        if not keys_to_check:
+            break
+
         props = feature["properties"]
-        for key, value in props.items():
-            if isinstance(value, (dict, list)):
-                props[key] = json.dumps(value, ensure_ascii=False)
-            if isinstance(value, (datetime, date)):
-                props[key] = value.isoformat()
-            if isinstance(value, Decimal):
-                props[key] = float(value)
+        found_for_this_feature = set()
 
-def write_featurecollection_to_geojson(path_to_file, featurecollection):
-    """
-    Write a featurecollection object to a geojson-file.
+        for key in keys_to_check:
+            val = props.get(key)
+            if val is not None:
+                # Bepaal welke transformatie nodig is
+                if isinstance(val, (dict, list)):
+                    plan[key] = lambda v: json.dumps(v, ensure_ascii=False)
+                elif isinstance(val, (datetime, date)):
+                    plan[key] = lambda v: v.isoformat()
+                elif isinstance(val, Decimal):
+                    plan[key] = lambda v: float(v)
 
-    Args:
-        path_to_file (str): Path to the output file.
-        featurecollection (FeatureCollection): The featurecollection object to write.
-    """
-    serialize_featurecollection(featurecollection)
-    parent = os.path.dirname(path_to_file)
+                found_for_this_feature.add(key)
+
+        keys_to_check -= found_for_this_feature
+
+    return plan
+
+
+def serialize_featurecollection_fast(featurecollection):
+    features = featurecollection.get("features", [])
+    if not features:
+        return
+
+    # 1. Maak het plan (eenmalige kost)
+    plan = get_serialization_plan(features)
+
+    # 2. Voer alleen de noodzakelijke transformaties uit
+    # We loopen alleen over de keys die in het plan staan
+    for feature in features:
+        props = feature["properties"]
+        for key, transform_func in plan.items():
+            val = props.get(key)
+            if val is not None:
+                props[key] = transform_func(val)
+
+def geojson_serializor(obj):
+    if isinstance(obj, (datetime, date)):
+        return obj.isoformat()
+    if isinstance(obj, Decimal):
+        return float(obj)
+    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
+
+
+def write_featurecollection_to_geojson(output_path, featurecollection):
+    features = featurecollection.get("features", [])
+
+    # Determine all columns who need a json.dumps (lists and dicts)
+    keys_to_stringify = set()
+    if features:
+        sample_props = features[0]["properties"]
+        for k, v in sample_props.items():
+            if isinstance(v, (dict, list)):
+                keys_to_stringify.add(k)
+
+    # Serializes these columns
+    for feature in features:
+        props = feature["properties"]
+        for key in keys_to_stringify:
+            if props[key] is not None:
+                props[key] = json.dumps(props[key], ensure_ascii=False)
+
+    #create/write file
+    parent = os.path.dirname(output_path)
     os.makedirs(parent, exist_ok=True)
-    with open(path_to_file, "w",encoding='utf-8') as f:
-        json.dump(featurecollection, f,  indent=2)
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(featurecollection, f,indent=2, default=geojson_serializor, ensure_ascii=False)
 
 
 def flatten_iter(lst):
