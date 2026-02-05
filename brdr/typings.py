@@ -49,8 +49,8 @@ class ProcessResult(TypedDict, total=False):
         Calculated metrics and feature attributes.
     metadata : Dict[Any, Any]
         Dictionary containing execution metadata.
-    observation : Dict[Any, Any]
-        Dictionary containing the alignment observation details.
+    observations : Dict[Any, Any]
+        Dictionary containing the alignment observations.
 
     Notes
     -----
@@ -81,7 +81,7 @@ class ProcessResult(TypedDict, total=False):
     result_relevant_diff: BaseGeometry
     properties: Dict[str, Any]
     metadata: Dict[Any, Any]
-    observation: Dict[Any, Any]
+    observations: Dict[Any, Any]
 
 
 InputId = Union[str, int]
