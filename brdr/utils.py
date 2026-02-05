@@ -794,7 +794,7 @@ def union_process_result(process_result: ProcessResult) -> ProcessResult:
     ProcessorConfig : Settings that define how these results are generated.
     """
     for key in ProcessResult.__annotations__:
-        if key in ["properties", "metadata", "observation"]:
+        if key in ["properties", "metadata", "observations"]:
             process_result[key] = process_result.get(key, {})  # noqa
             continue
         value = process_result.get(key, GeometryCollection())  # noqa

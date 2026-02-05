@@ -196,3 +196,7 @@
 - Added observation_properties to process_result
 - Fix for GRB Updater
 - Fix for Reference Loaders when no thematic data is loaded
+
+# 0.15.4
+
+- In progress

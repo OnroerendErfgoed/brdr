@@ -792,7 +792,7 @@ class DieussaertGeometryProcessor(BaseProcessor):
         for process_result in list_process_results:
             for key in process_result:
                 value = process_result[key]
-                if key in ["metadata", "observation"]:
+                if key in ["metadata", "observations"]:
                     # This will add the needed keys to the processResult. The values are filled afterwards
                     if key in merged_process_result:
                         continue

@@ -364,7 +364,7 @@ def _get_metadata_observations_from_process_result(
     processResult: ProcessResult,
     reference_lookup: Dict[any, any],
 ) -> List[Dict]:
-    observation = processResult["observation"]
+    observation = processResult["observations"]
     actuation_metadata = processResult["metadata"]["actuation"]
     observation_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S%z")
     sensor_uuid = uuid.uuid4()
@@ -501,7 +501,6 @@ def _reverse_metadata_observations_to_brdr_observation(metadata: Dict) -> Dict:
         # De overige velden (brdr_version etc.) zitten niet in de observaties
         # en moeten idealiter uit de context komen.
     }
-    alignment_date = None
     for obs in observations:
         prop = obs.get("observed_property")
         val = obs.get("result", {}).get("value")
@@ -532,8 +531,7 @@ def _reverse_metadata_observations_to_brdr_observation(metadata: Dict) -> Dict:
 
     # Finalize the reconstructed structure
     #TODO; this can be implemented better, but for now we get the information from the observation
-    if alignment_date:
-        reconstructed["alignment_date"] = alignment_date
+    reconstructed["alignment_date"] = actuation_metadata.get("result_time", None)
     reconstructed["reference_source"] = None
     reconstructed["brdr_version"] = None
     reconstructed["reference_od"] = None
@@ -551,14 +549,14 @@ def aligner_metadata_decorator(f):
             thematic_id, geometry, relevant_distance, aligner, *args, **kwargs
         )
         if aligner.add_observations:
-            process_result["observation"] = aligner.compare_to_reference(
+            process_result["observations"] = aligner.compare_to_reference(
                 process_result.get("result")
             )
             # add observation properties to the properties
             observation_props = aligner.get_observation_properties(process_result)
             props = process_result["properties"]
             props[OBSERVATION_FIELD_NAME] = process_result[
-                "observation"
+                "observations"
             ]  # adding the raw brdr_observation?!
             props.update(observation_props)
             process_result["properties"] = props
@@ -591,6 +589,7 @@ def aligner_metadata_decorator(f):
             thematic_feature = aligner.thematic_data.features[thematic_id]
             feature_of_interest_id = thematic_feature.brdr_id
             result_urn = urn_from_geom(process_result["result"])
+            actuation_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S%z")
             process_result["metadata"] = {}
             process_result["metadata"]["actuation"] = {
                 "id": actuation_id.urn,
@@ -599,6 +598,7 @@ def aligner_metadata_decorator(f):
                 "changes": "geo:hasGeometry",
                 "sosa:hasFeatureOfInterest": {"id": feature_of_interest_id},
                 "result": result_urn,
+                "result_time":actuation_time,#TODO _CHECK
                 "procedure": {
                     "id": processor_id,
                     "implementedBy": processor_name,
@@ -615,7 +615,7 @@ def aligner_metadata_decorator(f):
                     ],
                 },
             }
-            if process_result["observation"]:
+            if process_result["observations"]:
                 ref_lookup = reference_data.reference_lookup
                 process_result["metadata"]["observations"] = (
                     _get_metadata_observations_from_process_result(
@@ -1698,9 +1698,9 @@ class Aligner:
             FULL_ACTUAL_FIELD_NAME: None,
         }
         actual_brdr_observation = process_result.get(
-            "observation"
+            "observations"
         ) or self.compare_to_reference(geom_process_result)
-        process_result["observation"] = actual_brdr_observation
+        process_result["observations"] = actual_brdr_observation
         if (
             actual_brdr_observation is None
             or geom_process_result is None
@@ -1734,7 +1734,7 @@ class Aligner:
         properties.update(props)
 
         actual_brdr_observation = process_result.get(
-            "observation"
+            "observations"
         ) or self.compare_to_reference(geom_process_result)
         if (
             actual_brdr_observation is None

@@ -14,7 +14,7 @@ BASE_OBSERVATION_FIELD_NAME = (
 )  # for use in grb_actualisation
 ID_THEME_FIELD_NAME = PREFIX_FIELDNAME + "id"
 ID_REFERENCE_FIELD_NAME = PREFIX_FIELDNAME + "ref_id"
-OBSERVATION_FIELD_NAME = PREFIX_FIELDNAME + "observation"
+OBSERVATION_FIELD_NAME = PREFIX_FIELDNAME + "observations"
 BASE_METADATA_FIELD_NAME = (
     PREFIX_FIELDNAME + "metadata_base"
 )  # fieldname to write the base metadata of the input geometrie
