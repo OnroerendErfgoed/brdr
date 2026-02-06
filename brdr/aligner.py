@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import uuid
@@ -525,6 +526,10 @@ def _reverse_metadata_observations_to_brdr_observation(metadata: Dict) -> Dict:
                 reconstructed["reference_features"][ref_id]["area"] = val
             elif prop == "brdr:area_overlap_percentage":
                 reconstructed["reference_features"][ref_id]["percentage"] = val
+                if val ==100:
+                    reconstructed["reference_features"][ref_id]["full"] = True
+                else:
+                    reconstructed["reference_features"][ref_id]["full"] = False
 
         #Get some values from a single observation
         alignment_date = obs.get("result_time", {})
@@ -1847,6 +1852,9 @@ class Aligner:
             base_metadata = self.thematic_data.features.get(id_theme).properties[
                 base_metadata_field
             ]
+            if isinstance(base_metadata, str):
+                base_metadata = json.loads(base_metadata)
+
             base_brdr_observation = _reverse_metadata_observations_to_brdr_observation(
                 base_metadata
             )
