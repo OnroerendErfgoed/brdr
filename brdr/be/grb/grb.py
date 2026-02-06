@@ -105,6 +105,8 @@ def update_featurecollection_to_actual_grb(
     # Initiate a Aligner to reference thematic features to the actual borders
     aligner_config = AlignerConfig()
     aligner_config.max_workers = max_workers
+    aligner_config.log_metadata=True
+    aligner_config.add_observations=True
     aligner = Aligner(crs=crs, feedback=feedback, config=aligner_config)
     aligner.load_thematic_data(
         GeoJsonLoader(_input=featurecollection, id_property=id_theme_fieldname)
