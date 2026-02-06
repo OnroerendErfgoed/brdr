@@ -151,6 +151,9 @@ def write_featurecollection_to_geopackage(output_path, featurecollection,  layer
             )
 
     # Write to geopackage
+    folder = os.path.dirname(output_path)
+    if folder and not os.path.exists(folder):
+        os.makedirs(folder, exist_ok=True)
     gdf.to_file(output_path, driver="GPKG", layer=layer_name,
                 #mode="a",
                 engine="pyogrio"
