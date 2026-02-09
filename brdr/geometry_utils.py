@@ -1205,6 +1205,78 @@ def nearest_node(point, nodes):
     return min(nodes, key=lambda n: Point(n).distance(point))
 
 
+# def find_best_circle_path2(G, geom_to_process):
+#     """
+#             #TODO - research if this is a better alternative for 'find_cycle_path'?
+#     """
+#     line_geoms = []
+#     for edge in G.edges(data=True):
+#         line_geoms.append(edge[2]["geometry"])
+#     all_faces = polygonize(line_geoms)
+#     all_polygons = [geom for geom in all_faces.geoms if isinstance(geom, Polygon)]
+#     geom_to_process_polygon = Polygon(geom_to_process)
+#     candidates = [face for face in all_polygons if face.intersects(geom_to_process_polygon)]
+#
+#     best_iou = 0
+#
+#     must_haves = []
+#
+#     remaining_data = []  # Lijst van tuples: (polygoon, overlap_area)
+#
+#     # Eén pass om te splitsen
+#     for candidate in candidates:
+#         c_area = candidate.area
+#         i_area = candidate.intersection(geom_to_process_polygon).area
+#
+#         if i_area >= c_area * 0.99:
+#             must_haves.append(candidate)
+#         elif i_area > 0:  # Alleen meenemen als er überhaupt overlap is
+#             # We slaan de i_area even op in het object om niet opnieuw te hoeven rekenen
+#             remaining_data.append((candidate, i_area))
+#
+#     # Directe start met de bulk
+#     current_selection = must_haves
+#     combined_union = unary_union(must_haves) if must_haves else None
+#
+#     # 2. Sorteer de twijfelgevallen op de overlap-waarde (index 1 van de tuple)
+#     remaining_data.sort(key=lambda x: x[1], reverse=True)
+#
+#     # Initialiseer best_iou
+#     if combined_union:
+#         intersection = combined_union.intersection(geom_to_process_polygon).area
+#         union = combined_union.union(geom_to_process_polygon).area
+#         best_iou = intersection / union if union > 0 else 0
+#     else:
+#         best_iou = 0
+#
+#     # 3. De Greedy loop over de uitgepakte tuples
+#     for candidate, i_area in remaining_data:
+#         test_set = current_selection + [candidate]
+#         test_combined = unary_union(test_set)
+#
+#         test_intersection = test_combined.intersection(geom_to_process_polygon).area
+#         test_union = test_combined.union(geom_to_process_polygon).area
+#         iou = test_intersection / test_union if test_union > 0 else 0
+#
+#         if iou > best_iou:
+#             best_iou = iou
+#             current_selection.append(candidate)
+#         else:
+#             continue
+#     try:
+#         final_cycle = unary_union(current_selection)
+#         if final_cycle is None or final_cycle.is_empty:
+#             return None
+#
+#         final_cycle=to_multi(final_cycle)
+#         final_cycle = [geom for geom in final_cycle.geoms if isinstance(geom, Polygon)]
+#         final_cycle = unary_union(final_cycle)
+#         outer_line = final_cycle.exterior
+#     except:
+#         outer_line = None
+#         #raise Exception
+#     return outer_line
+
 def find_best_circle_path(graph, geom_to_process):
     """
     Find the best cycle in the graph that is closest to the original geometry to process
@@ -1698,6 +1770,7 @@ def get_thematic_points(input_geometry, reference_intersection):
     )
     return thematic_points
 
+
 def build_custom_network(
     input_geometry,
     theme_multiline,
@@ -1706,6 +1779,7 @@ def build_custom_network(
     relevant_distance,
     snap_strategy=SnapStrategy.NO_PREFERENCE,
     gap_threshold=0.1,
+    snap_dist=0.01,
 ):
     """
     Build a topological network from multiple linestrings and point geometries.
@@ -1798,11 +1872,11 @@ def build_custom_network(
                 u,v,edge_data = find_closest_in_subset(point, edge_list)
                 line = edge_data["geometry"]
                 p1, p2 = nearest_points(point, line)
-
-            if p1.distance(p2) <= 1e-7:
-                _add_pseudonode(G, p2, u, v,tag_point="pseudo_theme_ref_vertex",tag_line="ref_lines")
-            elif  p1.distance(p2) <= relevant_distance:
-                _add_pseudonode(G, p2, u, v,tag_point="pseudo_ref_vertex",tag_line="ref_lines")
+            if p2.distance(Point(u))>snap_dist and p2.distance(Point(v))>snap_dist:
+                if p1.distance(p2) <= 1e-7:
+                    _add_pseudonode(G, p2, u, v,tag_point="pseudo_theme_ref_vertex",tag_line="ref_lines")
+                elif  p1.distance(p2) <= relevant_distance:
+                    _add_pseudonode(G, p2, u, v,tag_point="pseudo_ref_vertex",tag_line="ref_lines")
     # 4. Optimization and Connectivity Pipeline
     # Close gaps and create initial theme-to-ref interconnections, keeping snapStrategy
     G = solve_all_network_gaps(
@@ -1810,7 +1884,7 @@ def build_custom_network(
         snap_strategy=snap_strategy,
         gap_dist=gap_threshold,
         interconnect_dist=2*relevant_distance,
-        snap_dist=0.01,
+        snap_dist=snap_dist,
         merge_nodes=False,
     )
 

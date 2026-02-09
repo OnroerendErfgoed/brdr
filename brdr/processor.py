@@ -1431,6 +1431,7 @@ class NetworkGeometryProcessor(BaseProcessor):
                     exterior,
                     reference,
                     relevant_distance,
+                    correction_distance=correction_distance,
                     close_output=True,
                 )
 
@@ -1442,6 +1443,7 @@ class NetworkGeometryProcessor(BaseProcessor):
                         i,
                         reference,
                         relevant_distance,
+                    correction_distance=correction_distance,
                         close_output=True,
                     )
                     interiors_processed.append(i_processed)
@@ -1456,6 +1458,7 @@ class NetworkGeometryProcessor(BaseProcessor):
                     geom,
                     reference,
                     relevant_distance,
+                    correction_distance=correction_distance,
                     close_output=False,
                 )
                 geom_processed_list.append(geom_processed)
@@ -1480,6 +1483,7 @@ class NetworkGeometryProcessor(BaseProcessor):
         geom_to_process,
         reference,
         relevant_distance,
+        correction_distance,
         close_output=False,
     ):
         buffer_distance = relevant_distance / 2
@@ -1513,14 +1517,15 @@ class NetworkGeometryProcessor(BaseProcessor):
                 if not p2_vertices is None and not p2_vertices.is_empty:
                     p2 = p2_vertices
             geom_processed = p2
-        else: #Linestring; Use of graph
-
+        else:
+            #Linestring; Use of graph
             geom_processed = self._get_processed_network_path(
                 input_geometry=geom_to_process,
                 reference=reference,
                 reference_intersection=reference_intersection,
                 thematic_difference=thematic_difference,
                 relevant_distance=relevant_distance,
+                correction_distance=correction_distance
             )
             if (
                 close_output
@@ -1531,8 +1536,6 @@ class NetworkGeometryProcessor(BaseProcessor):
                 geom_processed = LineString(closed_coords)
         return make_valid(geom_processed)
 
-
-
     def _get_processed_network_path(
         self,
         input_geometry,
@@ -1540,6 +1543,7 @@ class NetworkGeometryProcessor(BaseProcessor):
         reference_intersection,
         thematic_difference,
         relevant_distance,
+        correction_distance,
     ):
         graph = build_custom_network(
             input_geometry=input_geometry,
@@ -1549,9 +1553,10 @@ class NetworkGeometryProcessor(BaseProcessor):
             relevant_distance=relevant_distance,
             snap_strategy=self.config.snap_strategy,
             gap_threshold=0.1,
+            snap_dist=correction_distance
         )
         return find_best_path_in_network(
-            input_geometry, graph,
+            input_geometry, graph
         )
 
 
