@@ -195,7 +195,7 @@ class TestAligner(unittest.TestCase):
 
         loader = DictLoader(reference_dict)
         aligner.load_reference_data(loader)
-        relevant_distance = 4
+        relevant_distance = 2
         aligner_result = aligner.process([relevant_distance], max_workers=None)
         process_results = aligner_result.get_results(aligner=aligner)
         self.assertEqual(

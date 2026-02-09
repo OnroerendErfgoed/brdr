@@ -9,7 +9,7 @@ import networkx as nx
 import numpy as np
 import pyproj
 from networkx import Graph
-from shapely import GEOSException, get_coordinates, LinearRing
+from shapely import GEOSException, get_coordinates, LinearRing, LineString
 from shapely import STRtree
 from shapely import buffer
 from shapely import difference
@@ -46,6 +46,7 @@ from shapely.ops import substring
 from shapely.prepared import prep
 
 from brdr.enums import SnapStrategy
+from brdr.viz import export_to_geopackage
 
 ShapelyGeometry = Union[
     Point,
@@ -1143,57 +1144,46 @@ def to_multi(geometry, geomtype=None):
         raise TypeError("Geometry type not supported: {}".format(type(geometry)))
 
 
-# def get_geoms_from_geometry(geometry):
-#     geoms = set()
-#     if geometry is None or geometry.is_empty:
-#         return geoms
-#     elif isinstance(geometry, (Point, LineString, Polygon)):
-#         geoms.update([geometry])
-#     elif isinstance(geometry, (MultiPoint, MultiLineString, MultiPolygon)):
-#         geoms.update(geometry.geoms)
-#     elif isinstance(geometry, GeometryCollection):
-#         for geom in geometry.geoms:
-#             geoms.update(get_geoms_from_geometry(geom))
-#     return geoms
+def find_best_circle_path(graph, geom_to_process,node,cutoff):
+    min_dist = inf
+    best_cycle_line = None
 
+    # We kijken naar alle buren van de startnode
+    neighbors = list(graph.neighbors(node))
+    degree = len(neighbors)
+    max_amount = 1000
+    i=0
+    if degree < 2:
+        # Een knoop met degree 0 of 1 kan nooit onderdeel zijn van een cyclus
+        return best_cycle_line
 
-def fill_gaps_in_multilinestring(multilinestring, tolerance):
-    """
-    Vul kleine gaps in een MultiLineString op door verbindingslijnen toe te voegen
-    tussen eindpunten die binnen een bepaalde tolerantie van elkaar liggen.
+    if degree == 2:
+        # Optimalisatie: we nemen slechts één willekeurige buur
+        neighbors = [neighbors[0]]
 
-    Parameters:
-    - multilinestring: shapely.geometry.MultiLineString
-    - tolerance: float, maximale afstand tussen eindpunten om een verbindingslijn toe te voegen
+    for neighbor in neighbors:
+        # We zoeken paden van de buur terug naar de startnode
+        # Cutoff is -1 omdat de eerste stap (node -> neighbor) al gezet is
+        paths = nx.all_simple_paths(graph, source=neighbor, target=node, cutoff=cutoff-1)
 
-    Returns:
-    - Een nieuwe MultiLineString met toegevoegde verbindingslijnen
-    """
-
-    if isinstance(multilinestring, LineString):
-        return MultiLineString([multilinestring])
-    lines = list(multilinestring.geoms)
-    endpoints = []
-
-    # Verzamel alle begin- en eindpunten
-    for line in lines:
-        endpoints.append(Point(line.coords[0]))
-        endpoints.append(Point(line.coords[-1]))
-
-    # Zoek paren van eindpunten die dicht bij elkaar liggen
-    new_lines = []
-    used_pairs = set()
-    for p1, p2 in combinations(endpoints, 2):
-        if p1.equals(p2) or (p1, p2) in used_pairs or (p2, p1) in used_pairs:
-            continue
-        if p1.distance(p2) <= tolerance:
-            new_lines.append(LineString([p1, p2]))
-            used_pairs.add((p1, p2))
-
-    # Voeg originele lijnen en nieuwe verbindingslijnen samen
-    all_lines = lines + new_lines
-    return line_merge(all_lines)
-
+        for path in paths:
+            i+=1
+            if i > max_amount:  # safetyleak
+                logging.warning(
+                    f"max cycles tested while searching for geometry: {max_amount}"
+                )
+                break
+            # Een pad moet minstens 2 andere knopen bevatten om een echte lus te zijn (A-B-C-A)
+            # In een ongerichte graaf voorkom je zo ook het 'heen-en-weertje' (A-B-A)
+            if len(path) <= 2:
+                continue
+            full_cycle = [node] + path
+            cycle_line = LineString(full_cycle)
+            vertex_distance = total_vertex_distance(cycle_line, geom_to_process)
+            if vertex_distance < min_dist:
+                min_dist = vertex_distance
+                best_cycle_line = cycle_line
+    return best_cycle_line
 
 def nearest_node(point, nodes):
     """
@@ -1277,33 +1267,33 @@ def nearest_node(point, nodes):
 #         #raise Exception
 #     return outer_line
 
-def find_best_circle_path(graph, geom_to_process):
-    """
-    Find the best cycle in the graph that is closest to the original geometry to process
-    """
-    cycles_generator = nx.cycle_basis(graph)
-    min_dist = inf
-    best_cycle_line = None
-    max_amount = 1000
-
-    for i, cycle in enumerate(cycles_generator):
-        if len(cycle) <= 2:
-            continue
-        if i > max_amount:  # safetyleak
-            logging.warning(
-                f"max cycles tested while searching for geometry: {max_amount}"
-            )
-            break
-        # logging.debug (i)
-        # logging.debug (LineString(cycle).wkt)
-        cycle_coords = cycle + [cycle[0]]
-
-        cycle_line = LineString(cycle_coords)
-        vertex_distance = total_vertex_distance(cycle_line, geom_to_process)
-        if vertex_distance < min_dist:
-            min_dist = vertex_distance
-            best_cycle_line = cycle_line
-    return best_cycle_line
+# def find_best_circle_path3(graph, geom_to_process):
+#     """
+#     Find the best cycle in the graph that is closest to the original geometry to process
+#     """
+#     cycles_generator = nx.cycle_basis(graph)
+#     min_dist = inf
+#     best_cycle_line = None
+#     max_amount = 1000
+#
+#     for i, cycle in enumerate(cycles_generator):
+#         if len(cycle) <= 2:
+#             continue
+#         if i > max_amount:  # safetyleak
+#             logging.warning(
+#                 f"max cycles tested while searching for geometry: {max_amount}"
+#             )
+#             break
+#         # logging.debug (i)
+#         # logging.debug (LineString(cycle).wkt)
+#         cycle_coords = cycle + [cycle[0]]
+#
+#         cycle_line = LineString(cycle_coords)
+#         vertex_distance = total_vertex_distance(cycle_line, geom_to_process)
+#         if vertex_distance < min_dist:
+#             min_dist = vertex_distance
+#             best_cycle_line = cycle_line
+#     return best_cycle_line
 
 
 def longest_linestring_from_multilinestring(multilinestring):
@@ -1350,8 +1340,8 @@ def longest_linestring_from_multilinestring(multilinestring):
     return LineString(longest_path)
 
 
-def euclidean_distance(p1, p2):
-    return math.hypot(p1[0] - p2[0], p1[1] - p2[1])
+# def euclidean_distance(p1, p2):
+#     return math.hypot(p1[0] - p2[0], p1[1] - p2[1])
 
 
 def total_vertex_distance(
@@ -1380,54 +1370,54 @@ def total_vertex_distance(
     return total_distance / len_vertices
 
 
-def remove_composite_edges(G: nx.Graph) -> List[Tuple]:
-    """
-    Identifies and removes edges that are exact compositions of other edges.
+# def remove_composite_edges(G: nx.Graph) -> List[Tuple]:
+#     """
+#     Identifies and removes edges that are exact compositions of other edges.
+#
+#     An edge (u, v) is considered composite if there exists an alternative
+#     path between u and v whose total weight is exactly equal to the weight
+#     of the direct edge.
+#
+#     Parameters
+#     ----------
+#     G : nx.Graph
+#         The undirected graph to be processed. This object is modified in-place.
+#
+#     Returns
+#     -------
+#     removed_edges : list of tuple
+#         A list of edges (u, v) that were removed from the graph.
+#     """
+#     removed_edges = []
+#
+#     # Iterate over a static list of edges to avoid 'dictionary changed size' errors
+#     for u, v in list(G.edges()):
+#         # Get the weight of the current direct edge
+#         direct_weight = G[u][v].get("weight", 1.0)
+#
+#         # Temporarily remove the edge to find alternative paths
+#         G.remove_edge(u, v)
+#
+#         try:
+#             # Find the shortest path using the remaining edges
+#             alt_path_len = nx.shortest_path_length(G, u, v, weight="weight")
+#
+#             # If an alternative path exists with the EXACT same weight,
+#             # the direct edge is a composition and remains removed.
+#             if np.isclose(alt_path_len, direct_weight):
+#                 removed_edges.append((u, v))
+#             else:
+#                 # Path is longer or shorter (shortcut), so we restore the edge
+#                 G.add_edge(u, v, weight=direct_weight)
+#
+#         except nx.NetworkXNoPath:
+#             # No alternative route exists, restore the direct edge
+#             G.add_edge(u, v, weight=direct_weight)
+#
+#     return removed_edges
 
-    An edge (u, v) is considered composite if there exists an alternative
-    path between u and v whose total weight is exactly equal to the weight
-    of the direct edge.
 
-    Parameters
-    ----------
-    G : nx.Graph
-        The undirected graph to be processed. This object is modified in-place.
-
-    Returns
-    -------
-    removed_edges : list of tuple
-        A list of edges (u, v) that were removed from the graph.
-    """
-    removed_edges = []
-
-    # Iterate over a static list of edges to avoid 'dictionary changed size' errors
-    for u, v in list(G.edges()):
-        # Get the weight of the current direct edge
-        direct_weight = G[u][v].get("weight", 1.0)
-
-        # Temporarily remove the edge to find alternative paths
-        G.remove_edge(u, v)
-
-        try:
-            # Find the shortest path using the remaining edges
-            alt_path_len = nx.shortest_path_length(G, u, v, weight="weight")
-
-            # If an alternative path exists with the EXACT same weight,
-            # the direct edge is a composition and remains removed.
-            if np.isclose(alt_path_len, direct_weight):
-                removed_edges.append((u, v))
-            else:
-                # Path is longer or shorter (shortcut), so we restore the edge
-                G.add_edge(u, v, weight=direct_weight)
-
-        except nx.NetworkXNoPath:
-            # No alternative route exists, restore the direct edge
-            G.add_edge(u, v, weight=direct_weight)
-
-    return removed_edges
-
-
-def find_best_path_in_network(geom_to_process, graph):
+def find_best_path_in_network(geom_to_process, graph,cutoff=1000):
     """
     Determine the best path between 2 points in the network using the Hausdorf-distance
     Parameters:
@@ -1445,10 +1435,10 @@ def find_best_path_in_network(geom_to_process, graph):
     end_node = nearest_node(end_point, graph.nodes)
 
     if start_node == end_node:
-        return find_best_circle_path(graph, geom_to_process)
+        return find_best_circle_path(graph, geom_to_process,node = start_node,cutoff=cutoff)
 
     # Search all simple paths (limited, because cyclic paths can result in a lot of simple paths
-    max_amount = 1000
+
     path_found = nx.has_path(graph, start_node, end_node)
     logging.debug("Path detected? - " + str(path_found))
     if not path_found:
@@ -1459,16 +1449,16 @@ def find_best_path_in_network(geom_to_process, graph):
         )
 
     all_paths_generator = nx.all_simple_paths(
-        graph, source=start_node, target=end_node, cutoff=max_amount
+        graph, source=start_node, target=end_node, cutoff=cutoff
     )
 
     # Determine the network-path that fits the best to the original inputgeometry
     min_dist = inf
     best_line = None
     for i, path in enumerate(all_paths_generator):
-        if i > max_amount:  # safetyleak
+        if i > cutoff:  # safetyleak
             logging.warning(
-                f"max paths tested while searching for geometry: {max_amount}"
+                f"max paths tested while searching for geometry: {cutoff}"
             )
             break
         try:  # added try/except because 'path' sometimes exists out of 1 point, resulting in LineString-error
@@ -1480,6 +1470,7 @@ def find_best_path_in_network(geom_to_process, graph):
         except:
             pass
     return best_line
+
 
 def _get_snapped_point(
     point: Point,
@@ -1843,13 +1834,10 @@ def build_custom_network(
     pseudo_ref_coords = get_pseudo_coords(reference_intersection, reference)
     pseudo_theme_coords = get_pseudo_coords(theme_multiline, input_geometry)
 
-    _multilinestring_to_edges(G, theme_multiline,pseudo_coords=pseudo_theme_coords,node_tag="theme_vertex",pseudonode_tag= "pseudo_theme_vertex", edge_tag = "theme_lines")
+    srtree_theme_lines,edge_mapping_theme_lines =_multilinestring_to_edges(G, theme_multiline,pseudo_coords=pseudo_theme_coords,node_tag="theme_vertex",pseudonode_tag= "pseudo_theme_vertex", edge_tag = "theme_lines")
     srtree_ref_lines,edge_mapping_ref_lines =_multilinestring_to_edges(G, ref_multiline,pseudo_coords=pseudo_ref_coords,node_tag="ref_vertex",pseudonode_tag= "pseudo_ref_vertex", edge_tag = "ref_lines")
 
-    # 2. Load Reference Points
-    for pt in ref_points.geoms:
-        p_coord = pt.coords[0]
-        G.add_node(p_coord, tag="ref_points")
+
 
     # 3. Add Pseudo-nodes (theme_points) onto ref_lines
     if not ref_multiline is None and not ref_multiline.is_empty:
@@ -1877,6 +1865,38 @@ def build_custom_network(
                     _add_pseudonode(G, p2, u, v,tag_point="pseudo_theme_ref_vertex",tag_line="ref_lines")
                 elif  p1.distance(p2) <= relevant_distance:
                     _add_pseudonode(G, p2, u, v,tag_point="pseudo_ref_vertex",tag_line="ref_lines")
+
+    if ref_points:#TODO improve ref_points?
+        for pt in ref_points.geoms:
+            p_coord = pt.coords[0]
+            G.add_node(p_coord, tag="ref_points")
+            # Zoek alle nodes binnen de straal
+        ref_nodes = [
+            n for n, attr in G.nodes(data=True) if attr.get("tag") == "ref_points"
+        ]
+        all_nodes = list(G.nodes())
+
+        # 2. Verbind enkel de ref_points met de rest
+        for ref_node in ref_nodes:
+            for other_node in all_nodes:
+                connect=False
+                # Voorkom dat een node met zichzelf verbindt
+                if ref_node == other_node:
+                    continue
+                if other_node in ref_nodes:
+                    connect=True
+                else:
+                    dist = Point(ref_node).distance(Point(other_node))
+                    if dist < relevant_distance*3:
+                        connect=True
+                if connect:
+                    edge_geom = LineString([ref_node, other_node])
+                    G.add_edge(
+                        ref_node,
+                        other_node,
+                        geometry=edge_geom,
+                        tag="ref_points_connection",
+                    )
     # 4. Optimization and Connectivity Pipeline
     # Close gaps and create initial theme-to-ref interconnections, keeping snapStrategy
     G = solve_all_network_gaps(
@@ -1897,7 +1917,7 @@ def build_custom_network(
 
     # Force the creation of a cycle when input_geometry is a circle & the graph is currently a tree/forest
     if input_geometry.coords[0] == input_geometry.coords[-1]:
-        G = ensure_cycle_exists(G, interconnect_dist=2 * relevant_distance)
+        G = ensure_cycle_exists(G, interconnect_dist=4 * relevant_distance)
 
     # # 5. Final Cleanup
     # composite_edges_removed = remove_composite_edges(G)
