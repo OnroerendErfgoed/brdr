@@ -5,12 +5,14 @@ import math
 import os.path
 import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime, date
+from decimal import Decimal
 
+import geopandas as gpd
 import numpy as np
 import requests
 from geojson import Feature
 from geojson import FeatureCollection
-from geojson import dump
 from pyproj import CRS
 from shapely import GeometryCollection
 from shapely import make_valid
@@ -128,18 +130,79 @@ def _feature_from_geom(
     return Feature(geometry=geom, id=feature_id, properties=properties)
 
 
-def write_geojson(path_to_file, geojson):
-    """
-    Write a GeoJSON object to a file.
+def write_featurecollection_to_geopackage(
+    output_path, featurecollection, layer_name="resulting_layer"
+):
+    # 1. Change to GeoDataFrame
+    crs_name = featurecollection.get("crs", {}).get("properties", {}).get("name")
+    gdf = gpd.GeoDataFrame.from_features(featurecollection, crs=crs_name)
 
-    Args:
-        path_to_file (str): Path to the output file.
-        geojson (FeatureCollection): The GeoJSON object to write.
-    """
-    parent = os.path.dirname(path_to_file)
+    # 2. Set CRS
+    if gdf.crs is None:
+        gdf.set_crs(DEFAULT_CRS, inplace=True)
+
+    # 3. serialize dicts and lists to string
+    for col in gdf.columns:
+        if col == "geometry":
+            continue
+
+        sample = gdf[col].dropna().iloc[0] if not gdf[col].dropna().empty else None
+        if isinstance(sample, (dict, list)):
+            gdf[col] = gdf[col].apply(
+                lambda x: json.dumps(x, ensure_ascii=False) if x is not None else None
+            )
+
+    # Write to geopackage
+    folder = os.path.dirname(output_path)
+    if folder and not os.path.exists(folder):
+        os.makedirs(folder, exist_ok=True)
+    gdf.to_file(
+        output_path,
+        driver="GPKG",
+        layer=layer_name,
+        # mode="a",
+        engine="pyogrio",
+        # ,overwrite_layer=True
+    )
+
+
+def geojson_serializor(obj):
+    if isinstance(obj, (datetime, date)):
+        return obj.isoformat()
+    if isinstance(obj, Decimal):
+        return float(obj)
+    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
+
+
+def write_featurecollection_to_geojson(output_path, featurecollection):
+    features = featurecollection.get("features", [])
+
+    # Determine all columns who need a json.dumps (lists and dicts)
+    keys_to_stringify = set()
+    if features:
+        sample_props = features[0]["properties"]
+        for k, v in sample_props.items():
+            if isinstance(v, (dict, list)):
+                keys_to_stringify.add(k)
+
+    # Serializes these columns
+    for feature in features:
+        props = feature["properties"]
+        for key in keys_to_stringify:
+            if props[key] is not None:
+                props[key] = json.dumps(props[key], ensure_ascii=False)
+
+    # create/write file
+    parent = os.path.dirname(output_path)
     os.makedirs(parent, exist_ok=True)
-    with open(path_to_file, "w") as f:
-        dump(geojson, f, default=str)
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(
+            featurecollection,
+            f,
+            indent=2,
+            default=geojson_serializor,
+            ensure_ascii=False,
+        )
 
 
 def flatten_iter(lst):
@@ -296,7 +359,7 @@ def get_geometry_difference_metrics_from_processresults(
             "LineString",
             "MultiLineString",
         ):
-            diff_metric = DiffMetric.LENGTH_CHANGE
+            diff_metric = DiffMetric.LENGTH_ADDED_AND_REMOVED
         elif geom_thematic.geom_type in (
             "Point",
             "MultiPoint",
@@ -316,6 +379,7 @@ def get_geometry_difference_metrics_from_processresult(
     result = processresult.get("result")
     result_diff = processresult.get("result_diff")
     result_diff_min = processresult.get("result_diff_min")
+    result_diff_plus = processresult.get("result_diff_plus")
     diff = 0
     original = geom_thematic
     if result_diff is None or result_diff.is_empty or result is None or result.is_empty:
@@ -341,6 +405,16 @@ def get_geometry_difference_metrics_from_processresult(
     elif diff_metric == DiffMetric.LENGTH_REMOVED:
         if not result_diff_min is None or result_diff_min.is_empty:
             diff = result_diff_min.length
+    elif diff_metric == DiffMetric.LENGTH_ADDED_AND_REMOVED:
+        if not result_diff_min is None or result_diff_min.is_empty:
+            diff_min = result_diff_min.length
+        else:
+            diff_min = 0
+        if not result_diff_plus is None or result_diff_plus.is_empty:
+            diff_plus = result_diff_plus.length
+        else:
+            diff_plus = 0
+        diff = diff_plus + diff_min
     elif diff_metric == DiffMetric.REFERENCE_USAGE:
         if not reference_union is None and not reference_union.is_empty:
             reference_union_buffer = buffer_pos(reference_union, 0.01)
@@ -642,7 +716,7 @@ def get_collection_by_partition(
     if collection:
         unique_features = deduplicate_features(features_list)
         collection["features"] = unique_features
-    # TODO; only return fatures that intersect with the 'geometry'?
+    # TODO; only return features that intersect with the 'geometry'?
 
     return collection
 
@@ -746,7 +820,7 @@ def union_process_result(process_result: ProcessResult) -> ProcessResult:
     ProcessorConfig : Settings that define how these results are generated.
     """
     for key in ProcessResult.__annotations__:
-        if key in ["properties", "metadata", "observation"]:
+        if key in ["properties", "metadata", "observations"]:
             process_result[key] = process_result.get(key, {})  # noqa
             continue
         value = process_result.get(key, GeometryCollection())  # noqa

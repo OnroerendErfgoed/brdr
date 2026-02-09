@@ -23,7 +23,12 @@ from shapely.geometry.base import BaseGeometry
 from brdr import __version__
 from brdr.configs import AlignerConfig
 from brdr.configs import ProcessorConfig
-from brdr.constants import AREA_CHANGE, METADATA_FIELD_NAME, MAX_REFERENCE_BUFFER
+from brdr.constants import (
+    AREA_CHANGE,
+    METADATA_FIELD_NAME,
+    MAX_REFERENCE_BUFFER,
+    OBSERVATION_FIELD_NAME,
+)
 from brdr.constants import AREA_PERCENTAGE_CHANGE
 from brdr.constants import DATE_FORMAT
 from brdr.constants import DEFAULT_CRS
@@ -77,7 +82,7 @@ from brdr.utils import get_geometry_difference_metrics_from_processresult
 from brdr.utils import get_geometry_difference_metrics_from_processresults
 from brdr.utils import is_brdr_observation
 from brdr.utils import urn_from_geom
-from brdr.utils import write_geojson
+from brdr.utils import write_featurecollection_to_geojson
 
 ###################
 
@@ -305,7 +310,7 @@ class AlignerResult:
                         continue
                     prop_dictionary[theme_id][relevant_distance][
                         METADATA_FIELD_NAME
-                    ] = json.dumps(metadata_result)
+                    ] = metadata_result
 
         return get_geojsons_from_process_results(
             results,
@@ -353,14 +358,14 @@ class AlignerResult:
         )
         for name, fc in fcs.items():
             file_name = f"{result_type.value}_{name}.geojson"
-            write_geojson(os.path.join(path, file_name), fc)
+            write_featurecollection_to_geojson(os.path.join(path, file_name), fc)
 
 
 def _get_metadata_observations_from_process_result(
     processResult: ProcessResult,
     reference_lookup: Dict[any, any],
 ) -> List[Dict]:
-    observation = processResult["observation"]
+    observation = processResult["observations"]
     actuation_metadata = processResult["metadata"]["actuation"]
     observation_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S%z")
     sensor_uuid = uuid.uuid4()
@@ -374,14 +379,14 @@ def _get_metadata_observations_from_process_result(
 
     observations = []
     for ref_id, observations_dict in observation["reference_features"].items():
-        reference = reference_lookup[ref_id]
+        reference_id = reference_lookup[ref_id]
         if area := observations_dict.get("area"):
             observations.append(
                 {
                     **observation_metadata,
                     "id": uuid.uuid4().urn,
                     "observed_property": "brdr:area_overlap",
-                    "has_feature_of_interest": reference,
+                    "has_feature_of_interest": reference_id,
                     "result": {"value": area, "type": "float"},
                     "used_procedure": "brdr:observation_procedure_area_overlap",
                     "used": result_id,
@@ -392,25 +397,24 @@ def _get_metadata_observations_from_process_result(
                 {
                     **observation_metadata,
                     "id": uuid.uuid4().urn,
-                    "has_feature_of_interest": reference,
+                    "has_feature_of_interest": reference_id,
                     "observed_property": "brdr:area_overlap_percentage",
                     "result": {"value": percentage, "type": "float"},
                     "used_procedure": "brdr:observation_procedure_area_overlap_percentage",
                     "used": result_id,
                 }
             )
-        # TODO: decide whether to keep this observation
-        if full := observations_dict.get("full"):
-            observations.append(
-                {
-                    **observation_metadata,
-                    "id": uuid.uuid4().urn,
-                    "observed_property": "brdr:area_overlap_full",
-                    "result": {"value": full, "type": "boolean"},
-                    "used_procedure": "brdr:observation_procedure_area_overlap_full",
-                    "used": reference,
-                }
-            )
+    if full := observation.get("full"):
+        observations.append(
+            {
+                **observation_metadata,
+                "id": uuid.uuid4().urn,
+                "has_feature_of_interest": result_id,
+                "observed_property": "brdr:area_overlap_full",
+                "result": {"value": full, "type": "boolean"},
+                "used_procedure": "brdr:observation_procedure_area_overlap_full",
+            }
+        )
 
     if area := observation.get("area"):
         observations.append(
@@ -429,17 +433,16 @@ def _get_metadata_observations_from_process_result(
                 **observation_metadata,
                 "id": uuid.uuid4().urn,
                 "has_feature_of_interest": result_id,
-                "observed_property": "brdr:areaOD",
+                "observed_property": "brdr:area_open_domain",
                 "result": {"value": area_od, "type": "float"},
-                "used_procedure": "brdr:observation_procedure_area_od",
-                "reference_features": actuation_metadata["reference_features"],
+                "used_procedure": "brdr:observation_procedure_area_open_domain",
             }
         )
 
     return observations
 
 
-def _reverse_metadata_observations_to_brdr_observation(metadata: List[Dict]) -> Dict:
+def _reverse_metadata_observations_to_brdr_observation(metadata: Dict) -> Dict:
     """
     Reconstruct a BRDR observation dictionary from a list of Linked Data observations.
 
@@ -475,78 +478,74 @@ def _reverse_metadata_observations_to_brdr_observation(metadata: List[Dict]) -> 
     checking for the presence of a 'ref_id' that differs from the primary
     result interest ID.
     """
-    if not metadata or not "observations" in metadata:
+    if not metadata or not "actuation" in metadata or not "observations" in metadata:
         return {}
-
     observations = metadata["observations"]
+    actuation_metadata = metadata["actuation"]
+    # 1. Bouw een reverse lookup: {uuid: originele_id}
+    # We kijken in de reference_geometries van de actuation metadata
+    reverse_ref_lookup = {}
+    for ref_geom in actuation_metadata.get("reference_geometries", []):
+        uuid_id = ref_geom.get("id")
+        original_id = ref_geom.get("derived_from", {}).get("id")
+        if uuid_id and original_id:
+            reverse_ref_lookup[uuid_id] = original_id
 
-    # Initialize the base structure
-    res = {
-        "observation": {"reference_features": {}},
-        "metadata": {
-            "actuation": {
-                "result": observations[0].get("has_feature_of_interest"),
-                "reference_geometries": [],
-            }
-        },
+    # De hoofd-result ID (de FOI voor top-level zaken als 'area')
+    main_result_id = actuation_metadata.get("result")
+
+    # 2. Initialiseer de resultaatstructuur
+    reconstructed = {
+        "reference_features": {},
+        "full": None,
+        "area": None,
+        # De overige velden (brdr_version etc.) zitten niet in de observaties
+        # en moeten idealiter uit de context komen.
     }
-
-    obs_root = res["observation"]
-    actuation = res["metadata"]["actuation"]
-    seen_reference_ids = set()
-
     for obs in observations:
         prop = obs.get("observed_property")
-        result_val = obs.get("result", {}).get("value")
-        used = obs.get("used", {})
-        ref_id = used.get("id")
+        val = obs.get("result", {}).get("value")
+        foi = obs.get("has_feature_of_interest")
 
-        # 1. Restore global values (area, area_od, full at root level)
-        if prop == "brdr:area":
-            obs_root["area"] = result_val
-        elif prop == "brdr:area_od":
-            obs_root["area_od"] = {"area": result_val}
-        elif prop == "brdr:area_overlap_full" and not ref_id:
-            # If no reference ID, 'full' belongs to the root
-            obs_root["full"] = result_val
+        # Top-level eigenschappen (FOI is de hoofd-result ID)
+        if foi == main_result_id:
+            if prop == "brdr:area_overlap_full":
+                reconstructed["full"] = val
+            elif prop == "brdr:area":
+                reconstructed["area"] = val
+            elif prop == "brdr:area_open_domain":
+                reconstructed["area_od"] = {"area": val}
 
-        # 2. Restore reference-specific values (reference_features)
-        elif ref_id:
-            # Add reference to metadata if not seen before
-            if ref_id not in seen_reference_ids and ref_id != actuation["result"]:
-                actuation["reference_geometries"].append(used)
-                seen_reference_ids.add(ref_id)
+        # Feature-specifieke eigenschappen (FOI is een reference-uuid)
+        elif foi in reverse_ref_lookup:
+            ref_id = reverse_ref_lookup[foi]
+            if ref_id not in reconstructed["reference_features"]:
+                reconstructed["reference_features"][ref_id] = {}
 
-            # Initialize the dict for this specific reference in observations
-            if ref_id != actuation["result"]:
-                if ref_id not in obs_root["reference_features"]:
-                    obs_root["reference_features"][ref_id] = {}
+            if prop == "brdr:area_overlap":
+                reconstructed["reference_features"][ref_id]["area"] = val
+            elif prop == "brdr:area_overlap_percentage":
+                reconstructed["reference_features"][ref_id]["percentage"] = val
+                if val == 100:
+                    reconstructed["reference_features"][ref_id]["full"] = True
+                else:
+                    reconstructed["reference_features"][ref_id]["full"] = False
 
-                target_ref = obs_root["reference_features"][ref_id]
+        # Get some values from a single observation
+        alignment_date = obs.get("result_time", {})
 
-                if prop == "brdr:area_overlap":
-                    target_ref["area"] = result_val
-                elif prop == "brdr:area_overlap_percentage":
-                    target_ref["percentage"] = result_val
-                elif prop == "brdr:area_overlap_full":
-                    target_ref["full"] = result_val
-
-    # Finalize the result structure
-    result = res["observation"]
-    if not "full" in result:
-        result["full"] = None
-    if not "area" in result:
-        result["area"] = None
-    result["alignment_date"] = None
-    result["reference_source"] = None
-    result["brdr_version"] = None
-    result["reference_od"] = None
+    # Finalize the reconstructed structure
+    # TODO; this can be implemented better, but for now we get the information from the observation
+    reconstructed["alignment_date"] = actuation_metadata.get("result_time", None)
+    reconstructed["reference_source"] = None
+    reconstructed["brdr_version"] = None
+    reconstructed["reference_od"] = None
 
     # Validation check
-    if not is_brdr_observation(result):
+    if not is_brdr_observation(reconstructed):
         raise ValueError("The reconstructed object is not a valid brdr observation")
 
-    return result
+    return reconstructed
 
 
 def aligner_metadata_decorator(f):
@@ -555,12 +554,15 @@ def aligner_metadata_decorator(f):
             thematic_id, geometry, relevant_distance, aligner, *args, **kwargs
         )
         if aligner.add_observations:
-            process_result["observation"] = aligner.compare_to_reference(
+            process_result["observations"] = aligner.compare_to_reference(
                 process_result.get("result")
             )
             # add observation properties to the properties
             observation_props = aligner.get_observation_properties(process_result)
             props = process_result["properties"]
+            props[OBSERVATION_FIELD_NAME] = process_result[
+                "observations"
+            ]  # adding the raw brdr_observation?!
             props.update(observation_props)
             process_result["properties"] = props
 
@@ -590,8 +592,9 @@ def aligner_metadata_decorator(f):
                 reference_geometries.append(feat_dict)
 
             thematic_feature = aligner.thematic_data.features[thematic_id]
-            feature_of_interest_id = thematic_feature.brdr_id  # TODO (emrys?)
+            feature_of_interest_id = thematic_feature.brdr_id
             result_urn = urn_from_geom(process_result["result"])
+            actuation_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S%z")
             process_result["metadata"] = {}
             process_result["metadata"]["actuation"] = {
                 "id": actuation_id.urn,
@@ -600,6 +603,7 @@ def aligner_metadata_decorator(f):
                 "changes": "geo:hasGeometry",
                 "sosa:hasFeatureOfInterest": {"id": feature_of_interest_id},
                 "result": result_urn,
+                "result_time": actuation_time,  # TODO _CHECK
                 "procedure": {
                     "id": processor_id,
                     "implementedBy": processor_name,
@@ -616,7 +620,7 @@ def aligner_metadata_decorator(f):
                     ],
                 },
             }
-            if process_result["observation"]:
+            if process_result["observations"]:
                 ref_lookup = reference_data.reference_lookup
                 process_result["metadata"]["observations"] = (
                     _get_metadata_observations_from_process_result(
@@ -681,8 +685,9 @@ class Aligner:
     --------
     >>> from brdr.aligner import Aligner
     >>> aligner = Aligner(crs="EPSG:31370")
-    >>> aligner.load_thematic_data(my_features)
-    >>> results = aligner.align(relevant_distances=[0.5, 1.0])
+    >>> aligner.load_thematic_data(...)
+    >>> aligner.load_reference_data(...)
+    >>> results = aligner.process(relevant_distances=[0, 0.5, 1.0])
     """
 
     def __init__(
@@ -1295,7 +1300,7 @@ class Aligner:
                         and props[PREDICTION_COUNT] == 1
                     ):
                         props[EVALUATION_FIELD_NAME] = Evaluation.PREDICTION_UNIQUE
-                        # TODO can we add continue here? No, because this can get overwriten by prediction_unique_full
+                        # TODO can we add continue here? No, because this can get overwritten by prediction_unique_full
                     elif (
                         props[EVALUATION_FIELD_NAME]
                         in (Evaluation.TO_CHECK_NO_PREDICTION, Evaluation.NOT_EVALUATED)
@@ -1698,9 +1703,9 @@ class Aligner:
             FULL_ACTUAL_FIELD_NAME: None,
         }
         actual_brdr_observation = process_result.get(
-            "observation"
+            "observations"
         ) or self.compare_to_reference(geom_process_result)
-        process_result["observation"] = actual_brdr_observation
+        process_result["observations"] = actual_brdr_observation
         if (
             actual_brdr_observation is None
             or geom_process_result is None
@@ -1734,7 +1739,7 @@ class Aligner:
         properties.update(props)
 
         actual_brdr_observation = process_result.get(
-            "observation"
+            "observations"
         ) or self.compare_to_reference(geom_process_result)
         if (
             actual_brdr_observation is None
@@ -1844,11 +1849,12 @@ class Aligner:
         self, id_theme: Any, base_metadata_field: str
     ) -> dict:
         try:
-            base_metadata = json.loads(
-                self.thematic_data.features.get(id_theme).properties[
-                    base_metadata_field
-                ]
-            )
+            base_metadata = self.thematic_data.features.get(id_theme).properties[
+                base_metadata_field
+            ]
+            if isinstance(base_metadata, str):
+                base_metadata = json.loads(base_metadata)
+
             base_brdr_observation = _reverse_metadata_observations_to_brdr_observation(
                 base_metadata
             )

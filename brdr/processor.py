@@ -2,21 +2,16 @@ from abc import ABC
 from abc import abstractmethod
 from typing import List, Any
 
-from shapely import GeometryCollection
-from shapely import LinearRing
-from shapely import MultiLineString
-from shapely import MultiPoint
+from shapely import GeometryCollection, MultiPoint
 from shapely import MultiPolygon
 from shapely import Point
 from shapely import Polygon
 from shapely import get_parts
 from shapely import make_valid
 from shapely import remove_repeated_points
-from shapely.errors import GeometryTypeError
 from shapely.geometry.base import BaseGeometry
 from shapely.geometry.linestring import LineString
 from shapely.ops import nearest_points
-from shapely.ops import split
 
 from brdr.configs import ProcessorConfig
 from brdr.constants import REMARK_FIELD_NAME
@@ -28,13 +23,13 @@ from brdr.feature_data import AlignerFeatureCollection
 from brdr.geometry_utils import (
     buffer_neg,
     build_custom_network,
+    get_non_pseudo_coords,
 )
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import buffer_pos
 from brdr.geometry_utils import fill_and_remove_gaps
 from brdr.geometry_utils import find_best_path_in_network
 from brdr.geometry_utils import geometric_equality
-from brdr.geometry_utils import get_coords_from_geometry
 from brdr.geometry_utils import get_shape_index
 from brdr.geometry_utils import safe_difference
 from brdr.geometry_utils import safe_intersection
@@ -792,7 +787,7 @@ class DieussaertGeometryProcessor(BaseProcessor):
         for process_result in list_process_results:
             for key in process_result:
                 value = process_result[key]
-                if key in ["metadata", "observation"]:
+                if key in ["metadata", "observations"]:
                     # This will add the needed keys to the processResult. The values are filled afterwards
                     if key in merged_process_result:
                         continue
@@ -1436,6 +1431,7 @@ class NetworkGeometryProcessor(BaseProcessor):
                     exterior,
                     reference,
                     relevant_distance,
+                    correction_distance=correction_distance,
                     close_output=True,
                 )
 
@@ -1447,6 +1443,7 @@ class NetworkGeometryProcessor(BaseProcessor):
                         i,
                         reference,
                         relevant_distance,
+                        correction_distance=correction_distance,
                         close_output=True,
                     )
                     interiors_processed.append(i_processed)
@@ -1461,6 +1458,7 @@ class NetworkGeometryProcessor(BaseProcessor):
                     geom,
                     reference,
                     relevant_distance,
+                    correction_distance=correction_distance,
                     close_output=False,
                 )
                 geom_processed_list.append(geom_processed)
@@ -1485,6 +1483,7 @@ class NetworkGeometryProcessor(BaseProcessor):
         geom_to_process,
         reference,
         relevant_distance,
+        correction_distance,
         close_output=False,
     ):
         buffer_distance = relevant_distance / 2
@@ -1502,31 +1501,34 @@ class NetworkGeometryProcessor(BaseProcessor):
         thematic_difference = safe_difference(geom_to_process, overlap_buffered)
         thematic_difference = safe_unary_union(thematic_difference)
         thematic_difference = to_multi(thematic_difference)
-        if self.config.snap_strategy != SnapStrategy.NO_PREFERENCE:
-            reference_coords = MultiPoint(list(get_coords_from_geometry(reference)))
-            reference_coords_intersection = to_multi(
-                safe_intersection(reference_coords, overlap_buffered)
-            )
-        else:
-            reference_coords_intersection = None
+
         if isinstance(geom_to_process, Point):
+            if self.config.snap_strategy == SnapStrategy.NO_PREFERENCE:
+                reference_intersection_points = None
+            else:
+                reference_intersection_points = MultiPoint(
+                    list(get_non_pseudo_coords(reference_intersection, reference))
+                )
             p1, p2 = nearest_points(geom_to_process, reference_intersection)
             if (
-                not reference_coords_intersection is None
-                and not reference_coords_intersection.is_empty
+                not reference_intersection_points is None
+                and not reference_intersection_points.is_empty
             ):
                 p1_vertices, p2_vertices = nearest_points(
-                    geom_to_process, reference_coords_intersection
+                    geom_to_process, reference_intersection_points
                 )
                 if not p2_vertices is None and not p2_vertices.is_empty:
                     p2 = p2_vertices
             geom_processed = p2
         else:
+            # Linestring; Use of graph
             geom_processed = self._get_processed_network_path(
                 input_geometry=geom_to_process,
+                reference=reference,
                 reference_intersection=reference_intersection,
                 thematic_difference=thematic_difference,
                 relevant_distance=relevant_distance,
+                correction_distance=correction_distance,
             )
             if (
                 close_output
@@ -1537,87 +1539,26 @@ class NetworkGeometryProcessor(BaseProcessor):
                 geom_processed = LineString(closed_coords)
         return make_valid(geom_processed)
 
-    def _get_thematic_points(self, geom_to_process, reference_intersection):
-        """
-        returns a MultiPoint geometry with points on the thematic geometry that are used for consistency while creating connection_lines
-        :param geom_to_process:
-        :param reference_intersection:
-        :return: MultiPoint
-        """
-        geom_to_process_line = geom_to_process
-        if isinstance(geom_to_process_line, LinearRing):
-            geom_to_process_line = LineString(geom_to_process_line.coords)
-
-        # geom_to_process_segmentized = segmentize(
-        #     geom_to_process_line, self.config.partial_snap_max_segment_length
-        # )
-        geom_to_process_segmentized = geom_to_process_line
-        # Split the line at all intersection points with the MultiLineString
-        splitter = safe_unary_union(reference_intersection)
-        try:
-            geom_to_process_splitted = split(geom_to_process_segmentized, splitter)
-        except (GeometryTypeError, ValueError):
-            geom_to_process_splitted = geom_to_process_segmentized
-        thematic_points = MultiPoint(
-            list(get_coords_from_geometry(geom_to_process_splitted))
-        )
-        return thematic_points
-
     def _get_processed_network_path(
         self,
         input_geometry,
+        reference,
         reference_intersection,
         thematic_difference,
         relevant_distance,
+        correction_distance,
     ):
-        ref_multilinestring, ref_points = (
-            self._multilinestring_multipoint_from_reference_intersection(
-                reference_intersection
-            )
-        )
-        thematic_points = self._get_thematic_points(
-            input_geometry, reference_intersection
-        )
         graph = build_custom_network(
+            input_geometry=input_geometry,
             theme_multiline=thematic_difference,
-            ref_multiline=ref_multilinestring,
-            ref_points=ref_points,
-            theme_points=thematic_points,
-            gap_threshold=0.1,
+            reference=reference,
+            reference_intersection=reference_intersection,
             relevant_distance=relevant_distance,
+            snap_strategy=self.config.snap_strategy,
+            gap_threshold=0.1,
+            snap_dist=correction_distance,
         )
-        return find_best_path_in_network(
-            input_geometry, graph, self.config.snap_strategy, relevant_distance
-        )
-
-    def _multilinestring_multipoint_from_reference_intersection(
-        self, reference_intersection
-    ):
-        if isinstance(reference_intersection, (LineString, MultiLineString)):
-            return to_multi(reference_intersection), MultiPoint()
-        if isinstance(reference_intersection, (Point, MultiPoint)):
-            return MultiLineString(), to_multi(reference_intersection)
-        if isinstance(reference_intersection, GeometryCollection):
-            points = []
-            lines = []
-            for geom in reference_intersection.geoms:
-
-                if isinstance(geom, (Point, MultiPoint)):
-                    points.append(geom)
-                elif isinstance(geom, (LineString, MultiLineString)):
-                    lines.append(geom)
-                elif isinstance(geom, (Polygon, MultiPolygon)):
-                    lines.append(geom.boundary)
-                else:
-                    TypeError("Geometrytype not valid at this stage")
-            return to_multi(safe_unary_union(lines)), to_multi(safe_unary_union(points))
-
-        if isinstance(reference_intersection, (Polygon, MultiPolygon)):
-            return to_multi(reference_intersection.boundary), MultiPoint()
-
-        raise TypeError(
-            "Reference could not be interpreted by NetworkGeometryProcessor"
-        )
+        return find_best_path_in_network(input_geometry, graph)
 
 
 class AlignerGeometryProcessor(BaseProcessor):

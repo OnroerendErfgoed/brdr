@@ -196,3 +196,13 @@
 - Added observation_properties to process_result
 - Fix for GRB Updater
 - Fix for Reference Loaders when no thematic data is loaded
+
+# 0.15.4
+
+- add brdr_observation to properties
+- renamed observation to observations
+- bump geopandas to 1.1.2
+- write to geojson and geopackage
+- metadata fix: added date
+- update_to_grb fix
+- improved networkgeometryprocessor

@@ -12,7 +12,6 @@ from brdr.configs import AlignerConfig
 from brdr.constants import (
     LAST_VERSION_DATE,
     DATE_FORMAT,
-    BASE_OBSERVATION_FIELD_NAME,
     DEFAULT_CRS,
     METADATA_FIELD_NAME,
     EVALUATION_FIELD_NAME,
@@ -105,6 +104,8 @@ def update_featurecollection_to_actual_grb(
     # Initiate a Aligner to reference thematic features to the actual borders
     aligner_config = AlignerConfig()
     aligner_config.max_workers = max_workers
+    aligner_config.log_metadata = True
+    aligner_config.add_observations = True
     aligner = Aligner(crs=crs, feedback=feedback, config=aligner_config)
     aligner.load_thematic_data(
         GeoJsonLoader(_input=featurecollection, id_property=id_theme_fieldname)
@@ -124,18 +125,21 @@ def update_featurecollection_to_actual_grb(
     for id_theme, feature in aligner.thematic_data.features.items():
         try:
             if not base_metadata_field is None:
-                base_observation_string = feature.properties[base_metadata_field]
-                base_observation = json.loads(base_observation_string)
 
-                logger.feedback_debug("observation: " + str(base_observation))
+                base_metadata = feature.properties[base_metadata_field]
+                if isinstance(base_metadata, str):
+                    base_metadata = json.loads(base_metadata)
+
+                logger.feedback_debug("observation: " + str(base_metadata))
+                # TODO - this not available in base_metadata?
                 try:
                     logger.feedback_debug(str(feature.properties))
                     if (
-                        LAST_VERSION_DATE in base_observation
-                        and base_observation[LAST_VERSION_DATE] is not None
-                        and base_observation[LAST_VERSION_DATE] != ""
+                        LAST_VERSION_DATE in base_metadata
+                        and base_metadata[LAST_VERSION_DATE] is not None
+                        and base_metadata[LAST_VERSION_DATE] != ""
                     ):
-                        str_lvd = base_observation[LAST_VERSION_DATE]
+                        str_lvd = base_metadata[LAST_VERSION_DATE]
                         lvd = datetime.strptime(str_lvd, DATE_FORMAT).date()
                         if last_version_date is None or lvd < last_version_date:
                             last_version_date = lvd
@@ -199,7 +203,7 @@ def update_featurecollection_to_actual_grb(
     aligner_result = aligner.evaluate(
         relevant_distances=relevant_distances,
         thematic_ids=affected_and_changeable,
-        metadata_field=BASE_OBSERVATION_FIELD_NAME,
+        metadata_field=base_metadata_field,
         full_reference_strategy=full_reference_strategy,
         max_predictions=max_predictions,
         multi_to_best_prediction=multi_to_best_prediction,
