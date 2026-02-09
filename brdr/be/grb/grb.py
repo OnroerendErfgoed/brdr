@@ -104,8 +104,8 @@ def update_featurecollection_to_actual_grb(
     # Initiate a Aligner to reference thematic features to the actual borders
     aligner_config = AlignerConfig()
     aligner_config.max_workers = max_workers
-    aligner_config.log_metadata=True
-    aligner_config.add_observations=True
+    aligner_config.log_metadata = True
+    aligner_config.add_observations = True
     aligner = Aligner(crs=crs, feedback=feedback, config=aligner_config)
     aligner.load_thematic_data(
         GeoJsonLoader(_input=featurecollection, id_property=id_theme_fieldname)
@@ -127,11 +127,11 @@ def update_featurecollection_to_actual_grb(
             if not base_metadata_field is None:
 
                 base_metadata = feature.properties[base_metadata_field]
-                if isinstance(base_metadata,str):
+                if isinstance(base_metadata, str):
                     base_metadata = json.loads(base_metadata)
 
                 logger.feedback_debug("observation: " + str(base_metadata))
-                #TODO - this not available in base_metadata?
+                # TODO - this not available in base_metadata?
                 try:
                     logger.feedback_debug(str(feature.properties))
                     if (

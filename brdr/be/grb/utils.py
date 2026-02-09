@@ -218,6 +218,7 @@ def get_last_version_date(
         return update_dates[0]
     return None
 
+
 def get_collection_grb_actual(
     geometry,
     grb_type=GRBType.ADP,

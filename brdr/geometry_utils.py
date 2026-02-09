@@ -1142,7 +1142,7 @@ def to_multi(geometry, geomtype=None):
         raise TypeError("Geometry type not supported: {}".format(type(geometry)))
 
 
-def find_best_circle_path(graph, geom_to_process,node,cutoff):
+def find_best_circle_path(graph, geom_to_process, node, cutoff):
     min_dist = inf
     best_cycle_line = None
 
@@ -1150,7 +1150,7 @@ def find_best_circle_path(graph, geom_to_process,node,cutoff):
     neighbors = list(graph.neighbors(node))
     degree = len(neighbors)
     max_amount = 1000
-    i=0
+    i = 0
     if degree < 2:
         # Een knoop met degree 0 of 1 kan nooit onderdeel zijn van een cyclus
         return best_cycle_line
@@ -1162,10 +1162,12 @@ def find_best_circle_path(graph, geom_to_process,node,cutoff):
     for neighbor in neighbors:
         # We zoeken paden van de buur terug naar de startnode
         # Cutoff is -1 omdat de eerste stap (node -> neighbor) al gezet is
-        paths = nx.all_simple_paths(graph, source=neighbor, target=node, cutoff=cutoff-1)
+        paths = nx.all_simple_paths(
+            graph, source=neighbor, target=node, cutoff=cutoff - 1
+        )
 
         for path in paths:
-            i+=1
+            i += 1
             if i > max_amount:  # safetyleak
                 logging.warning(
                     f"max cycles tested while searching for geometry: {max_amount}"
@@ -1182,6 +1184,7 @@ def find_best_circle_path(graph, geom_to_process,node,cutoff):
                 min_dist = vertex_distance
                 best_cycle_line = cycle_line
     return best_cycle_line
+
 
 def nearest_node(point, nodes):
     """
@@ -1311,7 +1314,14 @@ def longest_linestring_from_multilinestring(multilinestring):
 
     # Create a graph from the MultiLineString
     graph = Graph()
-    _multilinestring_to_edges(graph, multilinestring, node_tag="",edge_tag="",pseudo_coords=[],pseudonode_tag="",)
+    _multilinestring_to_edges(
+        graph,
+        multilinestring,
+        node_tag="",
+        edge_tag="",
+        pseudo_coords=[],
+        pseudonode_tag="",
+    )
 
     # Find all simple paths and keep the longest one
     longest_path = []
@@ -1415,7 +1425,7 @@ def total_vertex_distance(
 #     return removed_edges
 
 
-def find_best_path_in_network(geom_to_process, graph,cutoff=100):
+def find_best_path_in_network(geom_to_process, graph, cutoff=100):
     """
     Determine the best path between 2 points in the network using the Hausdorf-distance
     Parameters:
@@ -1433,7 +1443,9 @@ def find_best_path_in_network(geom_to_process, graph,cutoff=100):
     end_node = nearest_node(end_point, graph.nodes)
 
     if start_node == end_node:
-        return find_best_circle_path(graph, geom_to_process,node = start_node,cutoff=cutoff)
+        return find_best_circle_path(
+            graph, geom_to_process, node=start_node, cutoff=cutoff
+        )
 
     # Search all simple paths (limited, because cyclic paths can result in a lot of simple paths
 
@@ -1455,9 +1467,7 @@ def find_best_path_in_network(geom_to_process, graph,cutoff=100):
     best_line = None
     for i, path in enumerate(all_paths_generator):
         if i > cutoff:  # safetyleak
-            logging.warning(
-                f"max paths tested while searching for geometry: {cutoff}"
-            )
+            logging.warning(f"max paths tested while searching for geometry: {cutoff}")
             break
         try:  # added try/except because 'path' sometimes exists out of 1 point, resulting in LineString-error
             line = LineString(path)
@@ -1685,7 +1695,8 @@ def from_crs(crs, format="uri"):
     except Exception as e:
         raise ValueError(f"Error converting CRS: {e}")
 
-def get_pseudo_coords (geom1,geom2):
+
+def get_pseudo_coords(geom1, geom2):
     coords1 = get_coordinates(geom1)
     coords2 = get_coordinates(geom2)
     # (Tuples are 'hashable', NumPy arrays not)
@@ -1693,7 +1704,8 @@ def get_pseudo_coords (geom1,geom2):
     set2 = set(map(tuple, coords2))
     return set1 - set2
 
-def get_non_pseudo_coords (geom1,geom2):
+
+def get_non_pseudo_coords(geom1, geom2):
     coords1 = get_coordinates(geom1)
     coords2 = get_coordinates(geom2)
     # (Tuples are 'hashable', NumPy arrays not)
@@ -1703,9 +1715,7 @@ def get_non_pseudo_coords (geom1,geom2):
     return set1 - pseudo
 
 
-def multilinestring_multipoint_from_reference_intersection(
-    reference_intersection
-):
+def multilinestring_multipoint_from_reference_intersection(reference_intersection):
     if isinstance(reference_intersection, (LineString, MultiLineString)):
         return to_multi(reference_intersection), MultiPoint()
     if isinstance(reference_intersection, (Point, MultiPoint)):
@@ -1728,9 +1738,7 @@ def multilinestring_multipoint_from_reference_intersection(
     if isinstance(reference_intersection, (Polygon, MultiPolygon)):
         return to_multi(reference_intersection.boundary), MultiPoint()
 
-    raise TypeError(
-        "Reference could not be interpreted"
-    )
+    raise TypeError("Reference could not be interpreted")
 
 
 def get_thematic_points(input_geometry, reference_intersection):
@@ -1754,9 +1762,7 @@ def get_thematic_points(input_geometry, reference_intersection):
         geom_to_process_splitted = split(geom_to_process_segmentized, splitter)
     except (GeometryTypeError, ValueError):
         geom_to_process_splitted = geom_to_process_segmentized
-    thematic_points = MultiPoint(
-        list(get_coordinates(geom_to_process_splitted))
-    )
+    thematic_points = MultiPoint(list(get_coordinates(geom_to_process_splitted)))
     return thematic_points
 
 
@@ -1821,10 +1827,8 @@ def build_custom_network(
     # pseudo_ref_vertex
     # pseudo_theme_ref_vertex
 
-    ref_multiline, ref_points = (
-        multilinestring_multipoint_from_reference_intersection(
-            reference_intersection
-        )
+    ref_multiline, ref_points = multilinestring_multipoint_from_reference_intersection(
+        reference_intersection
     )
     theme_points = get_thematic_points(input_geometry, reference_intersection)
 
@@ -1832,19 +1836,29 @@ def build_custom_network(
     pseudo_ref_coords = get_pseudo_coords(reference_intersection, reference)
     pseudo_theme_coords = get_pseudo_coords(theme_multiline, input_geometry)
 
-    srtree_theme_lines,edge_mapping_theme_lines =_multilinestring_to_edges(G, theme_multiline,pseudo_coords=pseudo_theme_coords,node_tag="theme_vertex",pseudonode_tag= "pseudo_theme_vertex", edge_tag = "theme_lines")
-    srtree_ref_lines,edge_mapping_ref_lines =_multilinestring_to_edges(G, ref_multiline,pseudo_coords=pseudo_ref_coords,node_tag="ref_vertex",pseudonode_tag= "pseudo_ref_vertex", edge_tag = "ref_lines")
-
-
+    srtree_theme_lines, edge_mapping_theme_lines = _multilinestring_to_edges(
+        G,
+        theme_multiline,
+        pseudo_coords=pseudo_theme_coords,
+        node_tag="theme_vertex",
+        pseudonode_tag="pseudo_theme_vertex",
+        edge_tag="theme_lines",
+    )
+    srtree_ref_lines, edge_mapping_ref_lines = _multilinestring_to_edges(
+        G,
+        ref_multiline,
+        pseudo_coords=pseudo_ref_coords,
+        node_tag="ref_vertex",
+        pseudonode_tag="pseudo_ref_vertex",
+        edge_tag="ref_lines",
+    )
 
     # 3. Add Pseudo-nodes (theme_points) onto ref_lines
     if not ref_multiline is None and not ref_multiline.is_empty:
         for point in theme_points.geoms:
             if G.has_node(point.coords[0]):
                 continue
-            nearest_idx = srtree_ref_lines.nearest(
-                point
-            )
+            nearest_idx = srtree_ref_lines.nearest(point)
             # Find edge in NetworkX
             u, v = edge_mapping_ref_lines[nearest_idx]
 
@@ -1854,17 +1868,26 @@ def build_custom_network(
                 p1, p2 = nearest_points(point, line)
             else:
                 # This is possible when the original line is already split with a pseudonode
-                edge_list = list(G.edges(u,data=True)) + list(G.edges(v,data=True))
-                u,v,edge_data = find_closest_in_subset(point, edge_list)
+                edge_list = list(G.edges(u, data=True)) + list(G.edges(v, data=True))
+                u, v, edge_data = find_closest_in_subset(point, edge_list)
                 line = edge_data["geometry"]
                 p1, p2 = nearest_points(point, line)
-            if p2.distance(Point(u))>snap_dist and p2.distance(Point(v))>snap_dist:
+            if p2.distance(Point(u)) > snap_dist and p2.distance(Point(v)) > snap_dist:
                 if p1.distance(p2) <= 1e-7:
-                    _add_pseudonode(G, p2, u, v,tag_point="pseudo_theme_ref_vertex",tag_line="ref_lines")
-                elif  p1.distance(p2) <= relevant_distance:
-                    _add_pseudonode(G, p2, u, v,tag_point="pseudo_ref_vertex",tag_line="ref_lines")
+                    _add_pseudonode(
+                        G,
+                        p2,
+                        u,
+                        v,
+                        tag_point="pseudo_theme_ref_vertex",
+                        tag_line="ref_lines",
+                    )
+                elif p1.distance(p2) <= relevant_distance:
+                    _add_pseudonode(
+                        G, p2, u, v, tag_point="pseudo_ref_vertex", tag_line="ref_lines"
+                    )
 
-    if ref_points:#TODO improve ref_points?
+    if ref_points:  # TODO improve ref_points?
         for pt in ref_points.geoms:
             p_coord = pt.coords[0]
             G.add_node(p_coord, tag="ref_points")
@@ -1877,16 +1900,16 @@ def build_custom_network(
         # 2. Verbind enkel de ref_points met de rest
         for ref_node in ref_nodes:
             for other_node in all_nodes:
-                connect=False
+                connect = False
                 # Voorkom dat een node met zichzelf verbindt
                 if ref_node == other_node:
                     continue
                 if other_node in ref_nodes:
-                    connect=True
+                    connect = True
                 else:
                     dist = Point(ref_node).distance(Point(other_node))
-                    if dist < relevant_distance*3:
-                        connect=True
+                    if dist < relevant_distance * 3:
+                        connect = True
                 if connect:
                     edge_geom = LineString([ref_node, other_node])
                     G.add_edge(
@@ -1901,7 +1924,7 @@ def build_custom_network(
         G=G,
         snap_strategy=snap_strategy,
         gap_dist=gap_threshold,
-        interconnect_dist=2*relevant_distance,
+        interconnect_dist=2 * relevant_distance,
         snap_dist=snap_dist,
         merge_nodes=False,
     )
@@ -1911,7 +1934,7 @@ def build_custom_network(
         G, interconnect_dist=2 * relevant_distance, edge_tags=["ref_lines"]
     )
     # remove pseudo_theme_vertices
-    remove_pseodonodes (G,tag="pseudo_theme_vertex")
+    remove_pseodonodes(G, tag="pseudo_theme_vertex")
 
     # Force the creation of a cycle when input_geometry is a circle & the graph is currently a tree/forest
     if input_geometry.coords[0] == input_geometry.coords[-1]:
@@ -1920,7 +1943,7 @@ def build_custom_network(
     # # 5. Final Cleanup
     # composite_edges_removed = remove_composite_edges(G)
     # logging.debug(f"Removed composite edges: {len(composite_edges_removed)}")
-    #export_to_geopackage(G,"g_out.gpkg")#TODO remove
+    # export_to_geopackage(G,"g_out.gpkg")#TODO remove
 
     return G
 
@@ -1946,10 +1969,8 @@ def find_closest_in_subset(point, edge_list):
     return closest_edge  # Geeft (u, v, data) terug van de winnaar
 
 
-def remove_pseodonodes (G,tag):
-    nodes_to_remove = [
-        n for n, d in G.nodes(data=True) if d.get("tag") == tag
-    ]
+def remove_pseodonodes(G, tag):
+    nodes_to_remove = [n for n, d in G.nodes(data=True) if d.get("tag") == tag]
 
     for node in nodes_to_remove:
         # Get neighbors
@@ -1958,28 +1979,26 @@ def remove_pseodonodes (G,tag):
         # Verbind alle buren met elkaar (bijv. bij een graad van 2 verbindt hij A met B)
         # Gebruik itertools als je nodes met een hogere graad dan 2 hebt
 
-
         for u, v in combinations(neighbors, 2):
             if not G.has_edge(u, v):
-                G.add_edge(u, v, tag = "merged_lines",geometry=LineString([u, v]))
+                G.add_edge(u, v, tag="merged_lines", geometry=LineString([u, v]))
 
         # Remove old node
         G.remove_node(node)
 
-def _add_pseudonode(G: Graph, p2, u, v,tag_point,tag_line):
+
+def _add_pseudonode(G: Graph, p2, u, v, tag_point, tag_line):
     p_coord = p2.coords[0]
     # Remove the original edge and split it into two new edges at the point
     G.remove_edge(u, v)
     G.add_node(p_coord, tag=tag_point)
-    G.add_edge(
-        u, p_coord, tag=tag_line, geometry=LineString([u, p_coord])
-    )
-    G.add_edge(
-        p_coord, v, tag=tag_line, geometry=LineString([p_coord, v])
-    )
+    G.add_edge(u, p_coord, tag=tag_line, geometry=LineString([u, p_coord]))
+    G.add_edge(p_coord, v, tag=tag_line, geometry=LineString([p_coord, v]))
 
 
-def _multilinestring_to_edges(G, multilinestring, node_tag,edge_tag,pseudo_coords,pseudonode_tag):
+def _multilinestring_to_edges(
+    G, multilinestring, node_tag, edge_tag, pseudo_coords, pseudonode_tag
+):
     multilinestring = to_multi(multilinestring)
     if not isinstance(multilinestring, MultiLineString):
         return None, None
@@ -2090,7 +2109,12 @@ def ensure_cycle_exists(G, interconnect_dist=5.0):
 
 
 def solve_all_network_gaps(
-    G, snap_strategy=SnapStrategy.NO_PREFERENCE, snap_dist=0.001, gap_dist=0.1, interconnect_dist=1.5, merge_nodes=False
+    G,
+    snap_strategy=SnapStrategy.NO_PREFERENCE,
+    snap_dist=0.001,
+    gap_dist=0.1,
+    interconnect_dist=1.5,
+    merge_nodes=False,
 ):
     """
     Solve network gaps through universal snapping, gap closure, and targeted interconnects.
@@ -2130,7 +2154,7 @@ def solve_all_network_gaps(
     global_tree = STRtree(all_points)
 
     nodes_to_relabel = {}
-    endpoints = [n for n, deg in G.degree() if deg <= 1]#endpoints or floating points
+    endpoints = [n for n, deg in G.degree() if deg <= 1]  # endpoints or floating points
 
     for ep in endpoints:
         ep_pt = Point(ep)
@@ -2174,9 +2198,13 @@ def solve_all_network_gaps(
         if loops:
             logging.debug(f"Cleaned: {len(loops)} self-loops removed after merging.")
 
-    #STEP 2 make interconnection edges
-    theme_edges = [(u, v) for u, v, d in G.edges(data=True) if d.get("tag") == "theme_lines"]
-    ref_edges = [(u, v) for u, v, d in G.edges(data=True) if d.get("tag") == "ref_lines"]
+    # STEP 2 make interconnection edges
+    theme_edges = [
+        (u, v) for u, v, d in G.edges(data=True) if d.get("tag") == "theme_lines"
+    ]
+    ref_edges = [
+        (u, v) for u, v, d in G.edges(data=True) if d.get("tag") == "ref_lines"
+    ]
 
     if ref_edges:
         theme_sub = G.edge_subgraph(theme_edges)
@@ -2191,7 +2219,9 @@ def solve_all_network_gaps(
         trees["all"] = {"pts": all_pts, "tree": STRtree(all_pts), "nodes": nodes}
 
         if snap_strategy != SnapStrategy.NO_PREFERENCE:
-            v_nodes = [n for n in nodes if not G.nodes[n].get("tag", "").startswith("pseudo")]
+            v_nodes = [
+                n for n in nodes if not G.nodes[n].get("tag", "").startswith("pseudo")
+            ]
             v_pts = [Point(n) for n in v_nodes]
             trees["vertex"] = {"pts": v_pts, "tree": STRtree(v_pts), "nodes": v_nodes}
 
@@ -2200,10 +2230,15 @@ def solve_all_network_gaps(
             connection_made = False
 
             # Order of strategies to test
-            strategies = ["vertex", "all"] if snap_strategy != SnapStrategy.NO_PREFERENCE else ["all"]
+            strategies = (
+                ["vertex", "all"]
+                if snap_strategy != SnapStrategy.NO_PREFERENCE
+                else ["all"]
+            )
 
             for s_key in strategies:
-                if s_key not in trees: continue
+                if s_key not in trees:
+                    continue
 
                 s = trees[s_key]
                 n_idx = s["tree"].nearest(tep_pt)
@@ -2227,6 +2262,7 @@ def solve_all_network_gaps(
                 if connection_made:
                     break
     return G
+
 
 def finalize_network_connectivity(
     G, interconnect_dist=2.0, edge_tags=["theme_lines", "ref_lines"]
