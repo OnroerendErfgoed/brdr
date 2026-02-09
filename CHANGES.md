@@ -199,4 +199,10 @@
 
 # 0.15.4
 
-- In progress
+- add brdr_observation to properties
+- renamed observation to observations
+- bump geopandas to 1.1.2
+- write to geojson and geopackage
+- metadata fix: added date
+- update_to_grb fix
+- improved networkgeometryprocessor

@@ -1417,7 +1417,7 @@ def total_vertex_distance(
 #     return removed_edges
 
 
-def find_best_path_in_network(geom_to_process, graph,cutoff=1000):
+def find_best_path_in_network(geom_to_process, graph,cutoff=250):
     """
     Determine the best path between 2 points in the network using the Hausdorf-distance
     Parameters:
@@ -1425,7 +1425,7 @@ def find_best_path_in_network(geom_to_process, graph,cutoff=1000):
     - nw_multilinestring: shapely.geometry.MultiLineString - MultiLineString with all parts of a network
 
     Returns:
-    - shapely.geometry.LineString van het langste pad tussen de twee punten
+    - shapely.geometry.LineString of the best path
     """
 
     start_point = Point(geom_to_process.coords[0])
