@@ -1,5 +1,4 @@
 import logging
-import math
 from itertools import combinations
 from math import inf
 from math import pi
@@ -9,7 +8,7 @@ import networkx as nx
 import numpy as np
 import pyproj
 from networkx import Graph
-from shapely import GEOSException, get_coordinates, LinearRing, LineString
+from shapely import GEOSException, get_coordinates, LinearRing
 from shapely import STRtree
 from shapely import buffer
 from shapely import difference
@@ -46,7 +45,6 @@ from shapely.ops import substring
 from shapely.prepared import prep
 
 from brdr.enums import SnapStrategy
-from brdr.viz import export_to_geopackage
 
 ShapelyGeometry = Union[
     Point,
@@ -1417,7 +1415,7 @@ def total_vertex_distance(
 #     return removed_edges
 
 
-def find_best_path_in_network(geom_to_process, graph,cutoff=250):
+def find_best_path_in_network(geom_to_process, graph,cutoff=100):
     """
     Determine the best path between 2 points in the network using the Hausdorf-distance
     Parameters:

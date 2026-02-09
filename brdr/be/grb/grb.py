@@ -12,7 +12,6 @@ from brdr.configs import AlignerConfig
 from brdr.constants import (
     LAST_VERSION_DATE,
     DATE_FORMAT,
-    BASE_OBSERVATION_FIELD_NAME,
     DEFAULT_CRS,
     METADATA_FIELD_NAME,
     EVALUATION_FIELD_NAME,
