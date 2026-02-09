@@ -1300,7 +1300,7 @@ class Aligner:
                         and props[PREDICTION_COUNT] == 1
                     ):
                         props[EVALUATION_FIELD_NAME] = Evaluation.PREDICTION_UNIQUE
-                        # TODO can we add continue here? No, because this can get overwriten by prediction_unique_full
+                        # TODO can we add continue here? No, because this can get overwritten by prediction_unique_full
                     elif (
                         props[EVALUATION_FIELD_NAME]
                         in (Evaluation.TO_CHECK_NO_PREDICTION, Evaluation.NOT_EVALUATED)

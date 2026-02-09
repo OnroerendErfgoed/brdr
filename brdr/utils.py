@@ -347,7 +347,7 @@ def get_geometry_difference_metrics_from_processresults(
             "LineString",
             "MultiLineString",
         ):
-            diff_metric = DiffMetric.LENGTH_CHANGE
+            diff_metric = DiffMetric.LENGTH_ADDED_AND_REMOVED
         elif geom_thematic.geom_type in (
             "Point",
             "MultiPoint",
@@ -367,6 +367,7 @@ def get_geometry_difference_metrics_from_processresult(
     result = processresult.get("result")
     result_diff = processresult.get("result_diff")
     result_diff_min = processresult.get("result_diff_min")
+    result_diff_plus = processresult.get("result_diff_plus")
     diff = 0
     original = geom_thematic
     if result_diff is None or result_diff.is_empty or result is None or result.is_empty:
@@ -392,6 +393,16 @@ def get_geometry_difference_metrics_from_processresult(
     elif diff_metric == DiffMetric.LENGTH_REMOVED:
         if not result_diff_min is None or result_diff_min.is_empty:
             diff = result_diff_min.length
+    elif diff_metric == DiffMetric.LENGTH_ADDED_AND_REMOVED:
+        if not result_diff_min is None or result_diff_min.is_empty:
+            diff_min = result_diff_min.length
+        else:
+            diff_min =0
+        if not result_diff_plus is None or result_diff_plus.is_empty:
+            diff_plus = result_diff_plus.length
+        else:
+            diff_plus =0
+        diff= diff_plus + diff_min
     elif diff_metric == DiffMetric.REFERENCE_USAGE:
         if not reference_union is None and not reference_union.is_empty:
             reference_union_buffer = buffer_pos(reference_union, 0.01)

@@ -79,11 +79,13 @@ class DiffMetric(str, Enum):
     SYMMETRICAL_AREA_PERCENTAGE_CHANGE : str
         Symmetric difference as a percentage of original area.
     LENGTH_CHANGE : str
-        Change in perimeter/length.
+        Change in length.
     LENGTH_PERCENTAGE_CHANGE : str
-        Relative change in perimeter.
+        Relative change in length.
     LENGTH_REMOVED : str
         The length of segments removed during processing.
+    LENGTH_ADDED_AND_REMOVED: str
+        The length of segments added and removed during processing.
     TOTAL_DISTANCE : str
         Sum of displacement of all vertices.
     REFERENCE_USAGE : str
@@ -96,6 +98,7 @@ class DiffMetric(str, Enum):
     SYMMETRICAL_AREA_PERCENTAGE_CHANGE = "SYMMETRICAL_AREA_PERCENTAGE_CHANGE"
     LENGTH_CHANGE = "LENGTH_CHANGE"
     LENGTH_PERCENTAGE_CHANGE = "LENGTH_PERCENTAGE_CHANGE"
+    LENGTH_ADDED_AND_REMOVED = "LENGTH_ADDED_AND_REMOVED"
     LENGTH_REMOVED = "LENGTH_REMOVED"
     TOTAL_DISTANCE = "TOTAL_DISTANCE"
     REFERENCE_USAGE = "REFERENCE_USAGE"
