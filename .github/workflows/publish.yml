@@ -19,10 +19,11 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: 3.12
+          cache: pip
 
       - run: |
           python -m pip install --upgrade pip
-          pip install --upgrade griffe quartodoc
+          pip install griffe>=0.45.0
           pip install notebook ipykernel matplotlib brdr quartodoc
           python -m ipykernel install --user
 
