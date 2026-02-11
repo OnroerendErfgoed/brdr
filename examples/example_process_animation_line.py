@@ -13,7 +13,20 @@ if __name__ == "__main__":
     # Initiate brdr
     aligner = Aligner()
     # Load thematic data
-    geometry = {"coordinates":[[[171647.88034171,226384.40524778998],[171649.5703417,226381.8352478],[171650.0003417,226381.1752478],[171726.18034169,226420.87524778],[171748.02034169,226433.39524778],[171769.37034168,226441.33524778],[171826.76034167,226461.27524777]]],"type":"MultiLineString"}
+    geometry = {
+        "coordinates": [
+            [
+                [171647.88034171, 226384.40524778998],
+                [171649.5703417, 226381.8352478],
+                [171650.0003417, 226381.1752478],
+                [171726.18034169, 226420.87524778],
+                [171748.02034169, 226433.39524778],
+                [171769.37034168, 226441.33524778],
+                [171826.76034167, 226461.27524777],
+            ]
+        ],
+        "type": "MultiLineString",
+    }
 
     thematic_json = {
         "type": "FeatureCollection",
@@ -43,7 +56,7 @@ if __name__ == "__main__":
         key: feat.geometry for key, feat in aligner.thematic_data.features.items()
     }
     reference_geometries = {
-        key: feat.geometry  for key, feat in aligner.reference_data.features.items()
+        key: feat.geometry for key, feat in aligner.reference_data.features.items()
     }
     # SHOW results: map and plotted changes
     now = datetime.now()  # current date and time

@@ -1443,7 +1443,7 @@ class NetworkGeometryProcessor(BaseProcessor):
                         i,
                         reference,
                         relevant_distance,
-                    correction_distance=correction_distance,
+                        correction_distance=correction_distance,
                         close_output=True,
                     )
                     interiors_processed.append(i_processed)
@@ -1506,11 +1506,14 @@ class NetworkGeometryProcessor(BaseProcessor):
             if self.config.snap_strategy == SnapStrategy.NO_PREFERENCE:
                 reference_intersection_points = None
             else:
-                reference_intersection_points = MultiPoint(list(get_non_pseudo_coords (reference_intersection,reference)))
+                reference_intersection_points = MultiPoint(
+                    list(get_non_pseudo_coords(reference_intersection, reference))
+                )
             p1, p2 = nearest_points(geom_to_process, reference_intersection)
             if (
                 not reference_intersection_points is None
-                and not reference_intersection_points.is_empty):
+                and not reference_intersection_points.is_empty
+            ):
                 p1_vertices, p2_vertices = nearest_points(
                     geom_to_process, reference_intersection_points
                 )
@@ -1518,14 +1521,14 @@ class NetworkGeometryProcessor(BaseProcessor):
                     p2 = p2_vertices
             geom_processed = p2
         else:
-            #Linestring; Use of graph
+            # Linestring; Use of graph
             geom_processed = self._get_processed_network_path(
                 input_geometry=geom_to_process,
                 reference=reference,
                 reference_intersection=reference_intersection,
                 thematic_difference=thematic_difference,
                 relevant_distance=relevant_distance,
-                correction_distance=correction_distance
+                correction_distance=correction_distance,
             )
             if (
                 close_output
@@ -1553,11 +1556,9 @@ class NetworkGeometryProcessor(BaseProcessor):
             relevant_distance=relevant_distance,
             snap_strategy=self.config.snap_strategy,
             gap_threshold=0.1,
-            snap_dist=correction_distance
+            snap_dist=correction_distance,
         )
-        return find_best_path_in_network(
-            input_geometry, graph
-        )
+        return find_best_path_in_network(input_geometry, graph)
 
 
 class AlignerGeometryProcessor(BaseProcessor):

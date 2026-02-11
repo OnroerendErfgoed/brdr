@@ -310,7 +310,7 @@ class AlignerResult:
                         continue
                     prop_dictionary[theme_id][relevant_distance][
                         METADATA_FIELD_NAME
-                    ]  = metadata_result
+                    ] = metadata_result
 
         return get_geojsons_from_process_results(
             results,
@@ -526,16 +526,16 @@ def _reverse_metadata_observations_to_brdr_observation(metadata: Dict) -> Dict:
                 reconstructed["reference_features"][ref_id]["area"] = val
             elif prop == "brdr:area_overlap_percentage":
                 reconstructed["reference_features"][ref_id]["percentage"] = val
-                if val ==100:
+                if val == 100:
                     reconstructed["reference_features"][ref_id]["full"] = True
                 else:
                     reconstructed["reference_features"][ref_id]["full"] = False
 
-        #Get some values from a single observation
+        # Get some values from a single observation
         alignment_date = obs.get("result_time", {})
 
     # Finalize the reconstructed structure
-    #TODO; this can be implemented better, but for now we get the information from the observation
+    # TODO; this can be implemented better, but for now we get the information from the observation
     reconstructed["alignment_date"] = actuation_metadata.get("result_time", None)
     reconstructed["reference_source"] = None
     reconstructed["brdr_version"] = None
@@ -603,7 +603,7 @@ def aligner_metadata_decorator(f):
                 "changes": "geo:hasGeometry",
                 "sosa:hasFeatureOfInterest": {"id": feature_of_interest_id},
                 "result": result_urn,
-                "result_time":actuation_time,#TODO _CHECK
+                "result_time": actuation_time,  # TODO _CHECK
                 "procedure": {
                     "id": processor_id,
                     "implementedBy": processor_name,
