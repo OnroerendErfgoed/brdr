@@ -1151,7 +1151,7 @@ def find_best_circle_path(graph, geom_to_process,node,cutoff):
     # We kijken naar alle buren van de startnode
     neighbors = list(graph.neighbors(node))
     degree = len(neighbors)
-    max_amount = 1000
+
     i=0
     if degree < 2:
         # Een knoop met degree 0 of 1 kan nooit onderdeel zijn van een cyclus
@@ -1168,9 +1168,9 @@ def find_best_circle_path(graph, geom_to_process,node,cutoff):
 
         for path in paths:
             i+=1
-            if i > max_amount:  # safetyleak
+            if i > cutoff:  # safetyleak
                 logging.warning(
-                    f"max cycles tested while searching for geometry: {max_amount}"
+                    f"max cycles tested while searching for geometry: {cutoff}"
                 )
                 break
             # Een pad moet minstens 2 andere knopen bevatten om een echte lus te zijn (A-B-C-A)

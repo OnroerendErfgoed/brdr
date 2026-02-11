@@ -28,7 +28,7 @@ aligner_result = aligner.predict(
     relevant_distances=series,
 )
 # aligner_result = aligner.process(relevant_distances=[0,1,2,3,4],)
-# aligner_result = aligner.process(relevant_distances=[1],)
+#aligner_result = aligner.process(relevant_distances=[1],)
 dict_predictions = aligner_result.get_results(
     aligner=aligner, result_type=AlignerResultType.PREDICTIONS
 )
