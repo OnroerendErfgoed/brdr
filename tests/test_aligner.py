@@ -516,6 +516,3 @@ class TestAligner(unittest.TestCase):
         assert fcs["result_diff"]["features"][0]["properties"][AREA_ATTRIBUTE] == 0
         assert fcs["result_diff_min"]["features"][0]["properties"][AREA_ATTRIBUTE] == 0
         assert fcs["result_diff_plus"]["features"][0]["properties"][AREA_ATTRIBUTE] == 0
-
-
-

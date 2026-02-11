@@ -130,7 +130,9 @@ def _feature_from_geom(
     return Feature(geometry=geom, id=feature_id, properties=properties)
 
 
-def write_featurecollection_to_geopackage(output_path, featurecollection,  layer_name="resulting_layer"):
+def write_featurecollection_to_geopackage(
+    output_path, featurecollection, layer_name="resulting_layer"
+):
     # 1. Change to GeoDataFrame
     crs_name = featurecollection.get("crs", {}).get("properties", {}).get("name")
     gdf = gpd.GeoDataFrame.from_features(featurecollection, crs=crs_name)
@@ -154,11 +156,15 @@ def write_featurecollection_to_geopackage(output_path, featurecollection,  layer
     folder = os.path.dirname(output_path)
     if folder and not os.path.exists(folder):
         os.makedirs(folder, exist_ok=True)
-    gdf.to_file(output_path, driver="GPKG", layer=layer_name,
-                #mode="a",
-                engine="pyogrio"
-                #,overwrite_layer=True
-                )
+    gdf.to_file(
+        output_path,
+        driver="GPKG",
+        layer=layer_name,
+        # mode="a",
+        engine="pyogrio",
+        # ,overwrite_layer=True
+    )
+
 
 def geojson_serializor(obj):
     if isinstance(obj, (datetime, date)):
@@ -186,11 +192,17 @@ def write_featurecollection_to_geojson(output_path, featurecollection):
             if props[key] is not None:
                 props[key] = json.dumps(props[key], ensure_ascii=False)
 
-    #create/write file
+    # create/write file
     parent = os.path.dirname(output_path)
     os.makedirs(parent, exist_ok=True)
     with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(featurecollection, f,indent=2, default=geojson_serializor, ensure_ascii=False)
+        json.dump(
+            featurecollection,
+            f,
+            indent=2,
+            default=geojson_serializor,
+            ensure_ascii=False,
+        )
 
 
 def flatten_iter(lst):
@@ -397,12 +409,12 @@ def get_geometry_difference_metrics_from_processresult(
         if not result_diff_min is None or result_diff_min.is_empty:
             diff_min = result_diff_min.length
         else:
-            diff_min =0
+            diff_min = 0
         if not result_diff_plus is None or result_diff_plus.is_empty:
             diff_plus = result_diff_plus.length
         else:
-            diff_plus =0
-        diff= diff_plus + diff_min
+            diff_plus = 0
+        diff = diff_plus + diff_min
     elif diff_metric == DiffMetric.REFERENCE_USAGE:
         if not reference_union is None and not reference_union.is_empty:
             reference_union_buffer = buffer_pos(reference_union, 0.01)

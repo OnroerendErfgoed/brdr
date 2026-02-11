@@ -54,29 +54,35 @@ def _make_map(ax, processresult, thematic_dict, reference_dict):
         ax.set_ylim(bounds[1] - padding, bounds[3] + padding)
 
         # 1. Plot Reference Data
-        reference_has_polygons = any(gs_reference.geom_type.isin(["Polygon", "MultiPolygon"]))
+        reference_has_polygons = any(
+            gs_reference.geom_type.isin(["Polygon", "MultiPolygon"])
+        )
         if reference_has_polygons:
-            color="lightgray"
+            color = "lightgray"
         else:
-            color="black"
+            color = "black"
         gs_reference.plot(
-            ax=ax,color=color, edgecolor="black", linewidth=2.0, zorder=1
+            ax=ax, color=color, edgecolor="black", linewidth=2.0, zorder=1
         )
 
         # 2. Plot Resulting Geometry (Lijnen hebben geen vulling, dus we focussen op edgecolor)
-        results_has_polygons = any(gs_results.geom_type.isin(["Polygon", "MultiPolygon"]))
+        results_has_polygons = any(
+            gs_results.geom_type.isin(["Polygon", "MultiPolygon"])
+        )
         if results_has_polygons:
-            color="none"
+            color = "none"
         else:
-            color="green"
+            color = "green"
         gs_results.plot(ax=ax, color=color, edgecolor="green", linewidth=2.0, zorder=2)
 
         # 3. Plot Original (Thematic) Data
-        thematic_has_polygons = any(gs_thematic.geom_type.isin(["Polygon", "MultiPolygon"]))
+        thematic_has_polygons = any(
+            gs_thematic.geom_type.isin(["Polygon", "MultiPolygon"])
+        )
         if thematic_has_polygons:
-            color="none"
+            color = "none"
         else:
-            color="#0000FF"
+            color = "#0000FF"
         gs_thematic.plot(
             ax=ax,
             color=color,
@@ -108,14 +114,24 @@ def _make_map(ax, processresult, thematic_dict, reference_dict):
                 )
 
         # Legenda
-        legend_patch_res = Patch(facecolor="green",hatch="+", edgecolor="green", label="Result")
+        legend_patch_res = Patch(
+            facecolor="green", hatch="+", edgecolor="green", label="Result"
+        )
         legend_patch_ori = Patch(
-            facecolor="blue", edgecolor="blue",hatch="+", label="Original", linestyle="dashdot"
+            facecolor="blue",
+            edgecolor="blue",
+            hatch="+",
+            label="Original",
+            linestyle="dashdot",
         )
         legend_patch_removed = Patch(
-            facecolor="red", edgecolor="red",hatch="+", label="Removed", linestyle="dashdot"
+            facecolor="red",
+            edgecolor="red",
+            hatch="+",
+            label="Removed",
+            linestyle="dashdot",
         )
-        ax.legend(handles=[legend_patch_res, legend_patch_ori,legend_patch_removed])
+        ax.legend(handles=[legend_patch_res, legend_patch_ori, legend_patch_removed])
 
     except Exception as e:
         logging.error(f"make_map: Error while making map: {e}")
@@ -285,12 +301,14 @@ def animated_map(
         theme_id = list(dict_results_by_distance[frame_dist].keys())[0]
         entry = dict_results_by_distance[frame_dist][theme_id]
 
-        if isinstance(entry["result"],(LineString,MultiLineString)):
+        if isinstance(entry["result"], (LineString, MultiLineString)):
 
-            original_length= dict_thematic[theme_id].length
+            original_length = dict_thematic[theme_id].length
             result_length = entry["result"].length
             diff_length = abs(result_length - original_length)
-            percentage = 100 * diff_length / original_length if original_length != 0 else 0
+            percentage = (
+                100 * diff_length / original_length if original_length != 0 else 0
+            )
         else:
             area_diff = entry["result_diff"].area
             area_total = entry["result"].area
