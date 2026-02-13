@@ -1,5 +1,4 @@
 import logging
-import math
 from itertools import combinations
 from math import inf
 from math import pi
@@ -9,7 +8,7 @@ import networkx as nx
 import numpy as np
 import pyproj
 from networkx import Graph
-from shapely import GEOSException, get_coordinates, LinearRing, LineString
+from shapely import GEOSException, get_coordinates, LinearRing
 from shapely import STRtree
 from shapely import buffer
 from shapely import difference
