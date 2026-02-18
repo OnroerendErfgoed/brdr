@@ -206,3 +206,7 @@
 - metadata fix: added date
 - update_to_grb fix
 - improved networkgeometryprocessor
+
+# 0.15.5
+
+- major improvement for networkgeometryprocessor (stable results)
