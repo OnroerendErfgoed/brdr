@@ -201,7 +201,7 @@ def show_map(
 
         ax.set_title(f"Relevant distance: {dist} m")
 
-    plt.show(block=False)
+    plt.show(block=True)
 
 
 def animated_map(
