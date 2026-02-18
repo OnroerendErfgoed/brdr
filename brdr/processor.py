@@ -1486,19 +1486,14 @@ class NetworkGeometryProcessor(BaseProcessor):
         correction_distance,
         close_output=False,
     ):
-        buffer_distance = relevant_distance / 2
-        geom_to_process_buffered = buffer_pos(geom_to_process, buffer_distance)
-        reference_buffered = buffer_pos(reference, buffer_distance)
-        overlap = safe_intersection(geom_to_process_buffered, reference_buffered)
-        if overlap.is_empty:
-            return geom_to_process
-        overlap_buffered = buffer_pos(overlap, buffer_distance)
-        reference_intersection = safe_intersection(reference, overlap_buffered)
+        geom_to_process_buffered = buffer_pos(geom_to_process,relevant_distance)
+        reference_intersection = safe_intersection(reference, geom_to_process_buffered)
         reference_intersection = safe_unary_union(reference_intersection)
         reference_intersection = to_multi(reference_intersection)
         if reference_intersection.is_empty:
             return geom_to_process
-        thematic_difference = safe_difference(geom_to_process, overlap_buffered)
+        reference_intersection_buffered = buffer_pos(reference_intersection,relevant_distance)
+        thematic_difference = safe_difference(geom_to_process, reference_intersection_buffered)
         thematic_difference = safe_unary_union(thematic_difference)
         thematic_difference = to_multi(thematic_difference)
 
