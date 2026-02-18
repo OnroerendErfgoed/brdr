@@ -1743,27 +1743,28 @@ def build_custom_network(
     G = connect_network_components(
         G, interconnect_dist=5 * relevant_distance, edge_tags=["ref_lines","ref_points_connection"]
     )
-    remove_pseudonodes(G, tag="pseudo_ref_vertex", target_degree=1)
-    #unconnected_distance = 100
+    remove_pseudonodes(G, tag="pseudo_ref_vertex", target_degrees=[1])
+    # unconnected_distance = 100
     # G = connect_unconnected(
     #     G, max_geo_dist=unconnected_distance,multi_factor=5
     # )
     #
-    remove_pseudonodes (G,tag="pseudo_theme_vertex",target_degree=2)
-    max_unconnected_distance = 100
+    remove_pseudonodes (G,tag="pseudo_theme_vertex",target_degrees=[2])
+    max_unconnected_distance = 50
     unconnected_distance =10*relevant_distance
     if unconnected_distance > max_unconnected_distance:
         unconnected_distance = max_unconnected_distance
-
-    G=connect_unconnected(G,max_spatial_dist=unconnected_distance,detour_ratio=3)
+    unconnected_distance = 50
+    G=connect_unconnected_greedy(G,max_spatial_dist=unconnected_distance,detour_ratio=5)
 
     # remove pseudo_vertices
+    remove_pseudonodes (G,tag="pseudo_theme_vertex",target_degrees=[1,2])
 
     G = clean_pseudo_nodes_by_snap_strategy(G, snap_strategy=snap_strategy, distance_threshold=relevant_distance)
     # Correction for intersecting edges
     G = reconstruct_graph_for_intersections(G)
 
-    #export_to_geopackage(G,"g_out.gpkg")#TODO remove
+    # export_to_geopackage(G,"g_out.gpkg")#TODO remove
 
     return G
 
@@ -1868,8 +1869,109 @@ def connect_unconnected(G, max_spatial_dist=50, detour_ratio=3.0):
     return G
 
 
-def add_pseudonodes_to_ref_line(G, edge_mapping_ref_lines, ref_multiline,
-                                relevant_distance: float, snap_dist: float, srtree_ref_lines, theme_points: MultiPoint):
+def connect_unconnected_greedy(G, max_spatial_dist=50, detour_ratio=3.0):
+    """
+    Iteratively adds the shortest connections and re-evaluates
+    if remaining connections are still necessary.
+    """
+
+    # 1. Identify all dead-ends once at the start
+    dead_ends = [n for n, d in G.degree() if d == 1]
+
+    # 2. Collect all candidate connections
+    target_edges = []
+    for u, v, data in G.edges(data=True):
+        if "geometry" in data:
+            if u in dead_ends or v in dead_ends:
+                target_edges.append((u, v, data["geometry"]))
+
+    all_candidates = []
+
+    for node_id in dead_ends:
+        node_point = Point(node_id)
+        for u, v, edge_geom in target_edges:
+            if node_id == u or node_id == v:
+                continue
+
+            p1, p2 = nearest_points(node_point, edge_geom)
+            spatial_dist = p1.distance(p2)
+
+            if spatial_dist < max_spatial_dist:
+                all_candidates.append(
+                    {
+                        "from_node": node_id,
+                        "to_edge": (u, v),
+                        "projection_point": p2,
+                        "spatial_dist": spatial_dist,
+                    }
+                )
+
+    # 3. Sort candidates by spatial distance (shortest first)
+    all_candidates.sort(key=lambda x: x["spatial_dist"])
+
+    # 4. Iteratively process candidates
+    for link in all_candidates:
+        u, v = link["to_edge"]
+        dead_end_node = link["from_node"]
+        proj_p = link["projection_point"]
+        spatial_dist = link["spatial_dist"]
+
+        # Check current network distance AFTER previous modifications
+        try:
+            current_network_dist = nx.shortest_path_length(
+                G, source=dead_end_node, target=u, weight="length"
+            )
+        except nx.NetworkXNoPath:
+            current_network_dist = float("inf")
+
+        # RE-EVALUATION: Only add if the shortcut is still significantly better
+        if current_network_dist / spatial_dist > detour_ratio:
+
+            # Create unique ID for the pseudo node
+            pseudo_node_id = proj_p.coords[0]
+
+            # Add node
+            G.add_node(pseudo_node_id, tag="pseudo_connect_vertex")
+
+            # Handle edge splitting (only if the original edge hasn't been removed yet)
+            # Note: In a greedy approach, multiple nodes might want to split the same edge.
+            # We check if the edge u-v still exists.
+            if G.has_edge(u, v):
+                G.remove_edge(u, v)
+
+                line_up = LineString([u, pseudo_node_id])
+                G.add_edge(u, pseudo_node_id, geometry=line_up, length=line_up.length)
+
+                line_pv = LineString([pseudo_node_id, v])
+                G.add_edge(pseudo_node_id, v, geometry=line_pv, length=line_pv.length)
+            else:
+                # If the edge (u,v) was already split by a previous iteration,
+                # for simplicity, we connect to the nearest node instead or skip.
+                # Here we just skip to keep the topology clean.
+                continue
+
+            # Add the interconnection
+            line_connect = LineString([dead_end_node, pseudo_node_id])
+            G.add_edge(
+                dead_end_node,
+                pseudo_node_id,
+                geometry=line_connect,
+                length=line_connect.length,
+                tag="connect_unconnected",
+            )
+
+    return G
+
+
+def add_pseudonodes_to_ref_line(
+    G,
+    edge_mapping_ref_lines,
+    ref_multiline,
+    relevant_distance: float,
+    snap_dist: float,
+    srtree_ref_lines,
+    theme_points: MultiPoint,
+):
     if not ref_multiline is None and not ref_multiline.is_empty:
         for point in theme_points.geoms:
             if G.has_node(point.coords[0]):
@@ -1918,7 +2020,7 @@ def find_closest_in_subset(target_point, edge_list):
     return edge_list[nearest_idx]
 
 
-def remove_pseudonodes(G, tag, target_degree=2):
+def remove_pseudonodes(G, tag, target_degrees=[2]):
     """
     Removes nodes with a specific tag and degree.
     Replaces the connecting edges with direct, straight connections between neighbors.
@@ -1927,7 +2029,7 @@ def remove_pseudonodes(G, tag, target_degree=2):
     nodes_to_remove = [
         n
         for n, d in G.nodes(data=True)
-        if d.get("tag") == tag and G.degree(n) == target_degree
+        if d.get("tag") == tag and G.degree(n) in target_degrees
     ]
 
     for node in nodes_to_remove:
