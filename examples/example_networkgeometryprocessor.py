@@ -28,13 +28,15 @@ aligner_result = aligner.predict(
     relevant_distances=series,
 )
 # aligner_result = aligner.process(relevant_distances=[0,1,2,3,4],)
-#aligner_result = aligner.process(relevant_distances=[1],)
+# aligner_result = aligner.process(relevant_distances=[1],)
 dict_predictions = aligner_result.get_results(
     aligner=aligner, result_type=AlignerResultType.PREDICTIONS
 )
 
 # SHOW results of the predictions
-fcs = aligner_result.get_results_as_geojson(add_metadata=False, aligner=aligner,result_type=AlignerResultType.PREDICTIONS)
+fcs = aligner_result.get_results_as_geojson(
+    add_metadata=False, aligner=aligner, #result_type=AlignerResultType.PREDICTIONS
+)
 diffs_dict = aligner.get_difference_metrics_for_thematic_data(
     dict_processresults=aligner_result.results, thematic_data=aligner.thematic_data
 )

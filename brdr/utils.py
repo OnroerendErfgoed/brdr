@@ -259,7 +259,9 @@ def coverage_ratio(values, min_val=0, bin_count=10):
 import numpy as np
 
 
-def determine_stability2(x_coords,y_coords, max_derivative_threshold=100, num_plateaus=10):
+def determine_stability2(
+    x_coords, y_coords, max_derivative_threshold=100, num_plateaus=10
+):
     """
     Determine the stability and indicators ('zero_streaks') based on the derivative of the difference measurement (y) of a xy-plot
 
@@ -272,7 +274,6 @@ def determine_stability2(x_coords,y_coords, max_derivative_threshold=100, num_pl
             - list: List of breakpoints (extremes).
             - list: List of zero_streaks.
     """
-
 
     # Calculate derivatives (slopes)
     dx = np.diff(x_coords)
@@ -358,6 +359,7 @@ def determine_stability2(x_coords,y_coords, max_derivative_threshold=100, num_pl
         }
 
     return output
+
 
 def determine_stability(x, y):
     """
