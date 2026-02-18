@@ -1,15 +1,13 @@
 import logging
-from collections import defaultdict
-from itertools import combinations
-from math import inf
 from math import pi
-from typing import Union, List, Tuple, Any, Hashable
+from typing import Union, List, Tuple
+
 import geopandas as gpd
 import networkx as nx
 import numpy as np
 import pyproj
 from networkx import Graph
-from shapely import GEOSException, get_coordinates, LinearRing, polygonize, MultiPoint
+from shapely import GEOSException, get_coordinates, LinearRing, polygonize
 from shapely import STRtree
 from shapely import buffer
 from shapely import difference
@@ -46,7 +44,6 @@ from shapely.ops import substring
 from shapely.prepared import prep
 
 from brdr.enums import SnapStrategy
-from brdr.viz import export_to_geopackage
 
 ShapelyGeometry = Union[
     Point,
@@ -1764,7 +1761,7 @@ def build_custom_network(
     # Correction for intersecting edges
     G = reconstruct_graph_for_intersections(G)
 
-    # export_to_geopackage(G,"g_out.gpkg")#TODO remove
+    # export_to_geopackage(G,"g_out.gpkg")
 
     return G
 

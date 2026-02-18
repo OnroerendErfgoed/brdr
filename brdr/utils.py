@@ -9,7 +9,6 @@ from datetime import datetime, date
 from decimal import Decimal
 
 import geopandas as gpd
-import numpy as np
 import requests
 from geojson import Feature
 from geojson import FeatureCollection
