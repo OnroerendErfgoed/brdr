@@ -35,7 +35,8 @@ dict_predictions = aligner_result.get_results(
 
 # SHOW results of the predictions
 fcs = aligner_result.get_results_as_geojson(
-    add_metadata=False, aligner=aligner, #result_type=AlignerResultType.PREDICTIONS
+    add_metadata=False,
+    aligner=aligner,  # result_type=AlignerResultType.PREDICTIONS
 )
 diffs_dict = aligner.get_difference_metrics_for_thematic_data(
     dict_processresults=aligner_result.results, thematic_data=aligner.thematic_data
