@@ -257,6 +257,109 @@ def coverage_ratio(values, min_val=0, bin_count=10):
     return filled_bins / total_bins
 
 
+import numpy as np
+
+
+def determine_stability2(x_coords,y_coords, max_derivative_threshold=100, num_plateaus=10):
+    """
+    Determine the stability and indicators ('zero_streaks') based on the derivative of the difference measurement (y) of a xy-plot
+
+    Args:
+        x_coords (numpy.ndarray): The x values of the plot: relevant distances
+        y_coords (numpy.ndarray): The y values of the plot: diffence measurement
+
+    Returns:
+        tuple: A tuple containing:
+            - list: List of breakpoints (extremes).
+            - list: List of zero_streaks.
+    """
+
+
+    # Calculate derivatives (slopes)
+    dx = np.diff(x_coords)
+    dy = np.diff(y_coords)
+    slopes = dy / dx
+
+    found_segments = []
+
+    # 1. Search for the best plateaus
+    for i in range(1, len(slopes)):
+        slope_before = slopes[i - 1]
+        best_score_for_i = -1
+        best_seg_for_i = None
+
+        # Scan forward to find the optimal end point for a plateau starting at x[i]
+        for j in range(i, len(slopes)):
+            avg_slope_seg = (y_coords[j + 1] - y_coords[i]) / (
+                x_coords[j + 1] - x_coords[i]
+            )
+            length_seg = x_coords[j + 1] - x_coords[i]
+
+            # Condition: Average slope must stay below threshold and show significant deceleration
+            if (
+                avg_slope_seg > max_derivative_threshold
+                or avg_slope_seg > slope_before * 0.7
+            ):
+                break
+
+            # Score Calculation (Max 100)
+            # Flatness (50pts): Derivative 0 = 50pts, Derivative at threshold = 0pts
+            flatness_score = max(
+                0,
+                (max_derivative_threshold - avg_slope_seg)
+                / max_derivative_threshold
+                * 50,
+            )
+
+            # Length (50pts): Normalized to 1.0 unit of x for full score
+            length_score = min(50, (length_seg / 1.0) * 50)
+
+            total_score = flatness_score + length_score
+
+            if total_score > best_score_for_i:
+                best_score_for_i = total_score
+                best_seg_for_i = (x_coords[i], x_coords[j + 1], total_score)
+
+        if best_seg_for_i:
+            found_segments.append(best_seg_for_i)
+
+    # Filter overlapping segments and keep only the top ones
+    found_segments = sorted(found_segments, key=lambda k: k[2], reverse=True)
+    top_plateaus = {}
+    chosen_areas = []
+
+    for start, stop, score in found_segments:
+        # Avoid overlapping: a new plateau cannot overlap with a better one already chosen
+        if not any(not (stop <= u[0] or start >= u[1]) for u in chosen_areas):
+            top_plateaus[start] = (start, stop, score)
+            chosen_areas.append((start, stop))
+            if len(top_plateaus) >= num_plateaus:
+                break
+
+    # 2. Build the final dictionary for ALL x-values
+    output = {}
+    for val_x in x_coords:
+        is_stability_point = val_x in top_plateaus
+
+        if is_stability_point:
+            start, stop, score = top_plateaus[val_x]
+            center_value = round(start + (stop - start) / 2, 2)
+            streak_tuple = (
+                round(start, 2),  # start_value
+                round(stop, 2),  # end_value
+                center_value,  # center_center value
+                round(score, 2),  # score
+            )
+        else:
+            streak_tuple = None
+
+        output[val_x] = {
+            "brdr_stability": is_stability_point,
+            "brdr_zero_streak": streak_tuple,
+        }
+
+    return output
+
 def determine_stability(x, y):
     """
     Determine the stability and indicators ('zero_streaks') based on the derivative of the difference measurement (y) of a xy-plot
