@@ -553,6 +553,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#brdr.aligner.Aligner.compare_to_reference" id="toc-brdr.aligner.Aligner.compare_to_reference" class="nav-link" data-scroll-target="#brdr.aligner.Aligner.compare_to_reference">compare_to_reference</a></li>
   <li><a href="#brdr.aligner.Aligner.evaluate" id="toc-brdr.aligner.Aligner.evaluate" class="nav-link" data-scroll-target="#brdr.aligner.Aligner.evaluate">evaluate</a></li>
   <li><a href="#brdr.aligner.Aligner.get_difference_metrics_for_thematic_data" id="toc-brdr.aligner.Aligner.get_difference_metrics_for_thematic_data" class="nav-link" data-scroll-target="#brdr.aligner.Aligner.get_difference_metrics_for_thematic_data">get_difference_metrics_for_thematic_data</a></li>
+  <li><a href="#brdr.aligner.Aligner.get_observation_properties" id="toc-brdr.aligner.Aligner.get_observation_properties" class="nav-link" data-scroll-target="#brdr.aligner.Aligner.get_observation_properties">get_observation_properties</a></li>
+  <li><a href="#brdr.aligner.Aligner.load_reference_data" id="toc-brdr.aligner.Aligner.load_reference_data" class="nav-link" data-scroll-target="#brdr.aligner.Aligner.load_reference_data">load_reference_data</a></li>
   <li><a href="#brdr.aligner.Aligner.load_thematic_data" id="toc-brdr.aligner.Aligner.load_thematic_data" class="nav-link" data-scroll-target="#brdr.aligner.Aligner.load_thematic_data">load_thematic_data</a></li>
   <li><a href="#brdr.aligner.Aligner.predict" id="toc-brdr.aligner.Aligner.predict" class="nav-link" data-scroll-target="#brdr.aligner.Aligner.predict">predict</a></li>
   <li><a href="#brdr.aligner.Aligner.process" id="toc-brdr.aligner.Aligner.process" class="nav-link" data-scroll-target="#brdr.aligner.Aligner.process">process</a></li>
@@ -670,8 +672,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> <span class="im">from</span> brdr.aligner <span class="im">import</span> Aligner</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> aligner <span class="op">=</span> Aligner(crs<span class="op">=</span><span class="st">"EPSG:31370"</span>)</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> aligner.load_thematic_data(my_features)</span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> results <span class="op">=</span> aligner.align(relevant_distances<span class="op">=</span>[<span class="fl">0.5</span>, <span class="fl">1.0</span>])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> aligner.load_thematic_data(...)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> aligner.load_reference_data(...)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> results <span class="op">=</span> aligner.process(relevant_distances<span class="op">=</span>[<span class="dv">0</span>, <span class="fl">0.5</span>, <span class="fl">1.0</span>])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="methods" class="level2">
 <h2 class="anchored" data-anchor-id="methods">Methods</h2>
@@ -694,6 +697,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tr class="odd">
 <td><a href="#brdr.aligner.Aligner.get_difference_metrics_for_thematic_data">get_difference_metrics_for_thematic_data</a></td>
 <td>Calculates difference metrics for thematic elements across a series of distances.</td>
+</tr>
+<tr class="even">
+<td><a href="#brdr.aligner.Aligner.get_observation_comparison_properties">get_observation_comparison_properties</a></td>
+<td>function that returns the properties of the actual observation.</td>
+</tr>
+<tr class="odd">
+<td><a href="#brdr.aligner.Aligner.get_observation_properties">get_observation_properties</a></td>
+<td>function that returns the properties of the actual observation.</td>
 </tr>
 <tr class="even">
 <td><a href="#brdr.aligner.Aligner.load_reference_data">load_reference_data</a></td>
@@ -1038,13 +1049,26 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> <span class="co"># Get area change for feature 'A' at distance 0.5</span></span>
 <span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> <span class="bu">print</span>(metrics[<span class="st">'A'</span>][<span class="fl">0.5</span>])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <pre><code>
-### load_reference_data { #brdr.aligner.Aligner.load_reference_data }
+### get_observation_comparison_properties { #brdr.aligner.Aligner.get_observation_comparison_properties }
 
 ```python
-aligner.Aligner.load_reference_data(loader)</code></pre>
+aligner.Aligner.get_observation_comparison_properties(
+    process_result,
+    base_brdr_observation=None,
+)</code></pre>
+<p>function that returns the properties of the actual observation. If there is also a base_brdr_observation of the original geometry provided, also comparison-properties are added.</p>
+</section>
+</section>
+<section id="brdr.aligner.Aligner.get_observation_properties" class="level3">
+<h3 class="anchored" data-anchor-id="brdr.aligner.Aligner.get_observation_properties">get_observation_properties</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>aligner.Aligner.get_observation_properties(process_result)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>function that returns the properties of the actual observation.</p>
+</section>
+<section id="brdr.aligner.Aligner.load_reference_data" class="level3">
+<h3 class="anchored" data-anchor-id="brdr.aligner.Aligner.load_reference_data">load_reference_data</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>aligner.Aligner.load_reference_data(loader)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Loads the reference features into the aligner and prepares them for processing.</p>
 <p>This method retrieves data via the provided loader, synchronizes the CRS, and marks the feature collection as a reference dataset to enable spatial indexing and comparison logic.</p>
-</section>
 <section id="parameters-3" class="level4 doc-section doc-section-parameters">
 <h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-3">Parameters</h4>
 <table class="caption-top table">
@@ -1072,16 +1096,16 @@ aligner.Aligner.load_reference_data(loader)</code></pre>
 </section>
 <section id="examples-4" class="level4 doc-section doc-section-examples">
 <h4 class="doc-section doc-section-examples anchored" data-anchor-id="examples-4">Examples</h4>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> <span class="im">from</span> brdr.loader <span class="im">import</span> WFSReferenceLoader</span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> ref_loader <span class="op">=</span> WFSReferenceLoader(url<span class="op">=</span><span class="st">"https://geoserver.com/wfs"</span>)</span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> aligner.load_reference_data(ref_loader)</span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> <span class="bu">print</span>(aligner.reference_data.is_reference)</span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="va">True</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> <span class="im">from</span> brdr.loader <span class="im">import</span> WFSReferenceLoader</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> ref_loader <span class="op">=</span> WFSReferenceLoader(url<span class="op">=</span><span class="st">"https://geoserver.com/wfs"</span>)</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> aligner.load_reference_data(ref_loader)</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> <span class="bu">print</span>(aligner.reference_data.is_reference)</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="va">True</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 </section>
 <section id="brdr.aligner.Aligner.load_thematic_data" class="level3">
 <h3 class="anchored" data-anchor-id="brdr.aligner.Aligner.load_thematic_data">load_thematic_data</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>aligner.Aligner.load_thematic_data(loader)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>aligner.Aligner.load_thematic_data(loader)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Loads the thematic features into the aligner using a specific loader.</p>
 <p>This method executes the loader’s data retrieval logic and ensures that the resulting feature collection is tagged with the Aligner’s CRS.</p>
 <section id="parameters-4" class="level4 doc-section doc-section-parameters">
@@ -1111,19 +1135,19 @@ aligner.Aligner.load_reference_data(loader)</code></pre>
 </section>
 <section id="examples-5" class="level4 doc-section doc-section-examples">
 <h4 class="doc-section doc-section-examples anchored" data-anchor-id="examples-5">Examples</h4>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> <span class="im">from</span> brdr.loader <span class="im">import</span> GeoJsonLoader</span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> loader <span class="op">=</span> GeoJsonLoader(path<span class="op">=</span><span class="st">"data/themes.json"</span>)</span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> aligner.load_thematic_data(loader)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> <span class="im">from</span> brdr.loader <span class="im">import</span> GeoJsonLoader</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> loader <span class="op">=</span> GeoJsonLoader(path<span class="op">=</span><span class="st">"data/themes.json"</span>)</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> aligner.load_thematic_data(loader)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 </section>
 <section id="brdr.aligner.Aligner.predict" class="level3">
 <h3 class="anchored" data-anchor-id="brdr.aligner.Aligner.predict">predict</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>aligner.Aligner.predict(</span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    relevant_distances<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">*</span>,</span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>    thematic_ids<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>    diff_metric<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>aligner.Aligner.predict(</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>    relevant_distances<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">*</span>,</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>    thematic_ids<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>    diff_metric<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Predicts the ‘most interesting’ relevant distances for changes in thematic elements.</p>
 <p>This method analyzes the stability of geometric differences across a range of distances. It identifies “breakpoints” where changes occur and “zero-streaks” where the geometry remains stable. Based on this, a prediction score is assigned to specific results.</p>
 <section id="parameters-5" class="level4 doc-section doc-section-parameters">
@@ -1223,19 +1247,19 @@ aligner.Aligner.load_reference_data(loader)</code></pre>
 </section>
 <section id="examples-6" class="level4 doc-section doc-section-examples">
 <h4 class="doc-section doc-section-examples anchored" data-anchor-id="examples-6">Examples</h4>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> aligner <span class="op">=</span> Aligner(crs<span class="op">=</span><span class="st">"EPSG:31370"</span>)</span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> <span class="co"># Predict using default distance range</span></span>
-<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> prediction_results <span class="op">=</span> aligner.predict(thematic_ids<span class="op">=</span>[<span class="st">"id_1"</span>, <span class="st">"id_2"</span>])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> aligner <span class="op">=</span> Aligner(crs<span class="op">=</span><span class="st">"EPSG:31370"</span>)</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> <span class="co"># Predict using default distance range</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> prediction_results <span class="op">=</span> aligner.predict(thematic_ids<span class="op">=</span>[<span class="st">"id_1"</span>, <span class="st">"id_2"</span>])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 </section>
 <section id="brdr.aligner.Aligner.process" class="level3">
 <h3 class="anchored" data-anchor-id="brdr.aligner.Aligner.process">process</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>aligner.Aligner.process(</span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>    relevant_distances<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">*</span>,</span>
-<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>    thematic_ids<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>    max_workers<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>aligner.Aligner.process(</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>    relevant_distances<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">*</span>,</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>    thematic_ids<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>    max_workers<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Executes the alignment process across multiple relevant distances.</p>
 <p>This method iterates through the specified thematic features and calculates the alignment for each provided ‘relevant distance’. It can utilize parallel processing via a ThreadPoolExecutor to speed up calculations.</p>
 <section id="parameters-6" class="level4 doc-section doc-section-parameters">
@@ -1339,8 +1363,8 @@ aligner.Aligner.load_reference_data(loader)</code></pre>
 </section>
 <section id="examples-7" class="level4 doc-section doc-section-examples">
 <h4 class="doc-section doc-section-examples anchored" data-anchor-id="examples-7">Examples</h4>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> aligner.process(relevant_distances<span class="op">=</span>[<span class="dv">0</span>, <span class="fl">0.5</span>, <span class="fl">1.0</span>], max_workers<span class="op">=</span><span class="dv">4</span>)</span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>brdr.aligner.AlignerResult <span class="bu">object</span> at ...<span class="op">&gt;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> aligner.process(relevant_distances<span class="op">=</span>[<span class="dv">0</span>, <span class="fl">0.5</span>, <span class="fl">1.0</span>], max_workers<span class="op">=</span><span class="dv">4</span>)</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>brdr.aligner.AlignerResult <span class="bu">object</span> at ...<span class="op">&gt;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 
 
 </section>
