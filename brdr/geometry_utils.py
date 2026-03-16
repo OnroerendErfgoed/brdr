@@ -1,4 +1,6 @@
+import json
 import logging
+from io import BytesIO
 from math import pi
 from typing import Union, List, Tuple
 
@@ -6,6 +8,7 @@ import geopandas as gpd
 import networkx as nx
 import numpy as np
 import pyproj
+import requests
 from networkx import Graph
 from shapely import GEOSException, get_coordinates, LinearRing, polygonize
 from shapely import STRtree
@@ -2661,3 +2664,32 @@ def bridge_with_straight_line(G, n):
     else:
         # Junction (degree > 2): we leave it to preserve topology
         pass
+
+
+def gml_response_to_geojson(url, params):
+    """
+    Fetches a GML (Geography Markup Language) response from a URL,
+    reads it using GeoPandas, and converts the result to
+    GeoJSON format (as a Python dictionary).
+
+    Args:
+        url (str): The URL to fetch the GML data from (e.g., a WFS endpoint).
+        params (dict): The parameters to be sent with the GET request
+                       (e.g., service, version, request, typeName).
+
+    Returns:
+        dict: The geographical data in GeoJSON format.
+
+    Raises:
+        requests.exceptions.HTTPError: If the HTTP request fails.
+        fiona.errors.DriverError: If the GML data cannot be read correctly.
+    """
+    # Fetch the GML response
+    response = requests.get(url, params)
+    response.raise_for_status()  # Raises an error if the request failed
+
+    # Read the GML directly from the response (using BytesIO for in-memory processing)
+    gdf = gpd.read_file(BytesIO(response.content))
+
+    # Convert to GeoJSON (as a dict)
+    return json.loads(gdf.to_json())
