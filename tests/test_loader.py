@@ -1,4 +1,6 @@
 import pytest
+import geopandas as gpd
+from shapely.geometry import shape
 
 from brdr.aligner import Aligner
 from brdr.be.grb.enums import GRBType
@@ -9,7 +11,9 @@ from brdr.loader import (
     GeoJsonLoader,
     OGCFeatureAPIReferenceLoader,
     WFSReferenceLoader,
+    GeoDataFrameLoader,
 )
+from brdr.typings import FeatureCollection
 from tests.testdata.responses import mercator_responses
 
 
@@ -36,6 +40,52 @@ class TestExamples:
         aligner.reference_data = reference_loader.load_data()
         assert aligner.thematic_data is not None
         assert aligner.reference_data is not None
+
+    def test__prepare_thematic_data(self):
+        geojson: FeatureCollection = {
+            "type": "FeatureCollection",
+            "name": "theme",
+            "crs": {
+                "type": "name",
+                "properties": {"name": "urn:ogc:def:crs:EPSG::31370"},
+            },
+            "features": [
+                {
+                    "type": "Feature",
+                    "properties": {"fid": 4, "id": 4, "theme_identifier": "4"},
+                    "geometry": {
+                        "type": "MultiPolygon",
+                        "coordinates": [
+                            [
+                                [
+                                    [174647.924166895216331, 170964.980246312363306],
+                                    [174693.204879119351972, 170943.531487890402786],
+                                    [174696.382472959638108, 170930.82111252922914],
+                                    [174678.905706838035258, 170901.428369506524177],
+                                    [174660.634542256389977, 170861.708446502889274],
+                                    [174641.56897921464406, 170820.399726579111302],
+                                    [174593.905071610264713, 170839.46528962085722],
+                                    [174614.559431572153699, 170881.568408004706725],
+                                    [174628.064205393398879, 170926.054721768799936],
+                                    [174647.924166895216331, 170964.980246312363306],
+                                ]
+                            ]
+                        ],
+                    },
+                }
+            ],
+        }
+
+        gdf = gpd.GeoDataFrame.from_features(geojson["features"])
+        gdf.set_crs(epsg=31370, inplace=True)
+
+        thematic_loader = GeoDataFrameLoader(_input=gdf, id_property="theme_identifier")
+
+        aligner=Aligner()
+        aligner.thematic_data = thematic_loader.load_data()
+        assert aligner.thematic_data.features["4"].geometry == shape(
+            geojson["features"][0]["geometry"]
+        )
 
     # @pytest.mark.usefixtures("callback_grb_response")
     def test_ogcfeaturapiloader(self):

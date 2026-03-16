@@ -14,6 +14,7 @@ from datetime import datetime
 from typing import Any, Optional, Dict
 
 import requests
+from geopandas import GeoDataFrame
 from shapely import force_2d, make_valid
 from shapely.geometry.base import BaseGeometry
 
@@ -173,6 +174,55 @@ class DictLoader(Loader):
         """Executes the standard loading process."""
         return super().load_data()
 
+class GeoDataFrameLoader(Loader):
+    """
+    Base class for loaders dealing with GeoPandas geoDataFrame.
+
+    Processes a GeoPandas GeoDataFrame into the internal dictionary format.
+    """
+
+    def __init__(
+        self,
+        *,
+        id_property: Optional[str] = None,
+        _input: Optional[GeoDataFrame] = None,
+        source: Optional[str] = None,
+        source_url: Optional[str] = None,
+        is_reference: bool = False,
+    ):
+        """
+        Parameters
+        ----------
+        id_property : str, optional
+            The property field (unique) to use as the unique identifier.
+        _input : DatFrame, optional
+            A GeoPandas GeoDataFrame
+        is_reference : bool, optional
+            Whether this is a reference layer. Defaults to False.
+        """
+        super().__init__(is_reference=is_reference)
+        self.id_property = id_property
+        self.input = _input
+        self.data_dict_source["source"] = source
+        self.data_dict_source["source_url"] = source_url
+
+    def load_data(self) -> AlignerFeatureCollection:
+        """Parses the GeoDataFrame and loads into dict-structure."""
+        self._load_geodataframe()
+        return super().load_data()
+
+    def _load_geodataframe(self) -> None:
+        """Internal method to convert GeoDataFrame into internal dictionary formats."""
+        gdf= self.input
+        if self.id_property not in gdf.columns:
+            raise KeyError(f"Column '{self.id_property}' not found in GeoDataFrame")
+
+        self.data_dict = dict(zip(gdf[self.id_property], gdf.geometry))
+        # For properties
+        cols = [c for c in gdf.columns if c not in [self.id_property, gdf.geometry.name]]
+        self.data_dict_properties = dict(
+            zip(gdf[self.id_property], gdf[cols].to_dict(orient="records"))
+        )
 
 class GeoJsonLoader(Loader):
     """

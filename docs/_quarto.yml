@@ -60,6 +60,7 @@ quartodoc:
       contents:
         - Loader
         - DictLoader
+        - GeoDataFrameLoader
         - GeoJsonLoader
         - GeoJsonFileLoader
         - GeoJsonUrlLoader
