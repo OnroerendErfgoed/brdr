@@ -9,7 +9,7 @@ from shapely import wkt, GeometryCollection
 
 from brdr.aligner import Aligner
 from brdr.be.grb.enums import GRBType
-from brdr.be.grb.loader import GRBActualLoader
+from brdr.be.grb.loader import GRBActualLoader, GRBFiscalParcelLoader
 from brdr.configs import AlignerConfig
 from brdr.constants import RELEVANT_DISTANCE_DECIMALS, DEFAULT_CRS
 from brdr.enums import AlignerResultType
@@ -157,8 +157,10 @@ def get_false_positive_grb_parcels_dataframe(
             loader = DictLoader(dict_theme)
             aligner.load_thematic_data(loader)
             if not conn_str:
-                loader = GRBActualLoader(
-                    grb_type=GRBType.ADP, partition=1000, aligner=aligner
+                # loader = GRBActualLoader(
+                #     grb_type=GRBType.ADP, partition=1000, aligner=aligner
+                # )
+                loader = GRBFiscalParcelLoader(year="2025", partition=1000, aligner=aligner
                 )
             else:
                 # SQL-query to get geometry from postgis db
@@ -170,7 +172,7 @@ def get_false_positive_grb_parcels_dataframe(
                 loader = DictLoader(data_dict=dict_reference)
                 aligner.load_reference_data(loader)
             aligner.load_reference_data(loader)
-            dict_original_wkt = geom.wkt
+            dict_original_wkt[key] = geom.wkt
             # COVERAGE ANALYSIS
             coverage_data = get_coverage_data(
                 aligner, geom, percentages=[0, 1, 5, 10, 50, 90, 95, 99, 100]
@@ -323,9 +325,11 @@ def get_false_positive_grb_parcels_dataframe(
     return df, metrics
 
 
-def get_folder_path(analysis_name):
+def get_folder_path(analysis_name,add_timestamp=True):
     # Generate timestamp
-    foldername = analysis_name + "_" + datetime.now().strftime("%Y%m%d_%H%M%S")
+    foldername = analysis_name
+    if add_timestamp:
+        foldername += "_" + datetime.now().strftime("%Y%m%d_%H%M%S")
     output_dir = Path(foldername)
     output_dir.mkdir(parents=True, exist_ok=True)
 
