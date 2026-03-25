@@ -1,5 +1,5 @@
-# Adds automatic liink to every example
+# Adds an automatic link to every example
 include-after-body:
   text: |
     <hr>
-    <p><a href="../examples.qmd">← Back to examples - overview</a></p>
+    <p><a href="../examples.qmd"><- Back to examples overview</a></p>

@@ -100,7 +100,7 @@ class AlignerResult:
 
     Attributes
     ----------
-    results : Dict[ThematicId, Dict[float, Optional[ProcessResult]]]
+    results : Dict[InputId, Dict[float, Optional[ProcessResult]]]
         A nested dictionary where the outer key is the theme ID and the inner key
         is the relevant distance used during processing.
     metadata : Optional[Any]
@@ -137,7 +137,7 @@ class AlignerResult:
 
         Parameters
         ----------
-        process_results : Dict[ThematicId, Dict[float, Optional[ProcessResult]]]
+        process_results : Dict[InputId, Dict[float, Optional[ProcessResult]]]
             A nested dictionary containing raw results.
             Structure: `{theme_id: {distance: result_object}}`.
         """
@@ -163,7 +163,7 @@ class AlignerResult:
 
         Returns
         -------
-        Dict[ThematicId, Dict[float, Optional[ProcessResult]]]
+        Dict[InputId, Dict[float, Optional[ProcessResult]]]
             A dictionary of filtered and enriched results.
 
         Raises
@@ -830,7 +830,7 @@ class Aligner:
         relevant_distances : Iterable[float]
             A series of distances (in meters) to use for the alignment logic.
             This parameter is mandatory.
-        thematic_ids : List[ThematicId], optional
+        thematic_ids : List[InputId], optional
             A specific list of IDs to process. If None, all thematic features
             currently loaded in the aligner will be processed.
         max_workers : int, optional
@@ -962,7 +962,7 @@ class Aligner:
         relevant_distances : List[float] or np.ndarray, optional
             A series of distances (in meters) to be analyzed.
             Defaults to a range from 0.0 to 3.0 meters with steps of 0.1m.
-        thematic_ids : List[ThematicId], optional
+        thematic_ids : List[InputId], optional
             Specific thematic IDs to process. If None, all loaded thematic
             geometries are used.
         diff_metric : DiffMetric, optional
@@ -1113,7 +1113,7 @@ class Aligner:
         ----------
         relevant_distances : Iterable[float], optional
             Distances to evaluate. Defaults to 0.0m to 3.0m (step 0.1m).
-        thematic_ids : List[ThematicId], optional
+        thematic_ids : List[InputId], optional
             List of IDs to evaluate. If None, all loaded thematic features
             are processed. Features not in this list are marked as NOT_EVALUATED.
         metadata_field : str, optional
@@ -1625,7 +1625,7 @@ class Aligner:
 
         Parameters
         ----------
-        dict_processresults : Dict[ThematicId, Dict[float, Optional[ProcessResult]]], optional
+        dict_processresults : Dict[InputId, Dict[float, Optional[ProcessResult]]], optional
             A nested dictionary where keys are thematic IDs and values are dictionaries
             mapping relevant distances to `ProcessResult`[] objects.
             Required if not provided via internal state.
@@ -1638,7 +1638,7 @@ class Aligner:
 
         Returns
         -------
-        Dict[ThematicId, Dict[float, float]]
+        Dict[InputId, Dict[float, float]]
             A nested dictionary where each thematic ID maps to a dictionary of
             distances and their corresponding calculated metric values.
 
@@ -1696,7 +1696,18 @@ class Aligner:
         process_result,
     ):
         """
-        function that returns the properties of the actual observation.
+        Build observation properties for the current process result.
+
+        Parameters
+        ----------
+        process_result : ProcessResult
+            Processing output containing at least a `result` geometry.
+
+        Returns
+        -------
+        dict
+            Dictionary with derived observation flags, currently containing
+            `FULL_ACTUAL_FIELD_NAME`.
         """
         geom_process_result = process_result["result"]
         properties = {
@@ -1721,8 +1732,19 @@ class Aligner:
         base_brdr_observation=None,
     ):
         """
-        function that returns the properties of the actual observation.
-        If there is also a base_brdr_observation of the original geometry provided, also comparison-properties are added.
+        Compare current observation to a base observation and derive evaluation properties.
+
+        Parameters
+        ----------
+        process_result : ProcessResult
+            Processing output containing a `result` geometry.
+        base_brdr_observation : dict, optional
+            Observation dictionary of the original/base geometry.
+
+        Returns
+        -------
+        dict
+            Properties containing comparison metrics and an evaluation label.
         """
         geom_process_result = process_result["result"]
         threshold_od_percentage = 1
@@ -1858,6 +1880,6 @@ class Aligner:
             base_brdr_observation = _reverse_metadata_observations_to_brdr_observation(
                 base_metadata
             )
-        except:
+        except Exception:
             base_brdr_observation = None
         return base_brdr_observation

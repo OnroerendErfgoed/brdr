@@ -661,10 +661,17 @@ def fetch_all_ogc_features(
 
 def make_feature_collection(features):
     """
-    Maakt een GeoJSON FeatureCollection van een lijst met features.
+    Create a GeoJSON FeatureCollection from a list of GeoJSON features.
 
-    :param features: lijst van GeoJSON features (dicts met 'type': 'Feature')
-    :return: dict met 'type': 'FeatureCollection' en 'features': [...]
+    Parameters
+    ----------
+    features : list[dict]
+        List of GeoJSON features (`{"type": "Feature", ...}`).
+
+    Returns
+    -------
+    dict
+        GeoJSON FeatureCollection dictionary.
     """
     return {"type": "FeatureCollection", "features": features}
 
@@ -694,9 +701,17 @@ def get_collection(url, params=None):
 
 def geojson_geometry_to_shapely(geojson_geometry):
     """
-    Converts a geojson geometry into a shapely geometry
-    :param geojson_geometry:  geojson geometry
-    :return: shapely geometry
+    Convert a GeoJSON geometry object to a Shapely geometry.
+
+    Parameters
+    ----------
+    geojson_geometry : dict
+        GeoJSON geometry object.
+
+    Returns
+    -------
+    BaseGeometry
+        Converted Shapely geometry.
     """
     return shape(geojson_geometry)
 
@@ -871,9 +886,17 @@ def build_reverse_index_wkb(d: dict):
 
 def is_brdr_observation(brdr_observation):
     """
-    returns true if the value has the correct structure of a base_observation, otherwise False
-    :param brdr_observation:
-    :return:
+    Check whether a value matches the expected BRDR observation structure.
+
+    Parameters
+    ----------
+    brdr_observation : Any
+        Candidate observation object.
+
+    Returns
+    -------
+    bool
+        `True` if structure is valid, else `False`.
     """
     if brdr_observation is None or not isinstance(brdr_observation, dict):
         return False

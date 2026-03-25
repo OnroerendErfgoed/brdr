@@ -12,6 +12,12 @@ website:
       - text: Home
         href: index.qmd
         icon: house-fill
+      - text: Getting Started
+        href: getting-started.qmd
+      - text: Processor Guide
+        href: processor-selection.qmd
+      - text: Parameter Guide
+        href: parameter-cookbook.qmd
       - text: Reference
         href: reference/index.qmd
       - text: Examples

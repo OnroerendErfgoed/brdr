@@ -516,7 +516,7 @@ class BaseProcessor(ABC):
         relevant_distance : float
             The distance used to define the 'outer' shell.
         max_outer_buffer : int
-            Value that is used to calculate the boundary of a thematic geometry wherefor the calculation has to be done. (inner part is added)
+            Buffer size used to define the outer processing band around thematic geometry.
 
         Returns
         -------
@@ -1025,12 +1025,29 @@ class DieussaertGeometryProcessor(BaseProcessor):
         outer=False,
     ):
         """
+        Calculate open-domain geometry by snapping to a virtual reference on all sides.
 
-        :param geometry:
-        :param input_geometry_inner:
-        :param relevant_distance:
-        :param outer: when outer is True, the outer boundary is used, inner is not used
-        :return:
+        Parameters
+        ----------
+        geometry : BaseGeometry
+            Input thematic geometry.
+        input_geometry_inner : BaseGeometry
+            Inner geometry used to constrain open-domain relevance.
+        relevant_distance : float
+            Maximum distance used for open-domain snapping logic.
+        correction_distance : float
+            Technical cleanup tolerance.
+        mitre_limit : float
+            Mitre limit used in buffer operations.
+        reference_union : BaseGeometry
+            Union of reference geometries.
+        outer : bool, optional
+            If True, include outer boundary behavior when building virtual reference.
+
+        Returns
+        -------
+        tuple
+            `(geom_thematic_od, relevant_difference_array, relevant_intersection_array)`.
         """
         buffer_distance = relevant_distance / 2
         relevant_difference_array = []
@@ -1084,10 +1101,27 @@ class DieussaertGeometryProcessor(BaseProcessor):
         correction_distance,
     ):
         """
-        Calculates the intersecting parts between a thematic geometry and the Open Domain( domain, not covered by reference-polygons)
-        :param input_geometry:
-        :param relevant_distance:
-        :return:
+        Calculate intersections between thematic geometry and open-domain area.
+
+        Parameters
+        ----------
+        input_geometry : BaseGeometry
+            Input thematic geometry.
+        input_geometry_inner : BaseGeometry
+            Inner part of the thematic geometry.
+        relevant_distance : float
+            Maximum distance used for open-domain processing.
+        reference_union : BaseGeometry
+            Union of reference geometries.
+        mitre_limit : float
+            Mitre limit for buffer operations.
+        correction_distance : float
+            Technical cleanup tolerance.
+
+        Returns
+        -------
+        tuple
+            `(geom_thematic_od, relevant_difference_array, relevant_intersection_array)`.
         """
         # Calculate the intersection between thematic and Open Domain
         # buffer_distance = relevant_distance / 2

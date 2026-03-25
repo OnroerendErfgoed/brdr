@@ -39,9 +39,9 @@ class Loader(ABC):
 
     Attributes
     ----------
-    data_dict : Dict[ThematicId, BaseGeometry]
+    data_dict : Dict[InputId, BaseGeometry]
         Mapping of unique IDs to their corresponding Shapely geometries.
-    data_dict_properties : Dict[ThematicId, dict]
+    data_dict_properties : Dict[InputId, dict]
         Mapping of IDs to attribute dictionaries.
     data_dict_source : Dict[Any, str]
         Metadata regarding the data source (e.g., URL or file path).
@@ -176,9 +176,9 @@ class DictLoader(Loader):
 
 class GeoDataFrameLoader(Loader):
     """
-    Base class for loaders dealing with GeoPandas geoDataFrame.
+    Loader for GeoPandas `GeoDataFrame` input.
 
-    Processes a GeoPandas GeoDataFrame into the internal dictionary format.
+    Converts a GeoDataFrame into the internal dictionary representation used by `brdr`.
     """
 
     def __init__(
@@ -194,9 +194,9 @@ class GeoDataFrameLoader(Loader):
         Parameters
         ----------
         id_property : str, optional
-            The property field (unique) to use as the unique identifier.
-        _input : DatFrame, optional
-            A GeoPandas GeoDataFrame
+            Unique property field to use as feature identifier.
+        _input : GeoDataFrame, optional
+            Input GeoDataFrame.
         is_reference : bool, optional
             Whether this is a reference layer. Defaults to False.
         """
@@ -213,12 +213,11 @@ class GeoDataFrameLoader(Loader):
 
     def _load_geodataframe(self) -> None:
         """Internal method to convert GeoDataFrame into internal dictionary formats."""
-        gdf= self.input
+        gdf = self.input
         if self.id_property not in gdf.columns:
             raise KeyError(f"Column '{self.id_property}' not found in GeoDataFrame")
 
         self.data_dict = dict(zip(gdf[self.id_property], gdf.geometry))
-        # For properties
         cols = [c for c in gdf.columns if c not in [self.id_property, gdf.geometry.name]]
         self.data_dict_properties = dict(
             zip(gdf[self.id_property], gdf[cols].to_dict(orient="records"))

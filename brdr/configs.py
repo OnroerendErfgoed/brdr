@@ -16,7 +16,7 @@ class ProcessorConfig:
         single polygons for processing and merged back afterward. If False,
         multipolygons are processed as a single unit.
     max_outer_buffer: int, default 50
-        Value that is used to calculate the boundary of a thematic geometry wherefor the calculation has to be done. (inner part is added)
+        Buffer size used to define the outer processing band around thematic geometry.
     od_strategy : OpenDomainStrategy, default OpenDomainStrategy.SNAP_ALL_SIDE
         The strategy used to determine how to handle information outside the
         reference polygons (Open Domain).

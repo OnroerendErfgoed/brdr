@@ -1316,10 +1316,19 @@ def to_multi(geometry, geomtype=None):
 
 def nearest_node(point, nodes):
     """
-    find closest node to point
-    :param point:
-    :param nodes:
-    :return:
+    Find the closest node to a point.
+
+    Parameters
+    ----------
+    point : Point
+        Query point.
+    nodes : Iterable[tuple[float, float]]
+        Candidate node coordinates.
+
+    Returns
+    -------
+    tuple[float, float]
+        Closest node coordinate.
     """
     return min(nodes, key=lambda n: Point(n).distance(point))
 
@@ -1794,10 +1803,19 @@ def multilinestring_multipoint_from_reference_intersection(reference_intersectio
 
 def get_thematic_points(input_geometry, reference_intersection):
     """
-    returns a MultiPoint geometry with points on the thematic geometry that are used for consistency while creating connection_lines
-    :param input_geometry:
-    :param reference_intersection:
-    :return: MultiPoint
+    Build thematic points used for consistent connection-line construction.
+
+    Parameters
+    ----------
+    input_geometry : BaseGeometry
+        Input thematic geometry.
+    reference_intersection : BaseGeometry
+        Reference intersection geometry used as splitter.
+
+    Returns
+    -------
+    MultiPoint
+        MultiPoint with coordinates extracted from split thematic geometry.
     """
     geom_to_process_line = input_geometry
     if isinstance(geom_to_process_line, LinearRing):
