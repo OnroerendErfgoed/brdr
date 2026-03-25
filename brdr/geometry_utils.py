@@ -2341,7 +2341,7 @@ def connect_network_gaps(G, snap_dist=0.001, gap_dist=0.1, merge_nodes=False):
     for ep in endpoints:
         ep_pt = Point(ep)
         # Search for neighbors within gap_dist radius
-        indices = global_tree.query(ep_pt.buffer(gap_dist))
+        indices = global_tree.query(ep_pt, predicate="dwithin", distance=gap_dist)
 
         for idx in indices:
             candidate = all_nodes[idx]
@@ -2351,22 +2351,21 @@ def connect_network_gaps(G, snap_dist=0.001, gap_dist=0.1, merge_nodes=False):
 
             dist = ep_pt.distance(all_points[idx])
 
-            if dist <= gap_dist:
-                if merge_nodes and dist <= snap_dist:
-                    nodes_to_relabel[ep] = candidate
-                    break
-                else:
-                    # Only add an edge if it does not form a self-loop
-                    if ep != candidate and not G.has_edge(ep, candidate):
-                        geom = LineString([ep, candidate])
-                        G.add_edge(
-                            ep,
-                            candidate,
-                            tag="gap_closure",
-                            geometry=geom,
-                            length=geom.length,
-                        )
-                    break
+            if merge_nodes and dist <= snap_dist:
+                nodes_to_relabel[ep] = candidate
+                break
+            else:
+                # Only add an edge if it does not form a self-loop
+                if ep != candidate and not G.has_edge(ep, candidate):
+                    geom = LineString([ep, candidate])
+                    G.add_edge(
+                        ep,
+                        candidate,
+                        tag="gap_closure",
+                        geometry=geom,
+                        length=geom.length,
+                    )
+                break
 
     # Perform node merging (relabeling)
     if merge_nodes and nodes_to_relabel:
@@ -2389,8 +2388,12 @@ def connect_theme_and_reference(G, gap_dist=0.1, interconnect_dist=1.5):
     theme_edges = [
         (u, v) for u, v, d in G.edges(data=True) if d.get("tag") == "theme_lines"
     ]
+    if not theme_edges:
+        return G
     theme_sub = G.edge_subgraph(theme_edges)
     theme_endpoints = [n for n, deg in theme_sub.degree() if deg == 1]
+    if not theme_endpoints:
+        return G
     ref_node_ids = {
         node
         for u, v, d in G.edges(data=True)
@@ -2494,6 +2497,8 @@ def connect_network_components(
     # 3. Attempt to connect the components
     for i in range(len(component_data)):
         comp_a = component_data[i]
+        if not comp_a["points"]:
+            continue
 
         # Search for the nearest node in ALL other components
         best_dist = float("inf")
@@ -2513,6 +2518,10 @@ def connect_network_components(
                 if dist < best_dist and dist <= interconnect_dist:
                     best_dist = dist
                     best_connection = (comp_a["nodes"][idx_a], comp_b["nodes"][idx_b])
+                    if best_dist == 0:
+                        break
+            if best_dist == 0:
+                break
 
         # 4. Add the interconnecting edge
         if best_connection:
@@ -2614,40 +2623,34 @@ def connect_ref_points_to_nearest(G, ref_points, k_neighbors=2):
             G.nodes[p_coord].update({"tag": tag})
         new_ref_node_ids.append(p_coord)
 
-    ref_nodes = [(n, d) for n, d in G.nodes(data=True) if d.get("tag") == tag]
+    ref_nodes = [n for n, d in G.nodes(data=True) if d.get("tag") == tag]
+    if len(ref_nodes) <= 1:
+        return G
 
-    rows = []
-    for node_id, data in ref_nodes:
-        row = data.copy()
-        row["node_id"] = node_id
-        row["geometry"] = Point(node_id)
-        rows.append(row)
+    # Use vectorized NumPy distance computation to avoid GeoPandas sjoin overhead.
+    coords = np.array(ref_nodes, dtype=float)
+    k = min(k_neighbors, len(ref_nodes) - 1)
+    if k <= 0:
+        return G
 
-    gdf = gpd.GeoDataFrame(rows, geometry="geometry")
+    for i, u in enumerate(ref_nodes):
+        diff = coords - coords[i]
+        d2 = diff[:, 0] ** 2 + diff[:, 1] ** 2
+        d2[i] = np.inf
+        nearest_idx = np.argpartition(d2, k)[:k]
+        nearest_idx = nearest_idx[np.argsort(d2[nearest_idx])]
 
-    nearest = gpd.sjoin_nearest(
-        gdf, gdf, how="inner", distance_col="dist", exclusive=True
-    )
-    id_col_left = "node_id_left"
-    id_col_right = "node_id_right"
-    # Sorteer op de afstand per origineel punt (index_left)
-    nearest = nearest.sort_values(by=[id_col_left, "dist"])
-
-    # Sorteer en pak de top K buren per punt
-    # We groeperen op de index van het oorspronkelijke punt
-    top_k = nearest.sort_values(by=["dist"]).groupby(level=0).head(k_neighbors)
-
-    # 3. Voeg de edges toe
-    for idx_left, row in top_k.iterrows():
-        u = row[id_col_left]
-        v = row[id_col_right]
-        # d = row["dist"]
-        # Voeg de edge toe met de afstand als attribuut
-        if not G.has_edge(u, v):
-            geom = LineString([Point(u), Point(v)])
-            G.add_edge(
-                u, v, tag="ref_points_connection", geometry=geom, length=geom.length
-            )
+        for j in nearest_idx:
+            v = ref_nodes[int(j)]
+            if not G.has_edge(u, v):
+                geom = LineString([Point(u), Point(v)])
+                G.add_edge(
+                    u,
+                    v,
+                    tag="ref_points_connection",
+                    geometry=geom,
+                    length=geom.length,
+                )
     return G
 
 

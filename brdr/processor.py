@@ -50,6 +50,28 @@ from brdr.utils import (
 from brdr.utils import union_process_result
 
 
+def _to_multi_network_fast(geom):
+    """
+    Network helper: avoid expensive union/validation when geometry is already
+    a simple point/line multi-variant. Keeps behavior equivalent for common cases.
+    """
+    if geom is None:
+        return to_multi(geom)
+    if geom.is_empty:
+        return to_multi(geom)
+    if geom.geom_type in {
+        "Point",
+        "MultiPoint",
+        "LineString",
+        "MultiLineString",
+        "GeometryCollection",
+        "Polygon",
+        "MultiPolygon",
+    }:
+        return to_multi(geom)
+    return to_multi(safe_unary_union(geom))
+
+
 class BaseProcessor(ABC):
     """
     Abstract base class for geometric alignment processors.
@@ -1433,6 +1455,7 @@ class NetworkGeometryProcessor(BaseProcessor):
         reference = safe_unary_union(
             safe_intersection(reference_data.elements, input_geometry_buffered)
         )
+        reference_union = reference_data.union
 
         geom_processed_list = []
 
@@ -1478,7 +1501,10 @@ class NetworkGeometryProcessor(BaseProcessor):
                 geom_processed_list.append(geom_processed)
 
         # Merge all processed parts
-        geom_processed = safe_unary_union(geom_processed_list)
+        if len(geom_processed_list) == 1:
+            geom_processed = geom_processed_list[0]
+        else:
+            geom_processed = safe_unary_union(geom_processed_list)
 
         # Standard cleaning pipeline
         return self._postprocess_preresult(
@@ -1487,7 +1513,7 @@ class NetworkGeometryProcessor(BaseProcessor):
             GeometryCollection(),
             GeometryCollection(),
             relevant_distance,
-            reference_data.union,
+            reference_union,
             mitre_limit,
             correction_distance,
         )
@@ -1501,19 +1527,17 @@ class NetworkGeometryProcessor(BaseProcessor):
         close_output=False,
     ):
         geom_to_process_buffered = buffer_pos(geom_to_process, relevant_distance)
-        reference_intersection = safe_intersection(reference, geom_to_process_buffered)
-        reference_intersection = safe_unary_union(reference_intersection)
-        reference_intersection = to_multi(reference_intersection)
+        reference_intersection_raw = safe_intersection(reference, geom_to_process_buffered)
+        reference_intersection = _to_multi_network_fast(reference_intersection_raw)
         if reference_intersection.is_empty:
             return geom_to_process
         reference_intersection_buffered = buffer_pos(
             reference_intersection, relevant_distance
         )
-        thematic_difference = safe_difference(
+        thematic_difference_raw = safe_difference(
             geom_to_process, reference_intersection_buffered
         )
-        thematic_difference = safe_unary_union(thematic_difference)
-        thematic_difference = to_multi(thematic_difference)
+        thematic_difference = _to_multi_network_fast(thematic_difference_raw)
 
         if isinstance(geom_to_process, Point):
             if self.config.snap_strategy == SnapStrategy.NO_PREFERENCE:
