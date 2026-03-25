@@ -39,7 +39,7 @@ if __name__ == "__main__":
 
     # Initiate brdr
     processor_config = ProcessorConfig()
-    processor_config.snap_strategy=SnapStrategy.NO_PREFERENCE
+    processor_config.snap_strategy=SnapStrategy.PREFER_VERTICES
     processor= SnapGeometryProcessor(config=processor_config)
     #processor= NetworkGeometryProcessor(config=processor_config)
     aligner = Aligner(processor=processor,crs="EPSG:3812")

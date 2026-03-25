@@ -493,8 +493,6 @@ def snap_geometry_to_reference(
 ):
     if geometry is None or geometry.is_empty or reference is None or reference.is_empty:
         return geometry
-    if max_segment_length > 0:
-        geometry = segmentize(geometry, max_segment_length=max_segment_length)
     geometry = to_multi(geometry, geomtype=None)
     if geometry.geom_type == "MultiPoint":
         result = _snap_point_to_reference(
@@ -505,6 +503,13 @@ def snap_geometry_to_reference(
             tolerance=tolerance,
         )
     elif geometry.geom_type == "MultiLineString":
+        if max_segment_length > 0:
+            geometry = _refine_multiline_near_reference_vertices(
+                geometry,
+                reference=reference,
+                tolerance=tolerance,
+                max_segment_length=max_segment_length,
+            )
         result = _snap_line_to_reference(
             geometry,
             reference=reference,
@@ -513,6 +518,13 @@ def snap_geometry_to_reference(
             tolerance=tolerance,
         )
     elif geometry.geom_type == "MultiPolygon":
+        if max_segment_length > 0:
+            geometry = _refine_multipolygon_near_reference_vertices(
+                geometry,
+                reference=reference,
+                tolerance=tolerance,
+                max_segment_length=max_segment_length,
+            )
         result = _snap_polygon_to_reference(
             geometry,
             reference=reference,
@@ -540,6 +552,142 @@ def snap_geometry_to_reference(
             f"snapping for this type of geometry is not implemented: {str(geometry.geom_type)}"
         )
     return result
+
+
+def _refine_multiline_near_reference_vertices(
+    multiline: MultiLineString,
+    reference: BaseGeometry,
+    tolerance: float,
+    max_segment_length: float,
+) -> MultiLineString:
+    if multiline is None or multiline.is_empty:
+        return multiline
+    ref_coords = list(get_coordinates(reference))
+    if len(ref_coords) == 0:
+        return multiline
+
+    ref_vertex_points = [Point(c) for c in ref_coords]
+    ref_vertex_tree = STRtree(ref_vertex_points) if ref_vertex_points else None
+
+    refined_lines = []
+    for line in multiline.geoms:
+        refined_lines.append(
+            _refine_line_near_reference_vertices(
+                line,
+                ref_vertex_points=ref_vertex_points,
+                ref_vertex_tree=ref_vertex_tree,
+                tolerance=tolerance,
+                max_segment_length=max_segment_length,
+            )
+        )
+    return MultiLineString(refined_lines)
+
+
+def _refine_multipolygon_near_reference_vertices(
+    multipolygon: MultiPolygon,
+    reference: BaseGeometry,
+    tolerance: float,
+    max_segment_length: float,
+) -> MultiPolygon:
+    if multipolygon is None or multipolygon.is_empty:
+        return multipolygon
+    ref_coords = list(get_coordinates(reference))
+    if len(ref_coords) == 0:
+        return multipolygon
+
+    ref_vertex_points = [Point(c) for c in ref_coords]
+    ref_vertex_tree = STRtree(ref_vertex_points) if ref_vertex_points else None
+
+    refined_polygons = []
+    for polygon in multipolygon.geoms:
+        # exterior
+        exterior_line = LineString(polygon.exterior.coords)
+        exterior_refined = _refine_line_near_reference_vertices(
+            exterior_line,
+            ref_vertex_points=ref_vertex_points,
+            ref_vertex_tree=ref_vertex_tree,
+            tolerance=tolerance,
+            max_segment_length=max_segment_length,
+        )
+        exterior_coords = list(exterior_refined.coords)
+        if exterior_coords[0] != exterior_coords[-1]:
+            exterior_coords.append(exterior_coords[0])
+
+        # interiors
+        interior_rings = []
+        for interior in polygon.interiors:
+            interior_line = LineString(interior.coords)
+            interior_refined = _refine_line_near_reference_vertices(
+                interior_line,
+                ref_vertex_points=ref_vertex_points,
+                ref_vertex_tree=ref_vertex_tree,
+                tolerance=tolerance,
+                max_segment_length=max_segment_length,
+            )
+            interior_coords = list(interior_refined.coords)
+            if interior_coords[0] != interior_coords[-1]:
+                interior_coords.append(interior_coords[0])
+            interior_rings.append(interior_coords)
+
+        refined_polygon = make_valid(Polygon(exterior_coords, interior_rings))
+        if refined_polygon is None or refined_polygon.is_empty:
+            refined_polygon = polygon
+        refined_polygons.append(refined_polygon)
+    return to_multi(safe_unary_union(refined_polygons), geomtype="Polygon")
+
+
+def _refine_line_near_reference_vertices(
+    line: LineString,
+    ref_vertex_points: List[Point],
+    ref_vertex_tree: STRtree,
+    tolerance: float,
+    max_segment_length: float,
+) -> LineString:
+    if line is None or line.is_empty or line.length == 0:
+        return line
+
+    nearby_ref_points = []
+    if ref_vertex_tree is not None:
+        try:
+            hits = ref_vertex_tree.query(line, predicate="dwithin", distance=tolerance)
+            for h in hits:
+                if isinstance(h, (int, np.integer)):
+                    nearby_ref_points.append(ref_vertex_points[int(h)])
+                else:
+                    nearby_ref_points.append(h)
+        except Exception:
+            nearby_ref_points = [
+                p for p in ref_vertex_points if line.distance(p) <= tolerance
+            ]
+    if not nearby_ref_points:
+        return line
+
+    # Keep original vertices and only add local refinement around projected ref vertices.
+    sample_distances = [0.0, line.length]
+    sample_distances.extend([line.project(Point(c)) for c in line.coords[1:-1]])
+
+    half_step = max_segment_length / 2.0
+    for p in nearby_ref_points:
+        d = float(line.project(p))
+        sample_distances.extend(
+            [
+                max(0.0, d - half_step),
+                d,
+                min(line.length, d + half_step),
+            ]
+        )
+
+    sample_distances = sorted(set(round(float(d), 9) for d in sample_distances))
+    new_coords = []
+    for d in sample_distances:
+        p = line.interpolate(d)
+        coord = (float(p.x), float(p.y))
+        if not new_coords or coord != new_coords[-1]:
+            new_coords.append(coord)
+
+    if len(new_coords) < 2:
+        return line
+    return LineString(new_coords)
 
 
 def _snap_point_to_reference(

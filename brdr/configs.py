@@ -65,7 +65,7 @@ class ProcessorConfig:
     buffer_multiplication_factor: float = 1.01
     threshold_circle_ratio: float = 0.98
     snap_strategy: SnapStrategy = SnapStrategy.PREFER_VERTICES
-    snap_max_segment_length: int = -1
+    snap_max_segment_length: int = 2
     partial_snapping: bool = False
     partial_snap_strategy: SnapStrategy = SnapStrategy.PREFER_VERTICES
     partial_snap_max_segment_length: int = 2
