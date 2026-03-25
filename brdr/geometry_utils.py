@@ -551,8 +551,6 @@ def _snap_point_to_reference(
 ):
     if geometry is None or geometry.is_empty or reference is None or reference.is_empty:
         return geometry
-    if max_segment_length > 0:
-        geometry = segmentize(geometry, max_segment_length=max_segment_length)
 
     if geometry.geom_type == "Point":
         geometry = MultiPoint([geometry])
@@ -592,8 +590,6 @@ def _snap_line_to_reference(
     # return snap(geometry,reference,tolerance)
     if geometry is None or geometry.is_empty or reference is None or reference.is_empty:
         return geometry
-    if max_segment_length > 0:
-        geometry = segmentize(geometry, max_segment_length=max_segment_length)
 
     if geometry.geom_type == "LineString":
         geometry = MultiLineString([geometry])
@@ -629,8 +625,6 @@ def _snap_polygon_to_reference(
 ):
     if geometry is None or geometry.is_empty or reference is None or reference.is_empty:
         return geometry
-    if max_segment_length > 0:
-        geometry = segmentize(geometry, max_segment_length=max_segment_length)
     geometry = to_multi(geometry, geomtype="Polygon")
 
     ref_border, ref_borders, ref_coords = _get_ref_objects(reference)
@@ -724,6 +718,8 @@ def _get_snapped_coordinates(
     # Initialize Spatial Index (STRtree) for log(N) vertex lookups
     ref_vertices_objs = [Point(c) for c in ref_coords]
     tree = STRtree(ref_vertices_objs) if ref_vertices_objs else None
+    # Spatial index for nearest reference border lookup
+    ref_lines_tree = STRtree(ref_borders) if ref_borders else None
 
     # 2. Cache the snapped start point for the first iteration
     p_start = Point(coords[0])
@@ -754,6 +750,7 @@ def _get_snapped_coordinates(
                     p_start,
                     p_start_snapped,
                     ref_borders,
+                    ref_lines_tree,
                     tolerance,
                 )
             )
@@ -799,6 +796,7 @@ def _get_snapped_coordinates(
                                 p_start,
                                 p_start_snapped,
                                 ref_borders,
+                                ref_lines_tree,
                                 tolerance,
                             )
                         )
@@ -812,6 +810,7 @@ def _get_snapped_coordinates(
                                 p_mid,
                                 p_mid_snapped,
                                 ref_borders,
+                                ref_lines_tree,
                                 tolerance,
                             )
                         )
@@ -828,12 +827,18 @@ def _get_snapped_coordinates(
 
 
 def _get_sublinestring_coordinates(
-    p_end, p_end_snapped, p_start, p_start_snapped, ref_borders, tolerance
+    p_end,
+    p_end_snapped,
+    p_start,
+    p_start_snapped,
+    ref_borders,
+    ref_lines_tree,
+    tolerance,
 ):
     coordinates = []
     if p_start_snapped == p_end_snapped:
         return coordinates
-    reference_border, distance = closest_line(ref_borders, p_end)
+    reference_border, distance = _closest_line_fast(ref_borders, ref_lines_tree, p_end)
     if reference_border is None or reference_border.is_empty:
         return coordinates
     distance_start_end = p_start.distance(p_end)
@@ -848,6 +853,21 @@ def _get_sublinestring_coordinates(
             if (point.distance(p_start) + point.distance(p_end)) / 2 <= tolerance:
                 coordinates.append(p)
     return coordinates
+
+
+def _closest_line_fast(lines, lines_tree, point):
+    if not lines:
+        return None, -1
+    if lines_tree is None:
+        return closest_line(lines, point)
+    nearest = lines_tree.nearest(point)
+    if nearest is None:
+        return None, -1
+    if isinstance(nearest, (int, np.integer)):
+        line = lines[int(nearest)]
+    else:
+        line = nearest
+    return line, line.distance(point)
 
 
 def geometric_equality(geom_a, geom_b, correction_distance, mitre_limit):

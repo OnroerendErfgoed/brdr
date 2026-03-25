@@ -599,9 +599,6 @@ class SnapGeometryProcessor(BaseProcessor):
         ref_intersections = reference_data.items.take(
             reference_data.tree.query(input_geometry_outer_buffered)
         ).tolist()
-        ref_intersections = reference_data.items.take(
-            reference_data.tree.query(input_geometry_outer_buffered)
-        ).tolist()
 
         ref_intersections_geoms = []
         for key_ref in ref_intersections:
