@@ -1574,6 +1574,10 @@ class NetworkGeometryProcessor(BaseProcessor):
             ):
                 closed_coords = list(geom_processed.coords) + [geom_processed.coords[0]]
                 geom_processed = LineString(closed_coords)
+        if geom_processed is None:
+            return geom_processed
+        if hasattr(geom_processed, "is_valid") and geom_processed.is_valid:
+            return geom_processed
         return make_valid(geom_processed)
 
     def _get_processed_network_path(

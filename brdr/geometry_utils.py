@@ -857,11 +857,9 @@ def _get_snapped_coordinates(
 
     coordinates = []
 
-    # 1. Pre-process references (Outside the loop!)
-    # Pre-buffering avoids thousands of expensive re-calculations inside the loop
-    ref_buffered_main = buffer_pos(ref_border, tolerance)
-    ref_coords_multipoint = MultiPoint(ref_coords)
-    ref_coords_buffered = buffer_pos(ref_coords_multipoint, tolerance)
+    # 1. Lazy references for mixed-case handling
+    ref_buffered_main = None
+    ref_coords_buffered = None
 
     # Initialize Spatial Index (STRtree) for log(N) vertex lookups
     ref_vertices_objs = [Point(c) for c in ref_coords]
@@ -909,11 +907,15 @@ def _get_snapped_coordinates(
             line = LineString([p_start, p_end])
 
             # Select the appropriate pre-buffered geometry
-            curr_ref_buffered = (
-                ref_coords_buffered
-                if (ref_vertices_start or ref_vertices_end)
-                else ref_buffered_main
-            )
+            if ref_vertices_start or ref_vertices_end:
+                if ref_coords_buffered is None:
+                    ref_coords_multipoint = MultiPoint(ref_coords)
+                    ref_coords_buffered = buffer_pos(ref_coords_multipoint, tolerance)
+                curr_ref_buffered = ref_coords_buffered
+            else:
+                if ref_buffered_main is None:
+                    ref_buffered_main = buffer_pos(ref_border, tolerance)
+                curr_ref_buffered = ref_buffered_main
             intersected_line = safe_intersection(line, curr_ref_buffered)
 
             if (
@@ -2408,40 +2410,33 @@ def connect_theme_and_reference(G, gap_dist=0.1, interconnect_dist=1.5):
     else:
         return G
     nodes = list(ref_sub_graph.nodes())
-    trees = {}
     all_pts = [Point(n) for n in nodes]
-    trees["all"] = {"pts": all_pts, "tree": STRtree(all_pts), "nodes": nodes}
-    strategies = ["all"]
+    all_tree = STRtree(all_pts)
 
     for tep in theme_endpoints:
         tep_pt = Point(tep)
         connection_made = False
 
-        for s_key in strategies:
-            if s_key not in trees:
-                continue
+        n_idx = all_tree.nearest(tep_pt)
+        if n_idx is None:
+            continue
+        target_coord = nodes[n_idx]
+        dist = tep_pt.distance(all_pts[n_idx])
 
-            s = trees[s_key]
-            n_idx = s["tree"].nearest(tep_pt)
-            if n_idx is None:
-                continue
-            target_coord = s["nodes"][n_idx]
-            dist = tep_pt.distance(s["pts"][n_idx])
+        if tep != target_coord and gap_dist < dist <= interconnect_dist:
+            if not G.has_edge(tep, target_coord):
+                geom = LineString([tep, target_coord])
+                G.add_edge(
+                    tep,
+                    target_coord,
+                    tag="interconnect_lines",
+                    geometry=geom,
+                    length=geom.length,
+                )
+                connection_made = True
 
-            if tep != target_coord and gap_dist < dist <= interconnect_dist:
-                if not G.has_edge(tep, target_coord):
-                    geom = LineString([tep, target_coord])
-                    G.add_edge(
-                        tep,
-                        target_coord,
-                        tag="interconnect_lines",
-                        geometry=geom,
-                        length=geom.length,
-                    )
-                    connection_made = True
-
-            if connection_made:
-                break
+        if connection_made:
+            continue
     return G
 
 
@@ -2474,14 +2469,16 @@ def connect_network_components(
         return G  # Everything is already connected, no action needed
 
     # 2. Collect all potential reference nodes per component
+    allowed_nodes = set()
+    for u, v, d in G.edges(data=True):
+        if d.get("tag") in edge_tags:
+            allowed_nodes.add(u)
+            allowed_nodes.add(v)
+
     component_data = []
     for i, comp in enumerate(components):
-        # Filter nodes that belong to a 'ref_lines' edge within this component
-        ref_in_comp = [
-            n
-            for n in comp
-            if any(d.get("tag") in edge_tags for _, _, d in G.edges(n, data=True))
-        ]
+        # Filter nodes that belong to allowed edge tags within this component
+        ref_in_comp = [n for n in comp if n in allowed_nodes]
 
         if ref_in_comp:
             comp_points = [Point(n) for n in ref_in_comp]
