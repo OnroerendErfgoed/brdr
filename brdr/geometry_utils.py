@@ -47,7 +47,6 @@ from shapely.ops import substring
 from shapely.prepared import prep
 
 from brdr.enums import SnapStrategy
-from brdr.viz import export_to_geopackage
 
 ShapelyGeometry = Union[
     Point,
@@ -2601,27 +2600,39 @@ def clean_pseudo_nodes_by_snap_strategy(
         n for n, d in all_nodes if str(d.get("tag", "")).startswith("pseudo_")
     ]
 
-    # For PREFER_VERTICES, index non-pseudo nodes
-    real_nodes_geoms = [
-        Point(n)
-        for n, d in all_nodes
-        if not str(d.get("tag", "")).startswith("pseudo_")
-    ]
-    real_node_tree = STRtree(real_nodes_geoms) if real_nodes_geoms else None
+    # Build spatial index only when needed by the selected strategy
+    needs_real_node_tree = snap_strategy in (
+        SnapStrategy.PREFER_VERTICES,
+        #SnapStrategy.SMART_VERTICES,
+    )
+    real_node_tree = None
+    if needs_real_node_tree:
+        real_nodes_geoms = [
+            Point(n)
+            for n, d in all_nodes
+            if not str(d.get("tag", "")).startswith("pseudo_")
+        ]
+        real_node_tree = STRtree(real_nodes_geoms) if real_nodes_geoms else None
 
     nodes_to_remove = []
 
     for n in pseudo_nodes:
         if snap_strategy == SnapStrategy.ONLY_VERTICES:
             nodes_to_remove.append(n)
-        elif snap_strategy == SnapStrategy.PREFER_VERTICES and real_node_tree:
+        elif (
+            snap_strategy in (SnapStrategy.PREFER_VERTICES,
+                              #SnapStrategy.SMART_VERTICES
+                )
+            and real_node_tree
+        ):
             p_geom = Point(n)
             # Check if any real node is nearby
             # TODO spatial distance or network distance?
-            indices = real_node_tree.query(
-                p_geom, predicate="dwithin", distance=distance_threshold
-            )
-            if len(indices)>0:
+            if len(
+                real_node_tree.query(
+                    p_geom, predicate="dwithin", distance=distance_threshold
+                )
+            ) > 0:
                 nodes_to_remove.append(n)
 
     # 2. Bridge nodes and create NEW straight LineStrings
