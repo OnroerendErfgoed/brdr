@@ -1,6 +1,6 @@
 ---
 title: "Get Started"
-description: "Simple example to get started"
+description: "Minimal end-to-end alignment example with in-memory data"
 author: "Karel Dieussaert"
 date: "2026-01-07"
 categories: [Process]
@@ -10,7 +10,22 @@ format:
 jupyter: python3
 ---
 # Get Started
-This example shows a basic example to 'Get Started'.
+This is the smallest complete `brdr` workflow:
+
+1. Create an [Aligner](../reference/Aligner.qmd).
+2. Load one thematic geometry and one reference geometry with [DictLoader](../reference/DictLoader.qmd).
+3. Run `process(...)` for one `relevant_distance`.
+4. Inspect the aligned result and the added/removed differences.
+
+Use this example as the baseline before trying external loaders or advanced processors.
+
+## Input and Output
+
+- Input: two small polygons created from WKT.
+- Output:
+  - `result`: aligned geometry
+  - `result_diff_plus`: area added by alignment
+  - `result_diff_min`: area removed by alignment
 
 ```{python}
 #| fig-cap: "basic example"

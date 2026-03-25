@@ -205,20 +205,6 @@ class ProcessorID(str, Enum):
     TOPOLOGY = "2024:topology2024a"
 
 
-class AlignerResultType(str, Enum):
-    """Format of the output dictionary."""
-
-    PREDICTIONS = "predictions"
-    EVALUATED_PREDICTIONS = "evaluated_predictions"
-    PROCESSRESULTS = "processresults"
-
-
-class AlignerInputType(str, Enum):
-    """Role of the input dataset."""
-
-    THEMATIC = "thematic"
-    REFERENCE = "reference"
-
 
 class SnapStrategy(str, Enum):
     """Geometric priority during snapping."""

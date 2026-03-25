@@ -6,10 +6,19 @@ listing:
   sort: "date desc"         # Sort by date (newest first)
   categories: true          # Show categories in sidebar
   sort-ui: true             # User can sort
-  filter-ui: true           # Search alloweed
+  filter-ui: true           # Search allowed
   fields: [title, description, author, date, categories] # Fields from metadata
 ---
 
-Here you can find several examples how 'brdr' can be used:
+This page groups practical `brdr` examples from basic alignment to advanced workflows.
+
+How to use these examples:
+
+1. Start with **Get Started** to understand the standard `Aligner` flow.
+2. Continue with **Loader** examples to connect your own data sources.
+3. Use **Prediction** and **Evaluation** once your processing pipeline is stable.
+4. Use processor-specific examples (for example `NetworkGeometryProcessor`) only when needed.
+
+Most examples use real GRB reference data and therefore require network access during execution.
 
 

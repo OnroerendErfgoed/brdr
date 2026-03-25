@@ -1,6 +1,6 @@
 ---
 title: "DictLoader"
-description: "example how a DictLoader is used to load a Dictionary of thematic data"
+description: "Load geometries from a Python dictionary and align with GRB reference data"
 author: "Karel Dieussaert"
 date: "2026-01-07"
 categories: [Loader]
@@ -10,7 +10,23 @@ format:
 jupyter: python3
 ---
 # DictLoader
-This example shows a basic Loader example of the Aligner
+This example shows [DictLoader](../reference/DictLoader.qmd), useful when geometries already exist as Python objects (`{id: geometry}`).
+
+## What you learn
+
+1. Build an `Aligner` with explicit CRS.
+2. Load thematic geometry from a dictionary.
+3. Load GRB reference data.
+4. Run processing for one distance and inspect WKT outputs.
+
+## Typical use case
+
+Use this when your application already has geometries in memory (for example after ETL or preprocessing) and you want minimal loader overhead.
+
+## Notes
+
+- This example uses one large geometry and prints `result`, `result_diff_plus`, and `result_diff_min`.
+- If you need attributes in output, combine this with examples that include metadata enrichment.
 
 ```{python}
 #| fig-cap: "basic example"

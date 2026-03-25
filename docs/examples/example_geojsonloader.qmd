@@ -1,6 +1,6 @@
 ---
 title: "GeojsonLoader"
-description: "example how a GeojsonLoader is used to load thematic data"
+description: "Load thematic features from GeoJSON and align them to reference data"
 author: "Karel Dieussaert"
 date: "2026-01-14"
 categories: [Loader, GeojsonLoader]
@@ -10,7 +10,22 @@ format:
 jupyter: python3
 ---
 # GeojsonLoader
-This example shows how a GeojsonLoader can be used to add data to the aligner
+This example focuses on [GeoJsonLoader](../reference/GeoJsonLoader.qmd) as a practical loader for in-memory GeoJSON.
+
+## What you learn
+
+1. How to load thematic GeoJSON into `Aligner`.
+2. How to fetch reference geometries (GRB) and run `process(...)`.
+3. How to export and visualize the resulting aligned geometries.
+
+## Why this matters
+
+Most integrations already have GeoJSON available through APIs or preprocessing pipelines. This loader is usually the fastest way to connect those datasets to `brdr`.
+
+## Notes
+
+- Ensure the input `id_property` matches your feature properties.
+- The example calls `save_results(...)` and visualization helpers, useful for quick QA.
 
 ```{python}
 #| fig-cap: "basic example"

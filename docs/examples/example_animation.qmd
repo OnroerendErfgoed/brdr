@@ -1,6 +1,6 @@
 ---
 title: "Animated GIF"
-description: "Example to create a animated GIF showing the principle of **brdr**"
+description: "Generate an animation of alignment behavior across relevant distances"
 author: "Karel Dieussaert"
 date: "2026-01-07"
 categories: [Animation]
@@ -11,7 +11,21 @@ jupyter: python3
 ---
 # Animated GIF
 
-Example to create a animated GIF showing the principle of **brdr**. For every augmented relevant distance (~distance that adaptions are allowed), the resulting geometry is shown. In the graphic you can 'see' the moments where augmenting relevant distance does not give any change, so stable geometries are found.
+This example creates a GIF that visualizes alignment results over an increasing `relevant_distance` series.
+
+## What you learn
+
+1. How to process many distances in one run.
+2. How to generate an animation with `animated_map(...)`.
+3. How to detect stable zones where increased distance does not change geometry anymore.
+
+## How to interpret the animation
+
+- Early frames: small local corrections only.
+- Mid frames: more boundary segments start snapping.
+- Stable frames: geometry remains unchanged even when distance increases.
+
+This helps choose practical distance ranges for production settings.
 
 ```{python}
 #| label: fig-plots

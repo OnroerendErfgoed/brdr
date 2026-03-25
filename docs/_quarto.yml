@@ -85,6 +85,7 @@ quartodoc:
       contents:
         - FullReferenceStrategy
         - AlignerResultType
+        - AlignerInputType
         - OpenDomainStrategy
         - DiffMetric
         - ProcessRemark

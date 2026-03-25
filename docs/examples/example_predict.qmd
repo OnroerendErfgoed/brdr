@@ -1,6 +1,6 @@
 ---
 title: "Prediction"
-description: "Example of a simple prediction by using **brdr**"
+description: "Predict stable candidate geometries across multiple relevant distances"
 author: "Karel Dieussaert"
 date: "2026-01-07"
 categories: [Prediction]
@@ -10,7 +10,24 @@ format:
 jupyter: python3
 ---
 # Prediction
-This example shows a simple Prediction by using **brdr**
+This example demonstrates `aligner.predict(...)` for selecting meaningful candidate results from a distance series.
+
+## What you learn
+
+1. How to run prediction on a range of `relevant_distances`.
+2. How to retrieve prediction results with `AlignerResultType.PREDICTIONS`.
+3. How to visualize both geometry candidates and distance-vs-difference curves.
+
+## When to use this
+
+Use prediction when you do not want to manually inspect every processed distance and need a compact set of candidate outcomes.
+
+## Notes
+
+- This example loads GRB data (`GRBActualLoader`), so execution depends on available network connectivity.
+- The map and chart are complementary:
+  - map = spatial interpretation of candidates
+  - chart = where geometric change stabilizes
 
 ```{python}
 #| label: fig-plots

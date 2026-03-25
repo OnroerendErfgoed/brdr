@@ -1,6 +1,6 @@
 ---
 title: "Lambert72 to Lambert 08"
-description: "Simple example to align a data-object after Lambert72/08-transformation"
+description: "Realign transformed geometries after Lambert72 -> Lambert08 conversion"
 author: "Karel Dieussaert"
 date: "2026-01-14"
 categories: [Lambert72/08, Transformation]
@@ -10,7 +10,19 @@ format:
 jupyter: python3
 ---
 # Lambert72/08 transformation
-This example shows how **brdr** can be used to align a data-object after Lambert72/08-tranformation, so small deviations of the transformation are re-aligned to a 08-reference-layer.
+This example shows a two-step workflow for CRS migration scenarios:
+
+1. Align in Lambert72 (`EPSG:31370`) to create a clean baseline.
+2. Transform geometry to Lambert08 (`EPSG:3812`) and re-align to remove transformation-induced offsets.
+
+## Why this is important
+
+When geometries are transformed between CRS systems, small coordinate deviations can appear. A final `brdr` alignment step ensures boundaries follow the target reference layer precisely.
+
+## What to look at in the output
+
+- The final aligned Lambert08 geometry (`result`).
+- The corrected deviations (`result_diff`), which show what was adjusted after transformation.
 
 ```{python}
 #| fig-cap: "Alignment after Lambert72/08-transformation"
