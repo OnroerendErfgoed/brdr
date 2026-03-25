@@ -6,7 +6,7 @@ date: "2026-01-07"
 categories: [Animation]
 format:
   html:
-    code-fold: true
+    code-fold: false
 jupyter: python3
 ---
 # Animated GIF

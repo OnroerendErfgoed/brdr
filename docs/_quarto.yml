@@ -24,6 +24,9 @@ lang: en
 metadata-files:
   - reference/_sidebar.yml
 
+filters:
+  - machow/interlinks
+
 highlight-style: github-dark
 format:
   html:

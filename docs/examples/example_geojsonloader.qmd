@@ -9,10 +9,10 @@ format:
     code-fold: false
 jupyter: python3
 ---
-# DictLoader
+# GeojsonLoader
 This example shows how a GeojsonLoader can be used to add data to the aligner
 
 ```{python}
 #| fig-cap: "basic example"
-{{< include ../../examples/example_dictloader.py >}}
+{{< include ../../examples/example_geojsonloader.py >}}
 ```

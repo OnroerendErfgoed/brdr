@@ -6,7 +6,7 @@ date: "2026-01-14"
 categories: [Lambert72/08, Transformation]
 format:
   html:
-    code-fold: true
+    code-fold: false
 jupyter: python3
 ---
 # Lambert72/08 transformation
