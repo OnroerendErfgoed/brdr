@@ -12,6 +12,7 @@ from shapely import remove_repeated_points
 from shapely.geometry.base import BaseGeometry
 from shapely.geometry.linestring import LineString
 from shapely.ops import nearest_points
+from shapely.prepared import prep
 
 from brdr.configs import ProcessorConfig
 from brdr.constants import REMARK_FIELD_NAME
@@ -469,12 +470,14 @@ class BaseProcessor(ABC):
         List[BaseGeometry]
             The updated list containing extracted polygons.
         """
-        if not (geom.is_empty or geom is None):
-            geometry_collection = GeometryCollection(geom)
-            for g in geometry_collection.geoms:
-                g = make_valid(g)
-                if str(g.geom_type) in ["Polygon", "MultiPolygon"]:
-                    array.append(g)
+        if geom is None or geom.is_empty:
+            return array
+        for g in get_parts(geom):
+            if g is None or g.is_empty:
+                continue
+            g = make_valid(g)
+            if str(g.geom_type) in ["Polygon", "MultiPolygon"]:
+                array.append(g)
         return array
 
     @staticmethod
@@ -781,6 +784,7 @@ class DieussaertGeometryProcessor(BaseProcessor):
             return list_process_results[0]
 
         merged_process_result = ProcessResult()
+        geometries_by_key: dict[str, list[BaseGeometry]] = {}
         for process_result in list_process_results:
             for key in process_result:
                 value = process_result[key]
@@ -805,15 +809,19 @@ class DieussaertGeometryProcessor(BaseProcessor):
                     geom = value
                     if geom is None:
                         geom = GeometryCollection()
-                    if key in merged_process_result:
-                        existing = merged_process_result[key]
-                    else:
-                        existing = GeometryCollection()
-                    merged_process_result[key] = safe_unary_union([existing, geom])
+                    geometries_by_key.setdefault(key, []).append(geom)
                 else:
                     raise ValueError(
                         f"Invalid element with key {str(key)} for ProcessResult"
                     )
+
+        for key, geoms in geometries_by_key.items():
+            if len(geoms) == 0:
+                merged_process_result[key] = GeometryCollection()
+            elif len(geoms) == 1:
+                merged_process_result[key] = geoms[0]
+            else:
+                merged_process_result[key] = safe_unary_union(geoms)
 
         return merged_process_result
 
@@ -843,15 +851,8 @@ class DieussaertGeometryProcessor(BaseProcessor):
         ref_intersections = reference_data.items.take(
             reference_data.tree.query(input_geometry_outer_buffered)
         ).tolist()
-
-        ref_intersections_geoms = []
-        for key_ref in ref_intersections:
-            ref_geom = reference_data[key_ref].geometry
-            ref_intersections_geoms.append(ref_geom)
-            if not isinstance(ref_geom, (Polygon, MultiPolygon)):
-                raise ValueError(
-                    "Dieussaert algorithm can only be used when all reference geometries are polygons or multipolygons."
-                )
+        prepared_input_outer = prep(input_geometry_outer)
+        reference_union = reference_data.union
 
         buffer_distance = relevant_distance / 2
         (
@@ -862,16 +863,23 @@ class DieussaertGeometryProcessor(BaseProcessor):
             input_geometry_outer,
             input_geometry_inner,
             relevant_distance,
-            reference_data.union,
+            reference_union,
             mitre_limit,
             correction_distance,
         )
 
-        for geom_reference in ref_intersections_geoms:
+        for key_ref in ref_intersections:
+            geom_reference = reference_data[key_ref].geometry
+            if not isinstance(geom_reference, (Polygon, MultiPolygon)):
+                raise ValueError(
+                    "Dieussaert algorithm can only be used when all reference geometries are polygons or multipolygons."
+                )
+            # Cheap boolean pre-check before expensive intersection construction
+            if not prepared_input_outer.intersects(geom_reference):
+                continue
             geom_intersection = safe_intersection(input_geometry_outer, geom_reference)
             if geom_intersection.is_empty or geom_intersection is None:
                 continue
-            self.logger.feedback_debug("calculate intersection")
             (
                 geom,
                 relevant_intersection,
@@ -884,29 +892,40 @@ class DieussaertGeometryProcessor(BaseProcessor):
                 buffer_distance=buffer_distance,
                 mitre_limit=mitre_limit,
             )
-            self.logger.feedback_debug("intersection calculated")
-            preresult = self._add_multi_polygons_from_geom_to_array(geom, preresult)
-            relevant_intersection_array = self._add_multi_polygons_from_geom_to_array(
+            self._add_multi_polygons_from_geom_to_array(geom, preresult)
+            self._add_multi_polygons_from_geom_to_array(
                 relevant_intersection, relevant_intersection_array
             )
-            relevant_diff_array = self._add_multi_polygons_from_geom_to_array(
+            self._add_multi_polygons_from_geom_to_array(
                 relevant_diff, relevant_diff_array
             )
-        relevant_intersection = safe_unary_union(relevant_intersection_array)
-        if relevant_intersection is None or relevant_intersection.is_empty:
+
+        if len(relevant_intersection_array) == 0:
             relevant_intersection = Polygon()
-        relevant_diff = safe_unary_union(relevant_diff_array)
-        if relevant_diff is None or relevant_diff.is_empty:
+        elif len(relevant_intersection_array) == 1:
+            relevant_intersection = relevant_intersection_array[0]
+        else:
+            relevant_intersection = safe_unary_union(relevant_intersection_array)
+
+        if len(relevant_diff_array) == 0:
             relevant_diff = Polygon()
+        elif len(relevant_diff_array) == 1:
+            relevant_diff = relevant_diff_array[0]
+        else:
+            relevant_diff = safe_unary_union(relevant_diff_array)
+
         preresult.append(input_geometry_inner)
-        geom_preresult = safe_unary_union(preresult)
+        if len(preresult) == 1:
+            geom_preresult = preresult[0]
+        else:
+            geom_preresult = safe_unary_union(preresult)
         process_result = self._postprocess_preresult(
             geom_preresult,
             input_geometry,
             relevant_intersection,
             relevant_diff,
             relevant_distance,
-            reference_data.union,
+            reference_union,
             mitre_limit,
             correction_distance,
         )
@@ -1185,6 +1204,7 @@ class DieussaertGeometryProcessor(BaseProcessor):
 
         """
         od_overlap = 111  # define a specific value for defining overlap of OD
+        buffer_distance_x2 = 2 * buffer_distance
         if geom_reference.area == 0:
             overlap = od_overlap  # Open Domain
 
@@ -1218,6 +1238,21 @@ class DieussaertGeometryProcessor(BaseProcessor):
             buffer_distance,
             mitre_limit=mitre_limit,
         )
+        geom_difference_2_buffered = None
+
+        def _get_geom_difference_2_buffered():
+            nonlocal geom_difference_2_buffered
+            if geom_difference_2_buffered is None:
+                geom_intersection_buffered = buffer_pos(
+                    geom_intersection, buffer_distance_x2
+                )
+                geom_difference_2 = safe_difference(
+                    geom_reference, geom_intersection_buffered
+                )
+                geom_difference_2_buffered = buffer_pos(
+                    geom_difference_2, buffer_distance_x2
+                )
+            return geom_difference_2_buffered
 
         if (
             not geom_intersection_inner.is_empty
@@ -1226,7 +1261,7 @@ class DieussaertGeometryProcessor(BaseProcessor):
         ):
             geom_x = safe_intersection(
                 geom_intersection,
-                buffer_pos(geom_intersection_inner, 2 * buffer_distance),
+                buffer_pos(geom_intersection_inner, buffer_distance_x2),
             )
 
             geom_x = snap_geometry_to_reference(
@@ -1256,18 +1291,7 @@ class DieussaertGeometryProcessor(BaseProcessor):
                 ),
             )
             geom_x = buffer_neg_pos(geom_x, buffer_distance, mitre_limit=mitre_limit)
-
-            geom_intersection_buffered = buffer_pos(
-                geom_intersection, 2 * buffer_distance
-            )
-            geom_difference_2 = safe_difference(
-                geom_reference, geom_intersection_buffered
-            )
-            geom_difference_2_buffered = buffer_pos(
-                geom_difference_2, 2 * buffer_distance
-            )
-
-            geom_x = safe_difference(geom_x, geom_difference_2_buffered)
+            geom_x = safe_difference(geom_x, _get_geom_difference_2_buffered())
 
             geom_x = safe_intersection(geom_x, geom_reference)
 
@@ -1314,16 +1338,9 @@ class DieussaertGeometryProcessor(BaseProcessor):
                     max_segment_length=self.config.partial_snap_max_segment_length,
                 )
             elif not geom_intersection_inner.is_empty:
-                geom_intersection_buffered = buffer_pos(
-                    geom_intersection, 2 * buffer_distance
+                geom = safe_difference(
+                    geom_reference, _get_geom_difference_2_buffered()
                 )
-                geom_difference_2 = safe_difference(
-                    geom_reference, geom_intersection_buffered
-                )
-                geom_difference_2_buffered = buffer_pos(
-                    geom_difference_2, 2 * buffer_distance
-                )
-                geom = safe_difference(geom_reference, geom_difference_2_buffered)
             elif self.config.threshold_overlap_percentage < 0:
                 # if we take a value of -1, the original border will be used
                 geom = geom_intersection
