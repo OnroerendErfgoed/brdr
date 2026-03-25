@@ -8,6 +8,7 @@ from brdr.constants import (
     DATE_FORMAT,
     VERSION_DATE,
     MAX_REFERENCE_BUFFER,
+    DOWNLOAD_LIMIT,
 )
 from brdr.geometry_utils import (
     buffer_pos,
@@ -265,5 +266,144 @@ class BeCadastralParcelLoader(GeoJsonLoader):
         self.data_dict_source[VERSION_DATE] = datetime.now().strftime(DATE_FORMAT)
         self.aligner.logger.feedback_info(
             f"Cadaster downloaded (service={self.service})"
+        )
+        return super().load_data()
+
+
+def get_collection_vrbg(
+    geometry,
+    collection: str,
+    crs="EPSG:3812",
+    partition=1000,
+    limit: int = DOWNLOAD_LIMIT,
+    max_workers: Optional[int] = None,
+    max_pages=float("inf"),
+    request_timeout: int = 60,
+):
+    """
+    Retrieve administrative boundaries from the VRBG OGC API Features service.
+    """
+    crs = to_crs(crs)
+    url = (
+        "https://geo.api.vlaanderen.be/VRBG/ogc/features/v1/"
+        f"collections/{collection}/items"
+    )
+    params = {
+        "f": "json",
+        "crs": from_crs(crs),
+        "limit": limit,
+    }
+    return get_collection_by_partition(
+        url=url,
+        params=params,
+        geometry=geometry,
+        partition=partition,
+        crs=crs,
+        max_workers=max_workers,
+        max_pages=max_pages,
+        request_timeout=request_timeout,
+    )
+
+
+class BeAdministrativeBoundaryLoader(GeoJsonLoader):
+    """
+    Reference loader for Belgian administrative boundaries (VRBG).
+
+    Data is fetched from the Vlaanderen OGC API Features endpoint and clipped by
+    the buffered thematic extent through BBOX partition requests.
+    """
+
+    def __init__(
+        self,
+        aligner,
+        collection: str,
+        id_property: str = "OIDN",
+        partition: int = 1000,
+        limit: int = DOWNLOAD_LIMIT,
+        max_workers: Optional[int] = None,
+        max_pages=float("inf"),
+        request_timeout: int = 60,
+    ):
+        """
+        Initialize a VRBG administrative boundary loader.
+
+        Parameters
+        ----------
+        aligner : Aligner
+            Aligner instance containing thematic data and CRS context.
+        collection : str
+            VRBG collection identifier from `/collections` (for example a boundary layer).
+        id_property : str, optional
+            Feature property used as unique identifier. Defaults to `"OIDN"`.
+        partition : int, optional
+            Grid size parameter used to partition the thematic extent.
+        limit : int, optional
+            Requested number of features per request page.
+        max_workers : int, optional
+            Maximum number of concurrent workers for partition requests.
+        max_pages : int or float, optional
+            Maximum number of pages per partition. Defaults to unlimited.
+        request_timeout : int, optional
+            HTTP request timeout in seconds. Defaults to 60.
+
+        Raises
+        ------
+        ValueError
+            If the aligner CRS is not supported.
+        """
+        super().__init__()
+        self.aligner = aligner
+        if not self.aligner.crs in (to_crs(element) for element in BE_SUPPORTED_CRS):
+            raise ValueError(
+                f"BeAdministrativeBoundaryLoader only supports alignment in CRS '{BE_SUPPORTED_CRS}' while CRS '{self.aligner.crs}' is used"
+            )
+        self.collection = collection
+        self.id_property = id_property
+        self.partition = partition
+        self.limit = limit
+        self.max_workers = max_workers
+        self.max_pages = max_pages
+        self.request_timeout = request_timeout
+        self.data_dict_source["source"] = "VRBG"
+        self.data_dict_source[
+            "source_url"
+        ] = "https://geo.api.vlaanderen.be/VRBG/ogc/features/v1"
+
+    def load_data(self):
+        """
+        Load administrative boundary reference data for the thematic extent.
+
+        Returns
+        -------
+        AlignerFeatureCollection
+            Validated reference features ready for alignment.
+
+        Raises
+        ------
+        ValueError
+            If thematic data is missing or no valid thematic extent is available.
+        """
+        if not self.aligner.thematic_data:
+            raise ValueError("Thematic data not loaded")
+        geom_union = buffer_pos(self.aligner.thematic_data.union, MAX_REFERENCE_BUFFER)
+        if geom_union is None or geom_union.is_empty:
+            raise ValueError(
+                "Reference could not be loaded. Please load thematic data first"
+            )
+
+        collection = get_collection_vrbg(
+            geometry=geom_union,
+            collection=self.collection,
+            crs=self.aligner.crs,
+            partition=self.partition,
+            limit=self.limit,
+            max_workers=self.max_workers,
+            max_pages=self.max_pages,
+            request_timeout=self.request_timeout,
+        )
+        self.input = dict(collection)
+        self.data_dict_source[VERSION_DATE] = datetime.now().strftime(DATE_FORMAT)
+        self.aligner.logger.feedback_info(
+            f"VRBG boundaries downloaded (collection={self.collection})"
         )
         return super().load_data()
