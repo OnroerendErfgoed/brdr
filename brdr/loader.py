@@ -6,6 +6,7 @@ for loading spatial data from dictionaries, GeoJSON files, URLs, and OGC service
 """
 
 import json
+import math
 import os
 import uuid
 import xml.etree.ElementTree as ET
@@ -455,6 +456,10 @@ class WFSReferenceLoader(GeoJsonLoader):
         aligner: Any,
         partition: int = 1000,
         limit: int = DOWNLOAD_LIMIT,
+        output_format: Optional[str] = "application/json",
+        max_pages: int | float = math.inf,
+        max_workers: Optional[int] = None,
+        request_timeout: int = 60,
         is_reference: bool = True,
     ):
         """
@@ -472,6 +477,18 @@ class WFSReferenceLoader(GeoJsonLoader):
             Number of features per request. Defaults to 1000.
         limit : int, optional
             Maximum total features to download. Defaults to DOWNLOAD_LIMIT.
+        output_format : str, optional
+            Requested WFS output format. Defaults to `application/json`.
+            If not supported by the service, the lower-level fetch utility retries
+            without this parameter and parses XML/GML responses.
+        max_pages : int or float, optional
+            Maximum number of paginated pages to request per partition.
+            Defaults to `math.inf` (retrieve all available pages).
+        max_workers : int, optional
+            Maximum number of worker threads for partition requests.
+            Defaults to None.
+        request_timeout : int, optional
+            Request timeout in seconds for HTTP calls. Defaults to 60.
         is_reference : bool, optional
             Whether this is a reference layer: True.
         """
@@ -484,6 +501,10 @@ class WFSReferenceLoader(GeoJsonLoader):
         self.data_dict_source["source"] = url
         self.data_dict_source["source_url"] = url
         self.limit = limit
+        self.output_format = output_format
+        self.max_pages = max_pages
+        self.max_workers = max_workers
+        self.request_timeout = request_timeout
 
     def load_data(self) -> AlignerFeatureCollection:
         """
@@ -504,7 +525,7 @@ class WFSReferenceLoader(GeoJsonLoader):
             raise ValueError("Thematic data not loaded")
         self.data_dict_source[VERSION_DATE] = datetime.now().strftime(DATE_FORMAT)
         params = {"service": "WFS", "version": "2.0.0", "request": "GetCapabilities"}
-        response = requests.get(self.url, params=params)
+        response = requests.get(self.url, params=params, timeout=self.request_timeout)
         root = ET.fromstring(response.content)
 
         typename_exists = False
@@ -540,9 +561,10 @@ class WFSReferenceLoader(GeoJsonLoader):
             "VERSION": "2.0.0",
             "TYPENAMES": self.typename,
             "SRSNAME": from_crs(self.aligner.crs, format="epsg"),
-            "outputFormat": "application/json",
             "limit": self.limit,
         }
+        if self.output_format:
+            params["outputFormat"] = self.output_format
 
         collection = get_collection_by_partition(
             url=self.url,
@@ -550,6 +572,9 @@ class WFSReferenceLoader(GeoJsonLoader):
             geometry=geom_union,
             partition=self.part,
             crs=self.aligner.crs,
+            max_workers=self.max_workers,
+            max_pages=self.max_pages,
+            request_timeout=self.request_timeout,
         )
 
         self.input = dict(collection)

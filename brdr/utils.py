@@ -7,6 +7,7 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, date
 from decimal import Decimal
+from io import BytesIO
 
 import geopandas as gpd
 import requests
@@ -42,6 +43,65 @@ from brdr.logger import LOGGER
 from brdr.typings import ProcessResult
 
 log = logging.getLogger(__name__)
+
+
+def _parse_feature_collection_response(
+    response, base_url=None, params=None, request_timeout=60
+):
+    """
+    Parse an HTTP response into a GeoJSON FeatureCollection-like dictionary.
+
+    Strategy:
+    1. Try JSON first (preferred for OGC API Features and JSON-capable WFS).
+    2. Fallback to in-memory GML/XML parsing using GeoPandas.
+    3. Last fallback: re-fetch through `gml_response_to_geojson` when URL/params are available.
+    """
+    try:
+        data = response.json()
+        if isinstance(data, dict):
+            return data
+    except Exception:
+        pass
+
+    try:
+        gdf = gpd.read_file(BytesIO(response.content))
+        return json.loads(gdf.to_json())
+    except Exception:
+        if base_url is not None:
+            return gml_response_to_geojson(
+                base_url, params or {}, timeout=request_timeout
+            )
+        raise
+
+
+def _request_with_outputformat_fallback(
+    base_url, params=None, headers=None, request_timeout=60
+):
+    """
+    Request helper that retries once without `outputFormat` when unsupported.
+    """
+    local_params = (params or {}).copy()
+    response = requests.get(
+        base_url, params=local_params, headers=headers, timeout=request_timeout
+    )
+    if response.ok:
+        return response, local_params
+
+    if "outputFormat" in local_params:
+        LOGGER.info(
+            "Request failed with outputFormat=%s; retrying without outputFormat.",
+            local_params.get("outputFormat"),
+        )
+        local_params.pop("outputFormat", None)
+        response_retry = requests.get(
+            base_url, params=local_params, headers=headers, timeout=request_timeout
+        )
+        if response_retry.ok:
+            return response_retry, local_params
+        response_retry.raise_for_status()
+
+    response.raise_for_status()
+    return response, local_params
 
 
 def get_geojsons_from_process_results(
@@ -541,7 +601,12 @@ def get_geometry_difference_metrics_from_processresult(
 
 
 def fetch_all_ogc_features(
-    base_url, params=None, headers=None, max_pages=math.inf, max_workers=None
+    base_url,
+    params=None,
+    headers=None,
+    max_pages=math.inf,
+    max_workers=None,
+    request_timeout=60,
 ):
     """
     Fetches all features from an OGC Feature API using parallel requests where possible.
@@ -573,20 +638,28 @@ def fetch_all_ogc_features(
     if headers is None:
         headers = {"Accept": "application/json"}
 
-    limit = params.get("limit", DOWNLOAD_LIMIT)
+    requested_limit = params.get("limit", DOWNLOAD_LIMIT)
 
     # 1. Initial request to determine total count and pagination type
-    response = requests.get(base_url, params=params, headers=headers)
-    response.raise_for_status()
-    try:
-        data = response.json()
-    except:
-        params.pop("outputFormat", None)
-        data = gml_response_to_geojson(base_url, params)
+    response, params = _request_with_outputformat_fallback(
+        base_url, params=params, headers=headers, request_timeout=request_timeout
+    )
+    data = _parse_feature_collection_response(
+        response,
+        base_url=base_url,
+        params=params,
+        request_timeout=request_timeout,
+    )
 
     all_features = list(data.get("features", []))
     total_matched = data.get("numberMatched")
     number_returned = data.get("numberReturned", len(data.get("features", [])))
+    # Use the actual returned page size as effective step for pagination when the
+    # server silently enforces a lower max feature count than the requested limit.
+    if number_returned and number_returned > 0:
+        effective_limit = number_returned
+    else:
+        effective_limit = requested_limit
 
     # Check for 'next' link for cursor-based fallback
     next_link = next(
@@ -601,27 +674,36 @@ def fetch_all_ogc_features(
         )
 
         # Calculate offsets
-        offsets = range(number_returned, total_matched, limit)
-        # Limit offsets by max_pages
-        offsets = list(offsets)[: int(max_pages)]
+        offsets = list(range(number_returned, total_matched, effective_limit))
+        # Limit offsets by max_pages only when finite
+        if isinstance(max_pages, (int, float)) and math.isfinite(max_pages):
+            offsets = offsets[: int(max_pages)]
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             future_to_offset = {}
             for offset in offsets:
                 local_params = params.copy()
                 local_params["startIndex"] = offset
-                local_params["limit"] = limit
+                local_params["limit"] = effective_limit
                 future_to_offset[
                     executor.submit(
-                        requests.get, base_url, params=local_params, headers=headers
+                        _request_with_outputformat_fallback,
+                        base_url,
+                        local_params,
+                        headers,
+                        request_timeout,
                     )
                 ] = offset
 
             for future in as_completed(future_to_offset):
                 try:
-                    resp = future.result()
-                    resp.raise_for_status()
-                    page_data = resp.json()
+                    resp, used_params = future.result()
+                    page_data = _parse_feature_collection_response(
+                        resp,
+                        base_url=base_url,
+                        params=used_params,
+                        request_timeout=request_timeout,
+                    )
                     all_features.extend(page_data.get("features", []))
                 except Exception as exc:
                     LOGGER.error(
@@ -637,12 +719,24 @@ def fetch_all_ogc_features(
         )
         url = next_link
         page = 1
+        seen_next_urls = set()
         while url and page <= max_pages:
+            if url in seen_next_urls:
+                LOGGER.warning(
+                    "Detected cyclic 'next' pagination URL. Stopping sequential pagination."
+                )
+                break
+            seen_next_urls.add(url)
             LOGGER.debug(f"Fetching page {page}: {url}")
             # For next_links, parameters are usually already in the URL
-            response = requests.get(url, headers=headers)
+            response = requests.get(url, headers=headers, timeout=request_timeout)
             response.raise_for_status()
-            data = response.json()
+            data = _parse_feature_collection_response(
+                response,
+                base_url=url,
+                params={},
+                request_timeout=request_timeout,
+            )
 
             all_features.extend(data.get("features", []))
 
@@ -676,7 +770,9 @@ def make_feature_collection(features):
     return {"type": "FeatureCollection", "features": features}
 
 
-def get_collection(url, params=None):
+def get_collection(
+    url, params=None, max_pages=math.inf, max_workers=None, request_timeout=60
+):
     """
     Fetches a collection of features from a (paginated) API endpoint (OGC Feature API or WFS).
 
@@ -695,7 +791,13 @@ def get_collection(url, params=None):
     """
     if params is None:
         params = {}
-    features = fetch_all_ogc_features(base_url=url, params=params)
+    features = fetch_all_ogc_features(
+        base_url=url,
+        params=params,
+        max_pages=max_pages,
+        max_workers=max_workers,
+        request_timeout=request_timeout,
+    )
     return make_feature_collection(features)
 
 
@@ -755,7 +857,14 @@ def geojson_to_dicts(collection, id_property=None):
 
 
 def get_collection_by_partition(
-    url, params, geometry, partition=1000, crs=DEFAULT_CRS, max_workers=None
+    url,
+    params,
+    geometry,
+    partition=1000,
+    crs=DEFAULT_CRS,
+    max_workers=None,
+    max_pages=math.inf,
+    request_timeout=60,
 ):
     """
     Retrieves a collection of geographic data by partitioning the input geometry.
@@ -792,13 +901,25 @@ def get_collection_by_partition(
     collection = {}
 
     if geometry is None or geometry.is_empty:
-        return get_collection(url=url, params=params)
+        return get_collection(
+            url=url,
+            params=params,
+            max_pages=max_pages,
+            max_workers=max_workers,
+            request_timeout=request_timeout,
+        )
 
     if partition < 1:
         local_params = params.copy()
         local_params["bbox"] = get_bbox(geometry)
         local_params["bbox-crs"] = from_crs(crs)
-        return get_collection(url=url, params=local_params)
+        return get_collection(
+            url=url,
+            params=local_params,
+            max_pages=max_pages,
+            max_workers=max_workers,
+            request_timeout=request_timeout,
+        )
 
     # Prepare partitions
     geoms = get_partitions(geometry, partition)
@@ -815,7 +936,14 @@ def get_collection_by_partition(
             thread_params["bbox-crs"] = from_crs(crs)
 
             # Submit the request to the thread pool
-            future = executor.submit(get_collection, url=url, params=thread_params)
+            future = executor.submit(
+                get_collection,
+                url=url,
+                params=thread_params,
+                max_pages=max_pages,
+                max_workers=max_workers,
+                request_timeout=request_timeout,
+            )
             future_to_geom[future] = g
 
         # Collect results as they complete

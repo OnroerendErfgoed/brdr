@@ -1,8 +1,11 @@
 import json
 import logging
+import os
+import tempfile
 from io import BytesIO
 from math import pi
 from typing import Union, List, Tuple
+from urllib.parse import urlencode
 
 import geopandas as gpd
 import networkx as nx
@@ -2865,7 +2868,7 @@ def bridge_with_straight_line(G, n):
         pass
 
 
-def gml_response_to_geojson(url, params):
+def gml_response_to_geojson(url, params, timeout=60):
     """
     Fetches a GML (Geography Markup Language) response from a URL,
     reads it using GeoPandas, and converts the result to
@@ -2884,11 +2887,64 @@ def gml_response_to_geojson(url, params):
         fiona.errors.DriverError: If the GML data cannot be read correctly.
     """
     # Fetch the GML response
-    response = requests.get(url, params)
-    response.raise_for_status()  # Raises an error if the request failed
+    response = requests.get(url, params, timeout=timeout)
+    response.raise_for_status()
+    content = response.content
 
-    # Read the GML directly from the response (using BytesIO for in-memory processing)
-    gdf = gpd.read_file(BytesIO(response.content))
+    read_attempts = [
+        {"driver": "GML"},
+        {"driver": "GML", "engine": "fiona"},
+        {},
+    ]
 
-    # Convert to GeoJSON (as a dict)
-    return json.loads(gdf.to_json())
+    last_exc = None
+
+    # 1) Try reading directly from bytes
+    for kwargs in read_attempts:
+        try:
+            gdf = gpd.read_file(BytesIO(content), **kwargs)
+            return json.loads(gdf.to_json())
+        except Exception as exc:
+            last_exc = exc
+
+    # 2) Fallback: write bytes to temporary .gml file and read explicitly
+    tmp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".gml") as tmp:
+            tmp.write(content)
+            tmp_path = tmp.name
+
+        for kwargs in read_attempts:
+            try:
+                gdf = gpd.read_file(tmp_path, **kwargs)
+                return json.loads(gdf.to_json())
+            except Exception as exc:
+                last_exc = exc
+    finally:
+        if tmp_path and os.path.exists(tmp_path):
+            os.remove(tmp_path)
+
+    # 3) Fallback: let GDAL WFS driver fetch/parse the source directly
+    try:
+        query = urlencode(params or {}, doseq=True)
+        full_url = f"{url}{'&' if '?' in url else '?'}{query}" if query else url
+
+        wfs_read_attempts = [
+            {"path": f"WFS:{full_url}", "kwargs": {"driver": "WFS"}},
+            {"path": full_url, "kwargs": {"driver": "WFS"}},
+            {"path": f"WFS:{full_url}", "kwargs": {"driver": "WFS", "engine": "fiona"}},
+            {"path": full_url, "kwargs": {"driver": "WFS", "engine": "fiona"}},
+            {"path": full_url, "kwargs": {}},
+        ]
+
+        for attempt in wfs_read_attempts:
+            try:
+                gdf = gpd.read_file(attempt["path"], **attempt["kwargs"])
+                return json.loads(gdf.to_json())
+            except Exception as exc:
+                last_exc = exc
+    except Exception as exc:
+        last_exc = exc
+
+    # All attempts failed
+    raise last_exc
