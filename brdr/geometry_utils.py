@@ -47,6 +47,7 @@ from shapely.ops import substring
 from shapely.prepared import prep
 
 from brdr.enums import SnapStrategy
+from brdr.viz import export_to_geopackage
 
 ShapelyGeometry = Union[
     Point,
@@ -1794,7 +1795,7 @@ def build_custom_network(
     # Correction for intersecting edges
     G = reconstruct_graph_for_intersections(G)
 
-    # export_to_geopackage(G,"g_out.gpkg")
+    #export_to_geopackage(G,"g_out.gpkg", crs="EPSG:3812")
 
     return G
 
@@ -2617,9 +2618,10 @@ def clean_pseudo_nodes_by_snap_strategy(
             p_geom = Point(n)
             # Check if any real node is nearby
             # TODO spatial distance or network distance?
-            if real_node_tree.query(
+            indices = real_node_tree.query(
                 p_geom, predicate="dwithin", distance=distance_threshold
-            ).any():
+            )
+            if len(indices)>0:
                 nodes_to_remove.append(n)
 
     # 2. Bridge nodes and create NEW straight LineStrings
