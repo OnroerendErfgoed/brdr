@@ -320,6 +320,16 @@ def safe_intersection(geom_a: BaseGeometry, geom_b: BaseGeometry) -> BaseGeometr
 
 
 def safe_unary_union(geometries):
+    if geometries is None:
+        return GeometryCollection()
+    if isinstance(geometries, BaseGeometry):
+        return make_valid(geometries)
+    if not isinstance(geometries, (list, tuple)):
+        geometries = list(geometries)
+    if len(geometries) == 0:
+        return GeometryCollection()
+    if len(geometries) == 1:
+        return make_valid(geometries[0])
     try:
         unioned_geom = make_valid(unary_union(geometries))
     except:
@@ -1475,14 +1485,21 @@ def _is_angle_graph_node(graph, node_id, angle_threshold_degrees=150.0):
     return min_angle <= angle_threshold_degrees
 
 
-def _candidate_nodes_within_tolerance(point, nodes, tolerance):
+def _candidate_nodes_within_tolerance(
+    point, nodes, tolerance, node_points_tree=None, node_set=None
+):
     if tolerance is None or tolerance <= 0:
         return []
     node_list = list(nodes)
     if not node_list:
         return []
-    node_points = [Point(n) for n in node_list]
-    tree = STRtree(node_points)
+    if node_points_tree is None:
+        node_points = [Point(n) for n in node_list]
+        tree = STRtree(node_points)
+    else:
+        tree = node_points_tree
+    if node_set is None:
+        node_set = set(node_list)
     try:
         hits = tree.query(point, predicate="dwithin", distance=tolerance)
     except Exception:
@@ -1493,7 +1510,7 @@ def _candidate_nodes_within_tolerance(point, nodes, tolerance):
             candidates.append(node_list[int(h)])
         else:
             coord = (h.x, h.y)
-            if coord in node_list:
+            if coord in node_set:
                 candidates.append(coord)
     # Deduplicate while preserving order
     seen = set()
@@ -1517,11 +1534,20 @@ def _select_network_node_by_snap_strategy(
     tolerance=None,
     angle_threshold_degrees=150.0,
     endnode_tag="is_reference_line_end",
+    node_list=None,
+    node_points_tree=None,
 ):
-    node_list = list(graph.nodes)
+    node_list = list(graph.nodes) if node_list is None else list(node_list)
     if not node_list:
         return None
-    candidates = _candidate_nodes_within_tolerance(point, node_list, tolerance)
+    node_set = set(node_list)
+    candidates = _candidate_nodes_within_tolerance(
+        point,
+        node_list,
+        tolerance,
+        node_points_tree=node_points_tree,
+        node_set=node_set,
+    )
     real_candidates = [n for n in candidates if not _is_pseudo_graph_node(graph, n)]
     real_nodes = [n for n in node_list if not _is_pseudo_graph_node(graph, n)]
 
@@ -1753,6 +1779,8 @@ def find_best_path_in_network(
 
     start_point = Point(geom_to_process.coords[0])
     end_point = Point(geom_to_process.coords[-1])
+    node_list = list(graph.nodes)
+    node_points_tree = STRtree([Point(n) for n in node_list]) if node_list else None
 
     start_node = _select_network_node_by_snap_strategy(
         start_point,
@@ -1760,6 +1788,8 @@ def find_best_path_in_network(
         snap_strategy=snap_strategy,
         tolerance=tolerance,
         angle_threshold_degrees=angle_threshold_degrees,
+        node_list=node_list,
+        node_points_tree=node_points_tree,
     )
     end_node = _select_network_node_by_snap_strategy(
         end_point,
@@ -1767,6 +1797,8 @@ def find_best_path_in_network(
         snap_strategy=snap_strategy,
         tolerance=tolerance,
         angle_threshold_degrees=angle_threshold_degrees,
+        node_list=node_list,
+        node_points_tree=node_points_tree,
     )
 
     if start_node is None or end_node is None:

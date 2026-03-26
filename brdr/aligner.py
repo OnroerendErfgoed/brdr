@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING
 from typing import Union
 
 import numpy as np
-from shapely import make_valid
+from shapely import make_valid, GeometryCollection
 from shapely import to_geojson
 from shapely.geometry.base import BaseGeometry
 
@@ -1591,9 +1591,13 @@ class Aligner:
             dict_observation[LAST_VERSION_DATE] = last_version_date.strftime(
                 DATE_FORMAT
             )
+        if intersected:
+            intersected_union = safe_unary_union(intersected)
+        else:
+            intersected_union = GeometryCollection()
         geom_od = buffer_pos(
             buffer_neg(
-                safe_difference(geometry, safe_unary_union(intersected)),
+                safe_difference(geometry, intersected_union),
                 self.correction_distance,
                 mitre_limit=self.mitre_limit,
             ),
