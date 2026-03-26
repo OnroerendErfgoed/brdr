@@ -1,9 +1,10 @@
 import unittest
 
 import pytest
-from shapely.geometry import Polygon
+from shapely.geometry import Polygon, Point
 
 from brdr.utils import (
+    get_geodataframe_from_process_results,
     get_collection,
     get_geometry_difference_metrics_from_processresults,
 )
@@ -74,6 +75,35 @@ class TestUtils(unittest.TestCase):
         assert expected_diffs == get_geometry_difference_metrics_from_processresults(
             dict_processresult, geom_thematic, reference_union=None
         )
+
+    def test_get_geodataframe_from_process_results_flattened(self):
+        process_results = {
+            "theme_1": {
+                1.0: {
+                    "result": Point(0, 0),
+                    "result_diff": Point(1, 1),
+                    "properties": {"score": 10, "nested": {"flag": True}},
+                }
+            }
+        }
+
+        gdf = get_geodataframe_from_process_results(
+            process_results=process_results,
+            crs="EPSG:31370",
+            id_field="theme_id",
+        )
+
+        self.assertEqual(len(gdf), 1)
+        self.assertEqual(gdf.geometry.name, "result")
+        self.assertIn("theme_id", gdf.columns)
+        self.assertIn("relevant_distance", gdf.columns)
+        self.assertIn("result_diff", gdf.columns)
+        self.assertIn("properties__score", gdf.columns)
+        self.assertIn("properties__nested__flag", gdf.columns)
+        self.assertEqual(gdf.iloc[0]["theme_id"], "theme_1")
+        self.assertEqual(gdf.iloc[0]["relevant_distance"], 1.0)
+        self.assertEqual(gdf.iloc[0]["properties__score"], 10)
+        self.assertTrue(gdf.iloc[0]["properties__nested__flag"])
 
     @pytest.mark.usefixtures("callback_grb_response")
     def test_get_collection(self):

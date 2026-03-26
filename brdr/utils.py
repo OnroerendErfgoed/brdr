@@ -152,6 +152,86 @@ def get_geojsons_from_process_results(
     return geojsons
 
 
+def _flatten_dict(input_dict: dict, parent_key: str = "", sep: str = "__") -> dict:
+    flat = {}
+    for key, value in (input_dict or {}).items():
+        new_key = f"{parent_key}{sep}{key}" if parent_key else str(key)
+        if isinstance(value, dict):
+            flat.update(_flatten_dict(value, parent_key=new_key, sep=sep))
+        else:
+            flat[new_key] = value
+    return flat
+
+
+def get_geodataframe_from_process_results(
+    process_results: dict[str | int, dict[float, ProcessResult]],
+    crs: CRS,
+    id_field: str,
+    series_prop_dict: dict[str | int, dict[float, dict]] = None,
+    preferred_geometry_column: str = "result",
+) -> gpd.GeoDataFrame:
+    """
+    Convert nested process results to a flat GeoDataFrame.
+
+    Each row represents one (theme_id, relevant_distance) result and includes:
+    - id field
+    - relevant_distance
+    - geometry columns (result, result_diff, ...)
+    - flattened dict columns (e.g. properties__score, metadata__actuation__id, ...)
+    """
+    rows = []
+
+    for theme_id, results_dict in (process_results or {}).items():
+        prop_dict = dict(series_prop_dict or {}).get(theme_id, {})
+        for relevant_distance, process_result in (results_dict or {}).items():
+            if process_result is None:
+                continue
+
+            row = {
+                id_field: theme_id,
+                "relevant_distance": relevant_distance,
+            }
+
+            extra_props = prop_dict.get(relevant_distance, {})
+            if isinstance(extra_props, dict):
+                row.update(_flatten_dict(extra_props))
+
+            for key, value in process_result.items():
+                if isinstance(value, BaseGeometry):
+                    row[key] = value
+                elif isinstance(value, dict):
+                    row.update(_flatten_dict(value, parent_key=key))
+                elif isinstance(value, list):
+                    row[key] = json.dumps(
+                        value,
+                        ensure_ascii=False,
+                        default=geojson_serializor,
+                    )
+                else:
+                    row[key] = value
+
+            rows.append(row)
+
+    if not rows:
+        return gpd.GeoDataFrame(columns=[id_field, "relevant_distance"], crs=crs)
+
+    geometry_columns = [
+        col
+        for col in rows[0].keys()
+        if any(isinstance(r.get(col), BaseGeometry) for r in rows)
+    ]
+
+    geometry_column = None
+    if preferred_geometry_column in geometry_columns:
+        geometry_column = preferred_geometry_column
+    elif geometry_columns:
+        geometry_column = geometry_columns[0]
+
+    if geometry_column is None:
+        return gpd.GeoDataFrame(rows, crs=crs)
+    return gpd.GeoDataFrame(rows, geometry=geometry_column, crs=crs)
+
+
 def deep_merge(dict_a, dict_b):
     for key, value in dict_b.items():
         if key in dict_a and isinstance(dict_a[key], dict) and isinstance(value, dict):

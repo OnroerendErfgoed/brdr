@@ -78,6 +78,7 @@ from brdr.utils import (
     deep_merge,
 )
 from brdr.utils import determine_stability
+from brdr.utils import get_geodataframe_from_process_results
 from brdr.utils import get_geojsons_from_process_results
 from brdr.utils import get_geometry_difference_metrics_from_processresult
 from brdr.utils import get_geometry_difference_metrics_from_processresults
@@ -318,6 +319,56 @@ class AlignerResult:
             crs=aligner.crs,
             id_field=aligner.thematic_data.id_fieldname,
             series_prop_dict=prop_dictionary,
+        )
+
+    def get_results_as_geodataframe(
+        self,
+        aligner: "Aligner",
+        result_type: AlignerResultType = AlignerResultType.PROCESSRESULTS,
+        add_metadata: bool = False,
+        add_original_attributes: bool = False,
+    ):
+        """
+        Converts the results into a flat GeoDataFrame.
+
+        The resulting GeoDataFrame contains one row per
+        (theme_id, relevant_distance), geometry columns (result, result_diff, ...),
+        and flattened dictionary columns (e.g. properties__*).
+        """
+        if not self.results:
+            raise ValueError("Empty results: No calculated results to export.")
+
+        results = self.get_results(aligner=aligner, result_type=result_type)
+        prop_dictionary = defaultdict(dict)
+
+        for theme_id, results_dict in results.items():
+            for relevant_distance, process_result in results_dict.items():
+                if process_result is None:
+                    continue
+
+                prop_dictionary[theme_id][relevant_distance] = {}
+                feature = aligner.thematic_data.features.get(theme_id)
+
+                if add_original_attributes and feature and feature.properties:
+                    prop_dictionary[theme_id][relevant_distance].update(
+                        feature.properties
+                    )
+
+                if add_metadata:
+                    metadata_result = process_result.get("metadata", None)
+                    if metadata_result is None:
+                        logging.debug("metadata not available")
+                        continue
+                    prop_dictionary[theme_id][relevant_distance][
+                        METADATA_FIELD_NAME
+                    ] = metadata_result
+
+        return get_geodataframe_from_process_results(
+            results,
+            crs=aligner.crs,
+            id_field=aligner.thematic_data.id_fieldname,
+            series_prop_dict=prop_dictionary,
+            preferred_geometry_column="result",
         )
 
     def save_results(
