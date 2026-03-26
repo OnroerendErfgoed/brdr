@@ -188,3 +188,4 @@ _quarto_internal_scss_error.scss
 /docs/site_libs
 /docs/examples/example_lambert72_to_lambert08_files
 /docs/examples/example_lambert72_to_lambert08_files
+tests/g_out.gpkg
