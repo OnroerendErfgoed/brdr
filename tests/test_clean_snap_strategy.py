@@ -4,7 +4,7 @@ import networkx as nx
 from shapely.geometry import LineString, MultiLineString
 
 from brdr.enums import SnapStrategy
-from brdr.geometry_utils import (
+from brdr.graph_utils import (
     bridge_with_straight_line,
     clean_pseudo_nodes_by_snap_strategy,
     find_best_path_in_network,

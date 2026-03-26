@@ -1,7 +1,7 @@
 import networkx as nx
 from shapely.geometry import LineString
 
-from brdr.geometry_utils import bridge_with_straight_line
+from brdr.graph_utils import bridge_with_straight_line
 
 
 def test_bridge_with_straight_line_endpoint_removal_no_new_edge():

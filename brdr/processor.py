@@ -23,13 +23,10 @@ from brdr.enums import SnapStrategy
 from brdr.feature_data import AlignerFeatureCollection
 from brdr.geometry_utils import (
     buffer_neg,
-    build_custom_network,
-    get_non_pseudo_coords,
 )
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import buffer_pos
 from brdr.geometry_utils import fill_and_remove_gaps
-from brdr.geometry_utils import find_best_path_in_network
 from brdr.geometry_utils import geometric_equality
 from brdr.geometry_utils import get_shape_index
 from brdr.geometry_utils import safe_difference
@@ -39,6 +36,11 @@ from brdr.geometry_utils import safe_unary_union
 from brdr.geometry_utils import safe_union
 from brdr.geometry_utils import snap_geometry_to_reference
 from brdr.geometry_utils import to_multi
+from brdr.graph_utils import (
+    build_custom_network,
+    find_best_path_in_network,
+    get_non_pseudo_coords,
+)
 from brdr.logger import Logger
 from brdr.topo_utils import _dissolve_topo, _generate_topo, _topojson_id_to_arcs
 from brdr.typings import ProcessResult, InputId

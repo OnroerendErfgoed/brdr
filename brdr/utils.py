@@ -29,7 +29,11 @@ from brdr.constants import SHAPE_INDEX_ATTRIBUTE
 from brdr.constants import STABILITY
 from brdr.constants import ZERO_STREAK
 from brdr.enums import DiffMetric
-from brdr.geometry_utils import buffer_neg, gml_response_to_geojson
+from brdr.geometry_utils import (
+    buffer_neg,
+    gml_response_to_geojson,
+    total_vertex_distance,
+)
 from brdr.geometry_utils import buffer_pos
 from brdr.geometry_utils import from_crs
 from brdr.geometry_utils import get_bbox
@@ -38,7 +42,6 @@ from brdr.geometry_utils import get_shape_index
 from brdr.geometry_utils import safe_intersection
 from brdr.geometry_utils import safe_unary_union
 from brdr.geometry_utils import to_crs
-from brdr.geometry_utils import total_vertex_distance
 from brdr.logger import LOGGER
 from brdr.typings import ProcessResult
 
