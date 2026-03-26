@@ -1861,12 +1861,18 @@ def find_best_path_in_network(
         if i > cutoff:  # safetyleak
             logging.warning(f"max paths tested while searching for geometry: {cutoff}")
             break
-        try:  # added try/except because 'path' sometimes exists out of 1 point, resulting in LineString-error
+        # Guard: a path with <2 nodes cannot form a valid line.
+        if len(path) < 2:
+            continue
+        try:
             line = LineString(path)
             dist = total_vertex_distance(line, geom_to_process)
             if dist < min_dist:
                 min_dist = dist
                 best_line = line
+                # Exact match cannot be improved; safe early exit.
+                if dist == 0.0:
+                    return best_line
         except:
             pass
     return best_line
