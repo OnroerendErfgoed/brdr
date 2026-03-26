@@ -19,6 +19,7 @@ import numpy as np
 from shapely import make_valid, GeometryCollection
 from shapely import to_geojson
 from shapely.geometry.base import BaseGeometry
+from shapely.prepared import prep
 
 from brdr import __version__
 from brdr.configs import AlignerConfig
@@ -1525,6 +1526,7 @@ class Aligner:
 
         full_total = True
         last_version_date = None
+        prepared_geometry = prep(geometry)
 
         ref_intersections = self.reference_data.items.take(
             self.reference_data.tree.query(geometry)
@@ -1534,6 +1536,8 @@ class Aligner:
             geom = None
             version_date = None
             geom_reference = self.reference_data[key_ref].geometry
+            if not prepared_geometry.intersects(geom_reference):
+                continue
             geom_intersection = make_valid(safe_intersection(geometry, geom_reference))
             if geom_intersection.is_empty or geom_intersection is None:
                 continue

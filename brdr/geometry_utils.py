@@ -1780,7 +1780,9 @@ def find_best_path_in_network(
     start_point = Point(geom_to_process.coords[0])
     end_point = Point(geom_to_process.coords[-1])
     node_list = list(graph.nodes)
-    node_points_tree = STRtree([Point(n) for n in node_list]) if node_list else None
+    node_points_tree = None
+    if tolerance is not None and tolerance > 0 and node_list:
+        node_points_tree = STRtree([Point(n) for n in node_list])
 
     start_node = _select_network_node_by_snap_strategy(
         start_point,
@@ -3026,14 +3028,12 @@ def connect_ref_points_to_nearest(G, ref_points, k_neighbors=2):
         return G
     tag = "ref_points"
     # 1. Add ref_points as nodes
-    new_ref_node_ids = []
     for pt in ref_points.geoms:
         p_coord = pt.coords[0]
         if p_coord not in G:
             G.add_node(p_coord, tag=tag)
         else:
             G.nodes[p_coord].update({"tag": tag})
-        new_ref_node_ids.append(p_coord)
 
     ref_nodes = [n for n, d in G.nodes(data=True) if d.get("tag") == tag]
     if len(ref_nodes) <= 1:
@@ -3041,28 +3041,52 @@ def connect_ref_points_to_nearest(G, ref_points, k_neighbors=2):
 
     # Use vectorized NumPy distance computation to avoid GeoPandas sjoin overhead.
     coords = np.array(ref_nodes, dtype=float)
+    n = len(ref_nodes)
     k = min(k_neighbors, len(ref_nodes) - 1)
     if k <= 0:
         return G
 
-    for i, u in enumerate(ref_nodes):
-        diff = coords - coords[i]
-        d2 = diff[:, 0] ** 2 + diff[:, 1] ** 2
-        d2[i] = np.inf
-        nearest_idx = np.argpartition(d2, k)[:k]
-        nearest_idx = nearest_idx[np.argsort(d2[nearest_idx])]
+    # For very large n, avoid allocating an n x n matrix.
+    max_matrix_nodes = 4000
+    if n <= max_matrix_nodes:
+        sq_norms = np.einsum("ij,ij->i", coords, coords)
+        d2_matrix = sq_norms[:, None] + sq_norms[None, :] - 2.0 * coords.dot(coords.T)
+        np.fill_diagonal(d2_matrix, np.inf)
 
-        for j in nearest_idx:
-            v = ref_nodes[int(j)]
-            if not G.has_edge(u, v):
-                geom = LineString([Point(u), Point(v)])
-                G.add_edge(
-                    u,
-                    v,
-                    tag="ref_points_connection",
-                    geometry=geom,
-                    length=geom.length,
-                )
+        for i, u in enumerate(ref_nodes):
+            d2 = d2_matrix[i]
+            nearest_idx = np.argpartition(d2, k)[:k]
+            nearest_idx = nearest_idx[np.argsort(d2[nearest_idx])]
+            for j in nearest_idx:
+                v = ref_nodes[int(j)]
+                if not G.has_edge(u, v):
+                    geom = LineString([Point(u), Point(v)])
+                    G.add_edge(
+                        u,
+                        v,
+                        tag="ref_points_connection",
+                        geometry=geom,
+                        length=geom.length,
+                    )
+    else:
+        for i, u in enumerate(ref_nodes):
+            diff = coords - coords[i]
+            d2 = diff[:, 0] ** 2 + diff[:, 1] ** 2
+            d2[i] = np.inf
+            nearest_idx = np.argpartition(d2, k)[:k]
+            nearest_idx = nearest_idx[np.argsort(d2[nearest_idx])]
+
+            for j in nearest_idx:
+                v = ref_nodes[int(j)]
+                if not G.has_edge(u, v):
+                    geom = LineString([Point(u), Point(v)])
+                    G.add_edge(
+                        u,
+                        v,
+                        tag="ref_points_connection",
+                        geometry=geom,
+                        length=geom.length,
+                    )
     return G
 
 
