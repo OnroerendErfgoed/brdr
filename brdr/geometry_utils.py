@@ -1704,6 +1704,35 @@ def longest_linestring_from_multilinestring(multilinestring):
         pseudonode_tag="",
     )
 
+    # Fast path for acyclic graphs (trees/forests): compute diameter per component.
+    if nx.is_forest(graph):
+        best_path = []
+        best_length = 0.0
+
+        for component_nodes in nx.connected_components(graph):
+            if not component_nodes:
+                continue
+            if len(component_nodes) == 1:
+                continue
+
+            sub = graph.subgraph(component_nodes)
+            start = next(iter(component_nodes))
+            dist_start = nx.single_source_dijkstra_path_length(
+                sub, start, weight="length"
+            )
+            far_a = max(dist_start, key=dist_start.get)
+            dist_a = nx.single_source_dijkstra_path_length(sub, far_a, weight="length")
+            far_b = max(dist_a, key=dist_a.get)
+            path = nx.shortest_path(sub, source=far_a, target=far_b, weight="length")
+            length = float(dist_a.get(far_b, 0.0))
+
+            if length > best_length:
+                best_length = length
+                best_path = path
+
+        if len(best_path) >= 2:
+            return LineString(best_path)
+
     # Find all simple paths and keep the longest one
     longest_path = []
     max_length = 0
