@@ -656,9 +656,10 @@ class SnapGeometryProcessor(BaseProcessor):
         snapped_geom = snap_geometry_to_reference(
             input_geometry,
             ref_geometrycollection,
-            snap_strategy,
-            self.config.snap_max_segment_length,
-            relevant_distance,
+            snap_strategy=snap_strategy,
+            max_segment_length=self.config.snap_max_segment_length,
+            tolerance=relevant_distance,
+            angle_threshold_degrees=self.config.angle_threshold_degrees,
         )
         snapped.append(snapped_geom)
 
@@ -979,6 +980,7 @@ class DieussaertGeometryProcessor(BaseProcessor):
                 max_segment_length=self.config.partial_snap_max_segment_length,
                 snap_strategy=snap_strategy,
                 tolerance=relevant_distance,
+                angle_threshold_degrees=self.config.angle_threshold_degrees,
             )
             out.append(p_snapped)
         return safe_unary_union(out)
@@ -1184,6 +1186,15 @@ class DieussaertGeometryProcessor(BaseProcessor):
                 mitre_limit=mitre_limit,
                 reference_union=reference_union,
             )
+        elif self.config.od_strategy == OpenDomainStrategy.SNAP_PREFER_VERTICES_ENDS_AND_ANGLES:
+            self.logger.feedback_debug("OD-strategy SNAP_PREFER_VERTICES_ENDS_AND_ANGLES")
+            geom_thematic_od = self._od_snap(
+                geometry=input_geometry,
+                relevant_distance=relevant_distance,
+                snap_strategy=SnapStrategy.PREFER_VERTICES_ENDS_AND_ANGLES,
+                mitre_limit=mitre_limit,
+                reference_union=reference_union,
+            )
 
         elif self.config.od_strategy == OpenDomainStrategy.SNAP_NO_PREFERENCE:
             self.logger.feedback_debug("OD-strategy SNAP_NO_PREFERENCE")
@@ -1326,6 +1337,7 @@ class DieussaertGeometryProcessor(BaseProcessor):
                 max_segment_length=self.config.partial_snap_max_segment_length,
                 snap_strategy=self.config.partial_snap_strategy,
                 tolerance=2 * buffer_distance,
+                angle_threshold_degrees=self.config.angle_threshold_degrees,
             )
 
             geom = geom_x
@@ -1358,6 +1370,7 @@ class DieussaertGeometryProcessor(BaseProcessor):
                     max_segment_length=self.config.partial_snap_max_segment_length,
                     snap_strategy=self.config.partial_snap_strategy,
                     tolerance=2 * buffer_distance,
+                    angle_threshold_degrees=self.config.angle_threshold_degrees,
                 )
             geom = safe_unary_union(
                 [geom_x, geom_relevant_intersection, geom_intersection_inner]
@@ -1392,6 +1405,7 @@ class DieussaertGeometryProcessor(BaseProcessor):
                     snap_strategy=self.config.partial_snap_strategy,
                     tolerance=2 * buffer_distance,
                     max_segment_length=self.config.partial_snap_max_segment_length,
+                    angle_threshold_degrees=self.config.angle_threshold_degrees,
                 )
             elif not geom_intersection_inner.is_empty:
                 geom = safe_difference(
@@ -1629,11 +1643,16 @@ class NetworkGeometryProcessor(BaseProcessor):
             reference=reference,
             reference_intersection=reference_intersection,
             relevant_distance=relevant_distance,
-            snap_strategy=self.config.snap_strategy,
             gap_threshold=0.1,
             snap_dist=correction_distance,
         )
-        return find_best_path_in_network(input_geometry, graph)
+        return find_best_path_in_network(
+            input_geometry,
+            graph,
+            snap_strategy=self.config.snap_strategy,
+            tolerance=relevant_distance,
+            angle_threshold_degrees=self.config.angle_threshold_degrees,
+        )
 
 
 class AlignerGeometryProcessor(BaseProcessor):

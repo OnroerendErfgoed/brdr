@@ -3,6 +3,8 @@ import logging
 import os
 import tempfile
 from io import BytesIO
+from itertools import combinations
+from math import inf
 from math import pi
 from typing import Union, List, Tuple
 from urllib.parse import urlencode
@@ -27,7 +29,6 @@ from shapely import intersection
 from shapely import is_empty
 from shapely import make_valid
 from shapely import polygons
-from shapely import segmentize
 from shapely import symmetric_difference
 from shapely import to_wkt
 from shapely import unary_union
@@ -46,10 +47,12 @@ from shapely.geometry import (
 from shapely.geometry.base import BaseGeometry
 from shapely.lib import line_merge
 from shapely.ops import nearest_points, split
+from shapely.ops import polygonize, unary_union
 from shapely.ops import substring
 from shapely.prepared import prep
 
 from brdr.enums import SnapStrategy
+from brdr.viz import export_to_geopackage
 
 ShapelyGeometry = Union[
     Point,
@@ -493,6 +496,7 @@ def snap_geometry_to_reference(
     snap_strategy=SnapStrategy.NO_PREFERENCE,
     max_segment_length=-1,
     tolerance=1,
+    angle_threshold_degrees=150.0,
 ):
     if geometry is None or geometry.is_empty or reference is None or reference.is_empty:
         return geometry
@@ -502,8 +506,8 @@ def snap_geometry_to_reference(
             geometry,
             reference=reference,
             snap_strategy=snap_strategy,
-            max_segment_length=max_segment_length,
             tolerance=tolerance,
+            angle_threshold_degrees=angle_threshold_degrees,
         )
     elif geometry.geom_type == "MultiLineString":
         if max_segment_length > 0:
@@ -517,8 +521,8 @@ def snap_geometry_to_reference(
             geometry,
             reference=reference,
             snap_strategy=snap_strategy,
-            max_segment_length=max_segment_length,
             tolerance=tolerance,
+            angle_threshold_degrees=angle_threshold_degrees,
         )
     elif geometry.geom_type == "MultiPolygon":
         if max_segment_length > 0:
@@ -532,8 +536,8 @@ def snap_geometry_to_reference(
             geometry,
             reference=reference,
             snap_strategy=snap_strategy,
-            max_segment_length=max_segment_length,
             tolerance=tolerance,
+            angle_threshold_degrees=angle_threshold_degrees,
         )
 
     elif geometry.geom_type == "GeometryCollection":
@@ -545,9 +549,9 @@ def snap_geometry_to_reference(
                 snap_strategy=snap_strategy,
                 max_segment_length=max_segment_length,
                 tolerance=tolerance,
+                angle_threshold_degrees=angle_threshold_degrees,
             )
             results.append(result)
-        # result = GeometryCollection(results)
         result = safe_unary_union(results)
 
     else:
@@ -697,8 +701,8 @@ def _snap_point_to_reference(
     geometry,
     reference,
     snap_strategy=SnapStrategy.NO_PREFERENCE,
-    max_segment_length=-1,
     tolerance=1,
+    angle_threshold_degrees=150.0,
 ):
     if geometry is None or geometry.is_empty or reference is None or reference.is_empty:
         return geometry
@@ -709,6 +713,9 @@ def _snap_point_to_reference(
     ref_border, ref_borders, ref_coords = _get_ref_objects(reference)
     ref_vertices_objs = [Point(c) for c in ref_coords]
     tree = STRtree(ref_vertices_objs) if ref_vertices_objs else None
+    end_vertices, angle_vertices = _get_reference_vertex_priority_sets(
+        ref_borders, angle_threshold_degrees=angle_threshold_degrees
+    )
 
     if len(ref_coords) == 0:
         snap_strategy = SnapStrategy.NO_PREFERENCE
@@ -720,7 +727,14 @@ def _snap_point_to_reference(
         for idx, coord in enumerate(coords):
             p = Point(coords[idx])
             p_snapped, bool_snapped, ref_vertices = _get_snapped_point(
-                p, ref_border, tree, ref_vertices_objs, snap_strategy, tolerance
+                p,
+                ref_border,
+                tree,
+                ref_vertices_objs,
+                snap_strategy,
+                tolerance,
+                end_vertices=end_vertices,
+                angle_vertices=angle_vertices,
             )
             coordinates.append(p_snapped.coords[0])
 
@@ -735,8 +749,8 @@ def _snap_line_to_reference(
     geometry,
     reference,
     snap_strategy=SnapStrategy.NO_PREFERENCE,
-    max_segment_length=-1,
     tolerance=1,
+    angle_threshold_degrees=150.0,
 ):
     # return snap(geometry,reference,tolerance)
     if geometry is None or geometry.is_empty or reference is None or reference.is_empty:
@@ -753,7 +767,13 @@ def _snap_line_to_reference(
     for geom in geometry.geoms:
         coords = list(geom.coords)
         coordinates = _get_snapped_coordinates(
-            coords, ref_border, ref_borders, ref_coords, snap_strategy, tolerance
+            coords,
+            ref_border,
+            ref_borders,
+            ref_coords,
+            snap_strategy,
+            tolerance,
+            angle_threshold_degrees=angle_threshold_degrees,
         )
 
         # convert coordinates back to a line
@@ -770,9 +790,9 @@ def _snap_polygon_to_reference(
     geometry,
     reference,
     snap_strategy=SnapStrategy.PREFER_VERTICES,
-    max_segment_length=-1,
     tolerance=1,
     correction_distance=0.01,
+    angle_threshold_degrees=150.0,
 ):
     if geometry is None or geometry.is_empty or reference is None or reference.is_empty:
         return geometry
@@ -785,7 +805,13 @@ def _snap_polygon_to_reference(
     for geom in geometry.geoms:
         coords = list(geom.exterior.coords)
         coordinates = _get_snapped_coordinates(
-            coords, ref_border, ref_borders, ref_coords, snap_strategy, tolerance
+            coords,
+            ref_border,
+            ref_borders,
+            ref_coords,
+            snap_strategy,
+            tolerance,
+            angle_threshold_degrees=angle_threshold_degrees,
         )
         # convert coordinates back to a polygon
         polygon = make_valid(Polygon(coordinates))
@@ -825,6 +851,7 @@ def _get_snapped_coordinates(
     ref_coords: List[Tuple[float, float]],
     snap_strategy: str,
     tolerance: float,
+    angle_threshold_degrees: float = 150.0,
 ) -> List[Tuple[float, float]]:
     """
     Snaps a sequence of coordinates to reference geometries using optimized spatial lookups.
@@ -867,13 +894,23 @@ def _get_snapped_coordinates(
     # Initialize Spatial Index (STRtree) for log(N) vertex lookups
     ref_vertices_objs = [Point(c) for c in ref_coords]
     tree = STRtree(ref_vertices_objs) if ref_vertices_objs else None
+    end_vertices, angle_vertices = _get_reference_vertex_priority_sets(
+        ref_borders, angle_threshold_degrees=angle_threshold_degrees
+    )
     # Spatial index for nearest reference border lookup
     ref_lines_tree = STRtree(ref_borders) if ref_borders else None
 
     # 2. Cache the snapped start point for the first iteration
     p_start = Point(coords[0])
     p_start_snapped, bool_start_snapped, ref_vertices_start = _get_snapped_point(
-        p_start, ref_border, tree, ref_vertices_objs, snap_strategy, tolerance
+        p_start,
+        ref_border,
+        tree,
+        ref_vertices_objs,
+        snap_strategy,
+        tolerance,
+        end_vertices=end_vertices,
+        angle_vertices=angle_vertices,
     )
 
     for idx in range(1, len(coords)):
@@ -881,7 +918,14 @@ def _get_snapped_coordinates(
 
         # Only snap the end point (the start point is carried over from the previous iteration)
         p_end_snapped, bool_end_snapped, ref_vertices_end = _get_snapped_point(
-            p_end, ref_border, tree, ref_vertices_objs, snap_strategy, tolerance
+            p_end,
+            ref_border,
+            tree,
+            ref_vertices_objs,
+            snap_strategy,
+            tolerance,
+            end_vertices=end_vertices,
+            angle_vertices=angle_vertices,
         )
 
         coordinates.append(p_start_snapped.coords[0])
@@ -939,6 +983,8 @@ def _get_snapped_coordinates(
                         ref_vertices_objs,
                         snap_strategy,
                         tolerance,
+                        end_vertices=end_vertices,
+                        angle_vertices=angle_vertices,
                     )
 
                     if first == p_start:
@@ -977,6 +1023,77 @@ def _get_snapped_coordinates(
         ref_vertices_start = ref_vertices_end
 
     return coordinates
+
+
+def _as_coord_tuple(point: Point) -> Tuple[float, float]:
+    return (float(point.x), float(point.y))
+
+
+def _angle_between_vectors_degrees(vec_a: np.ndarray, vec_b: np.ndarray) -> float:
+    """
+    Compute the unsigned angle in degrees between two vectors.
+    Returns 180.0 for degenerate vectors.
+    """
+    norm_a = float(np.linalg.norm(vec_a))
+    norm_b = float(np.linalg.norm(vec_b))
+    if norm_a == 0.0 or norm_b == 0.0:
+        return 180.0
+    cos_theta = float(np.dot(vec_a, vec_b) / (norm_a * norm_b))
+    cos_theta = float(np.clip(cos_theta, -1.0, 1.0))
+    return float(np.degrees(np.arccos(cos_theta)))
+
+
+def _vertex_angle_degrees(a, b, c) -> float:
+    ab = np.array([a[0] - b[0], a[1] - b[1]], dtype=float)
+    cb = np.array([c[0] - b[0], c[1] - b[1]], dtype=float)
+    return _angle_between_vectors_degrees(ab, cb)
+
+
+def _get_reference_vertex_priority_sets(
+    ref_borders: List[LineString], angle_threshold_degrees: float
+) -> Tuple[set, set]:
+    """
+    Build coordinate sets for prioritized reference vertices:
+    1) end vertices of open lines
+    2) angle vertices with interior angle <= threshold
+    """
+    end_vertices = set()
+    angle_vertices = set()
+
+    for border in ref_borders:
+        if border is None or border.is_empty or border.geom_type == "Point":
+            continue
+        coords = list(border.coords)
+        if len(coords) < 2:
+            continue
+
+        is_closed = coords[0] == coords[-1]
+        unique_coords = coords[:-1] if is_closed else coords
+        n = len(unique_coords)
+        if n < 2:
+            continue
+
+        if not is_closed:
+            end_vertices.add((float(unique_coords[0][0]), float(unique_coords[0][1])))
+            end_vertices.add((float(unique_coords[-1][0]), float(unique_coords[-1][1])))
+
+        if n < 3:
+            continue
+
+        for i in range(n):
+            if not is_closed and (i == 0 or i == n - 1):
+                continue
+            prev_i = (i - 1) % n
+            next_i = (i + 1) % n
+            angle = _vertex_angle_degrees(
+                unique_coords[prev_i], unique_coords[i], unique_coords[next_i]
+            )
+            if angle <= angle_threshold_degrees:
+                angle_vertices.add(
+                    (float(unique_coords[i][0]), float(unique_coords[i][1]))
+                )
+
+    return end_vertices, angle_vertices
 
 
 def _get_sublinestring_coordinates(
@@ -1336,9 +1453,135 @@ def nearest_node(point, nodes):
     return min(nodes, key=lambda n: Point(n).distance(point))
 
 
-from itertools import combinations
-from shapely.ops import polygonize, unary_union
-from math import inf
+def _is_angle_graph_node(graph, node_id, angle_threshold_degrees=150.0):
+    neighbors = list(graph.neighbors(node_id))
+    if len(neighbors) < 2:
+        return False
+    center = np.array([float(node_id[0]), float(node_id[1])], dtype=float)
+    vectors = []
+    for nb in neighbors:
+        vec = np.array([float(nb[0]), float(nb[1])], dtype=float) - center
+        norm = np.linalg.norm(vec)
+        if norm > 0:
+            vectors.append(vec / norm)
+    if len(vectors) < 2:
+        return False
+    min_angle = 180.0
+    for i in range(len(vectors)):
+        for j in range(i + 1, len(vectors)):
+            angle = _angle_between_vectors_degrees(vectors[i], vectors[j])
+            if angle < min_angle:
+                min_angle = angle
+    return min_angle <= angle_threshold_degrees
+
+
+def _candidate_nodes_within_tolerance(point, nodes, tolerance):
+    if tolerance is None or tolerance <= 0:
+        return []
+    node_list = list(nodes)
+    if not node_list:
+        return []
+    node_points = [Point(n) for n in node_list]
+    tree = STRtree(node_points)
+    try:
+        hits = tree.query(point, predicate="dwithin", distance=tolerance)
+    except Exception:
+        hits = []
+    candidates = []
+    for h in hits:
+        if isinstance(h, (int, np.integer)):
+            candidates.append(node_list[int(h)])
+        else:
+            coord = (h.x, h.y)
+            if coord in node_list:
+                candidates.append(coord)
+    # Deduplicate while preserving order
+    seen = set()
+    unique_candidates = []
+    for c in candidates:
+        if c not in seen:
+            seen.add(c)
+            unique_candidates.append(c)
+    return unique_candidates
+
+
+def _is_pseudo_graph_node(graph, node_id):
+    tag = str(graph.nodes[node_id].get("tag", ""))
+    return tag.startswith("pseudo_")
+
+
+def _select_network_node_by_snap_strategy(
+    point,
+    graph,
+    snap_strategy=SnapStrategy.NO_PREFERENCE,
+    tolerance=None,
+    angle_threshold_degrees=150.0,
+    endnode_tag="is_reference_line_end",
+):
+    node_list = list(graph.nodes)
+    if not node_list:
+        return None
+    candidates = _candidate_nodes_within_tolerance(point, node_list, tolerance)
+    real_candidates = [n for n in candidates if not _is_pseudo_graph_node(graph, n)]
+    real_nodes = [n for n in node_list if not _is_pseudo_graph_node(graph, n)]
+
+    if snap_strategy == SnapStrategy.PREFER_VERTICES_ENDS_AND_ANGLES:
+        ranking_pool = real_candidates if real_candidates else candidates
+        if not ranking_pool:
+            if real_nodes:
+                return nearest_node(point, real_nodes)
+            return nearest_node(point, node_list)
+
+        end_nodes = {n for n in ranking_pool if graph.nodes[n].get(endnode_tag, False)}
+        angle_nodes = {
+            n
+            for n in ranking_pool
+            if n not in end_nodes
+            and _is_angle_graph_node(graph, n, angle_threshold_degrees)
+        }
+
+        def _priority(node):
+            if node in end_nodes:
+                rank = 0
+            elif node in angle_nodes:
+                rank = 1
+            else:
+                rank = 2
+            return rank, float(Point(node).distance(point))
+
+        return min(ranking_pool, key=_priority)
+
+    if snap_strategy == SnapStrategy.ONLY_VERTICES:
+        if real_candidates:
+            return min(real_candidates, key=lambda n: Point(n).distance(point))
+        if real_nodes:
+            return nearest_node(point, real_nodes)
+        if candidates:
+            return min(candidates, key=lambda n: Point(n).distance(point))
+        return nearest_node(point, node_list)
+
+    if snap_strategy == SnapStrategy.PREFER_VERTICES:
+        if real_candidates:
+            return min(real_candidates, key=lambda n: Point(n).distance(point))
+        if candidates:
+            return min(candidates, key=lambda n: Point(n).distance(point))
+        if real_nodes:
+            return nearest_node(point, real_nodes)
+        return nearest_node(point, node_list)
+
+    if snap_strategy == SnapStrategy.NO_PREFERENCE:
+        # No extra priority classes, choose nearest within tolerance.
+        if candidates:
+            return min(candidates, key=lambda n: Point(n).distance(point))
+        return nearest_node(point, node_list)
+
+    # Unknown strategy: stay backward-compatible.
+    if candidates:
+        return min(candidates, key=lambda n: Point(n).distance(point))
+    return nearest_node(point, node_list)
+
+
+
 
 
 def find_best_circle_path(graph, geom_to_process, max_total_combis=1000):
@@ -1490,7 +1733,14 @@ def total_vertex_distance(
     return total_distance / len_vertices
 
 
-def find_best_path_in_network(geom_to_process, graph, cutoff=1000):
+def find_best_path_in_network(
+    geom_to_process,
+    graph,
+    cutoff=1000,
+    snap_strategy=SnapStrategy.NO_PREFERENCE,
+    tolerance=None,
+    angle_threshold_degrees=150.0,
+):
     """
     Determine the best path between 2 points in the network using the Hausdorf-distance
     Parameters:
@@ -1504,8 +1754,23 @@ def find_best_path_in_network(geom_to_process, graph, cutoff=1000):
     start_point = Point(geom_to_process.coords[0])
     end_point = Point(geom_to_process.coords[-1])
 
-    start_node = nearest_node(start_point, graph.nodes)
-    end_node = nearest_node(end_point, graph.nodes)
+    start_node = _select_network_node_by_snap_strategy(
+        start_point,
+        graph,
+        snap_strategy=snap_strategy,
+        tolerance=tolerance,
+        angle_threshold_degrees=angle_threshold_degrees,
+    )
+    end_node = _select_network_node_by_snap_strategy(
+        end_point,
+        graph,
+        snap_strategy=snap_strategy,
+        tolerance=tolerance,
+        angle_threshold_degrees=angle_threshold_degrees,
+    )
+
+    if start_node is None or end_node is None:
+        return None
 
     if start_node == end_node:
         return find_best_circle_path(graph, geom_to_process)
@@ -1520,6 +1785,7 @@ def find_best_path_in_network(geom_to_process, graph, cutoff=1000):
             50,
             edge_tags=["theme_lines", "ref_lines", "interconnect", "gap_closure"],
         )
+        #export_to_geopackage(graph, "g_out.gpkg", crs="EPSG:3812")
 
     all_paths_generator = nx.all_simple_paths(
         graph, source=start_node, target=end_node, cutoff=cutoff
@@ -1550,6 +1816,8 @@ def _get_snapped_point(
     ref_vertices_objs: List[Point],
     snap_strategy: str,
     tolerance: float,
+    end_vertices: set = None,
+    angle_vertices: set = None,
 ) -> Tuple[Point, bool, bool]:
     """
     Determines the nearest point to the input from a reference line or spatial tree.
@@ -1597,16 +1865,54 @@ def _get_snapped_point(
 
     # 2. Check proximity to vertices using the STRtree index
     if ref_coords_tree is not None:
-        result = ref_coords_tree.nearest(point)
+        if snap_strategy == SnapStrategy.PREFER_VERTICES_ENDS_AND_ANGLES:
+            candidate_vertices = []
+            try:
+                hits = ref_coords_tree.query(
+                    point, predicate="dwithin", distance=tolerance
+                )
+                for h in hits:
+                    if isinstance(h, (int, np.integer)):
+                        candidate_vertices.append(ref_vertices_objs[int(h)])
+                    else:
+                        candidate_vertices.append(h)
+            except Exception:
+                pass
 
-        # Handle index-based return (Shapely < 2.0 or specific configurations)
-        # vs object-based return (Shapely 2.0+)
-        if isinstance(result, (int, np.integer)):
-            p_nearest_vertex = ref_vertices_objs[result]
+            if candidate_vertices:
+                end_vertices = end_vertices or set()
+                angle_vertices = angle_vertices or set()
+
+                def _priority(candidate: Point):
+                    coord = _as_coord_tuple(candidate)
+                    if coord in end_vertices:
+                        rank = 0
+                    elif coord in angle_vertices:
+                        rank = 1
+                    else:
+                        rank = 2
+                    return rank, float(candidate.distance(point))
+
+                p_nearest_vertex = min(candidate_vertices, key=_priority)
+                dist_vertex = p_nearest_vertex.distance(point)
+            else:
+                result = ref_coords_tree.nearest(point)
+                if isinstance(result, (int, np.integer)):
+                    p_nearest_vertex = ref_vertices_objs[result]
+                else:
+                    p_nearest_vertex = result
+                dist_vertex = p_nearest_vertex.distance(point)
         else:
-            p_nearest_vertex = result
+            result = ref_coords_tree.nearest(point)
 
-        dist_vertex = p_nearest_vertex.distance(point)
+            # Handle index-based return (Shapely < 2.0 or specific configurations)
+            # vs object-based return (Shapely 2.0+)
+            if isinstance(result, (int, np.integer)):
+                p_nearest_vertex = ref_vertices_objs[result]
+            else:
+                p_nearest_vertex = result
+
+            dist_vertex = p_nearest_vertex.distance(point)
 
     # 3. Determine the closest candidate across both features
     # Start with the line as the candidate, override if vertex is closer
@@ -1645,6 +1951,19 @@ def _snapped_point_by_snapstrategy(
         else:
             p_snapped = p
     elif snap_strategy == SnapStrategy.PREFER_VERTICES:
+        if (
+            p_nearest_vertices is not None
+            and p.distance(p_nearest_vertices) <= tolerance
+        ):
+            p_snapped = p_nearest_vertices
+            snapped = True
+            ref_vertices = True
+        elif p.distance(p_nearest) <= tolerance:
+            p_snapped = p_nearest
+            snapped = True
+        else:
+            p_snapped = p
+    elif snap_strategy == SnapStrategy.PREFER_VERTICES_ENDS_AND_ANGLES:
         if (
             p_nearest_vertices is not None
             and p.distance(p_nearest_vertices) <= tolerance
@@ -1768,6 +2087,30 @@ def get_pseudo_coords(geom1, geom2):
     return set1 - set2
 
 
+def get_end_coords(geom1, geom2=None):
+    geom1 = to_multi(geom1, geomtype=None)
+    end_coords = set()
+
+    if isinstance(geom1, LineString):
+        coords = list(geom1.coords)
+        if coords:
+            end_coords.add(tuple(coords[0]))
+            end_coords.add(tuple(coords[-1]))
+    elif isinstance(geom1, MultiLineString):
+        for line in geom1.geoms:
+            coords = list(line.coords)
+            if coords:
+                end_coords.add(tuple(coords[0]))
+                end_coords.add(tuple(coords[-1]))
+
+    if geom2 is None:
+        return end_coords
+
+    coords2 = get_coordinates(geom2)
+    set2 = set(map(tuple, coords2))
+    return end_coords.intersection(set2)
+
+
 def get_non_pseudo_coords(geom1, geom2):
     coords1 = get_coordinates(geom1)
     coords2 = get_coordinates(geom2)
@@ -1844,7 +2187,6 @@ def build_custom_network(
     reference,
     reference_intersection,
     relevant_distance,
-    snap_strategy=SnapStrategy.NO_PREFERENCE,
     gap_threshold=0.1,
     snap_dist=0.01,
 ):
@@ -1907,6 +2249,8 @@ def build_custom_network(
     # Load Theme & reference Lines
     pseudo_ref_coords = get_pseudo_coords(reference_intersection, reference)
     pseudo_theme_coords = get_pseudo_coords(theme_multiline, input_geometry)
+    ref_end_coords = get_end_coords(reference, ref_multiline)
+    ref_endnode_tag = "is_reference_line_end"
 
     srtree_theme_lines, edge_mapping_theme_lines = _multilinestring_to_edges(
         G,
@@ -1923,6 +2267,8 @@ def build_custom_network(
         node_tag="ref_vertex",
         pseudonode_tag="pseudo_ref_vertex",
         edge_tag="ref_lines",
+        end_coords=ref_end_coords,
+        endnode_tag=ref_endnode_tag,
     )
 
     # Add Pseudo-nodes (theme_points) onto ref_lines
@@ -1979,9 +2325,12 @@ def build_custom_network(
     # remove pseudo_vertices
     remove_pseudonodes(G, tag="pseudo_theme_vertex", target_degrees=[1, 2])
 
-    G = clean_pseudo_nodes_by_snap_strategy(
-        G, snap_strategy=snap_strategy, distance_threshold=relevant_distance
-    )
+    # G = clean_pseudo_nodes_by_snap_strategy(
+    #     G,
+    #     snap_strategy=snap_strategy,
+    #     distance_threshold=relevant_distance,
+    #     angle_threshold_degrees=angle_threshold_degrees,
+    # )
     # Correction for intersecting edges
     G = reconstruct_graph_for_intersections(G)
 
@@ -2312,7 +2661,14 @@ def _add_pseudonode(G: Graph, p2, u, v, tag_point, tag_line):
 
 
 def _multilinestring_to_edges(
-    G, multilinestring, node_tag, edge_tag, pseudo_coords, pseudonode_tag
+    G,
+    multilinestring,
+    node_tag,
+    edge_tag,
+    pseudo_coords,
+    pseudonode_tag,
+    end_coords=None,
+    endnode_tag=None,
 ):
     multilinestring = to_multi(multilinestring)
     if not isinstance(multilinestring, MultiLineString):
@@ -2320,6 +2676,7 @@ def _multilinestring_to_edges(
 
     geoms_for_tree = []
     edge_mapping = []
+    end_coords = set(end_coords or [])
 
     for line in multilinestring.geoms:
         coords = list(line.coords)
@@ -2338,6 +2695,11 @@ def _multilinestring_to_edges(
                 G.nodes[v]["tag"] = node_tag
             else:
                 G.nodes[v]["tag"] = pseudonode_tag
+            if endnode_tag:
+                if u in end_coords:
+                    G.nodes[u][endnode_tag] = True
+                if v in end_coords:
+                    G.nodes[v][endnode_tag] = True
 
             # Verzamel voor de STRtree
             geoms_for_tree.append(geom)
@@ -2773,87 +3135,173 @@ def _perform_reconstruction(G, old_edge_geoms, tolerance):
 
 
 def clean_pseudo_nodes_by_snap_strategy(
-    G, snap_strategy=SnapStrategy.NO_PREFERENCE, distance_threshold=5.0
+    G,
+    snap_strategy=SnapStrategy.NO_PREFERENCE,
+    distance_threshold=5.0,
+    angle_threshold_degrees=150.0,
+    endnode_tag="is_reference_line_end",
 ):
     """
-    Refines the graph by removing pseudo nodes.
-    When a node is bridged, a new straight LineString is created between neighbors.
+    Refines the graph based on snap strategy by removing bridgeable nodes.
+    Pseudo nodes are removed for classic strategies; for
+    PREFER_VERTICES_ENDS_AND_ANGLES, nearby non-priority real degree-2
+    vertices are also removed.
     """
     if snap_strategy == SnapStrategy.NO_PREFERENCE:
         return G
     working_G = G.copy()
 
     # 1. Identify nodes based on tags
-    all_nodes = list(working_G.nodes(data=True))
-    pseudo_nodes = [
-        n for n, d in all_nodes if str(d.get("tag", "")).startswith("pseudo_")
-    ]
+    # all_nodes = list(working_G.nodes(data=True))
+    # pseudo_nodes = [
+    #     n for n, d in all_nodes if str(d.get("tag", "")).startswith("pseudo_")
+    # ]
 
-    # Build spatial index only when needed by the selected strategy
-    needs_real_node_tree = snap_strategy in (
-        SnapStrategy.PREFER_VERTICES,
-        #SnapStrategy.SMART_VERTICES,
-    )
-    real_node_tree = None
-    if needs_real_node_tree:
-        real_nodes_geoms = [
-            Point(n)
-            for n, d in all_nodes
+    def _build_tree(nodes):
+        geoms = [Point(n) for n in nodes]
+        return STRtree(geoms) if geoms else None
+
+    def _current_real_nodes():
+        return [
+            n
+            for n, d in working_G.nodes(data=True)
             if not str(d.get("tag", "")).startswith("pseudo_")
         ]
-        real_node_tree = STRtree(real_nodes_geoms) if real_nodes_geoms else None
 
-    nodes_to_remove = []
+    def _current_pseudo_nodes():
+        return [
+            n
+            for n, d in working_G.nodes(data=True)
+            if str(d.get("tag", "")).startswith("pseudo_")
+        ]
 
-    for n in pseudo_nodes:
-        if snap_strategy == SnapStrategy.ONLY_VERTICES:
-            nodes_to_remove.append(n)
-        elif (
-            snap_strategy in (SnapStrategy.PREFER_VERTICES,
-                              #SnapStrategy.SMART_VERTICES
-                )
-            and real_node_tree
-        ):
+    def _is_angle_node(node_id):
+        neighbors = list(working_G.neighbors(node_id))
+        if len(neighbors) < 2:
+            return False
+        center = np.array([float(node_id[0]), float(node_id[1])], dtype=float)
+        vectors = []
+        for nb in neighbors:
+            vec = np.array([float(nb[0]), float(nb[1])], dtype=float) - center
+            norm = np.linalg.norm(vec)
+            if norm > 0:
+                vectors.append(vec / norm)
+        if len(vectors) < 2:
+            return False
+        min_angle = 180.0
+        for i in range(len(vectors)):
+            for j in range(i + 1, len(vectors)):
+                angle = _angle_between_vectors_degrees(vectors[i], vectors[j])
+                if angle < min_angle:
+                    min_angle = angle
+        return min_angle <= angle_threshold_degrees
+
+    def _remove_nodes_near(target_nodes, candidate_nodes, protected_nodes=None):
+        tree = _build_tree(target_nodes)
+        if tree is None:
+            return
+        protected_nodes = protected_nodes or set()
+        for n in candidate_nodes:
+            if n not in working_G:
+                continue
+            if n in protected_nodes:
+                continue
             p_geom = Point(n)
-            # Check if any real node is nearby
-            # TODO spatial distance or network distance?
-            if len(
-                real_node_tree.query(
-                    p_geom, predicate="dwithin", distance=distance_threshold
-                )
-            ) > 0:
-                nodes_to_remove.append(n)
+            hits = tree.query(p_geom, predicate="dwithin", distance=distance_threshold)
+            if len(hits) > 0:
+                bridge_with_straight_line(working_G, n)
 
-    # 2. Bridge nodes and create NEW straight LineStrings
-    for n in nodes_to_remove:
-        if n in working_G:
-            bridge_with_straight_line(working_G, n)
+    def _remove_pseudo_nodes_near(real_nodes_subset):
+        _remove_nodes_near(real_nodes_subset, _current_pseudo_nodes())
+
+    if snap_strategy == SnapStrategy.ONLY_VERTICES:
+        for n in _current_pseudo_nodes():
+            if n in working_G:
+                bridge_with_straight_line(working_G, n)
+        return working_G
+
+    if snap_strategy == SnapStrategy.PREFER_VERTICES:
+        _remove_pseudo_nodes_near(_current_real_nodes())
+        return working_G
+
+    if snap_strategy == SnapStrategy.PREFER_VERTICES_ENDS_AND_ANGLES:
+        # Stage 1: endpoints first
+        real_nodes = _current_real_nodes()
+        end_nodes = [n for n in real_nodes if working_G.nodes[n].get(endnode_tag, False)]
+        remove_candidates = [
+            n for n in real_nodes if n not in end_nodes and working_G.degree(n) == 2
+        ]
+        _remove_nodes_near(
+            end_nodes,
+            remove_candidates,
+            protected_nodes=set(end_nodes),
+        )
+
+        # Stage 2: angle vertices
+        real_nodes = _current_real_nodes()
+        angle_nodes = [n for n in real_nodes if _is_angle_node(n)]
+        protected_nodes = set(end_nodes) | set(angle_nodes)
+        remove_candidates = [
+            n for n in real_nodes if n not in protected_nodes and working_G.degree(n) == 2
+        ]
+        _remove_nodes_near(
+            angle_nodes,
+            remove_candidates,
+            protected_nodes=protected_nodes,
+        )
+
+        # Stage 3: any remaining real vertices
+        _remove_pseudo_nodes_near(_current_real_nodes())
 
     return working_G
 
 
 def bridge_with_straight_line(G, n):
     """
-    Removes node n and connects neighbors u and v with a
-    direct LineString based on their current positions.
+    Removes node n and connects neighbors u and v.
+    If both incident edges carry geometry, the combined path is preserved.
+    Otherwise, falls back to a direct straight segment.
     """
     neighbors = list(G.neighbors(n))
 
     if len(neighbors) == 2:
         u, v = neighbors
+        old_data_un = G.get_edge_data(u, n) or {}
+        old_data_nv = G.get_edge_data(n, v) or {}
+        geom_un = old_data_un.get("geometry")
+        geom_nv = old_data_nv.get("geometry")
 
-        # Get point geometries of the neighbors
-        pos_u = Point(u)
-        pos_v = Point(v)
+        if isinstance(geom_un, LineString) and isinstance(geom_nv, LineString):
+            coords_un = list(geom_un.coords)
+            coords_nv = list(geom_nv.coords)
 
-        # Create a brand new straight line between u and v
-        new_geom = LineString([pos_u, pos_v])
+            # Orient geometries so they form u -> n and n -> v.
+            if coords_un and coords_un[-1] != n and coords_un[0] == n:
+                coords_un = list(reversed(coords_un))
+            if coords_nv and coords_nv[0] != n and coords_nv[-1] == n:
+                coords_nv = list(reversed(coords_nv))
 
-        # Inherit data from one of the original edges (e.g., u-n)
-        old_data = G.get_edge_data(u, n)
-        new_data = old_data.copy()
+            merged_coords = coords_un
+            if coords_nv:
+                if merged_coords and coords_nv[0] == merged_coords[-1]:
+                    merged_coords = merged_coords + coords_nv[1:]
+                else:
+                    merged_coords = merged_coords + coords_nv
 
-        # Update with new geometry and its straight-line length
+            # Collapse accidental consecutive duplicates.
+            deduped = []
+            for c in merged_coords:
+                if not deduped or c != deduped[-1]:
+                    deduped.append(c)
+
+            if len(deduped) >= 2:
+                new_geom = LineString(deduped)
+            else:
+                new_geom = LineString([u, v])
+        else:
+            new_geom = LineString([u, v])
+
+        new_data = old_data_un.copy()
         new_data["geometry"] = new_geom
         new_data["length"] = new_geom.length
 
