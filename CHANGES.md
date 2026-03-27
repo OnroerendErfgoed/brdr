@@ -212,7 +212,7 @@
 - major improvement for networkgeometryprocessor (stable results)
 
 
-# 0.15.5
+# 0.15.6
 
 - Major performance improvement for snapgeometryprocessor
 - General performance improvements for all processors
