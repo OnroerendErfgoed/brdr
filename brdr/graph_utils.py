@@ -685,7 +685,7 @@ def _select_network_node_by_snap_strategy(
     real_candidates = [n for n in candidates if not _is_pseudo_graph_node(graph, n)]
     real_nodes = [n for n in node_list if not _is_pseudo_graph_node(graph, n)]
 
-    if snap_strategy == SnapStrategy.PREFER_VERTICES_ENDS_AND_ANGLES:
+    if snap_strategy == SnapStrategy.PREFER_ENDS_AND_ANGLES:
         ranking_pool = real_candidates if real_candidates else candidates
         if not ranking_pool:
             if real_nodes:
@@ -1125,7 +1125,7 @@ def clean_pseudo_nodes_by_snap_strategy(
         _remove_pseudo_nodes_near(_current_real_nodes())
         return working_G
 
-    if snap_strategy == SnapStrategy.PREFER_VERTICES_ENDS_AND_ANGLES:
+    if snap_strategy == SnapStrategy.PREFER_ENDS_AND_ANGLES:
         real_nodes = _current_real_nodes()
         end_nodes = [n for n in real_nodes if working_G.nodes[n].get(endnode_tag, False)]
         remove_candidates = [

@@ -1188,12 +1188,12 @@ class DieussaertGeometryProcessor(BaseProcessor):
                 mitre_limit=mitre_limit,
                 reference_union=reference_union,
             )
-        elif self.config.od_strategy == OpenDomainStrategy.SNAP_PREFER_VERTICES_ENDS_AND_ANGLES:
-            self.logger.feedback_debug("OD-strategy SNAP_PREFER_VERTICES_ENDS_AND_ANGLES")
+        elif self.config.od_strategy == OpenDomainStrategy.SNAP_PREFER_ENDS_AND_ANGLES:
+            self.logger.feedback_debug("OD-strategy SNAP_PREFER_ENDS_AND_ANGLES")
             geom_thematic_od = self._od_snap(
                 geometry=input_geometry,
                 relevant_distance=relevant_distance,
-                snap_strategy=SnapStrategy.PREFER_VERTICES_ENDS_AND_ANGLES,
+                snap_strategy=SnapStrategy.PREFER_ENDS_AND_ANGLES,
                 mitre_limit=mitre_limit,
                 reference_union=reference_union,
             )

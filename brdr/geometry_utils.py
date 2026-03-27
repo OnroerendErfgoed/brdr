@@ -1498,7 +1498,7 @@ def _get_snapped_point(
 
     # 2. Check proximity to vertices using the STRtree index
     if ref_coords_tree is not None:
-        if snap_strategy == SnapStrategy.PREFER_VERTICES_ENDS_AND_ANGLES:
+        if snap_strategy == SnapStrategy.PREFER_ENDS_AND_ANGLES:
             candidate_vertices = []
             try:
                 hits = ref_coords_tree.query(
@@ -1596,7 +1596,7 @@ def _snapped_point_by_snapstrategy(
             snapped = True
         else:
             p_snapped = p
-    elif snap_strategy == SnapStrategy.PREFER_VERTICES_ENDS_AND_ANGLES:
+    elif snap_strategy == SnapStrategy.PREFER_ENDS_AND_ANGLES:
         if (
             p_nearest_vertices is not None
             and p.distance(p_nearest_vertices) <= tolerance

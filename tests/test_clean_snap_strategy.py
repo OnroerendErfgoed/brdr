@@ -78,7 +78,7 @@ class TestCleanSnapStrategy(unittest.TestCase):
 
         cleaned = clean_pseudo_nodes_by_snap_strategy(
             G,
-            snap_strategy=SnapStrategy.PREFER_VERTICES_ENDS_AND_ANGLES,
+            snap_strategy=SnapStrategy.PREFER_ENDS_AND_ANGLES,
             distance_threshold=2.1,
             angle_threshold_degrees=150.0,
         )
@@ -115,7 +115,7 @@ class TestCleanSnapStrategy(unittest.TestCase):
         result_ends_angles = find_best_path_in_network(
             thematic,
             G,
-            snap_strategy=SnapStrategy.PREFER_VERTICES_ENDS_AND_ANGLES,
+            snap_strategy=SnapStrategy.PREFER_ENDS_AND_ANGLES,
             tolerance=tolerance,
             angle_threshold_degrees=150.0,
         )

@@ -58,7 +58,7 @@ if __name__ == "__main__":
         SnapStrategy.PREFER_VERTICES, thematic_wkt, relevant_distance
     )
     result_pref_vertices_ends_angles = _run_network_with_strategy(
-        SnapStrategy.PREFER_VERTICES_ENDS_AND_ANGLES, thematic_wkt, relevant_distance
+        SnapStrategy.PREFER_ENDS_AND_ANGLES, thematic_wkt, relevant_distance
     )
 
     print("thematic_wkt:", thematic_wkt)

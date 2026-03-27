@@ -17,7 +17,7 @@ class OpenDomainStrategy(Enum):
         Snap open-domain parts to both inner and outer sides where applicable.
     SNAP_PREFER_VERTICES : str
         Snap with preference for reference vertices.
-    SNAP_PREFER_VERTICES_ENDS_AND_ANGLES : str
+    SNAP_PREFER_ENDS_AND_ANGLES : str
         Snap with preference for reference vertices; first ends, then angles, then other vertices.
     SNAP_NO_PREFERENCE : str
         Snap without vertex/edge preference.
@@ -30,7 +30,7 @@ class OpenDomainStrategy(Enum):
     SNAP_INNER_SIDE = "SNAP_INNER_SIDE"
     SNAP_ALL_SIDE = "SNAP_ALL_SIDE"
     SNAP_PREFER_VERTICES = "SNAP_PREFER_VERTICES"
-    SNAP_PREFER_VERTICES_ENDS_AND_ANGLES = "SNAP_PREFER_VERTICES_ENDS_AND_ANGLES"
+    SNAP_PREFER_ENDS_AND_ANGLES = "SNAP_PREFER_ENDS_AND_ANGLES"
     SNAP_NO_PREFERENCE = "SNAP_NO_PREFERENCE"
     SNAP_ONLY_VERTICES = "SNAP_ONLY_VERTICES"
 
@@ -233,7 +233,7 @@ class SnapStrategy(str, Enum):
         Snap only to reference vertices.
     PREFER_VERTICES : str
         Prefer vertices over edges, based on relevant distance.
-    PREFER_VERTICES_ENDS_AND_ANGLES : str
+    PREFER_ENDS_AND_ANGLES : str
         Prefer end vertices first, then sharp-angle vertices, then other vertices.
     NO_PREFERENCE : str
         Use nearest valid target without preference.
@@ -241,7 +241,7 @@ class SnapStrategy(str, Enum):
 
     ONLY_VERTICES = "only_vertices"
     PREFER_VERTICES = "prefer_vertices"
-    PREFER_VERTICES_ENDS_AND_ANGLES = "prefer_vertices_ends_and_angles"
+    PREFER_ENDS_AND_ANGLES = "prefer_ends_and_angles"
     NO_PREFERENCE = "no_preference"
 
 

@@ -64,7 +64,7 @@ if __name__ == "__main__":
         snapped_ends_angles = _snap_single_point(
             pt,
             reference,
-            SnapStrategy.PREFER_VERTICES_ENDS_AND_ANGLES,
+            SnapStrategy.PREFER_ENDS_AND_ANGLES,
             tolerance,
         )
 
