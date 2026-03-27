@@ -1577,7 +1577,9 @@ class NetworkGeometryProcessor(BaseProcessor):
         close_output=False,
     ):
         geom_to_process_buffered = buffer_pos(geom_to_process, relevant_distance)
-        reference_intersection_raw = safe_intersection(reference, geom_to_process_buffered)
+        reference_intersection_raw = safe_intersection(
+            reference, geom_to_process_buffered
+        )
         reference_intersection = _to_multi_network_fast(reference_intersection_raw)
         if reference_intersection.is_empty:
             return geom_to_process

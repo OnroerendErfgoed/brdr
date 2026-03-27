@@ -708,6 +708,7 @@ def _select_network_node_by_snap_strategy(
             else:
                 rank = 2
             return rank, float(Point(node).distance(point))
+
         return min(ranking_pool, key=_priority)
 
     if snap_strategy == SnapStrategy.ONLY_VERTICES:
@@ -1127,7 +1128,9 @@ def clean_pseudo_nodes_by_snap_strategy(
 
     if snap_strategy == SnapStrategy.PREFER_ENDS_AND_ANGLES:
         real_nodes = _current_real_nodes()
-        end_nodes = [n for n in real_nodes if working_G.nodes[n].get(endnode_tag, False)]
+        end_nodes = [
+            n for n in real_nodes if working_G.nodes[n].get(endnode_tag, False)
+        ]
         remove_candidates = [
             n for n in real_nodes if n not in end_nodes and working_G.degree(n) == 2
         ]
@@ -1155,6 +1158,7 @@ def clean_pseudo_nodes_by_snap_strategy(
 
     return working_G
 
+
 def get_non_pseudo_coords(geom1, geom2):
     coords1 = get_coordinates(geom1)
     coords2 = get_coordinates(geom2)
@@ -1163,6 +1167,7 @@ def get_non_pseudo_coords(geom1, geom2):
     set2 = set(map(tuple, coords2))
     pseudo = set1 - set2
     return set1 - pseudo
+
 
 # def connect_unconnected2(G, max_geo_dist=50, multi_factor=3):
 #     """

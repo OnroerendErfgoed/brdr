@@ -175,6 +175,7 @@ class DictLoader(Loader):
         """Executes the standard loading process."""
         return super().load_data()
 
+
 class GeoDataFrameLoader(Loader):
     """
     Loader for GeoPandas `GeoDataFrame` input.
@@ -219,10 +220,13 @@ class GeoDataFrameLoader(Loader):
             raise KeyError(f"Column '{self.id_property}' not found in GeoDataFrame")
 
         self.data_dict = dict(zip(gdf[self.id_property], gdf.geometry))
-        cols = [c for c in gdf.columns if c not in [self.id_property, gdf.geometry.name]]
+        cols = [
+            c for c in gdf.columns if c not in [self.id_property, gdf.geometry.name]
+        ]
         self.data_dict_properties = dict(
             zip(gdf[self.id_property], gdf[cols].to_dict(orient="records"))
         )
+
 
 class GeoJsonLoader(Loader):
     """

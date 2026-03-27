@@ -632,7 +632,8 @@ def export_histogram(path, df, column_name, filename="histogram.png"):
 
     # Dynamische titel met totaal aantal objecten"
     lbl = f"Mogelijke 'false positives' ({column_name})"
-    ax.set_title("Frequentieverdeling: " +lbl + f"\n *Totaal aantal objecten: {n_total}*",
+    ax.set_title(
+        "Frequentieverdeling: " + lbl + f"\n *Totaal aantal objecten: {n_total}*",
         fontsize=15,
         pad=20,
         fontweight="bold",
@@ -735,7 +736,7 @@ def export_boxplot(path, df, column_name, filename="boxplot.png"):
     # 5. Uitgebreide Titel met N en Outliers
     lbl = f"Mogelijke 'false positives' ({column_name})"
     title_text = (
-        f"Boxplot: "+lbl +"\n"
+        f"Boxplot: " + lbl + "\n"
         f"N = {n_total}  |  Outliers: {n_outliers} ({perc_outliers:.1f}%)"
     )
     ax.set_title(title_text, fontsize=14, fontweight="bold", pad=20)

@@ -787,7 +787,6 @@ def _snap_line_to_reference(
         lines.append(linestring)
     result = safe_unary_union(lines)
 
-
     result = longest_linestring_from_multilinestring(
         result
     )  # Solves overshoots in multilinestrings to return a linestring
@@ -1735,11 +1734,6 @@ def multilinestring_multipoint_from_reference_intersection(reference_intersectio
         return to_multi(reference_intersection.boundary), MultiPoint()
 
     raise TypeError("Reference could not be interpreted")
-
-
-
-
-
 
 
 def gml_response_to_geojson(url, params, timeout=60):
