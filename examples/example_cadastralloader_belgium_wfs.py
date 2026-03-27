@@ -1,5 +1,4 @@
 from brdr.aligner import Aligner
-from brdr.be.be import BeCadastralParcelLoader
 from brdr.geometry_utils import geom_from_wkt
 from brdr.loader import DictLoader, WFSReferenceLoader
 
@@ -26,7 +25,7 @@ if __name__ == "__main__":
         typename="CL:Cadastral_parcel",
         aligner=aligner,
         partition=1000,
-        #limit=500,
+        # limit=500,
         max_pages=2,
         request_timeout=30,
     )

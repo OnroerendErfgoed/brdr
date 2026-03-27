@@ -1,5 +1,5 @@
-import pytest
 import geopandas as gpd
+import pytest
 from shapely.geometry import shape
 
 from brdr.aligner import Aligner
@@ -81,7 +81,7 @@ class TestExamples:
 
         thematic_loader = GeoDataFrameLoader(_input=gdf, id_property="theme_identifier")
 
-        aligner=Aligner()
+        aligner = Aligner()
         aligner.thematic_data = thematic_loader.load_data()
         assert aligner.thematic_data.features["4"].geometry == shape(
             geojson["features"][0]["geometry"]

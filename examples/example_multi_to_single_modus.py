@@ -17,9 +17,7 @@ if __name__ == "__main__":
     """
     # Example (ErfgoedObject): https://inventaris.onroerenderfgoed.be/erfgoedobjecten/305858
     loader = OnroerendErfgoedLoader(
-        objectids=[
-            "https://id.erfgoed.net/erfgoedobjecten/305858"
-        ],
+        objectids=["https://id.erfgoed.net/erfgoedobjecten/305858"],
         oetype=OEType.EO,
     )
     relevant_distance = 5  # rd is taken very high to show the difference

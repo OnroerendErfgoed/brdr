@@ -18,14 +18,10 @@ def _run_network_with_strategy(
     aligner = Aligner(processor=processor, crs="EPSG:3812")
 
     thematic_id = "theme_line"
-    thematic_data = {
-        thematic_id: geom_from_wkt(thematic_wkt)
-    }
+    thematic_data = {thematic_id: geom_from_wkt(thematic_wkt)}
     # Single reference line with open ends and a sharp bend.
     reference_data = {
-        "ref_1": geom_from_wkt(
-            "LINESTRING (0 0, 20 0, 40 0, 60 0, 70 20, 80 20)"
-        ),
+        "ref_1": geom_from_wkt("LINESTRING (0 0, 20 0, 40 0, 60 0, 70 20, 80 20)"),
     }
 
     aligner.load_thematic_data(DictLoader(thematic_data))
