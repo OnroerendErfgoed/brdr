@@ -23,11 +23,7 @@ aligner.load_reference_data(DictLoader(reference_geometries))
 # Run alignment for a single relevant distance.
 aligner_result = aligner.process(relevant_distances=[RELEVANT_DISTANCE])
 process_results = aligner_result.get_results(aligner=aligner)
-results_gdf = aligner_result.get_results_as_geodataframe(
-    aligner=aligner,
-    add_metadata=True,
-    add_original_attributes=True,
-)
+
 
 # Print result geometries in WKT.
 print("result: " + process_results[THEME_ID][RELEVANT_DISTANCE]["result"].wkt)
@@ -40,7 +36,14 @@ print(
     + process_results[THEME_ID][RELEVANT_DISTANCE]["result_diff_min"].wkt
 )
 
-# GeoDataFrame export (one row per theme_id + relevant_distance).
-print("gdf columns: " + ", ".join(results_gdf.columns.astype(str)))
-print(results_gdf[[aligner.thematic_data.id_fieldname, "relevant_distance"]].head())
+#OPTIONAL - export results to GeoDataFrame
+
+# results_gdf = aligner_result.get_results_as_geodataframe(
+#     aligner=aligner,
+#     add_metadata=True,
+#     add_original_attributes=True,
+# )
+# # GeoDataFrame export (one row per theme_id + relevant_distance).
+# print("gdf columns: " + ", ".join(results_gdf.columns.astype(str)))
+# print(results_gdf[[aligner.thematic_data.id_fieldname, "relevant_distance"]].head())
 

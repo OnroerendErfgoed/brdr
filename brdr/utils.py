@@ -20,6 +20,7 @@ from shapely import node
 from shapely import polygonize
 from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
+from shapely.geometry.polygon import Polygon
 
 from brdr.constants import AREA_ATTRIBUTE
 from brdr.constants import DEFAULT_CRS
@@ -933,7 +934,10 @@ def geojson_to_dicts(collection, id_property=None):
                 raise KeyError(
                     f"Identifier '{id_property}' not found in properties of GeoJson FeatureCollection"
                 )
-        geom = shape(f["geometry"])
+        try:
+            geom = shape(f["geometry"])
+        except:
+            geom = Polygon()
         data_dict[key] = make_valid(geom)
         data_dict_properties[key] = f["properties"]
     return data_dict, data_dict_properties
