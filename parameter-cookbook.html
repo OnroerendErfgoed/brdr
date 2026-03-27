@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>BRDR - Aligning borders</title>
+<title>parameter-cookbook – BRDR - Aligning borders</title>
 <style>
 /* Default styles provided by pandoc.
 ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
@@ -22,41 +22,6 @@ ul.task-list li input[type="checkbox"] {
   width: 0.8em;
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
-}
-/* CSS for syntax highlighting */
-html { -webkit-text-size-adjust: 100%; }
-pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
-pre > code.sourceCode > span:empty { height: 1.2em; }
-.sourceCode { overflow: visible; }
-code.sourceCode > span { color: inherit; text-decoration: inherit; }
-div.sourceCode { margin: 1em 0; }
-pre.sourceCode { margin: 0; }
-@media screen {
-div.sourceCode { overflow: auto; }
-}
-@media print {
-pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
-}
-pre.numberSource code
-  { counter-reset: source-line 0; }
-pre.numberSource code > span
-  { position: relative; left: -4em; counter-increment: source-line; }
-pre.numberSource code > span > a:first-child::before
-  { content: counter(source-line);
-    position: relative; left: -1em; text-align: right; vertical-align: baseline;
-    border: none; display: inline-block;
-    -webkit-touch-callout: none; -webkit-user-select: none;
-    -khtml-user-select: none; -moz-user-select: none;
-    -ms-user-select: none; user-select: none;
-    padding: 0 4px; width: 4em;
-  }
-pre.numberSource { margin-left: 3em;  padding-left: 4px; }
-div.sourceCode
-  {   }
-@media screen {
-pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
 }
 </style>
 
@@ -105,9 +70,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     "search-label": "Search"
   }
 }</script>
-<script src="site_libs/quarto-diagram/mermaid.min.js"></script>
-<script src="site_libs/quarto-diagram/mermaid-init.js"></script>
-<link href="site_libs/quarto-diagram/mermaid.css" rel="stylesheet">
 
 
 </head>
@@ -134,7 +96,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
           <div class="collapse navbar-collapse" id="navbarCollapse">
             <ul class="navbar-nav navbar-nav-scroll me-auto">
   <li class="nav-item">
-    <a class="nav-link active" href="./index.html" aria-current="page"> <i class="bi bi-house-fill" role="img">
+    <a class="nav-link" href="./index.html"> <i class="bi bi-house-fill" role="img">
 </i> 
 <span class="menu-text">Home</span></a>
   </li>  
@@ -147,7 +109,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span class="menu-text">Processor Guide</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./parameter-cookbook.html"> 
+    <a class="nav-link active" href="./parameter-cookbook.html" aria-current="page"> 
 <span class="menu-text">Parameter Guide</span></a>
   </li>  
   <li class="nav-item">
@@ -178,26 +140,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#brdr" id="toc-brdr" class="nav-link active" data-scroll-target="#brdr"><code>brdr</code></a>
+  <li><a href="#parameter-guide" id="toc-parameter-guide" class="nav-link active" data-scroll-target="#parameter-guide">Parameter Guide</a>
   <ul class="collapse">
-  <li><a href="#quick-links" id="toc-quick-links" class="nav-link" data-scroll-target="#quick-links">Quick links</a></li>
-  <li><a href="#what-brdr-does" id="toc-what-brdr-does" class="nav-link" data-scroll-target="#what-brdr-does">What <code>brdr</code> does</a></li>
-  <li><a href="#core-workflow" id="toc-core-workflow" class="nav-link" data-scroll-target="#core-workflow">Core workflow</a></li>
-  <li><a href="#visual-intuition" id="toc-visual-intuition" class="nav-link" data-scroll-target="#visual-intuition">Visual intuition</a></li>
-  <li><a href="#installation" id="toc-installation" class="nav-link" data-scroll-target="#installation">Installation</a></li>
-  <li><a href="#development" id="toc-development" class="nav-link" data-scroll-target="#development">Development</a>
-  <ul class="collapse">
-  <li><a href="#dependency-locking" id="toc-dependency-locking" class="nav-link" data-scroll-target="#dependency-locking">Dependency locking</a></li>
-  <li><a href="#run-tests" id="toc-run-tests" class="nav-link" data-scroll-target="#run-tests">Run tests</a></li>
-  <li><a href="#docker-proof-of-concept" id="toc-docker-proof-of-concept" class="nav-link" data-scroll-target="#docker-proof-of-concept">Docker proof of concept</a></li>
-  </ul></li>
-  <li><a href="#qgis-integration" id="toc-qgis-integration" class="nav-link" data-scroll-target="#qgis-integration">QGIS integration</a></li>
-  <li><a href="#citation" id="toc-citation" class="nav-link" data-scroll-target="#citation">Citation</a></li>
-  <li><a href="#feedback-and-contributions" id="toc-feedback-and-contributions" class="nav-link" data-scroll-target="#feedback-and-contributions">Feedback and contributions</a></li>
-  <li><a href="#acknowledgement" id="toc-acknowledgement" class="nav-link" data-scroll-target="#acknowledgement">Acknowledgement</a></li>
+  <li><a href="#relevant_distance" id="toc-relevant_distance" class="nav-link" data-scroll-target="#relevant_distance"><code>relevant_distance</code></a></li>
+  <li><a href="#correction_distance" id="toc-correction_distance" class="nav-link" data-scroll-target="#correction_distance"><code>correction_distance</code></a></li>
+  <li><a href="#mitre_limit" id="toc-mitre_limit" class="nav-link" data-scroll-target="#mitre_limit"><code>mitre_limit</code></a></li>
+  <li><a href="#snap_strategy" id="toc-snap_strategy" class="nav-link" data-scroll-target="#snap_strategy"><code>snap_strategy</code></a></li>
+  <li><a href="#od_strategy-open-domain" id="toc-od_strategy-open-domain" class="nav-link" data-scroll-target="#od_strategy-open-domain"><code>od_strategy</code> (Open Domain)</a></li>
+  <li><a href="#tuning-workflow" id="toc-tuning-workflow" class="nav-link" data-scroll-target="#tuning-workflow">Tuning workflow</a></li>
+  <li><a href="#related" id="toc-related" class="nav-link" data-scroll-target="#related">Related</a></li>
   </ul></li>
   </ul>
-<div class="toc-actions"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/index.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
+<div class="toc-actions"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/parameter-cookbook.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"></header>
@@ -205,118 +159,69 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 
-<section id="brdr" class="level1">
-<h1><code>brdr</code></h1>
-<p>A Python library for aligning thematic geometries (OGC Simple Features) to reference boundaries.</p>
-<p><img src="https://img.shields.io/pypi/v/brdr.png" class="img-fluid" alt="PyPI - Version"> <a href="https://doi.org/10.5281/zenodo.11385644"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.11385644.svg" class="img-fluid" alt="DOI"></a></p>
-<section id="quick-links" class="level2">
-<h2 class="anchored" data-anchor-id="quick-links">Quick links</h2>
+<section id="parameter-guide" class="level1">
+<h1>Parameter Guide</h1>
+<p>This page provides practical guidance for the most important <code>brdr</code> parameters.</p>
+<section id="relevant_distance" class="level2">
+<h2 class="anchored" data-anchor-id="relevant_distance"><code>relevant_distance</code></h2>
 <ul>
-<li><a href="./getting-started.html">Getting started</a></li>
-<li><a href="./processor-selection.html">Processor selection</a></li>
-<li><a href="./parameter-cookbook.html">Parameter cookbook</a></li>
+<li>Meaning: maximum spatial search/tolerance distance for alignment behavior.</li>
+<li>Typical approach: evaluate a distance range, then use <code>predict(...)</code> or <code>evaluate(...)</code>.</li>
+<li>Start small and increase gradually.</li>
+</ul>
+</section>
+<section id="correction_distance" class="level2">
+<h2 class="anchored" data-anchor-id="correction_distance"><code>correction_distance</code></h2>
+<ul>
+<li>Meaning: technical cleanup tolerance used in post-processing.</li>
+<li>Keep this small relative to your data resolution.</li>
+<li>If too large, small valid features may be over-smoothed.</li>
+</ul>
+</section>
+<section id="mitre_limit" class="level2">
+<h2 class="anchored" data-anchor-id="mitre_limit"><code>mitre_limit</code></h2>
+<ul>
+<li>Meaning: controls corner behavior in buffer operations.</li>
+<li>Higher values keep sharper corners; lower values reduce spikes.</li>
+</ul>
+</section>
+<section id="snap_strategy" class="level2">
+<h2 class="anchored" data-anchor-id="snap_strategy"><code>snap_strategy</code></h2>
+<ul>
+<li>Meaning: controls vertex/edge preference in snapping workflows.</li>
+<li>Use strict vertex-based modes when reference vertices are authoritative.</li>
+<li>Use no-preference mode when edge proximity is equally valid.</li>
+</ul>
+</section>
+<section id="od_strategy-open-domain" class="level2">
+<h2 class="anchored" data-anchor-id="od_strategy-open-domain"><code>od_strategy</code> (Open Domain)</h2>
+<ul>
+<li>Meaning: defines behavior where no reference coverage exists.</li>
+<li>Choose explicitly based on business semantics:
+<ul>
+<li>keep as-is</li>
+<li>exclude</li>
+<li>snap to virtual/reference boundaries</li>
+</ul></li>
+</ul>
+</section>
+<section id="tuning-workflow" class="level2">
+<h2 class="anchored" data-anchor-id="tuning-workflow">Tuning workflow</h2>
+<ol type="1">
+<li>Fix a representative sample dataset.</li>
+<li>Sweep <code>relevant_distance</code>.</li>
+<li>Inspect stability and geometric deltas.</li>
+<li>Lock <code>od_strategy</code> and <code>snap_strategy</code>.</li>
+<li>Validate on a larger holdout set.</li>
+</ol>
+</section>
+<section id="related" class="level2">
+<h2 class="anchored" data-anchor-id="related">Related</h2>
+<ul>
 <li><a href="./examples.html">Examples</a></li>
+<li><a href="./processor-selection.html">Processor Guide</a></li>
 <li><a href="./reference/index.html">API reference</a></li>
 </ul>
-</section>
-<section id="what-brdr-does" class="level2">
-<h2 class="anchored" data-anchor-id="what-brdr-does">What <code>brdr</code> does</h2>
-<p><code>brdr</code> helps you:</p>
-<ol type="1">
-<li>Align thematic boundaries to a trusted reference layer.</li>
-<li>Evaluate geometric change over a range of relevant distances.</li>
-<li>Detect stable candidate outcomes (<code>predict</code> and <code>evaluate</code>).</li>
-<li>Export results and metrics for QA and downstream workflows.</li>
-</ol>
-</section>
-<section id="core-workflow" class="level2">
-<h2 class="anchored" data-anchor-id="core-workflow">Core workflow</h2>
-<p>The minimal workflow is:</p>
-<ol type="1">
-<li>Create an <code>Aligner</code>.</li>
-<li>Load thematic data.</li>
-<li>Load reference data.</li>
-<li>Run <code>process(...)</code>, <code>predict(...)</code>, or <code>evaluate(...)</code>.</li>
-<li>Export or inspect <code>AlignerResult</code>.</li>
-</ol>
-<div class="cell" data-layout-align="default">
-<div class="cell-output-display">
-<div>
-<p></p><figure class="figure"><p></p>
-<div>
-<pre class="mermaid mermaid-js">flowchart LR
-    A[Create Aligner] --&gt; B[Load thematic data]
-    B --&gt; C[Load reference data]
-    C --&gt; D[Run process / predict / evaluate]
-    D --&gt; E[Inspect or export AlignerResult]
-</pre>
-</div>
-<p></p></figure><p></p>
-</div>
-</div>
-</div>
-</section>
-<section id="visual-intuition" class="level2">
-<h2 class="anchored" data-anchor-id="visual-intuition">Visual intuition</h2>
-<p>The animation below illustrates how results evolve as <code>relevant_distance</code> increases.</p>
-<ul>
-<li>Left: thematic geometry, reference layer, and aligned result.</li>
-<li>Right: change metric over distance.</li>
-</ul>
-<p>Stable zones in this curve are used for prediction logic.</p>
-<p><img src="figures/animation.gif" class="img-fluid"></p>
-</section>
-<section id="installation" class="level2">
-<h2 class="anchored" data-anchor-id="installation">Installation</h2>
-<p>Install from PyPI:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install brdr</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</section>
-<section id="development" class="level2">
-<h2 class="anchored" data-anchor-id="development">Development</h2>
-<section id="dependency-locking" class="level3">
-<h3 class="anchored" data-anchor-id="dependency-locking">Dependency locking</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="va">PIP_COMPILE_ARGS</span><span class="op">=</span><span class="st">"-v --strip-extras --no-header --resolver=backtracking --no-emit-options --no-emit-find-links"</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">pip-compile</span> <span class="va">$PIP_COMPILE_ARGS</span></span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="ex">pip-compile</span> <span class="va">$PIP_COMPILE_ARGS</span> <span class="at">-o</span> requirements-dev.txt <span class="at">--all-extras</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</section>
-<section id="run-tests" class="level3">
-<h3 class="anchored" data-anchor-id="run-tests">Run tests</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pytest</span> <span class="at">--cov</span><span class="op">=</span>brdr tests <span class="at">--cov-report</span> term-missing</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</section>
-<section id="docker-proof-of-concept" class="level3">
-<h3 class="anchored" data-anchor-id="docker-proof-of-concept">Docker proof of concept</h3>
-<ul>
-<li><a href="https://github.com/dieuska/brdr-webservice">brdr-webservice (Docker POC) on GitHub</a> The repository includes a Docker-based proof of concept for a GRB-specific web service:</li>
-</ul>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode bat code-with-copy"><code class="sourceCode dosbat"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>docker build <span class="at">-f</span> Dockerfile . <span class="at">-t</span> grb_webservice</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>docker run -<span class="at">-rm</span> <span class="at">-p</span> 80:80 -<span class="at">-name</span> grb_webservice grb_webservice</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Then open: <code>http://localhost:80/docs#/default/actualiser_actualiser_post</code></p>
-</section>
-</section>
-<section id="qgis-integration" class="level2">
-<h2 class="anchored" data-anchor-id="qgis-integration">QGIS integration</h2>
-<p><code>brdrQ</code> provides a QGIS plugin implementation of <code>brdr</code>:</p>
-<ul>
-<li><a href="https://github.com/OnroerendErfgoed/brdrQ/">brdrQ on GitHub</a></li>
-</ul>
-</section>
-<section id="citation" class="level2">
-<h2 class="anchored" data-anchor-id="citation">Citation</h2>
-<ul>
-<li>Dieussaert, K., Vanvinckenroye, M., Vermeyen, M., &amp; Van Daele, K. (2024). Grenzen verleggen. Automatische correcties van geografische afbakeningen op verschuivende onderlagen. <em>Onderzoeksrapporten Agentschap Onroerend Erfgoed</em>. <a href="https://doi.org/10.55465/SXCW6218" class="uri">https://doi.org/10.55465/SXCW6218</a></li>
-</ul>
-</section>
-<section id="feedback-and-contributions" class="level2">
-<h2 class="anchored" data-anchor-id="feedback-and-contributions">Feedback and contributions</h2>
-<ul>
-<li>Questions and usage discussions: <a href="https://github.com/OnroerendErfgoed/brdr/discussions" class="uri">https://github.com/OnroerendErfgoed/brdr/discussions</a></li>
-<li>Bug reports and feature requests: <a href="https://github.com/OnroerendErfgoed/brdr/issues" class="uri">https://github.com/OnroerendErfgoed/brdr/issues</a></li>
-</ul>
-</section>
-<section id="acknowledgement" class="level2">
-<h2 class="anchored" data-anchor-id="acknowledgement">Acknowledgement</h2>
-<p>This software was created by <a href="https://athumi.be/en/">Athumi</a> and <a href="https://www.onroerenderfgoed.be/flanders-heritage-agency">Flanders Heritage Agency</a>.</p>
-<p><img src="figures/athumi_logo-250x84.png" class="img-fluid" alt="https://athumi.be/en/"> <img src="figures/Vlaanderen_is_erfgoed-250x97.png" class="img-fluid" alt="https://www.onroerenderfgoed.be/flanders-heritage-agency"></p>
 
 
 </section>
@@ -728,4 +633,4 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 
-<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/index.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>
+<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/parameter-cookbook.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>

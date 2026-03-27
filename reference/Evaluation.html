@@ -2,13 +2,16 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.8.27">
+<meta name="generator" content="quarto-1.9.36">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
 <title>evaluation – BRDR - Aligning borders</title>
 <style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
 div.columns{display: flex; gap: min(4vw, 1.5em);}
@@ -67,15 +70,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <meta name="quarto:offset" content="../">
 <script src="../site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
-<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
 <script src="../site_libs/quarto-html/popper.min.js"></script>
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-f1aadacce99040138bbb613f9330654f.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-dbc92dda8186f57fa2e333fbb71d6a9d.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-b79b1fcb1424b07627426b9f3ef330b1.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-4fb5ef05a860c8bf409e4f2b79d95a28.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -132,6 +134,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <a class="nav-link" href="../index.html"> <i class="bi bi-house-fill" role="img">
 </i> 
 <span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../getting-started.html"> 
+<span class="menu-text">Getting Started</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../processor-selection.html"> 
+<span class="menu-text">Processor Guide</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../parameter-cookbook.html"> 
+<span class="menu-text">Parameter Guide</span></a>
   </li>  
   <li class="nav-item">
     <a class="nav-link active" href="../reference/index.html" aria-current="page"> 
@@ -243,6 +257,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../reference/GeoDataFrameLoader.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">GeoDataFrameLoader</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../reference/GeoJsonLoader.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">GeoJsonLoader</span></a>
   </div>
@@ -339,6 +359,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <div class="sidebar-item-container"> 
   <a href="../reference/AlignerResultType.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">AlignerResultType</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/AlignerInputType.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">AlignerInputType</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -556,11 +582,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="brdr.enums.Evaluation" class="level1">
 <h1>Evaluation</h1>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>enums.Evaluation()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Classification of the alignment quality and reliability.</p>
-<p>These values help in deciding whether a change can be accepted automatically or requires manual review.</p>
+<p>Classification labels for prediction quality and confidence.</p>
 <section id="attributes" class="level2 doc-section doc-section-attributes">
 <h2 class="doc-section doc-section-attributes anchored" data-anchor-id="attributes">Attributes</h2>
 <table class="caption-top table">
+<colgroup>
+<col style="width: 30%">
+<col style="width: 11%">
+<col style="width: 58%">
+</colgroup>
 <thead>
 <tr class="header">
 <th>Name</th>
@@ -571,63 +601,63 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td>EQUALITY_BY_ID_AND_FULL_REFERENCE</td>
-<td><a href="`str`">str</a></td>
-<td>Match confirmed by both unique identifier and complete reference data.</td>
+<td><code>str</code></td>
+<td>Match by reference identifiers and full-reference condition.</td>
 </tr>
 <tr class="even">
 <td>EQUALITY_BY_ID</td>
-<td><a href="`str`">str</a></td>
-<td>Match confirmed via unique identifier only.</td>
+<td><code>str</code></td>
+<td>Match by reference identifiers.</td>
 </tr>
 <tr class="odd">
 <td>EQUALITY_BY_FULL_REFERENCE</td>
-<td><a href="`str`">str</a></td>
-<td>Match confirmed via complete reference data comparison.</td>
+<td><code>str</code></td>
+<td>Match by full-reference condition.</td>
 </tr>
 <tr class="even">
 <td>PREDICTION_UNIQUE</td>
-<td><a href="`str`">str</a></td>
-<td>A single high-confidence prediction was found.</td>
+<td><code>str</code></td>
+<td>One unique prediction selected.</td>
 </tr>
 <tr class="odd">
 <td>PREDICTION_UNIQUE_AND_FULL_REFERENCE</td>
-<td><a href="`str`">str</a></td>
-<td>A unique prediction that also matches the full reference.</td>
+<td><code>str</code></td>
+<td>One unique prediction selected with full-reference condition.</td>
 </tr>
 <tr class="even">
 <td>TO_CHECK_PREDICTION_FULL</td>
-<td><a href="`str`">str</a></td>
-<td>Requires review; prediction exists with full reference but lacks certainty.</td>
+<td><code>str</code></td>
+<td>Manual check advised; prediction selected with full-reference context.</td>
 </tr>
 <tr class="odd">
 <td>TO_CHECK_PREDICTION_MULTI</td>
-<td><a href="`str`">str</a></td>
-<td>Requires review; multiple conflicting predictions were found.</td>
+<td><code>str</code></td>
+<td>Manual check advised; multiple prediction candidates.</td>
 </tr>
 <tr class="even">
 <td>TO_CHECK_PREDICTION_MULTI_FULL</td>
-<td><a href="`str`">str</a></td>
-<td>Requires review; multiple predictions found alongside full reference data.</td>
+<td><code>str</code></td>
+<td>Manual check advised; multiple candidates with full-reference context.</td>
 </tr>
 <tr class="odd">
 <td>TO_CHECK_ORIGINAL</td>
-<td><a href="`str`">str</a></td>
-<td>Requires review against the original source data.</td>
+<td><code>str</code></td>
+<td>Manual check advised; keep or inspect original geometry.</td>
 </tr>
 <tr class="even">
 <td>TO_CHECK_NO_PREDICTION</td>
-<td><a href="`str`">str</a></td>
-<td>Requires review because no valid prediction could be generated.</td>
+<td><code>str</code></td>
+<td>Manual check advised; no suitable prediction found.</td>
 </tr>
 <tr class="odd">
 <td>NOT_EVALUATED</td>
-<td><a href="`str`">str</a></td>
-<td>The alignment has not yet been processed or evaluated.</td>
+<td><code>str</code></td>
+<td>No evaluation performed.</td>
 </tr>
 <tr class="even">
 <td>NO_CHANGE</td>
-<td><a href="`str`">str</a></td>
-<td>Evaluation complete; no changes were detected or required.</td>
+<td><code>str</code></td>
+<td>No meaningful change detected.</td>
 </tr>
 </tbody>
 </table>

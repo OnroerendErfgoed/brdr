@@ -2,16 +2,19 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.8.27">
+<meta name="generator" content="quarto-1.9.36">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Karel Dieussaert">
 <meta name="dcterms.date" content="2026-01-14">
-<meta name="description" content="example how a GeojsonLoader is used to load thematic data">
+<meta name="description" content="Load thematic features from GeoJSON and align them to reference data">
 
 <title>GeojsonLoader – BRDR - Aligning borders</title>
 <style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
 div.columns{display: flex; gap: min(4vw, 1.5em);}
@@ -70,15 +73,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <meta name="quarto:offset" content="../">
 <script src="../site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
-<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
 <script src="../site_libs/quarto-html/popper.min.js"></script>
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-f1aadacce99040138bbb613f9330654f.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-dbc92dda8186f57fa2e333fbb71d6a9d.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-b79b1fcb1424b07627426b9f3ef330b1.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-4fb5ef05a860c8bf409e4f2b79d95a28.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -137,6 +139,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span class="menu-text">Home</span></a>
   </li>  
   <li class="nav-item">
+    <a class="nav-link" href="../getting-started.html"> 
+<span class="menu-text">Getting Started</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../processor-selection.html"> 
+<span class="menu-text">Processor Guide</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../parameter-cookbook.html"> 
+<span class="menu-text">Parameter Guide</span></a>
+  </li>  
+  <li class="nav-item">
     <a class="nav-link" href="../reference/index.html"> 
 <span class="menu-text">Reference</span></a>
   </li>  
@@ -164,7 +178,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#dictloader" id="toc-dictloader" class="nav-link active" data-scroll-target="#dictloader">DictLoader</a></li>
+  <li><a href="#geojsonloader" id="toc-geojsonloader" class="nav-link active" data-scroll-target="#geojsonloader">GeojsonLoader</a>
+  <ul class="collapse">
+  <li><a href="#what-you-learn" id="toc-what-you-learn" class="nav-link" data-scroll-target="#what-you-learn">What you learn</a></li>
+  <li><a href="#why-this-matters" id="toc-why-this-matters" class="nav-link" data-scroll-target="#why-this-matters">Why this matters</a></li>
+  <li><a href="#notes" id="toc-notes" class="nav-link" data-scroll-target="#notes">Notes</a></li>
+  </ul></li>
   </ul>
 <div class="toc-actions"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/examples/example_geojsonloader.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
@@ -182,7 +201,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <div>
   <div class="description">
-    example how a GeojsonLoader is used to load thematic data
+    Load thematic features from GeoJSON and align them to reference data
   </div>
 </div>
 
@@ -211,53 +230,180 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<section id="dictloader" class="level1">
-<h1>DictLoader</h1>
-<p>This example shows how a GeojsonLoader can be used to add data to the aligner</p>
-<div id="531e098c" class="cell" data-execution_count="1">
+<section id="geojsonloader" class="level1">
+<h1>GeojsonLoader</h1>
+<p>This example focuses on <a href="../reference/GeoJsonLoader.html">GeoJsonLoader</a> as a practical loader for in-memory GeoJSON.</p>
+<section id="what-you-learn" class="level2">
+<h2 class="anchored" data-anchor-id="what-you-learn">What you learn</h2>
+<ol type="1">
+<li>How to load thematic GeoJSON into <code>Aligner</code>.</li>
+<li>How to fetch reference geometries (GRB) and run <code>process(...)</code>.</li>
+<li>How to export and visualize the resulting aligned geometries.</li>
+</ol>
+</section>
+<section id="why-this-matters" class="level2">
+<h2 class="anchored" data-anchor-id="why-this-matters">Why this matters</h2>
+<p>Most integrations already have GeoJSON available through APIs or preprocessing pipelines. This loader is usually the fastest way to connect those datasets to <code>brdr</code>.</p>
+</section>
+<section id="notes" class="level2">
+<h2 class="anchored" data-anchor-id="notes">Notes</h2>
+<ul>
+<li>Ensure the input <code>id_property</code> matches your feature properties.</li>
+<li>The example calls <code>save_results(...)</code> and visualization helpers, useful for quick QA.</li>
+</ul>
+<div id="3e782493" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.aligner <span class="im">import</span> Aligner</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.be.grb.enums <span class="im">import</span> GRBType</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.be.grb.loader <span class="im">import</span> GRBActualLoader</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.geometry_utils <span class="im">import</span> geom_from_wkt</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.loader <span class="im">import</span> DictLoader</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.enums <span class="im">import</span> AlignerResultType</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.loader <span class="im">import</span> GeoJsonLoader</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.viz <span class="im">import</span> print_observation_of_aligner_results, show_map</span>
 <span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="va">__name__</span> <span class="op">==</span> <span class="st">"__main__"</span>:</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""</span></span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co">    Example to load dat with a DictLoader, and also adding the properties to the result</span></span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co">    """</span></span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="co"># CREATE AN ALIGNER</span></span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    aligner <span class="op">=</span> Aligner(crs<span class="op">=</span><span class="st">"EPSG:31370"</span>)</span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    <span class="co"># ADD A THEMATIC POLYGON TO THEMATIC DICTIONARY and LOAD into Aligner</span></span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    <span class="bu">id</span> <span class="op">=</span> <span class="st">"my_theme_id"</span></span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    wkt <span class="op">=</span> <span class="st">"MULTIPOLYGON (((141894.30860000103712082 192030.99359999969601631, 141895.30039999634027481 192030.43499999865889549, 141916.94680000096559525 192018.24240000173449516, 141935.11959999799728394 192008.00629999861121178, 141938.46660000085830688 192006.36679999902844429, 141938.01630000025033951 192004.09310000017285347, 141936.13579999655485153 191997.07739999890327454, 141927.83190000057220459 191974.37330000102519989, 141924.48290000110864639 191964.26909999921917915, 141918.48789999634027481 191946.18219999969005585, 141897.54580000042915344 191892.38010000064969063, 141885.81229999661445618 191863.05810000002384186, 141883.73430000245571136 191858.32620000094175339, 141881.57930000126361847 191851.27149999886751175, 141880.02970000356435776 191844.1534000001847744, 141875.37430000305175781 191822.76999999955296516, 141875.30219999700784683 191822.43849999830126762, 141875.31379999965429306 191822.42839999869465828, 141875.32599999755620956 191822.41780000180006027, 141873.66679999977350235 191810.330400001257658, 141873.53939999639987946 191810.47140000015497208, 141824.16929999738931656 191865.09059999883174896, 141807.49130000174045563 191883.54179999977350235, 141806.4221000000834465 191884.39990000054240227, 141804.12879999727010727 191884.68789999932050705, 141802.18280000239610672 191884.19500000029802322, 141799.86169999837875366 191882.65430000051856041, 141797.43410000205039978 191879.70760000124573708, 141796.65850000083446503 191879.23550000041723251, 141795.6005999967455864 191879.14139999821782112, 141793.61129999905824661 191879.65769999846816063, 141791.29720000177621841 191881.41699999943375587, 141775.49679999798536301 191898.58630000054836273, 141762.63560000061988831 191912.02459999918937683, 141746.34480000287294388 191931.99890000000596046, 141739.71980000287294388 191941.33379999920725822, 141718.17260000109672546 191963.87099999934434891, 141707.33889999985694885 191974.1517999991774559, 141691.99570000171661377 191990.56419999897480011, 141682.7752000018954277 191999.544599998742342, 141680.59319999814033508 192001.8539000004529953, 141677.57880000025033951 192009.98910000175237656, 141677.57880000025033951 192024.72419999912381172, 141687.39810000360012054 192032.38650000095367432, 141710.51529999822378159 192048.2443000003695488, 141718.70740000158548355 192054.53130000084638596, 141792.93550000339746475 192111.49830000102519989, 141790.39050000160932541 192115.83139999955892563, 141771.93940000236034393 192145.56280000135302544, 141756.72280000150203705 192171.94390000030398369, 141750.73979999870061874 192185.24599999934434891, 141746.87189999967813492 192192.59640000015497208, 141744.20000000298023224 192197.03090000152587891, 141741.65730000287294388 192203.05490000173449516, 141738.98480000346899033 192211.15890000015497208, 141736.27549999952316284 192222.19130000099539757, 141734.4122999981045723 192232.36960000172257423, 141734.01650000363588333 192233.20839999988675117, 141733.4156000018119812 192233.86070000007748604, 141732.60769999772310257 192234.36529999971389771, 141731.69009999930858612 192234.72720000147819519, 141730.37650000303983688 192234.86820000037550926, 141727.74570000171661377 192234.72109999880194664, 141708.45470000058412552 192234.2791999988257885, 141680.76659999787807465 192234.02210000157356262, 141656.07289999723434448 192234.38520000129938126, 141629.07209999859333038 192233.29850000143051147, 141618.51850000023841858 192231.88439999893307686, 141603.34749999642372131 192228.10990000143647194, 141597.26340000331401825 192226.65670000016689301, 141592.5292000025510788 192225.30229999870061874, 141568.39479999989271164 192219.11100000143051147, 141554.37330000102519989 192214.54509999975562096, 141541.26389999687671661 192208.97210000082850456, 141529.27139999717473984 192202.5982000008225441, 141527.42339999973773956 192207.54980000108480453, 141526.95019999891519547 192208.81769999861717224, 141538.93559999763965607 192213.12829999998211861, 141551.88490000367164612 192218.77100000157952309, 141563.40359999984502792 192223.01000000163912773, 141568.94730000197887421 192224.56370000168681145, 141588.22190000116825104 192230.68310000002384186, 141599.65079999715089798 192233.4813000001013279, 141604.27549999952316284 192234.52360000088810921, 141612.59619999676942825 192236.39869999885559082, 141625.6671999990940094 192238.60940000042319298, 141640.7581000030040741 192239.92980000004172325, 141687.70180000364780426 192239.60280000045895576, 141708.04810000211000443 192239.78669999912381172, 141725.32699999958276749 192239.62020000070333481, 141736.44510000199079514 192239.40599999949336052, 141738.10999999940395355 192233.08529999852180481, 141744.46729999780654907 192208.94959999993443489, 141747.24490000307559967 192201.90359999984502792, 141750.76910000294446945 192194.79340000078082085, 141757.62960000336170197 192183.66059999912977219, 141765.30849999934434891 192168.3214000016450882, 141766.5877000018954277 192166.07369999960064888, 141779.35530000180006027 192173.02180000022053719, 141801.67239999771118164 192199.32169999927282333, 141831.40259999781847 192121.48229999840259552, 141831.68190000206232071 192121.63430000096559525, 141839.40439999848604202 192125.83700000122189522, 141847.05669999867677689 192105.80189999938011169, 141848.41929999738931656 192102.23440000042319298, 141852.30349999666213989 192092.06469999998807907, 141856.9464000016450882 192074.37240000069141388, 141855.61249999701976776 192070.44669999927282333, 141854.58449999988079071 192067.42040000110864639, 141851.04050000011920929 192056.98910000175237656, 141853.14169999957084656 192055.68459999933838844, 141855.8546999990940094 192053.98660000041127205, 141857.53270000219345093 192052.94280000030994415, 141865.36980000138282776 192048.06769999861717224, 141878.53230000287294388 192039.87979999929666519, 141877.30830000340938568 192037.69469999894499779, 141888.70970000326633453 192031.27279999852180481, 141889.19900000095367432 192031.21249999850988388, 141890.32779999822378159 192033.23580000177025795, 141894.30860000103712082 192030.99359999969601631),(141798.70589999854564667 192111.06799999997019768, 141801.00859999656677246 192106.89739999920129776, 141829.50010000169277191 192122.21880000084638596, 141800.99939999729394913 192196.83920000120997429, 141781.65139999985694885 192173.08870000019669533, 141767.0609000027179718 192165.24260000139474869, 141773.47720000147819519 192153.96849999949336052, 141785.42890000343322754 192135.11470000073313713, 141798.70589999854564667 192111.06799999997019768)))"</span></span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    thematic_dict <span class="op">=</span> {<span class="bu">id</span>: geom_from_wkt(wkt)}</span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    loader <span class="op">=</span> DictLoader(data_dict<span class="op">=</span>thematic_dict)</span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    aligner.load_thematic_data(loader)</span>
-<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Load reference data: The actual GRB-parcels</span></span>
-<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    loader <span class="op">=</span> GRBActualLoader(grb_type<span class="op">=</span>GRBType.ADP, partition<span class="op">=</span><span class="dv">1000</span>, aligner<span class="op">=</span>aligner)</span>
-<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>    aligner.load_reference_data(loader)</span>
-<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>    <span class="co"># EXECUTE THE ALIGNMENT</span></span>
-<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>    relevant_distance <span class="op">=</span> <span class="dv">5</span></span>
-<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>    aligner_result <span class="op">=</span> aligner.process(relevant_distances<span class="op">=</span>[relevant_distance])</span>
-<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>    process_results <span class="op">=</span> aligner_result.get_results(aligner<span class="op">=</span>aligner)</span>
-<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>    <span class="co"># PRINT RESULTS IN WKT</span></span>
-<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"result: "</span> <span class="op">+</span> process_results[<span class="bu">id</span>][relevant_distance][<span class="st">"result"</span>].wkt)</span>
-<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(</span>
-<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>        <span class="st">"added area: "</span> <span class="op">+</span> process_results[<span class="bu">id</span>][relevant_distance][<span class="st">"result_diff_plus"</span>].wkt</span>
-<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(</span>
-<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>        <span class="st">"removed area: "</span> <span class="op">+</span> process_results[<span class="bu">id</span>][relevant_distance][<span class="st">"result_diff_min"</span>].wkt</span>
-<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>    )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""Example: load thematic GeoJSON and align it to GRB reference data."""</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    aligner <span class="op">=</span> Aligner()</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Thematic input geometry.</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    thematic_json <span class="op">=</span> {</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>        <span class="st">"type"</span>: <span class="st">"FeatureCollection"</span>,</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>        <span class="st">"name"</span>: <span class="st">"test"</span>,</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>        <span class="st">"crs"</span>: {<span class="st">"type"</span>: <span class="st">"name"</span>, <span class="st">"properties"</span>: {<span class="st">"name"</span>: <span class="st">"urn:ogc:def:crs:EPSG::31370"</span>}},</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>        <span class="st">"features"</span>: [</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>            {</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>                <span class="st">"type"</span>: <span class="st">"Feature"</span>,</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>                <span class="st">"properties"</span>: {<span class="st">"fid"</span>: <span class="dv">1100</span>, <span class="st">"id"</span>: <span class="dv">1100</span>, <span class="st">"theme_identifier"</span>: <span class="st">"1100"</span>},</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>                <span class="st">"geometry"</span>: {</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>                    <span class="st">"type"</span>: <span class="st">"MultiPolygon"</span>,</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>                    <span class="st">"coordinates"</span>: [</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>                        [</span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>                            [</span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>                                [<span class="fl">170020.885142877610633</span>, <span class="fl">171986.324472956912359</span>],</span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>                                [<span class="fl">170078.339491307124263</span>, <span class="fl">172031.344329243671382</span>],</span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>                                [<span class="fl">170049.567976467020344</span>, <span class="fl">172070.009247593494365</span>],</span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>                                [<span class="fl">170058.413533725659363</span>, <span class="fl">172089.43287940043956</span>],</span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>                                [<span class="fl">170071.570170061604585</span>, <span class="fl">172102.403589786874363</span>],</span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>                                [<span class="fl">170061.212614970601862</span>, <span class="fl">172153.235667688539252</span>],</span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>                                [<span class="fl">170008.670597244432429</span>, <span class="fl">172137.344562214449979</span>],</span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>                                [<span class="fl">169986.296310421457747</span>, <span class="fl">172121.231194059771951</span>],</span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>                                [<span class="fl">169979.658902874827618</span>, <span class="fl">172095.676061166130239</span>],</span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a>                                [<span class="fl">169980.509304589155363</span>, <span class="fl">172078.495172578957863</span>],</span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a>                                [<span class="fl">169985.424311356124235</span>, <span class="fl">172065.162689057324314</span>],</span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a>                                [<span class="fl">169971.609697333740769</span>, <span class="fl">172057.093288242496783</span>],</span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a>                                [<span class="fl">170020.885142877610633</span>, <span class="fl">171986.324472956912359</span>],</span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a>                            ]</span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a>                        ]</span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a>                    ],</span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a>                },</span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a>            }</span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a>        ],</span>
+<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a>    aligner.load_thematic_data(</span>
+<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a>        GeoJsonLoader(_input<span class="op">=</span>thematic_json, id_property<span class="op">=</span><span class="st">"theme_identifier"</span>)</span>
+<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a>    aligner.load_reference_data(</span>
+<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a>        GRBActualLoader(grb_type<span class="op">=</span>GRBType.ADP, partition<span class="op">=</span><span class="dv">1000</span>, aligner<span class="op">=</span>aligner)</span>
+<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-55"><a href="#cb1-55" aria-hidden="true" tabindex="-1"></a>    relevant_distance <span class="op">=</span> <span class="dv">5</span></span>
+<span id="cb1-56"><a href="#cb1-56" aria-hidden="true" tabindex="-1"></a>    aligner_result <span class="op">=</span> aligner.process(relevant_distances<span class="op">=</span>[relevant_distance])</span>
+<span id="cb1-57"><a href="#cb1-57" aria-hidden="true" tabindex="-1"></a>    aligner_result.save_results(path<span class="op">=</span><span class="st">"output/"</span>, aligner<span class="op">=</span>aligner)</span>
+<span id="cb1-58"><a href="#cb1-58" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-59"><a href="#cb1-59" aria-hidden="true" tabindex="-1"></a>    thematic_geometries <span class="op">=</span> {</span>
+<span id="cb1-60"><a href="#cb1-60" aria-hidden="true" tabindex="-1"></a>        key: feat.geometry <span class="cf">for</span> key, feat <span class="kw">in</span> aligner.thematic_data.features.items()</span>
+<span id="cb1-61"><a href="#cb1-61" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb1-62"><a href="#cb1-62" aria-hidden="true" tabindex="-1"></a>    reference_geometries <span class="op">=</span> {</span>
+<span id="cb1-63"><a href="#cb1-63" aria-hidden="true" tabindex="-1"></a>        key: feat.geometry <span class="cf">for</span> key, feat <span class="kw">in</span> aligner.reference_data.features.items()</span>
+<span id="cb1-64"><a href="#cb1-64" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb1-65"><a href="#cb1-65" aria-hidden="true" tabindex="-1"></a>    show_map(aligner_result.results, thematic_geometries, reference_geometries)</span>
+<span id="cb1-66"><a href="#cb1-66" aria-hidden="true" tabindex="-1"></a>    print_observation_of_aligner_results(aligner_result.results, aligner)</span>
+<span id="cb1-67"><a href="#cb1-67" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-68"><a href="#cb1-68" aria-hidden="true" tabindex="-1"></a>    geojson_results <span class="op">=</span> aligner_result.get_results_as_geojson(</span>
+<span id="cb1-69"><a href="#cb1-69" aria-hidden="true" tabindex="-1"></a>        result_type<span class="op">=</span>AlignerResultType.PROCESSRESULTS, aligner<span class="op">=</span>aligner</span>
+<span id="cb1-70"><a href="#cb1-70" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb1-71"><a href="#cb1-71" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(geojson_results[<span class="st">"result"</span>])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="example_geojsonloader_files/figure-html/cell-2-output-1.png" width="953" height="374" class="figure-img"></p>
+<figcaption>basic example</figcaption>
+</figure>
+</div>
+</div>
 <div class="cell-output cell-output-stdout">
-<pre><code>result: MULTIPOLYGON (((141793.03305738285 192111.57318755027, 141790.3904695799 192115.8313674, 141771.93939757044 192145.56282341923, 141756.72275755982 192171.94387944016, 141750.7398455493 192185.2460234514, 141746.87194155 192192.59642345, 141742.82794304754 192200.28146594105, 141741.65728554007 192203.0549194593, 141739.89092246076 192208.41111370703, 141741.73062030482 192209.46040323336, 141750.76909355 192194.79341545, 141757.6296375507 192183.66061543886, 141765.30848556166 192168.32135143687, 141766.5828628447 192166.08220142793, 141767.06086818798 192165.24256983973, 141773.4771895606 192153.96845541894, 141785.4289335803 192135.1146954095, 141796.82158037843 192114.48072135754, 141797.44501794243 192113.35157246463, 141797.60589956064 192113.06018915444, 141798.28997375924 192111.8212172532, 141798.70586158 192111.0679753901, 141801.0038013616 192106.90600920998, 141801.6800913187 192105.68115173615, 141801.83878959 192105.39373539, 141831.4026264999 192121.48230970738, 141831.6818585496 192121.634309734, 141839.40442161 192125.8370634101, 141847.05670962 192105.80186339008, 141848.41933292866 192102.23450520015, 141852.3034936202 192092.0647113792, 141856.94637363 192074.37242337025, 141855.6125496299 192070.44666336008, 141854.5844539097 192067.42036021277, 141851.04045362 192056.98912736, 141852.39097125817 192056.15064807926, 141853.1417016185 192055.68455135095, 141854.7287057269 192054.69134007988, 141855.85472564306 192053.9866313356, 141857.53274162 192052.94279135, 141865.36978304185 192048.0676644248, 141866.81699864636 192047.1673787629, 141866.85261363 192047.1452233501, 141876.4258150617 192041.1901092554, 141878.53229363996 192039.87975133993, 141877.30829364 192037.69466334017, 141888.31859764 192031.49306334008, 141888.70970164993 192031.27277534, 141889.19904564018 192031.21248734, 141890.32781365007 192033.23578333991, 141894.3086136501 192030.99360734, 141895.30042165008 192030.43495134008, 141916.94675767008 192018.24237533, 141935.11955768114 192008.0063433195, 141938.46662968 192006.36679132, 141938.01632567964 192004.09312731825, 141936.13581368045 191997.07744731105, 141927.83194167062 191974.37331930175, 141924.4854072258 191964.27673489143, 141924.4828872273 191964.26913198843, 141918.4878776708 191946.182215282, 141897.54579764695 191892.38010323196, 141885.81229364063 191863.05811922147, 141883.7343416403 191858.32621522073, 141881.57933363982 191851.27149521885, 141880.02970324864 191844.153422599, 141875.3021755949 191822.43851153212, 141875.3254736129 191822.41380685786, 141873.66682164 191810.33043919006, 141873.53940063194 191810.47136385995, 141824.16934979084 191865.09056700877, 141807.49126958975 191883.54183124026, 141806.4220855899 191884.39994324007, 141804.12877357993 191884.68794324, 141802.18278958995 191884.19501524014, 141799.86170159004 191882.65427923997, 141797.43405357964 191879.70759122973, 141796.65850158 191879.23552723, 141795.60058157754 191879.14144723074, 141793.61126957982 191879.6576712401, 141791.29722157962 191881.41703124024, 141775.4967735719 191898.58631124764, 141762.63558956096 191912.02464724876, 141746.34477355 191931.99891927, 141739.71981353982 191941.33383128035, 141718.17261353089 191963.87104728923, 141707.3389495192 191974.1517513007, 141691.99571750825 191990.5641673119, 141682.7752375 191999.5446473201, 141680.5932215 192001.85389532015, 141677.57882149992 192009.98906332042, 141677.57882149992 192024.7241673399, 141687.3980854999 192032.38650334, 141710.5152695301 192048.24429535, 141718.70739026685 192054.5313297759, 141749.1093688275 192077.86358368513, 141751.58060556688 192074.77973901018, 141791.9401655799 192108.53645538993, 141790.96320244708 192109.984659987, 141792.9354935801 192111.49831139, 141793.03305738285 192111.57318755027)), ((141725.3270455372 192239.62016747976, 141736.44512554 192239.40602347982, 141737.61955949193 192234.94725314045, 141737.64666152475 192234.8443595378, 141738.78980980895 192230.5043660842, 141733.4156215401 192233.86067948, 141732.60768554022 192234.36525547988, 141731.69005354 192234.72723948, 141731.4883200514 192234.8068185435, 141731.04332745058 192234.79662609258, 141730.37651752948 192234.86816748008, 141727.74573353713 192234.7210954799, 141708.45472552654 192234.2792394801, 141680.76659750368 192234.0220874799, 141656.07290149166 192234.38522348, 141629.07206946905 192233.29850347992, 141618.5185334608 192231.88435948017, 141603.34752545008 192228.10989548, 141597.26342945182 192226.65671147034, 141592.5292214508 192225.30234347016, 141568.39482142948 192219.1109834698, 141554.3732534101 192214.54509547, 141547.59936119211 192212.33929130126, 141541.2639414099 192208.97210346008, 141529.2713654 192202.5982154602, 141527.42342940008 192207.54976746, 141526.95021872703 192208.8177373759, 141533.91939805186 192211.32418877794, 141538.93562139958 192213.12826346981, 141551.88486940946 192218.77101546992, 141563.40358942084 192223.00999147023, 141568.94726942235 192224.5636554708, 141588.22189343965 192230.68307947982, 141599.6508214521 192233.48128748054, 141604.2754954486 192234.52358471838, 141612.59616546106 192236.39866348018, 141625.66720547026 192238.6093514799, 141640.75814947 192239.92979947993, 141687.70182951 192239.60275947992, 141708.04813351537 192239.7866954799, 141719.13516967124 192239.67984257417, 141725.3270455372 192239.62016747976)))
-added area: GEOMETRYCOLLECTION EMPTY
-removed area: MULTIPOLYGON (((141751.58060556688 192074.77973901018, 141749.10938305568 192077.86356592987, 141790.96320994748 192109.98464886873, 141791.9401655799 192108.53645538993, 141751.58060556688 192074.77973901018)), ((141792.93549358012 192111.49831138997, 141790.75651614694 192115.20822342104, 141790.77155240465 192115.21730295772, 141793.03305738285 192111.57318755027, 141792.93549358012 192111.49831138997)), ((141801.6723999977 192199.32169999927, 141831.40260148828 192121.48229609613, 141801.83878959 192105.39373539, 141801.6800913187 192105.68115173615, 141801.00856517133 192106.8973812718, 141829.5001000017 192122.21880000085, 141800.9993999973 192196.8392000012, 141781.65139999986 192173.0887000002, 141767.06086249847 192165.24257983334, 141766.5877020916 192166.0737011368, 141779.3553000018 192173.02180000022, 141801.6723999977 192199.32169999927)), ((141742.88068583191 192200.15653360618, 141742.89109347828 192200.16145755255, 141746.75789507607 192192.81315251102, 141746.74550845352 192192.8061695695, 141744.20000000298 192197.03090000153, 141742.88068583191 192200.15653360618)), ((141541.3799938568 192209.03378372776, 141547.59936119211 192212.33929130126, 141554.2501284672 192214.5050019014, 141554.25409109317 192214.49442252837, 141541.38488562324 192209.02353278152, 141541.3799938568 192209.03378372776)), ((141750.71698525207 192194.8985433813, 141750.70753692367 192194.89330513956, 141741.73062030482 192209.46040323336, 141739.8909476443 192208.4111280707, 141738.98480000347 192211.15890000015, 141736.27549999952 192222.191300001, 141734.4122999981 192232.36960000172, 141734.01650000364 192233.2083999999, 141733.41561533514 192233.86068335516, 141738.78981405136 192230.50436343474, 141744.4672999978 192208.94959999993, 141747.24490000308 192201.90359999985, 141750.71698525207 192194.8985433813)), ((141731.6901736623 192234.72719209458, 141731.09726907214 192234.79083364972, 141731.09756480512 192234.79786838643, 141731.4883200514 192234.8068185435, 141731.6901736623 192234.72719209458)))</code></pre>
+<pre><code>-------- Observation for ID 1100 with relevant distance 5 --------------
+{'alignment_date': '2026-03-27',
+ 'area': 10805.47,
+ 'brdr_version': '0.15.6',
+ 'full': True,
+ 'last_version_date': '2025-06-21',
+ 'reference_features': {'24040C0160/00A000': {'area': 511.19,
+                                              'full': True,
+                                              'percentage': 100,
+                                              'version_date': '2025-06-21'},
+                        '24040C0160/00B000': {'area': 558.47,
+                                              'full': True,
+                                              'percentage': 100,
+                                              'version_date': '2022-06-25'},
+                        '24040C0160/00C000': {'area': 597.63,
+                                              'full': True,
+                                              'percentage': 100,
+                                              'version_date': '2022-06-25'},
+                        '24040C0160/00F000': {'area': 602.28,
+                                              'full': True,
+                                              'percentage': 100,
+                                              'version_date': '2022-06-25'},
+                        '24040C0160/00G000': {'area': 916.32,
+                                              'full': True,
+                                              'percentage': 100,
+                                              'version_date': '2022-06-25'},
+                        '24040C0160/00H000': {'area': 855.33,
+                                              'full': True,
+                                              'percentage': 100,
+                                              'version_date': '2022-06-25'},
+                        '24040C0160/00M000': {'area': 1233.7,
+                                              'full': True,
+                                              'percentage': 100,
+                                              'version_date': '2022-06-25'},
+                        '24040C0161/00C000': {'area': 608.85,
+                                              'full': True,
+                                              'percentage': 100,
+                                              'version_date': '2022-06-25'},
+                        '24040C0161/00D000': {'area': 570.82,
+                                              'full': True,
+                                              'percentage': 100,
+                                              'version_date': '2025-06-21'},
+                        '24040C0161/00E000': {'area': 501.67,
+                                              'full': True,
+                                              'percentage': 100,
+                                              'version_date': '2022-06-25'},
+                        '24040C0161/00F000': {'area': 504.39,
+                                              'full': True,
+                                              'percentage': 100,
+                                              'version_date': '2022-06-25'},
+                        '24040C0161/00G000': {'area': 527.93,
+                                              'full': True,
+                                              'percentage': 100,
+                                              'version_date': '2022-06-25'},
+                        '24040C0161/00H000': {'area': 484.52,
+                                              'full': True,
+                                              'percentage': 100,
+                                              'version_date': '2022-06-25'},
+                        '24040C0161/00K000': {'area': 753.61,
+                                              'full': True,
+                                              'percentage': 100,
+                                              'version_date': '2025-06-21'}},
+ 'reference_od': {'area': 1578.74},
+ 'reference_source': {'source': 'GRB - ADP - administratief perceel',
+                      'source_url': 'https://geo.api.vlaanderen.be/GRB/ogc/features/collections/ADP',
+                      'version_date': '2026-03-27'}}
+{"crs": {"properties": {"name": "http://www.opengis.net/def/crs/EPSG/0/31370"}, "type": "name"}, "features": [{"geometry": {"coordinates": [[[169979.658903, 172095.676061], [169980.710261, 172099.723965], [169986.29631, 172121.231194], [169987.405852, 172122.030257], [169987.654753, 172122.209508], [169995.140711, 172127.600697], [169997.740343, 172129.472883], [170003.980622, 172133.966966], [170004.159257, 172134.124346], [170004.975449, 172134.819066], [170005.803417, 172135.499578], [170006.642777, 172136.165946], [170007.493593, 172136.81785], [170008.355225, 172137.455098], [170009.227737, 172138.077498], [170010.110681, 172138.684986], [170011.003929, 172139.277178], [170011.907225, 172139.854074], [170012.820185, 172140.415482], [170013.742681, 172140.961146], [170014.674201, 172141.490938], [170015.614809, 172142.00473], [170016.564057, 172142.502458], [170017.521625, 172142.983802], [170018.487257, 172143.448826], [170019.460697, 172143.89721], [170020.441689, 172144.328826], [170021.429913, 172144.743674], [170021.665305, 172144.839674], [170022.425049, 172145.141562], [170023.426841, 172145.522362], [170024.435033, 172145.88601], [170025.449305, 172146.232314], [170026.469337, 172146.561338], [170027.494809, 172146.872762], [170028.525401, 172147.166778], [170029.560921, 172147.442938], [170030.601113, 172147.701434], [170031.645529, 172147.942202], [170032.693849, 172148.164986], [170033.745881, 172148.36985], [170034.801177, 172148.556666], [170034.910297, 172148.574906], [170035.859481, 172148.725434], [170036.920601, 172148.87609], [170037.984153, 172149.00857], [170043.537103, 172149.652216], [170043.593807, 172149.658808], [170046.527833, 172149.998906], [170050.676313, 172150.479802], [170051.931801, 172150.625338], [170056.436377, 172151.147514], [170059.474137, 172151.499642], [170062.124633, 172151.806906], [170062.174809, 172151.373882], [170065.252121, 172124.825914], [170068.410457, 172097.578682], [170067.538649, 172097.28089], [170066.678297, 172096.95129], [170065.830617, 172096.590202], [170064.996889, 172096.198074], [170064.178137, 172095.775482], [170063.375577, 172095.323066], [170062.590233, 172094.841338], [170061.823193, 172094.331002], [170061.075417, 172093.792698], [170060.347929, 172093.227322], [170059.641881, 172092.63545], [170058.957977, 172092.017978], [170058.297433, 172091.375738], [170057.660953, 172090.709626], [170057.049433, 172090.020474], [170056.463769, 172089.309242], [170056.238745, 172089.021178], [170055.904665, 172088.57689], [170055.373017, 172087.82457], [170054.869273, 172087.052986], [170054.394393, 172086.263482], [170053.991889, 172085.534649], [170057.77276, 172088.025828], [170051.059918, 172073.285347], [170051.062809, 172073.031034], [170051.107225, 172072.110714], [170051.185433, 172071.192698], [170051.297497, 172070.278138], [170051.443225, 172069.368442], [170051.622169, 172068.464698], [170051.834457, 172067.568186], [170051.837908, 172067.555659], [170052.079705, 172066.680058], [170052.090002, 172066.647568], [170052.357401, 172065.80153], [170052.447832, 172065.548413], [170052.587481, 172065.15737], [170052.667289, 172064.933882], [170052.982175, 172064.145102], [170053.619267, 172064.564877], [170062.406009, 172052.756715], [170060.701593, 172051.6337], [170065.003097, 172045.105274], [170074.638617, 172030.48153], [170053.262233, 172012.638842], [170034.976463, 171997.375893], [170034.98072, 171997.369431], [170034.784783, 171997.215899], [170031.113305, 171994.151353], [170031.031758, 171994.275119], [170023.872437, 171988.665245], [170022.443652, 171987.545683], [170020.885143, 171986.324473], [170019.757098, 171985.440564], [169993.376921, 172025.24441], [169985.297957, 172037.43437], [169980.829273, 172044.176954], [169972.970073, 172056.035322], [169971.956633, 172056.902266], [169971.904954, 172057.265754], [169972.084925, 172057.370879], [169984.101267, 172064.389872], [169985.424311, 172065.162689], [169986.132019, 172065.576075], [169986.17128, 172065.599009], [169986.081113, 172065.849722], [169985.732889, 172066.863354], [169985.402137, 172067.88281], [169985.088729, 172068.90777], [169984.792985, 172069.937786], [169984.514905, 172070.972922], [169984.367507, 172071.561499], [169983.05063, 172071.601555], [169980.509305, 172078.495173], [169980.351255, 172081.688284], [169982.713007, 172081.616446], [169982.639961, 172082.594682], [169982.578521, 172083.664698], [169982.535321, 172084.73561], [169982.510489, 172085.80697], [169982.538393, 172088.811194], [169982.545881, 172089.021818], [169982.594201, 172090.09241], [169982.660889, 172091.162106], [169982.745945, 172092.230522], [169982.846381, 172093.269665], [169980.029234, 172088.194157], [169979.658903, 172095.676061]]], "type": "Polygon"}, "id": "1100", "properties": {"brdr_area": 10805.468087706427, "brdr_diff_area_index": 95.8, "brdr_diff_area_index_perc": 0.9, "brdr_diff_length_index": 21.2, "brdr_diff_length_index_perc": 4.7, "brdr_id": "1100", "brdr_nr_calculations": 1, "brdr_perimeter": 476.58359976307725, "brdr_relevant_distance": 5, "brdr_remark": [], "brdr_shape_index": 0.5978266380626178, "brdr_sym_diff_area_index": 425.8, "brdr_sym_diff_area_index_perc": 3.9}, "type": "Feature"}], "type": "FeatureCollection"}</code></pre>
 </div>
 </div>
 
 
+</section>
 </section>
 
 </main> <!-- /main -->
@@ -663,7 +809,7 @@ removed area: MULTIPOLYGON (((141751.58060556688 192074.77973901018, 141749.1093
   </script>
 </div> <!-- /content -->
 <footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/examples/example_geojsonloader.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer><hr>
-<p><a href="../examples.html">← Back to examples - overview</a></p>
+<p><a href="../examples.html">&lt;- Back to examples overview</a></p>
 
 
 

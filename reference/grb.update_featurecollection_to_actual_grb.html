@@ -2,13 +2,16 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.8.27">
+<meta name="generator" content="quarto-1.9.36">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
 <title>grb.update_featurecollection_to_actual_grb – BRDR - Aligning borders</title>
 <style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
 div.columns{display: flex; gap: min(4vw, 1.5em);}
@@ -67,15 +70,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <meta name="quarto:offset" content="../">
 <script src="../site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
-<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
 <script src="../site_libs/quarto-html/popper.min.js"></script>
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-f1aadacce99040138bbb613f9330654f.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-dbc92dda8186f57fa2e333fbb71d6a9d.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-b79b1fcb1424b07627426b9f3ef330b1.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-4fb5ef05a860c8bf409e4f2b79d95a28.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -132,6 +134,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <a class="nav-link" href="../index.html"> <i class="bi bi-house-fill" role="img">
 </i> 
 <span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../getting-started.html"> 
+<span class="menu-text">Getting Started</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../processor-selection.html"> 
+<span class="menu-text">Processor Guide</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../parameter-cookbook.html"> 
+<span class="menu-text">Parameter Guide</span></a>
   </li>  
   <li class="nav-item">
     <a class="nav-link active" href="../reference/index.html" aria-current="page"> 
@@ -243,6 +257,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../reference/GeoDataFrameLoader.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">GeoDataFrameLoader</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../reference/GeoJsonLoader.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">GeoJsonLoader</span></a>
   </div>
@@ -339,6 +359,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <div class="sidebar-item-container"> 
   <a href="../reference/AlignerResultType.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">AlignerResultType</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/AlignerInputType.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">AlignerInputType</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -588,73 +614,73 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td>featurecollection</td>
-<td><a href="`typing.Dict`">Dict</a>[<a href="`str`">str</a>, <a href="`typing.Any`">Any</a>]</td>
+<td><code>Dict</code>[<code>str</code>, <code>Any</code>]</td>
 <td>The thematic data as a GeoJSON-like dictionary.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
 <td>id_theme_fieldname</td>
-<td><a href="`str`">str</a></td>
+<td><code>str</code></td>
 <td>The property field name containing the unique ID for each feature.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="odd">
 <td>base_metadata_field</td>
-<td><a href="`str`">str</a></td>
+<td><code>str</code></td>
 <td>Name of the attribute field that stores the existing alignment observation (JSON string). This is used to determine the last version date.</td>
 <td><code>OBSERVATION_FIELD_NAME</code></td>
 </tr>
 <tr class="even">
 <td>grb_type</td>
-<td><a href="`brdr.be.grb.enums.GRBType`">GRBType</a></td>
+<td><a href="../reference/enums.GRBType.html#brdr.be.grb.enums.GRBType">GRBType</a></td>
 <td>The type of GRB reference data to align against.</td>
 <td><code>GRBType.ADP</code></td>
 </tr>
 <tr class="odd">
 <td>max_distance_for_actualisation</td>
-<td><a href="`float`">float</a></td>
+<td><code>float</code></td>
 <td>Maximum distance (in meters) to search for potential alignments. The function checks intervals of 0.1m up to this value.</td>
 <td><code>2.0</code></td>
 </tr>
 <tr class="even">
 <td>max_predictions</td>
-<td><a href="`int`">int</a></td>
+<td><code>int</code></td>
 <td>Maximum number of alignment predictions to return. -1 returns all.</td>
 <td><code>-1</code></td>
 </tr>
 <tr class="odd">
 <td>full_reference_strategy</td>
-<td><a href="`brdr.enums.FullReferenceStrategy`">FullReferenceStrategy</a></td>
+<td><a href="../reference/FullReferenceStrategy.html#brdr.enums.FullReferenceStrategy">FullReferenceStrategy</a></td>
 <td>Determines the prediction score when evaluating predictions, so predictions that are based on full-reference-geometries can be preferred.</td>
 <td><code>NO_FULL_REFERENCE</code></td>
 </tr>
 <tr class="even">
 <td>multi_to_best_prediction</td>
-<td><a href="`bool`">bool</a></td>
+<td><code>bool</code></td>
 <td>If True, the prediction with the best prediction score is returned when multiple predictions are found If False, the original geometry is returned when multiple predictions are found</td>
 <td><code>True. Only useful when max_predictions=1</code></td>
 </tr>
 <tr class="odd">
 <td>feedback</td>
-<td><a href="`typing.Any`">Any</a></td>
+<td><code>Any</code></td>
 <td>Feedback object (e.g., QgsFeedback) for progress reporting and logging (in QGIS).</td>
 <td><code>None</code></td>
 </tr>
 <tr class="even">
 <td>crs</td>
-<td><a href="`str`">str</a></td>
+<td><code>str</code></td>
 <td>The Coordinate Reference System for processing.</td>
 <td><code>DEFAULT_CRS</code></td>
 </tr>
 <tr class="odd">
 <td>attributes</td>
-<td><a href="`bool`">bool</a></td>
+<td><code>bool</code></td>
 <td>Whether to include the original thematic attributes in the result.</td>
 <td><code>True</code></td>
 </tr>
 <tr class="even">
 <td>max_workers</td>
-<td><a href="`int`">int</a></td>
+<td><code>int</code></td>
 <td>The number of parallel threads to use for processing.</td>
 <td><code>None</code></td>
 </tr>
@@ -664,6 +690,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="returns" class="level2 doc-section doc-section-returns">
 <h2 class="doc-section doc-section-returns anchored" data-anchor-id="returns">Returns</h2>
 <table class="caption-top table">
+<colgroup>
+<col style="width: 4%">
+<col style="width: 35%">
+<col style="width: 59%">
+</colgroup>
 <thead>
 <tr class="header">
 <th>Name</th>
@@ -674,7 +705,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td></td>
-<td><a href="`typing.Dict`">Dict</a>[<a href="`str`">str</a>, <a href="`typing.Any`">Any</a>]</td>
+<td><code>Dict</code>[<code>str</code>, <code>Any</code>]</td>
 <td>A GeoJSON-like dictionary containing the evaluated predictions and updated alignment observations.</td>
 </tr>
 </tbody>
@@ -693,6 +724,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="raises" class="level2 doc-section doc-section-raises">
 <h2 class="doc-section doc-section-raises anchored" data-anchor-id="raises">Raises</h2>
 <table class="caption-top table">
+<colgroup>
+<col style="width: 7%">
+<col style="width: 25%">
+<col style="width: 67%">
+</colgroup>
 <thead>
 <tr class="header">
 <th>Name</th>
@@ -703,7 +739,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td></td>
-<td><a href="`ValueError`">ValueError</a></td>
+<td><code>ValueError</code></td>
 <td>If the CRS is unsupported or if the input feature collection is malformed.</td>
 </tr>
 </tbody>

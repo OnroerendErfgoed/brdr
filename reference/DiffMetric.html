@@ -2,13 +2,16 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.8.27">
+<meta name="generator" content="quarto-1.9.36">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
 <title>diffmetric – BRDR - Aligning borders</title>
 <style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
 div.columns{display: flex; gap: min(4vw, 1.5em);}
@@ -67,15 +70,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <meta name="quarto:offset" content="../">
 <script src="../site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
-<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
 <script src="../site_libs/quarto-html/popper.min.js"></script>
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-f1aadacce99040138bbb613f9330654f.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-dbc92dda8186f57fa2e333fbb71d6a9d.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-b79b1fcb1424b07627426b9f3ef330b1.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-4fb5ef05a860c8bf409e4f2b79d95a28.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -132,6 +134,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <a class="nav-link" href="../index.html"> <i class="bi bi-house-fill" role="img">
 </i> 
 <span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../getting-started.html"> 
+<span class="menu-text">Getting Started</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../processor-selection.html"> 
+<span class="menu-text">Processor Guide</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../parameter-cookbook.html"> 
+<span class="menu-text">Parameter Guide</span></a>
   </li>  
   <li class="nav-item">
     <a class="nav-link active" href="../reference/index.html" aria-current="page"> 
@@ -243,6 +257,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../reference/GeoDataFrameLoader.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">GeoDataFrameLoader</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../reference/GeoJsonLoader.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">GeoJsonLoader</span></a>
   </div>
@@ -339,6 +359,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <div class="sidebar-item-container"> 
   <a href="../reference/AlignerResultType.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">AlignerResultType</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/AlignerInputType.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">AlignerInputType</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -556,10 +582,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="brdr.enums.DiffMetric" class="level1">
 <h1>DiffMetric</h1>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>enums.DiffMetric()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Metrics to quantify the change between thematic and reference data.</p>
+<p>Metrics used to quantify geometric differences.</p>
 <section id="attributes" class="level2 doc-section doc-section-attributes">
 <h2 class="doc-section doc-section-attributes anchored" data-anchor-id="attributes">Attributes</h2>
 <table class="caption-top table">
+<colgroup>
+<col style="width: 40%">
+<col style="width: 15%">
+<col style="width: 44%">
+</colgroup>
 <thead>
 <tr class="header">
 <th>Name</th>
@@ -570,53 +601,53 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td>AREA_CHANGE</td>
-<td><a href="`str`">str</a></td>
-<td>Absolute change in area (m²).</td>
+<td><code>str</code></td>
+<td>Absolute area difference.</td>
 </tr>
 <tr class="even">
 <td>AREA_PERCENTAGE_CHANGE</td>
-<td><a href="`str`">str</a></td>
-<td>Relative change in area (%).</td>
+<td><code>str</code></td>
+<td>Relative area difference in percent.</td>
 </tr>
 <tr class="odd">
 <td>SYMMETRICAL_AREA_CHANGE</td>
-<td><a href="`str`">str</a></td>
-<td>The area of the symmetric difference (XOR).</td>
+<td><code>str</code></td>
+<td>Symmetric-difference area.</td>
 </tr>
 <tr class="even">
 <td>SYMMETRICAL_AREA_PERCENTAGE_CHANGE</td>
-<td><a href="`str`">str</a></td>
-<td>Symmetric difference as a percentage of original area.</td>
+<td><code>str</code></td>
+<td>Symmetric-difference area in percent.</td>
 </tr>
 <tr class="odd">
 <td>LENGTH_CHANGE</td>
-<td><a href="`str`">str</a></td>
-<td>Change in length.</td>
+<td><code>str</code></td>
+<td>Absolute length difference.</td>
 </tr>
 <tr class="even">
 <td>LENGTH_PERCENTAGE_CHANGE</td>
-<td><a href="`str`">str</a></td>
-<td>Relative change in length.</td>
+<td><code>str</code></td>
+<td>Relative length difference in percent.</td>
 </tr>
 <tr class="odd">
-<td>LENGTH_REMOVED</td>
-<td><a href="`str`">str</a></td>
-<td>The length of segments removed during processing.</td>
+<td>LENGTH_ADDED_AND_REMOVED</td>
+<td><code>str</code></td>
+<td>Combined added and removed length.</td>
 </tr>
 <tr class="even">
-<td>LENGTH_ADDED_AND_REMOVED</td>
-<td><a href="`str`">str</a></td>
-<td>The length of segments added and removed during processing.</td>
+<td>LENGTH_REMOVED</td>
+<td><code>str</code></td>
+<td>Removed length only.</td>
 </tr>
 <tr class="odd">
 <td>TOTAL_DISTANCE</td>
-<td><a href="`str`">str</a></td>
-<td>Sum of displacement of all vertices.</td>
+<td><code>str</code></td>
+<td>Total displacement distance.</td>
 </tr>
 <tr class="even">
 <td>REFERENCE_USAGE</td>
-<td><a href="`str`">str</a></td>
-<td>The extent of reference boundaries utilized (m or m²).</td>
+<td><code>str</code></td>
+<td>Amount of reference geometry used.</td>
 </tr>
 </tbody>
 </table>

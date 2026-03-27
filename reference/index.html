@@ -2,13 +2,16 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.8.27">
+<meta name="generator" content="quarto-1.9.36">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
 <title>index – BRDR - Aligning borders</title>
 <style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
 div.columns{display: flex; gap: min(4vw, 1.5em);}
@@ -32,15 +35,14 @@ ul.task-list li input[type="checkbox"] {
 <meta name="quarto:offset" content="../">
 <script src="../site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
-<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
 <script src="../site_libs/quarto-html/popper.min.js"></script>
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-f1aadacce99040138bbb613f9330654f.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-dbc92dda8186f57fa2e333fbb71d6a9d.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-b79b1fcb1424b07627426b9f3ef330b1.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-4fb5ef05a860c8bf409e4f2b79d95a28.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -97,6 +99,18 @@ ul.task-list li input[type="checkbox"] {
     <a class="nav-link" href="../index.html"> <i class="bi bi-house-fill" role="img">
 </i> 
 <span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../getting-started.html"> 
+<span class="menu-text">Getting Started</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../processor-selection.html"> 
+<span class="menu-text">Processor Guide</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../parameter-cookbook.html"> 
+<span class="menu-text">Parameter Guide</span></a>
   </li>  
   <li class="nav-item">
     <a class="nav-link active" href="../reference/index.html" aria-current="page"> 
@@ -208,6 +222,12 @@ ul.task-list li input[type="checkbox"] {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../reference/GeoDataFrameLoader.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">GeoDataFrameLoader</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../reference/GeoJsonLoader.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">GeoJsonLoader</span></a>
   </div>
@@ -304,6 +324,12 @@ ul.task-list li input[type="checkbox"] {
   <div class="sidebar-item-container"> 
   <a href="../reference/AlignerResultType.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">AlignerResultType</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/AlignerInputType.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">AlignerInputType</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -575,22 +601,26 @@ ul.task-list li input[type="checkbox"] {
 <td>Loader that accepts data directly from Python dictionaries.</td>
 </tr>
 <tr class="odd">
+<td><a href="../reference/GeoDataFrameLoader.html#brdr.loader.GeoDataFrameLoader">GeoDataFrameLoader</a></td>
+<td>Loader for GeoPandas <code>GeoDataFrame</code> input.</td>
+</tr>
+<tr class="even">
 <td><a href="../reference/GeoJsonLoader.html#brdr.loader.GeoJsonLoader">GeoJsonLoader</a></td>
 <td>Base class for loaders dealing with GeoJSON-formatted data.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><a href="../reference/GeoJsonFileLoader.html#brdr.loader.GeoJsonFileLoader">GeoJsonFileLoader</a></td>
 <td>Loads GeoJSON data from a local file system.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><a href="../reference/GeoJsonUrlLoader.html#brdr.loader.GeoJsonUrlLoader">GeoJsonUrlLoader</a></td>
 <td>Loads GeoJSON data from a remote URL via HTTP GET.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><a href="../reference/OGCFeatureAPIReferenceLoader.html#brdr.loader.OGCFeatureAPIReferenceLoader">OGCFeatureAPIReferenceLoader</a></td>
 <td>Loader for OGC API - Features services.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><a href="../reference/WFSReferenceLoader.html#brdr.loader.WFSReferenceLoader">WFSReferenceLoader</a></td>
 <td>Loader for OGC Web Feature Service (WFS) version 2.0.0.</td>
 </tr>
@@ -636,39 +666,43 @@ ul.task-list li input[type="checkbox"] {
 <tbody>
 <tr class="odd">
 <td><a href="../reference/FullReferenceStrategy.html#brdr.enums.FullReferenceStrategy">FullReferenceStrategy</a></td>
-<td>Strategy for handling reference data coverage.</td>
+<td>How strongly full-reference matches are preferred.</td>
 </tr>
 <tr class="even">
 <td><a href="../reference/AlignerResultType.html#brdr.enums.AlignerResultType">AlignerResultType</a></td>
-<td>Format of the output dictionary.</td>
+<td>Output format of alignment runs.</td>
 </tr>
 <tr class="odd">
+<td><a href="../reference/AlignerInputType.html#brdr.enums.AlignerInputType">AlignerInputType</a></td>
+<td>Role of an input dataset in the aligner pipeline.</td>
+</tr>
+<tr class="even">
 <td><a href="../reference/OpenDomainStrategy.html#brdr.enums.OpenDomainStrategy">OpenDomainStrategy</a></td>
-<td>Strategies for processing thematic areas not covered by reference data.</td>
+<td>Strategies for thematic areas that are not covered by the reference layer.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><a href="../reference/DiffMetric.html#brdr.enums.DiffMetric">DiffMetric</a></td>
-<td>Metrics to quantify the change between thematic and reference data.</td>
+<td>Metrics used to quantify geometric differences.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><a href="../reference/ProcessRemark.html#brdr.enums.ProcessRemark">ProcessRemark</a></td>
-<td>Status remarks added to processed features for auditing and debugging.</td>
+<td>Processing status remarks for auditing and diagnostics.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><a href="../reference/Evaluation.html#brdr.enums.Evaluation">Evaluation</a></td>
-<td>Classification of the alignment quality and reliability.</td>
-</tr>
-<tr class="odd">
-<td><a href="../reference/SnapStrategy.html#brdr.enums.SnapStrategy">SnapStrategy</a></td>
-<td>Geometric priority during snapping.</td>
+<td>Classification labels for prediction quality and confidence.</td>
 </tr>
 <tr class="even">
-<td><a href="../reference/PredictionStrategy.html#brdr.enums.PredictionStrategy">PredictionStrategy</a></td>
-<td>Determines which prediction is selected as the primary result.</td>
+<td><a href="../reference/SnapStrategy.html#brdr.enums.SnapStrategy">SnapStrategy</a></td>
+<td>Priority behavior used during snapping.</td>
 </tr>
 <tr class="odd">
+<td><a href="../reference/PredictionStrategy.html#brdr.enums.PredictionStrategy">PredictionStrategy</a></td>
+<td>How a primary prediction is selected from candidates.</td>
+</tr>
+<tr class="even">
 <td><a href="../reference/ProcessorID.html#brdr.enums.ProcessorID">ProcessorID</a></td>
-<td>Unique identifiers for the available alignment algorithms.</td>
+<td>Stable identifiers for available processing algorithms.</td>
 </tr>
 </tbody>
 </table>

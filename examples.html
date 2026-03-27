@@ -2,13 +2,16 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.8.27">
+<meta name="generator" content="quarto-1.9.36">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
 <title>Examples – BRDR - Aligning borders</title>
 <style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
 div.columns{display: flex; gap: min(4vw, 1.5em);}
@@ -34,15 +37,14 @@ ul.task-list li input[type="checkbox"] {
 <script src="site_libs/quarto-listing/quarto-listing.js"></script>
 <script src="site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
-<script src="site_libs/quarto-html/axe/axe-check.js" type="module"></script>
 <script src="site_libs/quarto-html/popper.min.js"></script>
 <script src="site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="site_libs/quarto-html/anchor.min.js"></script>
 <link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-f1aadacce99040138bbb613f9330654f.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-dbc92dda8186f57fa2e333fbb71d6a9d.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-b79b1fcb1424b07627426b9f3ef330b1.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-4fb5ef05a860c8bf409e4f2b79d95a28.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -101,7 +103,7 @@ ul.task-list li input[type="checkbox"] {
   </script>
 
   <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
 
 <script type="text/javascript">
 const typesetMath = (el) => {
@@ -159,6 +161,18 @@ window.Quarto = {
 <span class="menu-text">Home</span></a>
   </li>  
   <li class="nav-item">
+    <a class="nav-link" href="./getting-started.html"> 
+<span class="menu-text">Getting Started</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./processor-selection.html"> 
+<span class="menu-text">Processor Guide</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./parameter-cookbook.html"> 
+<span class="menu-text">Parameter Guide</span></a>
+  </li>  
+  <li class="nav-item">
     <a class="nav-link" href="./reference/index.html"> 
 <span class="menu-text">Reference</span></a>
   </li>  
@@ -206,7 +220,15 @@ window.Quarto = {
 </header>
 
 
-<p>Here you can find several examples how ‘brdr’ can be used:</p>
+<p>This page groups practical <code>brdr</code> examples from basic alignment to advanced workflows.</p>
+<p>How to use these examples:</p>
+<ol type="1">
+<li>Start with <strong>Get Started</strong> to understand the standard <code>Aligner</code> flow.</li>
+<li>Continue with <strong>Loader</strong> examples to connect your own data sources.</li>
+<li>Use <strong>Prediction</strong> and <strong>Evaluation</strong> once your processing pipeline is stable.</li>
+<li>Use processor-specific examples (for example <code>NetworkGeometryProcessor</code>) only when needed.</li>
+</ol>
+<p>Most examples use real GRB reference data and therefore require network access during execution.</p>
 
 
 
@@ -238,35 +260,7 @@ window.Quarto = {
     </div>
 </div>
 <div class="list grid quarto-listing-cols-3">
-<div class="g-col-1" data-index="0" data-categories="TG9hZGVyJTJDR2VvanNvbkxvYWRlcg==" data-listing-date-sort="1768348800000" data-listing-file-modified-sort="1772026364736" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="1" data-listing-word-count-sort="21">
-<a href="./examples/example_geojsonloader.html" class="quarto-grid-link">
-<div class="quarto-grid-item card h-100 card-left">
-<div class="card-body post-contents">
-<h5 class="no-anchor card-title listing-title">
-GeojsonLoader
-</h5>
-<div class="listing-categories">
-
-<div class="listing-category" onclick="window.quartoListingCategory('TG9hZGVy'); return false;">Loader</div>
-
-<div class="listing-category" onclick="window.quartoListingCategory('R2VvanNvbkxvYWRlcg=='); return false;">GeojsonLoader</div>
-
-</div>
-<div class="card-text listing-description delink">
-<p>example how a GeojsonLoader is used to load thematic data</p>
-</div>
-<div class="card-attribution card-text-small justify">
-<div class="listing-author">
-Karel Dieussaert
-</div>
-<div class="listing-date">
-Jan 14, 2026
-</div>
-</div>
-</div>
-</div></a>
-</div>
-<div class="g-col-1" data-index="1" data-categories="TGFtYmVydDcyJTJGMDglMkNUcmFuc2Zvcm1hdGlvbg==" data-listing-date-sort="1768348800000" data-listing-file-modified-sort="1772026364736" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="1" data-listing-word-count-sort="32">
+<div class="g-col-1" data-index="0" data-categories="TGFtYmVydDcyJTJGMDglMkNUcmFuc2Zvcm1hdGlvbg==" data-listing-date-sort="1768348800000" data-listing-file-modified-sort="1774609392240" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="1" data-listing-word-count-sort="89">
 <a href="./examples/example_lambert72_to_lambert08.html" class="quarto-grid-link">
 <div class="quarto-grid-item card h-100 card-left">
 <div class="card-body post-contents">
@@ -281,7 +275,7 @@ Lambert72 to Lambert 08
 
 </div>
 <div class="card-text listing-description delink">
-<p>Simple example to align a data-object after Lambert72/08-transformation</p>
+<p>Realign transformed geometries after Lambert72 -&gt; Lambert08 conversion</p>
 </div>
 <div class="card-attribution card-text-small justify">
 <div class="listing-author">
@@ -294,20 +288,48 @@ Jan 14, 2026
 </div>
 </div></a>
 </div>
-<div class="g-col-1" data-index="2" data-categories="QW5pbWF0aW9u" data-listing-date-sort="1767744000000" data-listing-file-modified-sort="1772026364736" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="1" data-listing-word-count-sort="58">
-<a href="./examples/example_animation.html" class="quarto-grid-link">
+<div class="g-col-1" data-index="1" data-categories="TG9hZGVyJTJDR2VvanNvbkxvYWRlcg==" data-listing-date-sort="1768348800000" data-listing-file-modified-sort="1774609392240" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="1" data-listing-word-count-sort="92">
+<a href="./examples/example_geojsonloader.html" class="quarto-grid-link">
 <div class="quarto-grid-item card h-100 card-left">
 <div class="card-body post-contents">
 <h5 class="no-anchor card-title listing-title">
-Animated GIF
+GeojsonLoader
 </h5>
 <div class="listing-categories">
 
-<div class="listing-category" onclick="window.quartoListingCategory('QW5pbWF0aW9u'); return false;">Animation</div>
+<div class="listing-category" onclick="window.quartoListingCategory('TG9hZGVy'); return false;">Loader</div>
+
+<div class="listing-category" onclick="window.quartoListingCategory('R2VvanNvbkxvYWRlcg=='); return false;">GeojsonLoader</div>
 
 </div>
 <div class="card-text listing-description delink">
-<p>Example to create a animated GIF showing the principle of <strong>brdr</strong></p>
+<p>Load thematic features from GeoJSON and align them to reference data</p>
+</div>
+<div class="card-attribution card-text-small justify">
+<div class="listing-author">
+Karel Dieussaert
+</div>
+<div class="listing-date">
+Jan 14, 2026
+</div>
+</div>
+</div>
+</div></a>
+</div>
+<div class="g-col-1" data-index="2" data-categories="UHJvY2Vzcw==" data-listing-date-sort="1767744000000" data-listing-file-modified-sort="1774609392240" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="1" data-listing-word-count-sort="81">
+<a href="./examples/example_readme.html" class="quarto-grid-link">
+<div class="quarto-grid-item card h-100 card-left">
+<div class="card-body post-contents">
+<h5 class="no-anchor card-title listing-title">
+Get Started
+</h5>
+<div class="listing-categories">
+
+<div class="listing-category" onclick="window.quartoListingCategory('UHJvY2Vzcw=='); return false;">Process</div>
+
+</div>
+<div class="card-text listing-description delink">
+<p>Minimal end-to-end alignment example with in-memory data</p>
 </div>
 <div class="card-attribution card-text-small justify">
 <div class="listing-author">
@@ -320,7 +342,33 @@ Jan 7, 2026
 </div>
 </div></a>
 </div>
-<div class="g-col-1" data-index="3" data-categories="UHJlZGljdGlvbg==" data-listing-date-sort="1767744000000" data-listing-file-modified-sort="1772026364736" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="1" data-listing-word-count-sort="24">
+<div class="g-col-1" data-index="3" data-categories="RXZhbHVhdGlvbg==" data-listing-date-sort="1767744000000" data-listing-file-modified-sort="1774609392240" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="1" data-listing-word-count-sort="104">
+<a href="./examples/example_evaluate.html" class="quarto-grid-link">
+<div class="quarto-grid-item card h-100 card-left">
+<div class="card-body post-contents">
+<h5 class="no-anchor card-title listing-title">
+Evaluation
+</h5>
+<div class="listing-categories">
+
+<div class="listing-category" onclick="window.quartoListingCategory('RXZhbHVhdGlvbg=='); return false;">Evaluation</div>
+
+</div>
+<div class="card-text listing-description delink">
+<p>Evaluate predicted results and inspect scoring metadata</p>
+</div>
+<div class="card-attribution card-text-small justify">
+<div class="listing-author">
+Karel Dieussaert
+</div>
+<div class="listing-date">
+Jan 7, 2026
+</div>
+</div>
+</div>
+</div></a>
+</div>
+<div class="g-col-1" data-index="4" data-categories="UHJlZGljdGlvbg==" data-listing-date-sort="1767744000000" data-listing-file-modified-sort="1774609392240" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="1" data-listing-word-count-sort="116">
 <a href="./examples/example_predict.html" class="quarto-grid-link">
 <div class="quarto-grid-item card h-100 card-left">
 <div class="card-body post-contents">
@@ -333,7 +381,7 @@ Prediction
 
 </div>
 <div class="card-text listing-description delink">
-<p>Example of a simple prediction by using <strong>brdr</strong></p>
+<p>Predict stable candidate geometries across multiple relevant distances</p>
 </div>
 <div class="card-attribution card-text-small justify">
 <div class="listing-author">
@@ -346,7 +394,33 @@ Jan 7, 2026
 </div>
 </div></a>
 </div>
-<div class="g-col-1" data-index="4" data-categories="TmV0d29ya0dlb21ldHJ5UHJvY2Vzc29yJTJDUHJlZGljdGlvbiUyQ0dyYXBo" data-listing-date-sort="1767744000000" data-listing-file-modified-sort="1772026364736" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="1" data-listing-word-count-sort="59">
+<div class="g-col-1" data-index="5" data-categories="TG9hZGVy" data-listing-date-sort="1767744000000" data-listing-file-modified-sort="1774609392240" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="1" data-listing-word-count-sort="99">
+<a href="./examples/example_dictloader.html" class="quarto-grid-link">
+<div class="quarto-grid-item card h-100 card-left">
+<div class="card-body post-contents">
+<h5 class="no-anchor card-title listing-title">
+DictLoader
+</h5>
+<div class="listing-categories">
+
+<div class="listing-category" onclick="window.quartoListingCategory('TG9hZGVy'); return false;">Loader</div>
+
+</div>
+<div class="card-text listing-description delink">
+<p>Load geometries from a Python dictionary and align with GRB reference data</p>
+</div>
+<div class="card-attribution card-text-small justify">
+<div class="listing-author">
+Karel Dieussaert
+</div>
+<div class="listing-date">
+Jan 7, 2026
+</div>
+</div>
+</div>
+</div></a>
+</div>
+<div class="g-col-1" data-index="6" data-categories="TmV0d29ya0dlb21ldHJ5UHJvY2Vzc29yJTJDUHJlZGljdGlvbiUyQ0dyYXBo" data-listing-date-sort="1767744000000" data-listing-file-modified-sort="1774609392240" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="1" data-listing-word-count-sort="100">
 <a href="./examples/example_networkgeometryprocessor.html" class="quarto-grid-link">
 <div class="quarto-grid-item card h-100 card-left">
 <div class="card-body post-contents">
@@ -363,7 +437,7 @@ NetworkGeometryProcessor
 
 </div>
 <div class="card-text listing-description delink">
-<p>Simple example to get started</p>
+<p>Use NetworkGeometryProcessor as processor backend for alignment</p>
 </div>
 <div class="card-attribution card-text-small justify">
 <div class="listing-author">
@@ -376,72 +450,20 @@ Jan 7, 2026
 </div>
 </div></a>
 </div>
-<div class="g-col-1" data-index="5" data-categories="UHJvY2Vzcw==" data-listing-date-sort="1767744000000" data-listing-file-modified-sort="1772026364736" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="1" data-listing-word-count-sort="15">
-<a href="./examples/example_readme.html" class="quarto-grid-link">
+<div class="g-col-1" data-index="7" data-categories="QW5pbWF0aW9u" data-listing-date-sort="1767744000000" data-listing-file-modified-sort="1774609392240" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="1" data-listing-word-count-sort="90">
+<a href="./examples/example_animation.html" class="quarto-grid-link">
 <div class="quarto-grid-item card h-100 card-left">
 <div class="card-body post-contents">
 <h5 class="no-anchor card-title listing-title">
-Get Started
+Animated GIF
 </h5>
 <div class="listing-categories">
 
-<div class="listing-category" onclick="window.quartoListingCategory('UHJvY2Vzcw=='); return false;">Process</div>
+<div class="listing-category" onclick="window.quartoListingCategory('QW5pbWF0aW9u'); return false;">Animation</div>
 
 </div>
 <div class="card-text listing-description delink">
-<p>Simple example to get started</p>
-</div>
-<div class="card-attribution card-text-small justify">
-<div class="listing-author">
-Karel Dieussaert
-</div>
-<div class="listing-date">
-Jan 7, 2026
-</div>
-</div>
-</div>
-</div></a>
-</div>
-<div class="g-col-1" data-index="6" data-categories="TG9hZGVy" data-listing-date-sort="1767744000000" data-listing-file-modified-sort="1772026364736" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="1" data-listing-word-count-sort="16">
-<a href="./examples/example_dictloader.html" class="quarto-grid-link">
-<div class="quarto-grid-item card h-100 card-left">
-<div class="card-body post-contents">
-<h5 class="no-anchor card-title listing-title">
-DictLoader
-</h5>
-<div class="listing-categories">
-
-<div class="listing-category" onclick="window.quartoListingCategory('TG9hZGVy'); return false;">Loader</div>
-
-</div>
-<div class="card-text listing-description delink">
-<p>example how a DictLoader is used to load a Dictionary of thematic data</p>
-</div>
-<div class="card-attribution card-text-small justify">
-<div class="listing-author">
-Karel Dieussaert
-</div>
-<div class="listing-date">
-Jan 7, 2026
-</div>
-</div>
-</div>
-</div></a>
-</div>
-<div class="g-col-1" data-index="7" data-categories="RXZhbHVhdGlvbg==" data-listing-date-sort="1767744000000" data-listing-file-modified-sort="1772026364736" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="1" data-listing-word-count-sort="24">
-<a href="./examples/example_evaluate.html" class="quarto-grid-link">
-<div class="quarto-grid-item card h-100 card-left">
-<div class="card-body post-contents">
-<h5 class="no-anchor card-title listing-title">
-Evaluation
-</h5>
-<div class="listing-categories">
-
-<div class="listing-category" onclick="window.quartoListingCategory('RXZhbHVhdGlvbg=='); return false;">Evaluation</div>
-
-</div>
-<div class="card-text listing-description delink">
-<p>Example of a simple Evaluation by using <strong>brdr</strong></p>
+<p>Generate an animation of alignment behavior across relevant distances</p>
 </div>
 <div class="card-attribution card-text-small justify">
 <div class="listing-author">

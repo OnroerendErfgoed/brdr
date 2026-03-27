@@ -2,13 +2,16 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.8.27">
+<meta name="generator" content="quarto-1.9.36">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
 <title>opendomainstrategy – BRDR - Aligning borders</title>
 <style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
 div.columns{display: flex; gap: min(4vw, 1.5em);}
@@ -67,15 +70,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <meta name="quarto:offset" content="../">
 <script src="../site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
-<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
 <script src="../site_libs/quarto-html/popper.min.js"></script>
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-f1aadacce99040138bbb613f9330654f.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-dbc92dda8186f57fa2e333fbb71d6a9d.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-b79b1fcb1424b07627426b9f3ef330b1.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-4fb5ef05a860c8bf409e4f2b79d95a28.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -132,6 +134,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <a class="nav-link" href="../index.html"> <i class="bi bi-house-fill" role="img">
 </i> 
 <span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../getting-started.html"> 
+<span class="menu-text">Getting Started</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../processor-selection.html"> 
+<span class="menu-text">Processor Guide</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../parameter-cookbook.html"> 
+<span class="menu-text">Parameter Guide</span></a>
   </li>  
   <li class="nav-item">
     <a class="nav-link active" href="../reference/index.html" aria-current="page"> 
@@ -243,6 +257,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../reference/GeoDataFrameLoader.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">GeoDataFrameLoader</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../reference/GeoJsonLoader.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">GeoJsonLoader</span></a>
   </div>
@@ -339,6 +359,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <div class="sidebar-item-container"> 
   <a href="../reference/AlignerResultType.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">AlignerResultType</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/AlignerInputType.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">AlignerInputType</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -543,7 +569,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#brdr.enums.OpenDomainStrategy" id="toc-brdr.enums.OpenDomainStrategy" class="nav-link active" data-scroll-target="#brdr.enums.OpenDomainStrategy">OpenDomainStrategy</a>
   <ul class="collapse">
   <li><a href="#attributes" id="toc-attributes" class="nav-link" data-scroll-target="#attributes">Attributes</a></li>
-  <li><a href="#notes" id="toc-notes" class="nav-link" data-scroll-target="#notes">Notes</a></li>
   </ul></li>
   </ul>
 <div class="toc-actions"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/reference/OpenDomainStrategy.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
@@ -557,11 +582,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="brdr.enums.OpenDomainStrategy" class="level1">
 <h1>OpenDomainStrategy</h1>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>enums.OpenDomainStrategy()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Strategies for processing thematic areas not covered by reference data.</p>
-<p>In GIS terms, this defines how the algorithm handles the ‘Public Domain’ when the reference layer (e.g., land parcels) does not provide a target.</p>
+<p>Strategies for thematic areas that are not covered by the reference layer.</p>
 <section id="attributes" class="level2 doc-section doc-section-attributes">
 <h2 class="doc-section doc-section-attributes anchored" data-anchor-id="attributes">Attributes</h2>
 <table class="caption-top table">
+<colgroup>
+<col style="width: 21%">
+<col style="width: 10%">
+<col style="width: 68%">
+</colgroup>
 <thead>
 <tr class="header">
 <th>Name</th>
@@ -572,44 +601,46 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td>EXCLUDE</td>
-<td><a href="`str`">str</a></td>
-<td>Completely remove parts of the thematic geometry not on the reference layer.</td>
+<td><code>str</code></td>
+<td>Exclude open-domain parts from the resulting geometry.</td>
 </tr>
 <tr class="even">
 <td>AS_IS</td>
-<td><a href="`str`">str</a></td>
-<td>Keep parts not covered by reference data unchanged in the result.</td>
+<td><code>str</code></td>
+<td>Keep open-domain parts unchanged.</td>
 </tr>
 <tr class="odd">
 <td>SNAP_INNER_SIDE</td>
-<td><a href="`str`">str</a></td>
-<td>Snap everything within the relevant distance to the interior parcel boundary.</td>
+<td><code>str</code></td>
+<td>Snap open-domain parts to inner reference boundaries.</td>
 </tr>
 <tr class="even">
 <td>SNAP_ALL_SIDE</td>
-<td><a href="`str`">str</a></td>
-<td>Snap to both inner and outer boundaries where possible.</td>
+<td><code>str</code></td>
+<td>Snap open-domain parts to both inner and outer sides where applicable.</td>
 </tr>
 <tr class="odd">
 <td>SNAP_PREFER_VERTICES</td>
-<td><a href="`str`">str</a></td>
-<td>Snap to reference polygons, prioritizing vertices over edges.</td>
+<td><code>str</code></td>
+<td>Snap with preference for reference vertices.</td>
 </tr>
 <tr class="even">
-<td>SNAP_NO_PREFERENCE</td>
-<td><a href="`str`">str</a></td>
-<td>Snap to the closest reference component (edge or vertex) without bias.</td>
+<td>SNAP_PREFER_ENDS_AND_ANGLES</td>
+<td><code>str</code></td>
+<td>Snap with preference for reference vertices; first ends, then angles, then other vertices.</td>
 </tr>
 <tr class="odd">
+<td>SNAP_NO_PREFERENCE</td>
+<td><code>str</code></td>
+<td>Snap without vertex/edge preference.</td>
+</tr>
+<tr class="even">
 <td>SNAP_ONLY_VERTICES</td>
-<td><a href="`str`">str</a></td>
-<td>Only allow snapping to existing vertices of the reference polygons.</td>
+<td><code>str</code></td>
+<td>Restrict snapping targets to reference vertices only.</td>
 </tr>
 </tbody>
 </table>
-</section>
-<section id="notes" class="level2 doc-section doc-section-notes">
-<h2 class="doc-section doc-section-notes anchored" data-anchor-id="notes">Notes</h2>
 
 
 </section>

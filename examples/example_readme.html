@@ -2,16 +2,19 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.8.27">
+<meta name="generator" content="quarto-1.9.36">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Karel Dieussaert">
 <meta name="dcterms.date" content="2026-01-07">
-<meta name="description" content="Simple example to get started">
+<meta name="description" content="Minimal end-to-end alignment example with in-memory data">
 
 <title>Get Started – BRDR - Aligning borders</title>
 <style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
 div.columns{display: flex; gap: min(4vw, 1.5em);}
@@ -70,15 +73,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <meta name="quarto:offset" content="../">
 <script src="../site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
-<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
 <script src="../site_libs/quarto-html/popper.min.js"></script>
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-f1aadacce99040138bbb613f9330654f.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-dbc92dda8186f57fa2e333fbb71d6a9d.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-b79b1fcb1424b07627426b9f3ef330b1.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-4fb5ef05a860c8bf409e4f2b79d95a28.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -137,6 +139,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span class="menu-text">Home</span></a>
   </li>  
   <li class="nav-item">
+    <a class="nav-link" href="../getting-started.html"> 
+<span class="menu-text">Getting Started</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../processor-selection.html"> 
+<span class="menu-text">Processor Guide</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../parameter-cookbook.html"> 
+<span class="menu-text">Parameter Guide</span></a>
+  </li>  
+  <li class="nav-item">
     <a class="nav-link" href="../reference/index.html"> 
 <span class="menu-text">Reference</span></a>
   </li>  
@@ -164,7 +178,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#get-started" id="toc-get-started" class="nav-link active" data-scroll-target="#get-started">Get Started</a></li>
+  <li><a href="#get-started" id="toc-get-started" class="nav-link active" data-scroll-target="#get-started">Get Started</a>
+  <ul class="collapse">
+  <li><a href="#input-and-output" id="toc-input-and-output" class="nav-link" data-scroll-target="#input-and-output">Input and Output</a></li>
+  </ul></li>
   </ul>
 <div class="toc-actions"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/examples/example_readme.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
@@ -181,7 +198,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <div>
   <div class="description">
-    Simple example to get started
+    Minimal end-to-end alignment example with in-memory data
   </div>
 </div>
 
@@ -212,51 +229,81 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <section id="get-started" class="level1">
 <h1>Get Started</h1>
-<p>This example shows a basic example to ‘Get Started’.</p>
-<div id="45041c7b" class="cell" data-execution_count="1">
-<details class="code-fold">
-<summary>Code</summary>
+<p>This is the smallest complete <code>brdr</code> workflow:</p>
+<ol type="1">
+<li>Create an <a href="../reference/Aligner.html">Aligner</a>.</li>
+<li>Load one thematic geometry and one reference geometry with <a href="../reference/DictLoader.html">DictLoader</a>.</li>
+<li>Run <code>process(...)</code> for one <code>relevant_distance</code>.</li>
+<li>Inspect the aligned result and the added/removed differences.</li>
+</ol>
+<p>Use this example as the baseline before trying external loaders or advanced processors.</p>
+<section id="input-and-output" class="level2">
+<h2 class="anchored" data-anchor-id="input-and-output">Input and Output</h2>
+<ul>
+<li>Input: two small polygons created from WKT.</li>
+<li>Output:
+<ul>
+<li><code>result</code>: aligned geometry</li>
+<li><code>result_diff_plus</code>: area added by alignment</li>
+<li><code>result_diff_min</code>: area removed by alignment</li>
+</ul></li>
+</ul>
+<div id="fb175846" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.aligner <span class="im">import</span> Aligner</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.geometry_utils <span class="im">import</span> geom_from_wkt</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.loader <span class="im">import</span> DictLoader</span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co"># CREATE AN ALIGNER</span></span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>aligner <span class="op">=</span> Aligner(</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    crs<span class="op">=</span><span class="st">"EPSG:31370"</span>,</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co"># ADD A THEMATIC POLYGON TO THEMATIC DICTIONARY and LOAD into Aligner</span></span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>thematic_dict <span class="op">=</span> {<span class="st">"theme_id_1"</span>: geom_from_wkt(<span class="st">"POLYGON ((0 0, 0 9, 5 10, 10 0, 0 0))"</span>)}</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>loader <span class="op">=</span> DictLoader(thematic_dict)</span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>aligner.load_thematic_data(loader)</span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="co"># ADD A REFERENCE POLYGON TO REFERENCE DICTIONARY and LOAD into Aligner</span></span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>reference_dict <span class="op">=</span> {<span class="st">"ref_id_1"</span>: geom_from_wkt(<span class="st">"POLYGON ((0 1, 0 10,8 10,10 1,0 1))"</span>)}</span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>loader <span class="op">=</span> DictLoader(reference_dict)</span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>aligner.load_reference_data(loader)</span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="co"># EXECUTE THE ALIGNMENT</span></span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>relevant_distance <span class="op">=</span> <span class="dv">1</span></span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>aligner_result <span class="op">=</span> aligner.process(</span>
-<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    relevant_distances<span class="op">=</span>[relevant_distance],</span>
-<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>process_results <span class="op">=</span> aligner_result.get_results(aligner<span class="op">=</span>aligner)</span>
-<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a><span class="co"># PRINT RESULTS IN WKT</span></span>
-<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"result: "</span> <span class="op">+</span> process_results[<span class="st">"theme_id_1"</span>][relevant_distance][<span class="st">"result"</span>].wkt)</span>
-<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(</span>
-<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>    <span class="st">"added area: "</span></span>
-<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>    <span class="op">+</span> process_results[<span class="st">"theme_id_1"</span>][relevant_distance][<span class="st">"result_diff_plus"</span>].wkt</span>
-<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(</span>
-<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>    <span class="st">"removed area: "</span></span>
-<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>    <span class="op">+</span> process_results[<span class="st">"theme_id_1"</span>][relevant_distance][<span class="st">"result_diff_min"</span>].wkt</span>
-<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</details>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>THEME_ID <span class="op">=</span> <span class="st">"theme_id_1"</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>REFERENCE_ID <span class="op">=</span> <span class="st">"ref_id_1"</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>RELEVANT_DISTANCE <span class="op">=</span> <span class="dv">1</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>aligner <span class="op">=</span> Aligner(crs<span class="op">=</span><span class="st">"EPSG:31370"</span>)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Load thematic geometry.</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>thematic_geometries <span class="op">=</span> {THEME_ID: geom_from_wkt(<span class="st">"POLYGON ((0 0, 0 9, 5 10, 10 0, 0 0))"</span>)}</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>aligner.load_thematic_data(DictLoader(thematic_geometries))</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Load reference geometry.</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>reference_geometries <span class="op">=</span> {</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    REFERENCE_ID: geom_from_wkt(<span class="st">"POLYGON ((0 1, 0 10,8 10,10 1,0 1))"</span>)</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>aligner.load_reference_data(DictLoader(reference_geometries))</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="co"># Run alignment for a single relevant distance.</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>aligner_result <span class="op">=</span> aligner.process(relevant_distances<span class="op">=</span>[RELEVANT_DISTANCE])</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>process_results <span class="op">=</span> aligner_result.get_results(aligner<span class="op">=</span>aligner)</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a><span class="co"># Print result geometries in WKT.</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"result: "</span> <span class="op">+</span> process_results[THEME_ID][RELEVANT_DISTANCE][<span class="st">"result"</span>].wkt)</span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(</span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>    <span class="st">"added area: "</span></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>    <span class="op">+</span> process_results[THEME_ID][RELEVANT_DISTANCE][<span class="st">"result_diff_plus"</span>].wkt</span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(</span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>    <span class="st">"removed area: "</span></span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>    <span class="op">+</span> process_results[THEME_ID][RELEVANT_DISTANCE][<span class="st">"result_diff_min"</span>].wkt</span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a><span class="co"># OPTIONAL - export results to GeoDataFrame</span></span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a><span class="co"># results_gdf = aligner_result.get_results_as_geodataframe(</span></span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a><span class="co">#     aligner=aligner,</span></span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a><span class="co">#     add_metadata=True,</span></span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a><span class="co">#     add_original_attributes=True,</span></span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a><span class="co"># )</span></span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a><span class="co"># # GeoDataFrame export (one row per theme_id + relevant_distance).</span></span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a><span class="co"># print("gdf columns: " + ", ".join(results_gdf.columns.astype(str)))</span></span>
+<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a><span class="co"># print(results_gdf[[aligner.thematic_data.id_fieldname, "relevant_distance"]].head())</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>result: POLYGON ((0.1685303876974549 0.4444297669803975, 0.0761204674887134 0.6173165676349098, 0.0192147195967695 0.8049096779838716, 0 1, 0 10, 4.999999999999999 10, 9.500000000000004 1, 9.381966011250102 1, 9.36275129165333 0.8049096779838723, 9.305845543761384 0.6173165676348947, 9.213435623552671 0.4444297669804294, 9.089072792436635 0.2928932188134386, 8.937536244269706 0.1685303876974548, 8.76464944361519 0.0761204674887132, 8.577056333266233 0.0192147195967696, 8.3819660112501 -1.734723475976807e-18, 0.9999999999999997 -1.734723475976807e-18, 0.8049096779838718 0.0192147195967696, 0.6173165676349087 0.0761204674887139, 0.4444297669803966 0.1685303876974555, 0.2928932188134523 0.2928932188134525, 0.1685303876974549 0.4444297669803975))
 added area: POLYGON ((0 10, 4.99850865709512 10, 4.9985376179666465 9.99970752359333, 0 9, 0 10))
-removed area: MULTIPOLYGON (((0.0761204674887134 0.6173165676349098, 0.1685303876974549 0.4444297669803975, 0.2928932188134523 0.2928932188134525, 0.4444297669803966 0.1685303876974556, 0.6173165676349087 0.0761204674887139, 0.8682521196030504 0, 1.734723475976807e-18 0, 1.734723475976807e-18 0.86825211960305, 0.0761204674887134 0.6173165676349098)), ((8.76464944361519 0.0761204674887132, 8.937536244269706 0.1685303876974548, 9.089072792436633 0.2928932188134385, 9.213435623552671 0.4444297669804296, 9.305845543761384 0.6173165676348947, 9.36275129165333 0.8049096779838723, 9.381966011250102 1, 9.5 1, 10 0, 8.513713891647056 0, 8.76464944361519 0.0761204674887132)))</code></pre>
+removed area: MULTIPOLYGON (((8.513713891647056 0, 8.76464944361519 0.0761204674887132, 8.937536244269706 0.1685303876974548, 9.089072792436633 0.2928932188134385, 9.213435623552671 0.4444297669804296, 9.305845543761384 0.6173165676348947, 9.36275129165333 0.8049096779838723, 9.381966011250102 1, 9.5 1, 10 0, 8.513713891647056 0)), ((1.734723475976807e-18 0.86825211960305, 0.0761204674887134 0.6173165676349098, 0.1685303876974549 0.4444297669803975, 0.2928932188134523 0.2928932188134525, 0.4444297669803966 0.1685303876974556, 0.6173165676349087 0.0761204674887139, 0.8682521196030504 0, 1.734723475976807e-18 0, 1.734723475976807e-18 0.86825211960305)))</code></pre>
 </div>
 </div>
 
 
+</section>
 </section>
 
 </main> <!-- /main -->
@@ -662,7 +709,7 @@ removed area: MULTIPOLYGON (((0.0761204674887134 0.6173165676349098, 0.168530387
   </script>
 </div> <!-- /content -->
 <footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/examples/example_readme.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer><hr>
-<p><a href="../examples.html">← Back to examples - overview</a></p>
+<p><a href="../examples.html">&lt;- Back to examples overview</a></p>
 
 
 

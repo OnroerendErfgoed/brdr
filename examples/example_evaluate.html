@@ -2,16 +2,19 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.8.27">
+<meta name="generator" content="quarto-1.9.36">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Karel Dieussaert">
 <meta name="dcterms.date" content="2026-01-07">
-<meta name="description" content="Example of a simple Evaluation by using brdr">
+<meta name="description" content="Evaluate predicted results and inspect scoring metadata">
 
 <title>Evaluation – BRDR - Aligning borders</title>
 <style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
 div.columns{display: flex; gap: min(4vw, 1.5em);}
@@ -70,15 +73,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <meta name="quarto:offset" content="../">
 <script src="../site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
-<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
 <script src="../site_libs/quarto-html/popper.min.js"></script>
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-f1aadacce99040138bbb613f9330654f.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-dbc92dda8186f57fa2e333fbb71d6a9d.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-b79b1fcb1424b07627426b9f3ef330b1.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-4fb5ef05a860c8bf409e4f2b79d95a28.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -137,6 +139,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span class="menu-text">Home</span></a>
   </li>  
   <li class="nav-item">
+    <a class="nav-link" href="../getting-started.html"> 
+<span class="menu-text">Getting Started</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../processor-selection.html"> 
+<span class="menu-text">Processor Guide</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../parameter-cookbook.html"> 
+<span class="menu-text">Parameter Guide</span></a>
+  </li>  
+  <li class="nav-item">
     <a class="nav-link" href="../reference/index.html"> 
 <span class="menu-text">Reference</span></a>
   </li>  
@@ -164,7 +178,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#evaluation" id="toc-evaluation" class="nav-link active" data-scroll-target="#evaluation">Evaluation</a></li>
+  <li><a href="#evaluation" id="toc-evaluation" class="nav-link active" data-scroll-target="#evaluation">Evaluation</a>
+  <ul class="collapse">
+  <li><a href="#what-you-learn" id="toc-what-you-learn" class="nav-link" data-scroll-target="#what-you-learn">What you learn</a></li>
+  <li><a href="#why-evaluation-is-useful" id="toc-why-evaluation-is-useful" class="nav-link" data-scroll-target="#why-evaluation-is-useful">Why evaluation is useful</a></li>
+  <li><a href="#notes" id="toc-notes" class="nav-link" data-scroll-target="#notes">Notes</a></li>
+  </ul></li>
   </ul>
 <div class="toc-actions"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/examples/example_evaluate.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
@@ -181,7 +200,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <div>
   <div class="description">
-    Example of a simple Evaluation by using <strong>brdr</strong>
+    Evaluate predicted results and inspect scoring metadata
   </div>
 </div>
 
@@ -212,7 +231,30 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <section id="evaluation" class="level1">
 <h1>Evaluation</h1>
-<p>This example shows a simple Evaluation by using <strong>brdr</strong></p>
+<p>This example demonstrates <code>aligner.evaluate(...)</code>, used to classify predicted alignments with evaluation metadata.</p>
+<section id="what-you-learn" class="level2">
+<h2 class="anchored" data-anchor-id="what-you-learn">What you learn</h2>
+<ol type="1">
+<li>How to run evaluation on a set of <code>relevant_distances</code>.</li>
+<li>How to retrieve <code>EVALUATED_PREDICTIONS</code> as GeoJSON.</li>
+<li>How to interpret key output fields such as:
+<ul>
+<li>evaluation status</li>
+<li>prediction score</li>
+<li>selected relevant distance</li>
+</ul></li>
+</ol>
+</section>
+<section id="why-evaluation-is-useful" class="level2">
+<h2 class="anchored" data-anchor-id="why-evaluation-is-useful">Why evaluation is useful</h2>
+<p>Evaluation helps when you need automated quality interpretation for batch processing, reporting, or downstream decision logic.</p>
+</section>
+<section id="notes" class="level2">
+<h2 class="anchored" data-anchor-id="notes">Notes</h2>
+<ul>
+<li>The example uses <code>FullReferenceStrategy.PREFER_FULL_REFERENCE</code>.</li>
+<li>GRB data is loaded at runtime, so network access is required.</li>
+</ul>
 <div id="fig-plots" class="cell quarto-float quarto-figure quarto-figure-center anchored" data-execution_count="1">
 <figure class="quarto-float quarto-float-fig figure">
 <div aria-describedby="fig-plots-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
@@ -230,55 +272,45 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.geometry_utils <span class="im">import</span> geom_from_wkt</span>
 <span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.loader <span class="im">import</span> DictLoader</span>
 <span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Press the green button in the gutter to run the script.</span></span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="va">__name__</span> <span class="op">==</span> <span class="st">"__main__"</span>:</span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""</span></span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="co">    EXAMPLE of the 'evaluate()-function of 'brdr': This function evaluates thematic objects with a former brdr_observation and compares them with an actual observation; and adds evaluation-properties to the result</span></span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="co">    """</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="va">__name__</span> <span class="op">==</span> <span class="st">"__main__"</span>:</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""Example: evaluate predictions and print score/distance summary."""</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    aligner <span class="op">=</span> Aligner(crs<span class="op">=</span><span class="st">"EPSG:31370"</span>)</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    relevant_distances <span class="op">=</span> np.arange(<span class="dv">0</span>, <span class="dv">400</span>, <span class="dv">10</span>, dtype<span class="op">=</span><span class="bu">int</span>) <span class="op">/</span> <span class="dv">100</span></span>
 <span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Start an aligner to align thematic objects on the actual parcels</span></span>
-<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    aligner <span class="op">=</span> Aligner(crs<span class="op">=</span><span class="st">"EPSG:31370"</span>)</span>
-<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Define the range of relevant distances to search for predictions</span></span>
-<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>    relevant_distances <span class="op">=</span> np.arange(<span class="dv">0</span>, <span class="dv">400</span>, <span class="dv">10</span>, dtype<span class="op">=</span><span class="bu">int</span>) <span class="op">/</span> <span class="dv">100</span></span>
-<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Define the input geometry</span></span>
-<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>    input_geometry_wkt <span class="op">=</span> <span class="st">"POLYGON ((174099.53572337731020525 179375.43192003236617893, 174116.23475504826637916 179372.81056040961993858, 174109.5357249012158718 179324.16977629828033969, 174094.68135370552772656 179324.75230065890355036, 174099.53572337731020525 179375.43192003236617893))"</span></span>
-<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>    thematic_dict <span class="op">=</span> {<span class="st">"id_1"</span>: geom_from_wkt(input_geometry_wkt)}</span>
-<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>    loader <span class="op">=</span> DictLoader(data_dict<span class="op">=</span>thematic_dict)</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    input_geometry_wkt <span class="op">=</span> <span class="st">"POLYGON ((174099.53572337731020525 179375.43192003236617893, 174116.23475504826637916 179372.81056040961993858, 174109.5357249012158718 179324.16977629828033969, 174094.68135370552772656 179324.75230065890355036, 174099.53572337731020525 179375.43192003236617893))"</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    aligner.load_thematic_data(</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>        DictLoader(data_dict<span class="op">=</span>{<span class="st">"id_1"</span>: geom_from_wkt(input_geometry_wkt)})</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>    aligner.load_reference_data(</span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>        GRBActualLoader(grb_type<span class="op">=</span>GRBType.ADP, partition<span class="op">=</span><span class="dv">1000</span>, aligner<span class="op">=</span>aligner)</span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>    )</span>
 <span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Load the input geometry into the Aligner</span></span>
-<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>    aligner.load_thematic_data(loader)</span>
-<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Load reference data (in this case we use a on-the-fly reference loader to load the actual parcels of Flanders (GRB)</span></span>
-<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>    aligner.load_reference_data(</span>
-<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>        GRBActualLoader(grb_type<span class="op">=</span>GRBType.ADP, partition<span class="op">=</span><span class="dv">1000</span>, aligner<span class="op">=</span>aligner)</span>
-<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Use the EVALUATE-function</span></span>
-<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a>    aligner_result <span class="op">=</span> aligner.evaluate(</span>
-<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a>        relevant_distances<span class="op">=</span>relevant_distances,</span>
-<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a>        thematic_ids<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a>        metadata_field<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a>        full_reference_strategy<span class="op">=</span>FullReferenceStrategy.PREFER_FULL_REFERENCE,</span>
-<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Get the EVALUATED results as GEOJSON</span></span>
-<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a>    fc <span class="op">=</span> aligner_result.get_results_as_geojson(</span>
-<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a>        result_type<span class="op">=</span>AlignerResultType.EVALUATED_PREDICTIONS,</span>
-<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a>        add_metadata<span class="op">=</span><span class="va">True</span>,</span>
-<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a>        add_original_attributes<span class="op">=</span><span class="va">True</span>,</span>
-<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a>        aligner<span class="op">=</span>aligner,</span>
-<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Loop these results to print the results</span></span>
-<span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> feature <span class="kw">in</span> fc[<span class="st">"result"</span>][<span class="st">"features"</span>]:</span>
-<span id="cb1-55"><a href="#cb1-55" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(</span>
-<span id="cb1-56"><a href="#cb1-56" aria-hidden="true" tabindex="-1"></a>            feature[<span class="st">"properties"</span>][aligner.thematic_data.id_fieldname]</span>
-<span id="cb1-57"><a href="#cb1-57" aria-hidden="true" tabindex="-1"></a>            <span class="op">+</span> <span class="st">": "</span></span>
-<span id="cb1-58"><a href="#cb1-58" aria-hidden="true" tabindex="-1"></a>            <span class="op">+</span> feature[<span class="st">"properties"</span>][EVALUATION_FIELD_NAME]</span>
-<span id="cb1-59"><a href="#cb1-59" aria-hidden="true" tabindex="-1"></a>            <span class="op">+</span> <span class="st">" - score "</span></span>
-<span id="cb1-60"><a href="#cb1-60" aria-hidden="true" tabindex="-1"></a>            <span class="op">+</span> <span class="bu">str</span>(feature[<span class="st">"properties"</span>][PREDICTION_SCORE])</span>
-<span id="cb1-61"><a href="#cb1-61" aria-hidden="true" tabindex="-1"></a>            <span class="op">+</span> <span class="st">" - distance "</span></span>
-<span id="cb1-62"><a href="#cb1-62" aria-hidden="true" tabindex="-1"></a>            <span class="op">+</span> <span class="bu">str</span>(feature[<span class="st">"properties"</span>][RELEVANT_DISTANCE_FIELD_NAME])</span>
-<span id="cb1-63"><a href="#cb1-63" aria-hidden="true" tabindex="-1"></a>        )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>    aligner_result <span class="op">=</span> aligner.evaluate(</span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>        relevant_distances<span class="op">=</span>relevant_distances,</span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>        thematic_ids<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>        metadata_field<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>        full_reference_strategy<span class="op">=</span>FullReferenceStrategy.PREFER_FULL_REFERENCE,</span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a>    geojson_results <span class="op">=</span> aligner_result.get_results_as_geojson(</span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a>        result_type<span class="op">=</span>AlignerResultType.EVALUATED_PREDICTIONS,</span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a>        add_metadata<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a>        add_original_attributes<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a>        aligner<span class="op">=</span>aligner,</span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> feature <span class="kw">in</span> geojson_results[<span class="st">"result"</span>][<span class="st">"features"</span>]:</span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(</span>
+<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a>            feature[<span class="st">"properties"</span>][aligner.thematic_data.id_fieldname]</span>
+<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a>            <span class="op">+</span> <span class="st">": "</span></span>
+<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a>            <span class="op">+</span> feature[<span class="st">"properties"</span>][EVALUATION_FIELD_NAME]</span>
+<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a>            <span class="op">+</span> <span class="st">" - score "</span></span>
+<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a>            <span class="op">+</span> <span class="bu">str</span>(feature[<span class="st">"properties"</span>][PREDICTION_SCORE])</span>
+<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a>            <span class="op">+</span> <span class="st">" - distance "</span></span>
+<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a>            <span class="op">+</span> <span class="bu">str</span>(feature[<span class="st">"properties"</span>][RELEVANT_DISTANCE_FIELD_NAME])</span>
+<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a>        )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>id_1: prediction_unique_full - score 100 - distance 1.4</code></pre>
 </div>
@@ -290,6 +322,7 @@ Figure&nbsp;1
 </div>
 
 
+</section>
 </section>
 
 </main> <!-- /main -->
@@ -695,7 +728,7 @@ Figure&nbsp;1
   </script>
 </div> <!-- /content -->
 <footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/examples/example_evaluate.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer><hr>
-<p><a href="../examples.html">← Back to examples - overview</a></p>
+<p><a href="../examples.html">&lt;- Back to examples overview</a></p>
 
 
 
