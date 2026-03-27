@@ -3,16 +3,14 @@ from brdr.be.grb.enums import GRBType
 from brdr.be.grb.loader import GRBActualLoader
 from brdr.enums import AlignerResultType
 from brdr.loader import GeoJsonLoader
-from brdr.viz import show_map, print_observation_of_aligner_results
+from brdr.viz import print_observation_of_aligner_results, show_map
 
 if __name__ == "__main__":
-    """
-    #EXAMPLE of a Geojson, aligned by 'brdr'
-    """
+    """Example: load thematic GeoJSON and align it to GRB reference data."""
 
-    # Initiate brdr
     aligner = Aligner()
-    # Load thematic data
+
+    # Thematic input geometry.
     thematic_json = {
         "type": "FeatureCollection",
         "name": "test",
@@ -47,16 +45,17 @@ if __name__ == "__main__":
         ],
     }
 
-    loader = GeoJsonLoader(_input=thematic_json, id_property="theme_identifier")
-    aligner.load_thematic_data(loader)
-    # Load reference data: The actual GRB-parcels
-    loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
-    aligner.load_reference_data(loader)
+    aligner.load_thematic_data(
+        GeoJsonLoader(_input=thematic_json, id_property="theme_identifier")
+    )
+    aligner.load_reference_data(
+        GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
+    )
 
-    # Example how to use the Aligner
-    rel_dist = 5
-    aligner_result = aligner.process(relevant_distances=[rel_dist])
+    relevant_distance = 5
+    aligner_result = aligner.process(relevant_distances=[relevant_distance])
     aligner_result.save_results(path="output/", aligner=aligner)
+
     thematic_geometries = {
         key: feat.geometry for key, feat in aligner.thematic_data.features.items()
     }
@@ -66,7 +65,7 @@ if __name__ == "__main__":
     show_map(aligner_result.results, thematic_geometries, reference_geometries)
     print_observation_of_aligner_results(aligner_result.results, aligner)
 
-    fcs = aligner_result.get_results_as_geojson(
+    geojson_results = aligner_result.get_results_as_geojson(
         result_type=AlignerResultType.PROCESSRESULTS, aligner=aligner
     )
-    print(fcs["result"])
+    print(geojson_results["result"])

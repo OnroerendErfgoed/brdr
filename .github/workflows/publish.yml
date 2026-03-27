@@ -27,6 +27,11 @@ jobs:
           pip install notebook ipykernel matplotlib brdr quartodoc
           python -m ipykernel install --user
 
+      - name: Install quartodoc interlinks extension
+        run: |
+          cd docs
+          quarto add machow/quartodoc --no-prompt
+
       - name: Build quartodoc
         run: quartodoc build --config docs/_quarto.yml
 

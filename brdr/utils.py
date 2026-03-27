@@ -7,6 +7,7 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, date
 from decimal import Decimal
+from io import BytesIO
 
 import geopandas as gpd
 import requests
@@ -19,6 +20,7 @@ from shapely import node
 from shapely import polygonize
 from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
+from shapely.geometry.polygon import Polygon
 
 from brdr.constants import AREA_ATTRIBUTE
 from brdr.constants import DEFAULT_CRS
@@ -28,7 +30,11 @@ from brdr.constants import SHAPE_INDEX_ATTRIBUTE
 from brdr.constants import STABILITY
 from brdr.constants import ZERO_STREAK
 from brdr.enums import DiffMetric
-from brdr.geometry_utils import buffer_neg
+from brdr.geometry_utils import (
+    buffer_neg,
+    gml_response_to_geojson,
+    total_vertex_distance,
+)
 from brdr.geometry_utils import buffer_pos
 from brdr.geometry_utils import from_crs
 from brdr.geometry_utils import get_bbox
@@ -37,11 +43,69 @@ from brdr.geometry_utils import get_shape_index
 from brdr.geometry_utils import safe_intersection
 from brdr.geometry_utils import safe_unary_union
 from brdr.geometry_utils import to_crs
-from brdr.geometry_utils import total_vertex_distance
 from brdr.logger import LOGGER
 from brdr.typings import ProcessResult
 
 log = logging.getLogger(__name__)
+
+
+def _parse_feature_collection_response(
+    response, base_url=None, params=None, request_timeout=60
+):
+    """
+    Parse an HTTP response into a GeoJSON FeatureCollection-like dictionary.
+
+    Strategy:
+    1. Try JSON first (preferred for OGC API Features and JSON-capable WFS).
+    2. Fallback to in-memory GML/XML parsing using GeoPandas.
+    3. Last fallback: re-fetch through `gml_response_to_geojson` when URL/params are available.
+    """
+    try:
+        data = response.json()
+        if isinstance(data, dict):
+            return data
+    except Exception:
+        pass
+
+    try:
+        gdf = gpd.read_file(BytesIO(response.content))
+        return json.loads(gdf.to_json())
+    except Exception:
+        if base_url is not None:
+            return gml_response_to_geojson(
+                base_url, params or {}, timeout=request_timeout
+            )
+        raise
+
+
+def _request_with_outputformat_fallback(
+    base_url, params=None, headers=None, request_timeout=60
+):
+    """
+    Request helper that retries once without `outputFormat` when unsupported.
+    """
+    local_params = (params or {}).copy()
+    response = requests.get(
+        base_url, params=local_params, headers=headers, timeout=request_timeout
+    )
+    if response.ok:
+        return response, local_params
+
+    if "outputFormat" in local_params:
+        LOGGER.info(
+            "Request failed with outputFormat=%s; retrying without outputFormat.",
+            local_params.get("outputFormat"),
+        )
+        local_params.pop("outputFormat", None)
+        response_retry = requests.get(
+            base_url, params=local_params, headers=headers, timeout=request_timeout
+        )
+        if response_retry.ok:
+            return response_retry, local_params
+        response_retry.raise_for_status()
+
+    response.raise_for_status()
+    return response, local_params
 
 
 def get_geojsons_from_process_results(
@@ -90,6 +154,86 @@ def get_geojsons_from_process_results(
         for result_type, features in features_list_dict.items()
     }
     return geojsons
+
+
+def _flatten_dict(input_dict: dict, parent_key: str = "", sep: str = "__") -> dict:
+    flat = {}
+    for key, value in (input_dict or {}).items():
+        new_key = f"{parent_key}{sep}{key}" if parent_key else str(key)
+        if isinstance(value, dict):
+            flat.update(_flatten_dict(value, parent_key=new_key, sep=sep))
+        else:
+            flat[new_key] = value
+    return flat
+
+
+def get_geodataframe_from_process_results(
+    process_results: dict[str | int, dict[float, ProcessResult]],
+    crs: CRS,
+    id_field: str,
+    series_prop_dict: dict[str | int, dict[float, dict]] = None,
+    preferred_geometry_column: str = "result",
+) -> gpd.GeoDataFrame:
+    """
+    Convert nested process results to a flat GeoDataFrame.
+
+    Each row represents one (theme_id, relevant_distance) result and includes:
+    - id field
+    - relevant_distance
+    - geometry columns (result, result_diff, ...)
+    - flattened dict columns (e.g. properties__score, metadata__actuation__id, ...)
+    """
+    rows = []
+
+    for theme_id, results_dict in (process_results or {}).items():
+        prop_dict = dict(series_prop_dict or {}).get(theme_id, {})
+        for relevant_distance, process_result in (results_dict or {}).items():
+            if process_result is None:
+                continue
+
+            row = {
+                id_field: theme_id,
+                "relevant_distance": relevant_distance,
+            }
+
+            extra_props = prop_dict.get(relevant_distance, {})
+            if isinstance(extra_props, dict):
+                row.update(_flatten_dict(extra_props))
+
+            for key, value in process_result.items():
+                if isinstance(value, BaseGeometry):
+                    row[key] = value
+                elif isinstance(value, dict):
+                    row.update(_flatten_dict(value, parent_key=key))
+                elif isinstance(value, list):
+                    row[key] = json.dumps(
+                        value,
+                        ensure_ascii=False,
+                        default=geojson_serializor,
+                    )
+                else:
+                    row[key] = value
+
+            rows.append(row)
+
+    if not rows:
+        return gpd.GeoDataFrame(columns=[id_field, "relevant_distance"], crs=crs)
+
+    geometry_columns = [
+        col
+        for col in rows[0].keys()
+        if any(isinstance(r.get(col), BaseGeometry) for r in rows)
+    ]
+
+    geometry_column = None
+    if preferred_geometry_column in geometry_columns:
+        geometry_column = preferred_geometry_column
+    elif geometry_columns:
+        geometry_column = geometry_columns[0]
+
+    if geometry_column is None:
+        return gpd.GeoDataFrame(rows, crs=crs)
+    return gpd.GeoDataFrame(rows, geometry=geometry_column, crs=crs)
 
 
 def deep_merge(dict_a, dict_b):
@@ -541,7 +685,12 @@ def get_geometry_difference_metrics_from_processresult(
 
 
 def fetch_all_ogc_features(
-    base_url, params=None, headers=None, max_pages=math.inf, max_workers=None
+    base_url,
+    params=None,
+    headers=None,
+    max_pages=math.inf,
+    max_workers=None,
+    request_timeout=60,
 ):
     """
     Fetches all features from an OGC Feature API using parallel requests where possible.
@@ -573,16 +722,28 @@ def fetch_all_ogc_features(
     if headers is None:
         headers = {"Accept": "application/json"}
 
-    limit = params.get("limit", DOWNLOAD_LIMIT)
+    requested_limit = params.get("limit", DOWNLOAD_LIMIT)
 
     # 1. Initial request to determine total count and pagination type
-    response = requests.get(base_url, params=params, headers=headers)
-    response.raise_for_status()
-    data = response.json()
+    response, params = _request_with_outputformat_fallback(
+        base_url, params=params, headers=headers, request_timeout=request_timeout
+    )
+    data = _parse_feature_collection_response(
+        response,
+        base_url=base_url,
+        params=params,
+        request_timeout=request_timeout,
+    )
 
     all_features = list(data.get("features", []))
     total_matched = data.get("numberMatched")
     number_returned = data.get("numberReturned", len(data.get("features", [])))
+    # Use the actual returned page size as effective step for pagination when the
+    # server silently enforces a lower max feature count than the requested limit.
+    if number_returned and number_returned > 0:
+        effective_limit = number_returned
+    else:
+        effective_limit = requested_limit
 
     # Check for 'next' link for cursor-based fallback
     next_link = next(
@@ -597,27 +758,36 @@ def fetch_all_ogc_features(
         )
 
         # Calculate offsets
-        offsets = range(number_returned, total_matched, limit)
-        # Limit offsets by max_pages
-        offsets = list(offsets)[: int(max_pages)]
+        offsets = list(range(number_returned, total_matched, effective_limit))
+        # Limit offsets by max_pages only when finite
+        if isinstance(max_pages, (int, float)) and math.isfinite(max_pages):
+            offsets = offsets[: int(max_pages)]
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             future_to_offset = {}
             for offset in offsets:
                 local_params = params.copy()
                 local_params["startIndex"] = offset
-                local_params["limit"] = limit
+                local_params["limit"] = effective_limit
                 future_to_offset[
                     executor.submit(
-                        requests.get, base_url, params=local_params, headers=headers
+                        _request_with_outputformat_fallback,
+                        base_url,
+                        local_params,
+                        headers,
+                        request_timeout,
                     )
                 ] = offset
 
             for future in as_completed(future_to_offset):
                 try:
-                    resp = future.result()
-                    resp.raise_for_status()
-                    page_data = resp.json()
+                    resp, used_params = future.result()
+                    page_data = _parse_feature_collection_response(
+                        resp,
+                        base_url=base_url,
+                        params=used_params,
+                        request_timeout=request_timeout,
+                    )
                     all_features.extend(page_data.get("features", []))
                 except Exception as exc:
                     LOGGER.error(
@@ -633,12 +803,24 @@ def fetch_all_ogc_features(
         )
         url = next_link
         page = 1
+        seen_next_urls = set()
         while url and page <= max_pages:
+            if url in seen_next_urls:
+                LOGGER.warning(
+                    "Detected cyclic 'next' pagination URL. Stopping sequential pagination."
+                )
+                break
+            seen_next_urls.add(url)
             LOGGER.debug(f"Fetching page {page}: {url}")
             # For next_links, parameters are usually already in the URL
-            response = requests.get(url, headers=headers)
+            response = requests.get(url, headers=headers, timeout=request_timeout)
             response.raise_for_status()
-            data = response.json()
+            data = _parse_feature_collection_response(
+                response,
+                base_url=url,
+                params={},
+                request_timeout=request_timeout,
+            )
 
             all_features.extend(data.get("features", []))
 
@@ -657,15 +839,24 @@ def fetch_all_ogc_features(
 
 def make_feature_collection(features):
     """
-    Maakt een GeoJSON FeatureCollection van een lijst met features.
+    Create a GeoJSON FeatureCollection from a list of GeoJSON features.
 
-    :param features: lijst van GeoJSON features (dicts met 'type': 'Feature')
-    :return: dict met 'type': 'FeatureCollection' en 'features': [...]
+    Parameters
+    ----------
+    features : list[dict]
+        List of GeoJSON features (`{"type": "Feature", ...}`).
+
+    Returns
+    -------
+    dict
+        GeoJSON FeatureCollection dictionary.
     """
     return {"type": "FeatureCollection", "features": features}
 
 
-def get_collection(url, params=None):
+def get_collection(
+    url, params=None, max_pages=math.inf, max_workers=None, request_timeout=60
+):
     """
     Fetches a collection of features from a (paginated) API endpoint (OGC Feature API or WFS).
 
@@ -684,15 +875,29 @@ def get_collection(url, params=None):
     """
     if params is None:
         params = {}
-    features = fetch_all_ogc_features(base_url=url, params=params)
+    features = fetch_all_ogc_features(
+        base_url=url,
+        params=params,
+        max_pages=max_pages,
+        max_workers=max_workers,
+        request_timeout=request_timeout,
+    )
     return make_feature_collection(features)
 
 
 def geojson_geometry_to_shapely(geojson_geometry):
     """
-    Converts a geojson geometry into a shapely geometry
-    :param geojson_geometry:  geojson geometry
-    :return: shapely geometry
+    Convert a GeoJSON geometry object to a Shapely geometry.
+
+    Parameters
+    ----------
+    geojson_geometry : dict
+        GeoJSON geometry object.
+
+    Returns
+    -------
+    BaseGeometry
+        Converted Shapely geometry.
     """
     return shape(geojson_geometry)
 
@@ -729,14 +934,24 @@ def geojson_to_dicts(collection, id_property=None):
                 raise KeyError(
                     f"Identifier '{id_property}' not found in properties of GeoJson FeatureCollection"
                 )
-        geom = shape(f["geometry"])
+        try:
+            geom = shape(f["geometry"])
+        except:
+            geom = Polygon()
         data_dict[key] = make_valid(geom)
         data_dict_properties[key] = f["properties"]
     return data_dict, data_dict_properties
 
 
 def get_collection_by_partition(
-    url, params, geometry, partition=1000, crs=DEFAULT_CRS, max_workers=None
+    url,
+    params,
+    geometry,
+    partition=1000,
+    crs=DEFAULT_CRS,
+    max_workers=None,
+    max_pages=math.inf,
+    request_timeout=60,
 ):
     """
     Retrieves a collection of geographic data by partitioning the input geometry.
@@ -773,13 +988,25 @@ def get_collection_by_partition(
     collection = {}
 
     if geometry is None or geometry.is_empty:
-        return get_collection(url=url, params=params)
+        return get_collection(
+            url=url,
+            params=params,
+            max_pages=max_pages,
+            max_workers=max_workers,
+            request_timeout=request_timeout,
+        )
 
     if partition < 1:
         local_params = params.copy()
         local_params["bbox"] = get_bbox(geometry)
         local_params["bbox-crs"] = from_crs(crs)
-        return get_collection(url=url, params=local_params)
+        return get_collection(
+            url=url,
+            params=local_params,
+            max_pages=max_pages,
+            max_workers=max_workers,
+            request_timeout=request_timeout,
+        )
 
     # Prepare partitions
     geoms = get_partitions(geometry, partition)
@@ -796,7 +1023,14 @@ def get_collection_by_partition(
             thread_params["bbox-crs"] = from_crs(crs)
 
             # Submit the request to the thread pool
-            future = executor.submit(get_collection, url=url, params=thread_params)
+            future = executor.submit(
+                get_collection,
+                url=url,
+                params=thread_params,
+                max_pages=max_pages,
+                max_workers=max_workers,
+                request_timeout=request_timeout,
+            )
             future_to_geom[future] = g
 
         # Collect results as they complete
@@ -867,9 +1101,17 @@ def build_reverse_index_wkb(d: dict):
 
 def is_brdr_observation(brdr_observation):
     """
-    returns true if the value has the correct structure of a base_observation, otherwise False
-    :param brdr_observation:
-    :return:
+    Check whether a value matches the expected BRDR observation structure.
+
+    Parameters
+    ----------
+    brdr_observation : Any
+        Candidate observation object.
+
+    Returns
+    -------
+    bool
+        `True` if structure is valid, else `False`.
     """
     if brdr_observation is None or not isinstance(brdr_observation, dict):
         return False
@@ -967,201 +1209,3 @@ def get_relevant_polygons_from_geom(
 
 def urn_from_geom(geom: BaseGeometry):
     return uuid.UUID(hex=hashlib.sha256(geom.wkb).hexdigest()[::2]).urn
-
-
-# def equal_geom_in_array(geom, geom_array, correction_distance, mitre_limit):
-#     """
-#     Check if a predicted geometry is equal to other predicted geometries in a list.
-#     Equality is defined as there is the symmetrical difference is smaller than the CORRECTION DISTANCE
-#     Returns True if one of the elements is equal, otherwise False
-#     """
-#     for g in geom_array:
-#         if geometric_equality(geom, g, correction_distance, mitre_limit):
-#             return True
-#     return False
-
-
-# def create_full_interpolated_dataset(
-#     discrete_list: List[float],  # The complete list of all x-coordinates
-#     cached_results: Dict[
-#         float, Any
-#     ],  # The dictionary with the calculated (cached) values
-# ) -> Dict[float, Any]:
-#     """
-#     Populates the complete discrete list by interpolating non-calculated values
-#     with the nearest calculated boundary value (Zero-Order Hold).
-#
-#     Returns: A new dictionary with results for ALL x-coordinates in the list.
-#     """
-#
-#     full_results = {}
-#     x_coords = np.array(discrete_list)
-#
-#     # We start with the value of the first calculated point
-#     current_fill_value = None
-#
-#     # Find the very first calculated point to determine the starting value
-#     for x in x_coords:
-#         if x in cached_results:
-#             # Make a deepcopy of the very first value found.
-#             current_fill_value = copy.deepcopy(cached_results[x])
-#             break
-#
-#     if current_fill_value is None:
-#         # This shouldn't happen if the list has boundaries, but for safety
-#         return full_results
-#
-#     # 1. Iterate through the entire discrete list and perform the interpolation
-#     for x in x_coords:
-#         if x in cached_results:
-#             # 2. Point is calculated (this is an interval boundary in the stable region).
-#             # Replace the fill_value with a DEEPCOPY of the new cached value.
-#             current_fill_value = copy.deepcopy(cached_results[x])
-#             # Assign a DEEPCOPY of the new fill_value to full_results.
-#             full_results[x] = copy.deepcopy(current_fill_value)
-#         else:
-#             # 3. Point is NOT calculated (lies within a stable region).
-#             # We populate it with the value of the last calculated (left boundary) point.
-#             # Assign a DEEPCOPY of the fill_value to full_results.
-#             full_results[x] = copy.deepcopy(current_fill_value)
-#
-#     return full_results
-
-
-# def recursive_stepwise_interval_check(
-#     f_value: Callable[
-#         [float], Any
-#     ],  # Function that returns the NUMERIC value/Object (V)
-#     f_condition: Callable[
-#         [Any, Any], bool
-#     ],  # Function that performs the BOOLEAN assessment on V_start and V_end
-#     discrete_list: List[float],  # The FIXED, discrete list of x-coordinates
-#     initial_sample_size: int = None,  # Number of evenly spaced values to initially cache
-# ) -> Tuple[List[float], Dict[float, Any]]:
-#     """
-#     Recursively searches a discrete domain (x-coordinates) to find intervals where a
-#     stability condition (f_condition) based on calculated values (f_value) is violated.
-#
-#     It uses a Zero-Order Hold (ZOH) approach for condition checking and a cache-aware
-#     stability check to prevent premature recursion stop in unstable regions.
-#
-#     The check is performed by evaluating the f_condition between interval endpoints
-#     and recursively subdividing the interval if the condition is not met.
-#
-#     Args:
-#         f_value: A function that calculates and returns the complex/numerical
-#                  result (V) for a given x-coordinate.
-#         f_condition: A function that takes V_start and V_end and returns True if
-#                      the stability/convergence condition is met, False otherwise.
-#         discrete_list: The complete, sorted list of x-coordinates to be evaluated.
-#         initial_sample_size: Optional. If set, this number of points are pre-calculated
-#                              and cached to potentially speed up the initial checks.
-#
-#     Returns:
-#         A tuple containing:
-#         1. A sorted list of x-coordinates that were identified as boundaries of
-#            the non-stable (non-matching) regions.
-#         2. The complete dictionary cache of all calculated f_value results.
-#     """
-#
-#     x_coords = np.array(discrete_list)
-#     cache: Dict[float, Any] = {}
-#     non_matching_x = set()
-#
-#     def _get_f_value(x: float) -> Any:
-#         """Helper to retrieve f_value result from cache or calculate it."""
-#         if x not in cache:
-#             # print(f"  > F_VALUE(x) calculated for x={round(x, 4)}")
-#             # We use deepcopy here to ensure the cached object is independent if f_value
-#             # returns a mutable object that might be modified later outside this function.
-#             # However, typically f_value is expected to return a stable result object.
-#             # If the result itself is used as input for further modification *within*
-#             # the surrounding logic, deepcopy may be added, but based on the original
-#             # context, we assume a stable return value for now.
-#             cache[x] = f_value(x)
-#         return cache[x]
-#
-#     # --- Initial Sample (Pre-caching) ---
-#     if (
-#         initial_sample_size is not None
-#         and initial_sample_size > 0
-#         and initial_sample_size < len(x_coords)
-#     ):
-#         step = max(1, len(x_coords) // initial_sample_size)
-#         initial_indices = np.arange(0, len(x_coords), step)[:initial_sample_size]
-#         for x in x_coords[initial_indices]:
-#             _get_f_value(x)
-#         # print(f"✅ Initialization: {len(initial_indices)} points cached.")
-#     # -----------------------------------
-#
-#     def _recursive_check(start_index: int, end_index: int):
-#         """
-#         The core recursive function to check the condition in the interval [start_index, end_index].
-#         """
-#
-#         # 0. Base Case: Interval contains no intermediate values (adjacent points)
-#         if end_index - start_index <= 1:
-#             x_start, x_end = x_coords[start_index], x_coords[end_index]
-#             num_start, num_end = _get_f_value(x_start), _get_f_value(x_end)
-#
-#             if not f_condition(num_start, num_end):
-#                 non_matching_x.add(x_start)
-#                 non_matching_x.add(x_end)
-#             return
-#
-#         x_start, x_end = x_coords[start_index], x_coords[end_index]
-#         num_start, num_end = _get_f_value(x_start), _get_f_value(x_end)
-#
-#         interval_is_satisfied = f_condition(num_start, num_end)
-#
-#         needs_forced_recursion = False
-#
-#         if interval_is_satisfied:
-#             # **NEW LOGIC:** Check internal stability using already cached points
-#
-#             # Find all x-values in the cache that fall STRICTLY within this interval
-#             internal_cached_x = sorted([x for x in cache.keys() if x_start < x < x_end])
-#
-#             # Iterate through the sub-intervals [current_x, next_x]
-#             current_x_val = x_start
-#             current_num_val = num_start
-#
-#             # Combine the internal cached points with the endpoint to cover all sub-intervals
-#             all_check_points = internal_cached_x + [x_end]
-#
-#             for next_x_val in all_check_points:
-#                 # We know next_x_val is either in the cache or is x_end (which is already calculated)
-#                 next_num_val = cache[next_x_val]
-#
-#                 # Evaluate the sub-interval [current_x_val, next_x_val]
-#                 if not f_condition(current_num_val, next_num_val):
-#                     # Internal instability found! Override the lazy stop.
-#                     needs_forced_recursion = True
-#                     break
-#
-#                 current_x_val = next_x_val
-#                 current_num_val = next_num_val
-#
-#         # 3. Decision Point:
-#
-#         if not interval_is_satisfied or needs_forced_recursion:
-#             # Condition NOT satisfied OR Internal cache indicates instability: Continue recursion.
-#
-#             # Add the extreme values (they are part of the 'non-matching' region)
-#             non_matching_x.add(x_start)
-#             non_matching_x.add(x_end)
-#
-#             # Perform recursion on the halves (Stepwise refinement)
-#             mid_index = (start_index + end_index) // 2
-#
-#             _recursive_check(start_index, mid_index)
-#             _recursive_check(mid_index, end_index)
-#
-#         else:
-#             # Condition IS satisfied and NO internal problems detected: Stop recursion.
-#             return
-#
-#     # Start the recursion over the full discrete list
-#     _recursive_check(0, len(x_coords) - 1)
-#
-#     return sorted(list(non_matching_x)), cache

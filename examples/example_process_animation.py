@@ -1,5 +1,3 @@
-from datetime import datetime
-
 import numpy as np
 
 from brdr.aligner import Aligner
@@ -9,11 +7,10 @@ from brdr.loader import GeoJsonLoader
 from brdr.viz import animated_map
 
 if __name__ == "__main__":
-    # EXAMPLE to process a series of relevant distances
-    # Initiate brdr
+    # Example: process a range of relevant distances and export animation.
     aligner = Aligner()
-    # Load thematic data
-    geometry = {
+
+    geometry = {  # noqa: F841 - kept for docs: alternative geometry candidate
         "coordinates": [
             [
                 [171136.16765265574, 170605.6084498393],
@@ -26,7 +23,7 @@ if __name__ == "__main__":
         "type": "Polygon",
     }
 
-    geometry = {
+    geometry = {  # Active geometry used in this example.
         "coordinates": [
             [
                 [171132.08386359326, 170804.71107799126],
@@ -55,27 +52,22 @@ if __name__ == "__main__":
         ],
     }
 
-    loader = GeoJsonLoader(_input=thematic_json, id_property="theme_identifier")
-    aligner.load_thematic_data(loader)
-    # Load reference data: The actual GRB-parcels
+    aligner.load_thematic_data(
+        GeoJsonLoader(_input=thematic_json, id_property="theme_identifier")
+    )
     aligner.load_reference_data(
         GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
     )
-    # PROCESS a series of relevant distances
+
     relevant_distances = np.arange(0, 710, 10, dtype=int) / 100
-    aligner_result = aligner.process(
-        relevant_distances=relevant_distances,
-    )
+    aligner_result = aligner.process(relevant_distances=relevant_distances)
     thematic_geometries = {
         key: feat.geometry for key, feat in aligner.thematic_data.features.items()
     }
     reference_geometries = {
         key: feat.geometry for key, feat in aligner.reference_data.features.items()
     }
-    # SHOW results: map and plotted changes
-    now = datetime.now()  # current date and time
-    date_time = now.strftime("%m_%d_%Y_%H_%M_%S")
-    # filename = "animation_" + str(date_time) + ".gif"
+
     filename = "animation.gif"
     animated_map(
         aligner_result.results,

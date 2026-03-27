@@ -9,9 +9,9 @@ from brdr.geometry_utils import (
     get_shape_index,
     geom_from_wkt,
     _get_line_substring,
-    longest_linestring_from_multilinestring,
     geojson_to_multi,
 )
+from brdr.graph_utils import longest_linestring_from_multilinestring
 from brdr.geometry_utils import buffer_neg
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import buffer_pos

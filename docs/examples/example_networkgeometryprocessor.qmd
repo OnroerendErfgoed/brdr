@@ -1,19 +1,33 @@
 ---
 title: "NetworkGeometryProcessor"
-description: "Simple example to get started"
+description: "Use NetworkGeometryProcessor as processor backend for alignment"
 author: "Karel Dieussaert"
 date: "2026-01-07"
 categories: [NetworkGeometryProcessor, Prediction, Graph]
 format:
   html:
-    code-fold: true
+    code-fold: false
 jupyter: python3
 ---
 # NetworkGeometryProcessor
-This example shows an example how a processor (NetworkGeometryProcessor) can be added to the aligner.
-The aligner makes predictions based on the result from this processor.
-In this case NetworkGeometryProcessor is used. This is a slower processor as DieussaertProcessor, but can be used more generic for all kinds of geometrytypes:
-Polygon/LibeString/Point - to - Polygon/LibeString/Point.
+This example shows how to plug [NetworkGeometryProcessor](../reference/NetworkGeometryProcessor.qmd) into [Aligner](../reference/Aligner.qmd).
+
+## Why this processor
+
+`NetworkGeometryProcessor` is generally slower than `DieussaertGeometryProcessor`, but it is more generic for network-like alignment scenarios and mixed geometry behavior.
+
+## What the script does
+
+1. Builds a processor with [ProcessorConfig](../reference/ProcessorConfig.qmd).
+2. Injects that processor into the `Aligner`.
+3. Loads one thematic geometry and GRB reference data.
+4. Runs prediction over multiple distances.
+5. Visualizes both the selected candidates and geometric change trend.
+
+## Practical guidance
+
+- Start with this processor only when your use case truly requires network behavior.
+- Keep your distance series small first; expand it after validating quality.
 
 ```{python}
 #| fig-cap: "Prediction with NetworkGeometryProcessor"

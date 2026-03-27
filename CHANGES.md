@@ -210,3 +210,16 @@
 # 0.15.5
 
 - major improvement for networkgeometryprocessor (stable results)
+
+
+# 0.15.5
+
+- Major performance improvement for snapgeometryprocessor
+- General performance improvements for all processors
+- Introduction of new SnapStrategy: PREFER_ENDS_AND_ANGLES [#329]
+- BeCadastralLoader fix [#323]
+- WFSReferenceLoader - support for XML [#324]
+- GeoDataFrameLoader added [#326]
+- Possibility to get results in a GeoDataFrame
+- Cleanup of documentation
+- Internal refactoring: added graph_utils.py

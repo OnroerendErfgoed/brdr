@@ -1,13 +1,17 @@
+import json
 import logging
+import os
+import tempfile
+from io import BytesIO
 from math import pi
 from typing import Union, List, Tuple
+from urllib.parse import urlencode
 
 import geopandas as gpd
-import networkx as nx
 import numpy as np
 import pyproj
-from networkx import Graph
-from shapely import GEOSException, get_coordinates, LinearRing, polygonize
+import requests
+from shapely import GEOSException, get_coordinates
 from shapely import STRtree
 from shapely import buffer
 from shapely import difference
@@ -21,12 +25,10 @@ from shapely import intersection
 from shapely import is_empty
 from shapely import make_valid
 from shapely import polygons
-from shapely import segmentize
 from shapely import symmetric_difference
 from shapely import to_wkt
 from shapely import unary_union
 from shapely import union
-from shapely.errors import GeometryTypeError
 from shapely.geometry import (
     Point,
     LineString,
@@ -39,8 +41,9 @@ from shapely.geometry import (
 )
 from shapely.geometry.base import BaseGeometry
 from shapely.lib import line_merge
-from shapely.ops import nearest_points, split
+from shapely.ops import nearest_points
 from shapely.ops import substring
+from shapely.ops import unary_union
 from shapely.prepared import prep
 
 from brdr.enums import SnapStrategy
@@ -311,6 +314,16 @@ def safe_intersection(geom_a: BaseGeometry, geom_b: BaseGeometry) -> BaseGeometr
 
 
 def safe_unary_union(geometries):
+    if geometries is None:
+        return GeometryCollection()
+    if isinstance(geometries, BaseGeometry):
+        return make_valid(geometries)
+    if not isinstance(geometries, (list, tuple)):
+        geometries = list(geometries)
+    if len(geometries) == 0:
+        return GeometryCollection()
+    if len(geometries) == 1:
+        return make_valid(geometries[0])
     try:
         unioned_geom = make_valid(unary_union(geometries))
     except:
@@ -487,35 +500,48 @@ def snap_geometry_to_reference(
     snap_strategy=SnapStrategy.NO_PREFERENCE,
     max_segment_length=-1,
     tolerance=1,
+    angle_threshold_degrees=150.0,
 ):
     if geometry is None or geometry.is_empty or reference is None or reference.is_empty:
         return geometry
-    if max_segment_length > 0:
-        geometry = segmentize(geometry, max_segment_length=max_segment_length)
     geometry = to_multi(geometry, geomtype=None)
     if geometry.geom_type == "MultiPoint":
         result = _snap_point_to_reference(
             geometry,
             reference=reference,
             snap_strategy=snap_strategy,
-            max_segment_length=max_segment_length,
             tolerance=tolerance,
+            angle_threshold_degrees=angle_threshold_degrees,
         )
     elif geometry.geom_type == "MultiLineString":
+        if max_segment_length > 0:
+            geometry = _refine_multiline_near_reference_vertices(
+                geometry,
+                reference=reference,
+                tolerance=tolerance,
+                max_segment_length=max_segment_length,
+            )
         result = _snap_line_to_reference(
             geometry,
             reference=reference,
             snap_strategy=snap_strategy,
-            max_segment_length=max_segment_length,
             tolerance=tolerance,
+            angle_threshold_degrees=angle_threshold_degrees,
         )
     elif geometry.geom_type == "MultiPolygon":
+        if max_segment_length > 0:
+            geometry = _refine_multipolygon_near_reference_vertices(
+                geometry,
+                reference=reference,
+                tolerance=tolerance,
+                max_segment_length=max_segment_length,
+            )
         result = _snap_polygon_to_reference(
             geometry,
             reference=reference,
             snap_strategy=snap_strategy,
-            max_segment_length=max_segment_length,
             tolerance=tolerance,
+            angle_threshold_degrees=angle_threshold_degrees,
         )
 
     elif geometry.geom_type == "GeometryCollection":
@@ -527,9 +553,9 @@ def snap_geometry_to_reference(
                 snap_strategy=snap_strategy,
                 max_segment_length=max_segment_length,
                 tolerance=tolerance,
+                angle_threshold_degrees=angle_threshold_degrees,
             )
             results.append(result)
-        # result = GeometryCollection(results)
         result = safe_unary_union(results)
 
     else:
@@ -539,17 +565,151 @@ def snap_geometry_to_reference(
     return result
 
 
+def _refine_multiline_near_reference_vertices(
+    multiline: MultiLineString,
+    reference: BaseGeometry,
+    tolerance: float,
+    max_segment_length: float,
+) -> MultiLineString:
+    if multiline is None or multiline.is_empty:
+        return multiline
+    ref_coords = list(get_coordinates(reference))
+    if len(ref_coords) == 0:
+        return multiline
+
+    ref_vertex_points = [Point(c) for c in ref_coords]
+    ref_vertex_tree = STRtree(ref_vertex_points) if ref_vertex_points else None
+
+    refined_lines = []
+    for line in multiline.geoms:
+        refined_lines.append(
+            _refine_line_near_reference_vertices(
+                line,
+                ref_vertex_points=ref_vertex_points,
+                ref_vertex_tree=ref_vertex_tree,
+                tolerance=tolerance,
+                max_segment_length=max_segment_length,
+            )
+        )
+    return MultiLineString(refined_lines)
+
+
+def _refine_multipolygon_near_reference_vertices(
+    multipolygon: MultiPolygon,
+    reference: BaseGeometry,
+    tolerance: float,
+    max_segment_length: float,
+) -> MultiPolygon:
+    if multipolygon is None or multipolygon.is_empty:
+        return multipolygon
+    ref_coords = list(get_coordinates(reference))
+    if len(ref_coords) == 0:
+        return multipolygon
+
+    ref_vertex_points = [Point(c) for c in ref_coords]
+    ref_vertex_tree = STRtree(ref_vertex_points) if ref_vertex_points else None
+
+    refined_polygons = []
+    for polygon in multipolygon.geoms:
+        # exterior
+        exterior_line = LineString(polygon.exterior.coords)
+        exterior_refined = _refine_line_near_reference_vertices(
+            exterior_line,
+            ref_vertex_points=ref_vertex_points,
+            ref_vertex_tree=ref_vertex_tree,
+            tolerance=tolerance,
+            max_segment_length=max_segment_length,
+        )
+        exterior_coords = list(exterior_refined.coords)
+        if exterior_coords[0] != exterior_coords[-1]:
+            exterior_coords.append(exterior_coords[0])
+
+        # interiors
+        interior_rings = []
+        for interior in polygon.interiors:
+            interior_line = LineString(interior.coords)
+            interior_refined = _refine_line_near_reference_vertices(
+                interior_line,
+                ref_vertex_points=ref_vertex_points,
+                ref_vertex_tree=ref_vertex_tree,
+                tolerance=tolerance,
+                max_segment_length=max_segment_length,
+            )
+            interior_coords = list(interior_refined.coords)
+            if interior_coords[0] != interior_coords[-1]:
+                interior_coords.append(interior_coords[0])
+            interior_rings.append(interior_coords)
+
+        refined_polygon = make_valid(Polygon(exterior_coords, interior_rings))
+        if refined_polygon is None or refined_polygon.is_empty:
+            refined_polygon = polygon
+        refined_polygons.append(refined_polygon)
+    return to_multi(safe_unary_union(refined_polygons), geomtype="Polygon")
+
+
+def _refine_line_near_reference_vertices(
+    line: LineString,
+    ref_vertex_points: List[Point],
+    ref_vertex_tree: STRtree,
+    tolerance: float,
+    max_segment_length: float,
+) -> LineString:
+    if line is None or line.is_empty or line.length == 0:
+        return line
+
+    nearby_ref_points = []
+    if ref_vertex_tree is not None:
+        try:
+            hits = ref_vertex_tree.query(line, predicate="dwithin", distance=tolerance)
+            for h in hits:
+                if isinstance(h, (int, np.integer)):
+                    nearby_ref_points.append(ref_vertex_points[int(h)])
+                else:
+                    nearby_ref_points.append(h)
+        except Exception:
+            nearby_ref_points = [
+                p for p in ref_vertex_points if line.distance(p) <= tolerance
+            ]
+    if not nearby_ref_points:
+        return line
+
+    # Keep original vertices and only add local refinement around projected ref vertices.
+    sample_distances = [0.0, line.length]
+    sample_distances.extend([line.project(Point(c)) for c in line.coords[1:-1]])
+
+    half_step = max_segment_length / 2.0
+    for p in nearby_ref_points:
+        d = float(line.project(p))
+        sample_distances.extend(
+            [
+                max(0.0, d - half_step),
+                d,
+                min(line.length, d + half_step),
+            ]
+        )
+
+    sample_distances = sorted(set(round(float(d), 9) for d in sample_distances))
+    new_coords = []
+    for d in sample_distances:
+        p = line.interpolate(d)
+        coord = (float(p.x), float(p.y))
+        if not new_coords or coord != new_coords[-1]:
+            new_coords.append(coord)
+
+    if len(new_coords) < 2:
+        return line
+    return LineString(new_coords)
+
+
 def _snap_point_to_reference(
     geometry,
     reference,
     snap_strategy=SnapStrategy.NO_PREFERENCE,
-    max_segment_length=-1,
     tolerance=1,
+    angle_threshold_degrees=150.0,
 ):
     if geometry is None or geometry.is_empty or reference is None or reference.is_empty:
         return geometry
-    if max_segment_length > 0:
-        geometry = segmentize(geometry, max_segment_length=max_segment_length)
 
     if geometry.geom_type == "Point":
         geometry = MultiPoint([geometry])
@@ -557,6 +717,9 @@ def _snap_point_to_reference(
     ref_border, ref_borders, ref_coords = _get_ref_objects(reference)
     ref_vertices_objs = [Point(c) for c in ref_coords]
     tree = STRtree(ref_vertices_objs) if ref_vertices_objs else None
+    end_vertices, angle_vertices = _get_reference_vertex_priority_sets(
+        ref_borders, angle_threshold_degrees=angle_threshold_degrees
+    )
 
     if len(ref_coords) == 0:
         snap_strategy = SnapStrategy.NO_PREFERENCE
@@ -568,7 +731,14 @@ def _snap_point_to_reference(
         for idx, coord in enumerate(coords):
             p = Point(coords[idx])
             p_snapped, bool_snapped, ref_vertices = _get_snapped_point(
-                p, ref_border, tree, ref_vertices_objs, snap_strategy, tolerance
+                p,
+                ref_border,
+                tree,
+                ref_vertices_objs,
+                snap_strategy,
+                tolerance,
+                end_vertices=end_vertices,
+                angle_vertices=angle_vertices,
             )
             coordinates.append(p_snapped.coords[0])
 
@@ -583,14 +753,14 @@ def _snap_line_to_reference(
     geometry,
     reference,
     snap_strategy=SnapStrategy.NO_PREFERENCE,
-    max_segment_length=-1,
     tolerance=1,
+    angle_threshold_degrees=150.0,
 ):
+    from brdr.graph_utils import longest_linestring_from_multilinestring
+
     # return snap(geometry,reference,tolerance)
     if geometry is None or geometry.is_empty or reference is None or reference.is_empty:
         return geometry
-    if max_segment_length > 0:
-        geometry = segmentize(geometry, max_segment_length=max_segment_length)
 
     if geometry.geom_type == "LineString":
         geometry = MultiLineString([geometry])
@@ -603,13 +773,20 @@ def _snap_line_to_reference(
     for geom in geometry.geoms:
         coords = list(geom.coords)
         coordinates = _get_snapped_coordinates(
-            coords, ref_border, ref_borders, ref_coords, snap_strategy, tolerance
+            coords,
+            ref_border,
+            ref_borders,
+            ref_coords,
+            snap_strategy,
+            tolerance,
+            angle_threshold_degrees=angle_threshold_degrees,
         )
 
         # convert coordinates back to a line
         linestring = make_valid(LineString(coordinates))
         lines.append(linestring)
     result = safe_unary_union(lines)
+
     result = longest_linestring_from_multilinestring(
         result
     )  # Solves overshoots in multilinestrings to return a linestring
@@ -620,14 +797,12 @@ def _snap_polygon_to_reference(
     geometry,
     reference,
     snap_strategy=SnapStrategy.PREFER_VERTICES,
-    max_segment_length=-1,
     tolerance=1,
     correction_distance=0.01,
+    angle_threshold_degrees=150.0,
 ):
     if geometry is None or geometry.is_empty or reference is None or reference.is_empty:
         return geometry
-    if max_segment_length > 0:
-        geometry = segmentize(geometry, max_segment_length=max_segment_length)
     geometry = to_multi(geometry, geomtype="Polygon")
 
     ref_border, ref_borders, ref_coords = _get_ref_objects(reference)
@@ -637,7 +812,13 @@ def _snap_polygon_to_reference(
     for geom in geometry.geoms:
         coords = list(geom.exterior.coords)
         coordinates = _get_snapped_coordinates(
-            coords, ref_border, ref_borders, ref_coords, snap_strategy, tolerance
+            coords,
+            ref_border,
+            ref_borders,
+            ref_coords,
+            snap_strategy,
+            tolerance,
+            angle_threshold_degrees=angle_threshold_degrees,
         )
         # convert coordinates back to a polygon
         polygon = make_valid(Polygon(coordinates))
@@ -677,6 +858,7 @@ def _get_snapped_coordinates(
     ref_coords: List[Tuple[float, float]],
     snap_strategy: str,
     tolerance: float,
+    angle_threshold_degrees: float = 150.0,
 ) -> List[Tuple[float, float]]:
     """
     Snaps a sequence of coordinates to reference geometries using optimized spatial lookups.
@@ -712,20 +894,30 @@ def _get_snapped_coordinates(
 
     coordinates = []
 
-    # 1. Pre-process references (Outside the loop!)
-    # Pre-buffering avoids thousands of expensive re-calculations inside the loop
-    ref_buffered_main = buffer_pos(ref_border, tolerance)
-    ref_coords_multipoint = MultiPoint(ref_coords)
-    ref_coords_buffered = buffer_pos(ref_coords_multipoint, tolerance)
+    # 1. Lazy references for mixed-case handling
+    ref_buffered_main = None
+    ref_coords_buffered = None
 
     # Initialize Spatial Index (STRtree) for log(N) vertex lookups
     ref_vertices_objs = [Point(c) for c in ref_coords]
     tree = STRtree(ref_vertices_objs) if ref_vertices_objs else None
+    end_vertices, angle_vertices = _get_reference_vertex_priority_sets(
+        ref_borders, angle_threshold_degrees=angle_threshold_degrees
+    )
+    # Spatial index for nearest reference border lookup
+    ref_lines_tree = STRtree(ref_borders) if ref_borders else None
 
     # 2. Cache the snapped start point for the first iteration
     p_start = Point(coords[0])
     p_start_snapped, bool_start_snapped, ref_vertices_start = _get_snapped_point(
-        p_start, ref_border, tree, ref_vertices_objs, snap_strategy, tolerance
+        p_start,
+        ref_border,
+        tree,
+        ref_vertices_objs,
+        snap_strategy,
+        tolerance,
+        end_vertices=end_vertices,
+        angle_vertices=angle_vertices,
     )
 
     for idx in range(1, len(coords)):
@@ -733,7 +925,14 @@ def _get_snapped_coordinates(
 
         # Only snap the end point (the start point is carried over from the previous iteration)
         p_end_snapped, bool_end_snapped, ref_vertices_end = _get_snapped_point(
-            p_end, ref_border, tree, ref_vertices_objs, snap_strategy, tolerance
+            p_end,
+            ref_border,
+            tree,
+            ref_vertices_objs,
+            snap_strategy,
+            tolerance,
+            end_vertices=end_vertices,
+            angle_vertices=angle_vertices,
         )
 
         coordinates.append(p_start_snapped.coords[0])
@@ -751,6 +950,7 @@ def _get_snapped_coordinates(
                     p_start,
                     p_start_snapped,
                     ref_borders,
+                    ref_lines_tree,
                     tolerance,
                 )
             )
@@ -761,11 +961,15 @@ def _get_snapped_coordinates(
             line = LineString([p_start, p_end])
 
             # Select the appropriate pre-buffered geometry
-            curr_ref_buffered = (
-                ref_coords_buffered
-                if (ref_vertices_start or ref_vertices_end)
-                else ref_buffered_main
-            )
+            if ref_vertices_start or ref_vertices_end:
+                if ref_coords_buffered is None:
+                    ref_coords_multipoint = MultiPoint(ref_coords)
+                    ref_coords_buffered = buffer_pos(ref_coords_multipoint, tolerance)
+                curr_ref_buffered = ref_coords_buffered
+            else:
+                if ref_buffered_main is None:
+                    ref_buffered_main = buffer_pos(ref_border, tolerance)
+                curr_ref_buffered = ref_buffered_main
             intersected_line = safe_intersection(line, curr_ref_buffered)
 
             if (
@@ -786,6 +990,8 @@ def _get_snapped_coordinates(
                         ref_vertices_objs,
                         snap_strategy,
                         tolerance,
+                        end_vertices=end_vertices,
+                        angle_vertices=angle_vertices,
                     )
 
                     if first == p_start:
@@ -796,6 +1002,7 @@ def _get_snapped_coordinates(
                                 p_start,
                                 p_start_snapped,
                                 ref_borders,
+                                ref_lines_tree,
                                 tolerance,
                             )
                         )
@@ -809,6 +1016,7 @@ def _get_snapped_coordinates(
                                 p_mid,
                                 p_mid_snapped,
                                 ref_borders,
+                                ref_lines_tree,
                                 tolerance,
                             )
                         )
@@ -824,13 +1032,90 @@ def _get_snapped_coordinates(
     return coordinates
 
 
+def _as_coord_tuple(point: Point) -> Tuple[float, float]:
+    return (float(point.x), float(point.y))
+
+
+def _angle_between_vectors_degrees(vec_a: np.ndarray, vec_b: np.ndarray) -> float:
+    """
+    Compute the unsigned angle in degrees between two vectors.
+    Returns 180.0 for degenerate vectors.
+    """
+    norm_a = float(np.linalg.norm(vec_a))
+    norm_b = float(np.linalg.norm(vec_b))
+    if norm_a == 0.0 or norm_b == 0.0:
+        return 180.0
+    cos_theta = float(np.dot(vec_a, vec_b) / (norm_a * norm_b))
+    cos_theta = float(np.clip(cos_theta, -1.0, 1.0))
+    return float(np.degrees(np.arccos(cos_theta)))
+
+
+def _vertex_angle_degrees(a, b, c) -> float:
+    ab = np.array([a[0] - b[0], a[1] - b[1]], dtype=float)
+    cb = np.array([c[0] - b[0], c[1] - b[1]], dtype=float)
+    return _angle_between_vectors_degrees(ab, cb)
+
+
+def _get_reference_vertex_priority_sets(
+    ref_borders: List[LineString], angle_threshold_degrees: float
+) -> Tuple[set, set]:
+    """
+    Build coordinate sets for prioritized reference vertices:
+    1) end vertices of open lines
+    2) angle vertices with interior angle <= threshold
+    """
+    end_vertices = set()
+    angle_vertices = set()
+
+    for border in ref_borders:
+        if border is None or border.is_empty or border.geom_type == "Point":
+            continue
+        coords = list(border.coords)
+        if len(coords) < 2:
+            continue
+
+        is_closed = coords[0] == coords[-1]
+        unique_coords = coords[:-1] if is_closed else coords
+        n = len(unique_coords)
+        if n < 2:
+            continue
+
+        if not is_closed:
+            end_vertices.add((float(unique_coords[0][0]), float(unique_coords[0][1])))
+            end_vertices.add((float(unique_coords[-1][0]), float(unique_coords[-1][1])))
+
+        if n < 3:
+            continue
+
+        for i in range(n):
+            if not is_closed and (i == 0 or i == n - 1):
+                continue
+            prev_i = (i - 1) % n
+            next_i = (i + 1) % n
+            angle = _vertex_angle_degrees(
+                unique_coords[prev_i], unique_coords[i], unique_coords[next_i]
+            )
+            if angle <= angle_threshold_degrees:
+                angle_vertices.add(
+                    (float(unique_coords[i][0]), float(unique_coords[i][1]))
+                )
+
+    return end_vertices, angle_vertices
+
+
 def _get_sublinestring_coordinates(
-    p_end, p_end_snapped, p_start, p_start_snapped, ref_borders, tolerance
+    p_end,
+    p_end_snapped,
+    p_start,
+    p_start_snapped,
+    ref_borders,
+    ref_lines_tree,
+    tolerance,
 ):
     coordinates = []
     if p_start_snapped == p_end_snapped:
         return coordinates
-    reference_border, distance = closest_line(ref_borders, p_end)
+    reference_border, distance = _closest_line_fast(ref_borders, ref_lines_tree, p_end)
     if reference_border is None or reference_border.is_empty:
         return coordinates
     distance_start_end = p_start.distance(p_end)
@@ -845,6 +1130,21 @@ def _get_sublinestring_coordinates(
             if (point.distance(p_start) + point.distance(p_end)) / 2 <= tolerance:
                 coordinates.append(p)
     return coordinates
+
+
+def _closest_line_fast(lines, lines_tree, point):
+    if not lines:
+        return None, -1
+    if lines_tree is None:
+        return closest_line(lines, point)
+    nearest = lines_tree.nearest(point)
+    if nearest is None:
+        return None, -1
+    if isinstance(nearest, (int, np.integer)):
+        line = lines[int(nearest)]
+    else:
+        line = nearest
+    return line, line.distance(point)
 
 
 def geometric_equality(geom_a, geom_b, correction_distance, mitre_limit):
@@ -1141,223 +1441,6 @@ def to_multi(geometry, geomtype=None):
         raise TypeError("Geometry type not supported: {}".format(type(geometry)))
 
 
-def nearest_node(point, nodes):
-    """
-    find closest node to point
-    :param point:
-    :param nodes:
-    :return:
-    """
-    return min(nodes, key=lambda n: Point(n).distance(point))
-
-
-from itertools import combinations
-from shapely.ops import polygonize, unary_union
-from math import inf
-
-
-def find_best_circle_path(graph, geom_to_process, max_total_combis=1000):
-    """
-    Finds the best cycle in the graph closest to the original geometry.
-    Optimized to prevent MemoryErrors and infinite processing times.
-
-    Args:
-        graph: NetworkX graph containing geometry data in edges.
-        geom_to_process: Reference geometry for distance measurement.
-        max_total_combis: Hard limit on the number of combinations to check.
-    """
-    min_dist = inf
-    best_cycle_line = None
-
-    # 1. Extract edges and convert to polygons
-    edges = [data["geometry"] for u, v, data in graph.edges(data=True)]
-    individual_polygons = list(polygonize(edges))
-
-    if not individual_polygons:
-        return None
-
-    # Handle the simple case of a single polygon
-    if len(individual_polygons) == 1:
-        poly = individual_polygons[0]
-        return poly.exterior if hasattr(poly, "exterior") else None
-
-    # 3. Combinatorial Safety Check
-    # We determine how many polygons (n) we can combine before exceeding the limit.
-    # Total combinations for n elements is (2^n) - 1.
-    num_to_include = 0
-    for n in range(1, len(individual_polygons) + 1):
-        if (2**n) - 1 > max_total_combis:
-            break
-        num_to_include = n
-    if len(individual_polygons) > num_to_include:
-        combined = safe_unary_union(individual_polygons)
-        # 2. Check of het resultaat een enkele Polygon of een MultiPolygon is
-        if isinstance(combined, Polygon):
-            return combined.exterior if hasattr(combined, "exterior") else None
-        elif isinstance(combined, (MultiPolygon, GeometryCollection)):
-            # 3. Pak de polygon met de grootste area uit de MultiPolygon
-            largest_poly = max(combined.geoms, key=lambda p: p.area)
-            return largest_poly.exterior if hasattr(largest_poly, "exterior") else None
-        else:
-            return None
-
-    # 4. Iterative Processing (Memory Safe)
-    # We loop directly over the generator to keep memory usage at O(1).
-    for i in range(1, len(individual_polygons) + 1):
-        for combi in combinations(individual_polygons, i):
-            # Use unary_union to merge selected polygons
-            combined_poly = safe_unary_union(combi)
-
-            # Check if result has an exterior (is a Polygon or MultiPolygon)
-            if hasattr(combined_poly, "exterior"):
-                cycle_line = combined_poly.exterior
-                vertex_distance = total_vertex_distance(cycle_line, geom_to_process)
-
-                if vertex_distance < min_dist:
-                    min_dist = vertex_distance
-                    best_cycle_line = cycle_line
-
-                    # Optional: Early exit if we find a near-perfect match
-                    if min_dist < 1e-7:
-                        return best_cycle_line
-
-    return best_cycle_line
-
-
-def longest_linestring_from_multilinestring(multilinestring):
-    """searches for a linestring in a multilinestring (with no loops)"""
-
-    if multilinestring is None or multilinestring.is_empty:
-        return GeometryCollection()
-
-    if isinstance(multilinestring, LineString):
-        return multilinestring
-
-    if not isinstance(multilinestring, MultiLineString):
-        logging.warning(
-            "Multilinestring expected. Other type detected; empty geometry returned"
-        )
-        return GeometryCollection()
-
-    # Create a graph from the MultiLineString
-    graph = Graph()
-    _multilinestring_to_edges(
-        graph,
-        multilinestring,
-        node_tag="",
-        edge_tag="",
-        pseudo_coords=[],
-        pseudonode_tag="",
-    )
-
-    # Find all simple paths and keep the longest one
-    longest_path = []
-    max_length = 0
-
-    for source in graph.nodes:
-        for target in graph.nodes:
-            if source != target:
-                try:
-                    path = nx.shortest_path(
-                        graph, source=source, target=target, weight="weight"
-                    )
-                    length = sum(
-                        LineString([path[i], path[i + 1]]).length
-                        for i in range(len(path) - 1)
-                    )
-                    if length > max_length:
-                        max_length = length
-                        longest_path = path
-                except nx.NetworkXNoPath:
-                    continue
-
-    # Convert the longest path to a LineString
-    return LineString(longest_path)
-
-
-# def euclidean_distance(p1, p2):
-#     return math.hypot(p1[0] - p2[0], p1[1] - p2[1])
-
-
-def total_vertex_distance(
-    geom1: BaseGeometry, geom2: BaseGeometry, bidirectional=True
-) -> float:
-    """Compute the total vertex-based distance between two geometries."""
-    vertices1 = get_coordinates(geom1)
-    total_distance_1 = 0.0
-    len_vertices_1 = len(vertices1)
-    # Sum of distances from vertices1 to geom2
-    for pt in vertices1:
-        total_distance_1 += Point(pt).distance(geom2)
-    total_distance = total_distance_1
-    len_vertices = len_vertices_1
-
-    if bidirectional:
-        # Sum of distances from vertices2 to geom1
-        total_distance_2 = 0.0
-        vertices2 = get_coordinates(geom2)
-        len_vertices_2 = len(vertices2)
-        for pt in vertices2:
-            total_distance_2 += Point(pt).distance(geom1)
-        total_distance = total_distance + total_distance_2
-        len_vertices = len_vertices + len_vertices_2
-
-    return total_distance / len_vertices
-
-
-def find_best_path_in_network(geom_to_process, graph, cutoff=1000):
-    """
-    Determine the best path between 2 points in the network using the Hausdorf-distance
-    Parameters:
-    - geom_to_process: shapely.geometry.MultiLineString -  geometry (line) with startpoint-endpoint and to determine hausdorf-distance
-    - nw_multilinestring: shapely.geometry.MultiLineString - MultiLineString with all parts of a network
-
-    Returns:
-    - shapely.geometry.LineString van het langste pad tussen de twee punten
-    """
-
-    start_point = Point(geom_to_process.coords[0])
-    end_point = Point(geom_to_process.coords[-1])
-
-    start_node = nearest_node(start_point, graph.nodes)
-    end_node = nearest_node(end_point, graph.nodes)
-
-    if start_node == end_node:
-        return find_best_circle_path(graph, geom_to_process)
-
-    # Search all simple paths (limited, because cyclic paths can result in a lot of simple paths
-
-    path_found = nx.has_path(graph, start_node, end_node)
-    logging.debug("Path detected? - " + str(path_found))
-    if not path_found:
-        graph = connect_network_components(
-            graph,
-            50,
-            edge_tags=["theme_lines", "ref_lines", "interconnect", "gap_closure"],
-        )
-
-    all_paths_generator = nx.all_simple_paths(
-        graph, source=start_node, target=end_node, cutoff=cutoff
-    )
-
-    # Determine the network-path that fits the best to the original inputgeometry
-    min_dist = inf
-    best_line = None
-    for i, path in enumerate(all_paths_generator):
-        if i > cutoff:  # safetyleak
-            logging.warning(f"max paths tested while searching for geometry: {cutoff}")
-            break
-        try:  # added try/except because 'path' sometimes exists out of 1 point, resulting in LineString-error
-            line = LineString(path)
-            dist = total_vertex_distance(line, geom_to_process)
-            if dist < min_dist:
-                min_dist = dist
-                best_line = line
-        except:
-            pass
-    return best_line
-
-
 def _get_snapped_point(
     point: Point,
     ref_line: LineString,
@@ -1365,6 +1448,8 @@ def _get_snapped_point(
     ref_vertices_objs: List[Point],
     snap_strategy: str,
     tolerance: float,
+    end_vertices: set = None,
+    angle_vertices: set = None,
 ) -> Tuple[Point, bool, bool]:
     """
     Determines the nearest point to the input from a reference line or spatial tree.
@@ -1412,16 +1497,54 @@ def _get_snapped_point(
 
     # 2. Check proximity to vertices using the STRtree index
     if ref_coords_tree is not None:
-        result = ref_coords_tree.nearest(point)
+        if snap_strategy == SnapStrategy.PREFER_ENDS_AND_ANGLES:
+            candidate_vertices = []
+            try:
+                hits = ref_coords_tree.query(
+                    point, predicate="dwithin", distance=tolerance
+                )
+                for h in hits:
+                    if isinstance(h, (int, np.integer)):
+                        candidate_vertices.append(ref_vertices_objs[int(h)])
+                    else:
+                        candidate_vertices.append(h)
+            except Exception:
+                pass
 
-        # Handle index-based return (Shapely < 2.0 or specific configurations)
-        # vs object-based return (Shapely 2.0+)
-        if isinstance(result, (int, np.integer)):
-            p_nearest_vertex = ref_vertices_objs[result]
+            if candidate_vertices:
+                end_vertices = end_vertices or set()
+                angle_vertices = angle_vertices or set()
+
+                def _priority(candidate: Point):
+                    coord = _as_coord_tuple(candidate)
+                    if coord in end_vertices:
+                        rank = 0
+                    elif coord in angle_vertices:
+                        rank = 1
+                    else:
+                        rank = 2
+                    return rank, float(candidate.distance(point))
+
+                p_nearest_vertex = min(candidate_vertices, key=_priority)
+                dist_vertex = p_nearest_vertex.distance(point)
+            else:
+                result = ref_coords_tree.nearest(point)
+                if isinstance(result, (int, np.integer)):
+                    p_nearest_vertex = ref_vertices_objs[result]
+                else:
+                    p_nearest_vertex = result
+                dist_vertex = p_nearest_vertex.distance(point)
         else:
-            p_nearest_vertex = result
+            result = ref_coords_tree.nearest(point)
 
-        dist_vertex = p_nearest_vertex.distance(point)
+            # Handle index-based return (Shapely < 2.0 or specific configurations)
+            # vs object-based return (Shapely 2.0+)
+            if isinstance(result, (int, np.integer)):
+                p_nearest_vertex = ref_vertices_objs[result]
+            else:
+                p_nearest_vertex = result
+
+            dist_vertex = p_nearest_vertex.distance(point)
 
     # 3. Determine the closest candidate across both features
     # Start with the line as the candidate, override if vertex is closer
@@ -1460,6 +1583,19 @@ def _snapped_point_by_snapstrategy(
         else:
             p_snapped = p
     elif snap_strategy == SnapStrategy.PREFER_VERTICES:
+        if (
+            p_nearest_vertices is not None
+            and p.distance(p_nearest_vertices) <= tolerance
+        ):
+            p_snapped = p_nearest_vertices
+            snapped = True
+            ref_vertices = True
+        elif p.distance(p_nearest) <= tolerance:
+            p_snapped = p_nearest
+            snapped = True
+        else:
+            p_snapped = p
+    elif snap_strategy == SnapStrategy.PREFER_ENDS_AND_ANGLES:
         if (
             p_nearest_vertices is not None
             and p.distance(p_nearest_vertices) <= tolerance
@@ -1574,25 +1710,6 @@ def from_crs(crs, format="uri"):
         raise ValueError(f"Error converting CRS: {e}")
 
 
-def get_pseudo_coords(geom1, geom2):
-    coords1 = get_coordinates(geom1)
-    coords2 = get_coordinates(geom2)
-    # (Tuples are 'hashable', NumPy arrays not)
-    set1 = set(map(tuple, coords1))
-    set2 = set(map(tuple, coords2))
-    return set1 - set2
-
-
-def get_non_pseudo_coords(geom1, geom2):
-    coords1 = get_coordinates(geom1)
-    coords2 = get_coordinates(geom2)
-    # (Tuples are 'hashable', NumPy arrays not)
-    set1 = set(map(tuple, coords1))
-    set2 = set(map(tuple, coords2))
-    pseudo = set1 - set2
-    return set1 - pseudo
-
-
 def multilinestring_multipoint_from_reference_intersection(reference_intersection):
     if isinstance(reference_intersection, (LineString, MultiLineString)):
         return to_multi(reference_intersection), MultiPoint()
@@ -1619,1045 +1736,104 @@ def multilinestring_multipoint_from_reference_intersection(reference_intersectio
     raise TypeError("Reference could not be interpreted")
 
 
-def get_thematic_points(input_geometry, reference_intersection):
+def gml_response_to_geojson(url, params, timeout=60):
     """
-    returns a MultiPoint geometry with points on the thematic geometry that are used for consistency while creating connection_lines
-    :param input_geometry:
-    :param reference_intersection:
-    :return: MultiPoint
+    Fetches a GML (Geography Markup Language) response from a URL,
+    reads it using GeoPandas, and converts the result to
+    GeoJSON format (as a Python dictionary).
+
+    Args:
+        url (str): The URL to fetch the GML data from (e.g., a WFS endpoint).
+        params (dict): The parameters to be sent with the GET request
+                       (e.g., service, version, request, typeName).
+
+    Returns:
+        dict: The geographical data in GeoJSON format.
+
+    Raises:
+        requests.exceptions.HTTPError: If the HTTP request fails.
+        fiona.errors.DriverError: If the GML data cannot be read correctly.
     """
-    geom_to_process_line = input_geometry
-    if isinstance(geom_to_process_line, LinearRing):
-        geom_to_process_line = LineString(geom_to_process_line.coords)
+    # Fetch the GML response
+    response = requests.get(url, params, timeout=timeout)
+    response.raise_for_status()
+    content = response.content
 
-    # geom_to_process_segmentized = segmentize(
-    #     geom_to_process_line, self.config.partial_snap_max_segment_length
-    # ) #We skip the segmentation
-    geom_to_process_segmentized = geom_to_process_line
-    # Split the line at all intersection points with the MultiLineString
-    splitter = safe_unary_union(reference_intersection)
-    try:
-        geom_to_process_splitted = split(geom_to_process_segmentized, splitter)
-    except (GeometryTypeError, ValueError):
-        geom_to_process_splitted = geom_to_process_segmentized
-    thematic_points = MultiPoint(list(get_coordinates(geom_to_process_splitted)))
-    return thematic_points
+    read_attempts = [
+        {"driver": "GML"},
+        {"driver": "GML", "engine": "fiona"},
+        {},
+    ]
 
+    last_exc = None
 
-def build_custom_network(
-    input_geometry,
-    theme_multiline,
-    reference,
-    reference_intersection,
-    relevant_distance,
-    snap_strategy=SnapStrategy.NO_PREFERENCE,
-    gap_threshold=0.1,
-    snap_dist=0.01,
-):
-    """
-    Build a topological network from multiple linestrings and point geometries.
-
-    This function integrates theme lines and reference lines into a graph,
-    inserts pseudo-nodes (theme points) into the reference network, and
-    executes a series of optimization steps to ensure connectivity and
-    cycle formation.
-
-    Parameters
-    ----------
-    input_geometry : shapely.geometry.MultiLineString
-        The primary linestrings
-    theme_multiline : shapely.geometry.MultiLineString
-        The part of the input_geometry (linestrings) representing the thematic network layer.
-    reference : shapely.geometry.MultiLineString
-        The original reference linestrings used for snapping and connectivity.
-    reference_intersection : shapely.geometry.MultiPoint
-        The reference points used for snapping and connectivity.
-    relevant_distance : float
-        A base distance used to calculate interconnect and connectivity thresholds.
-    snap_strategy: SnapStrategy
-        Decides which connection lines between vertices are added.
-    gap_threshold : float, optional
-        The distance threshold for closing small gaps, by default 0.1.
-
-    Returns
-    -------
-    nx.Graph
-        A topologically connected graph with optimized edges and nodes.
-    """
-    G = nx.Graph()
-
-    # TAG OVERVIEW
-    # LINES:
-    # ref_lines
-    # theme_lines
-    # interconnect
-    # gap_closure
-    # cycle_closure
-    # component_interconnect
-
-    # POINTS:
-    # ref_points
-
-    # VERTICES
-    # theme_vertex
-    # pseudo_theme_vertex
-    # ref_vertex
-    # pseudo_ref_vertex
-    # pseudo_theme_ref_vertex
-
-    ref_multiline, ref_points = multilinestring_multipoint_from_reference_intersection(
-        reference_intersection
-    )
-    theme_points = get_thematic_points(input_geometry, reference_intersection)
-
-    # Load Theme & reference Lines
-    pseudo_ref_coords = get_pseudo_coords(reference_intersection, reference)
-    pseudo_theme_coords = get_pseudo_coords(theme_multiline, input_geometry)
-
-    srtree_theme_lines, edge_mapping_theme_lines = _multilinestring_to_edges(
-        G,
-        theme_multiline,
-        pseudo_coords=pseudo_theme_coords,
-        node_tag="theme_vertex",
-        pseudonode_tag="pseudo_theme_vertex",
-        edge_tag="theme_lines",
-    )
-    srtree_ref_lines, edge_mapping_ref_lines = _multilinestring_to_edges(
-        G,
-        ref_multiline,
-        pseudo_coords=pseudo_ref_coords,
-        node_tag="ref_vertex",
-        pseudonode_tag="pseudo_ref_vertex",
-        edge_tag="ref_lines",
-    )
-
-    # Add Pseudo-nodes (theme_points) onto ref_lines
-    G = add_pseudonodes_to_ref_line(
-        G,
-        edge_mapping_ref_lines,
-        ref_multiline,
-        relevant_distance,
-        snap_dist,
-        srtree_ref_lines,
-        theme_points,
-    )
-
-    connect_ref_points_to_nearest(G, ref_points, 2)
-
-    # Optimization and Connectivity Pipeline
-    # Close gaps
-    G = connect_network_gaps(
-        G=G,
-        gap_dist=gap_threshold,
-        snap_dist=snap_dist,
-        merge_nodes=False,
-    )
-
-    # create initial theme-to-ref interconnections
-    G = connect_theme_and_reference(
-        G=G,
-        gap_dist=gap_threshold,
-        interconnect_dist=2 * relevant_distance,
-    )
-
-    # Ensure all isolated islands of reference lines are connected
-    G = connect_network_components(
-        G,
-        interconnect_dist=5 * relevant_distance,
-        edge_tags=["ref_lines", "ref_points_connection"],
-    )
-    remove_pseudonodes(G, tag="pseudo_ref_vertex", target_degrees=[1])
-    # unconnected_distance = 100
-    # G = connect_unconnected(
-    #     G, max_geo_dist=unconnected_distance,multi_factor=5
-    # )
-    #
-    remove_pseudonodes(G, tag="pseudo_theme_vertex", target_degrees=[2])
-    max_unconnected_distance = 50
-    unconnected_distance = 10 * relevant_distance
-    if unconnected_distance > max_unconnected_distance:
-        unconnected_distance = max_unconnected_distance
-    unconnected_distance = 50
-    G = connect_unconnected_greedy(
-        G, max_spatial_dist=unconnected_distance, detour_ratio=5
-    )
-
-    # remove pseudo_vertices
-    remove_pseudonodes(G, tag="pseudo_theme_vertex", target_degrees=[1, 2])
-
-    G = clean_pseudo_nodes_by_snap_strategy(
-        G, snap_strategy=snap_strategy, distance_threshold=relevant_distance
-    )
-    # Correction for intersecting edges
-    G = reconstruct_graph_for_intersections(G)
-
-    # export_to_geopackage(G,"g_out.gpkg")
-
-    return G
-
-
-def connect_unconnected(G, max_spatial_dist=50, detour_ratio=3.0):
-    """
-    Identifies dead-end nodes that are spatially close to an edge but
-    topologically far away (a large detour).
-    """
-    dead_ends = [n for n, d in G.degree() if d == 1]
-
-    # Pre-collect edge geometries to avoid repeated lookups
-    # We store these as 'target_edges'
-    target_edges = []
-    for u, v, data in G.edges(data=True):
-        if "geometry" in data:
-            if u in dead_ends or v in dead_ends:
-                target_edges.append((u, v, data["geometry"]))
-
-    links_to_add = []
-
-    for node_id in dead_ends:
-        node_point = Point(node_id)
-
-        best_dist = float("inf")
-        best_link = None
-
-        for u, v, edge_geom in target_edges:
-            # Skip edges that are already connected to this dead-end
-            if node_id == u or node_id == v:
-                continue
-
-            # Find the closest point on the edge to the dead-end node
-            p1, p2 = nearest_points(node_point, edge_geom)
-            spatial_dist = p1.distance(p2)
-
-            if spatial_dist < max_spatial_dist and spatial_dist < best_dist:
-                try:
-                    # Calculate the current detour (network distance)
-                    # We use 'u' as a proxy for the network distance to that edge
-                    network_dist = nx.shortest_path_length(
-                        G, source=node_id, target=u, weight="length"
-                    )
-
-                    if network_dist / spatial_dist > detour_ratio:
-                        best_dist = spatial_dist
-                        best_link = {
-                            "from_node": node_id,
-                            "to_edge": (u, v),
-                            "projection_point": p2,
-                            "spatial_dist": spatial_dist,
-                            "network_dist": network_dist,
-                        }
-                except nx.NetworkXNoPath:
-                    # If no path exists at all, this connection is high priority
-                    best_link = {
-                        "from_node": node_id,
-                        "to_edge": (u, v),
-                        "projection_point": p2,
-                        "spatial_dist": spatial_dist,
-                        "network_dist": float("inf"),
-                    }
-
-        if best_link:
-            links_to_add.append(best_link)
-
-    for link in links_to_add:
-        u, v = link["to_edge"]
-        dead_end_node = link["from_node"]
-        proj_p = link["projection_point"]
-
-        # 1. Create unique ID for the pseudo node
-        pseudo_node_id = proj_p.coords[0]
-
-        # Add the node with the requested tag
-        G.add_node(pseudo_node_id, tag="pseudo_connect_vertex")
-
-        # 3. Remove original edge and split it into two
-        if G.has_edge(u, v):
-            G.remove_edge(u, v)
-
-        # Segment u -> Pseudo
-        line_up = LineString([u, pseudo_node_id])
-        G.add_edge(u, pseudo_node_id, geometry=line_up, length=line_up.length)
-
-        # Segment Pseudo -> v
-        line_pv = LineString([pseudo_node_id, v])
-        G.add_edge(pseudo_node_id, v, geometry=line_pv, length=line_pv.length)
-
-        # 4. Create the final interconnection: Dead-end -> Pseudo
-        line_connect = LineString([dead_end_node, pseudo_node_id])
-        G.add_edge(
-            dead_end_node,
-            pseudo_node_id,
-            geometry=line_connect,
-            length=line_connect.length,
-            tag="connect_unconnected",
-        )
-
-    return G
-
-
-def connect_unconnected_greedy(G, max_spatial_dist=50, detour_ratio=3.0):
-    """
-    Iteratively adds the shortest connections and re-evaluates
-    if remaining connections are still necessary.
-    """
-
-    # 1. Identify all dead-ends once at the start
-    dead_ends = [n for n, d in G.degree() if d == 1]
-
-    # 2. Collect all candidate connections
-    target_edges = []
-    for u, v, data in G.edges(data=True):
-        if "geometry" in data:
-            if u in dead_ends or v in dead_ends:
-                target_edges.append((u, v, data["geometry"]))
-
-    all_candidates = []
-
-    for node_id in dead_ends:
-        node_point = Point(node_id)
-        for u, v, edge_geom in target_edges:
-            if node_id == u or node_id == v:
-                continue
-
-            p1, p2 = nearest_points(node_point, edge_geom)
-            spatial_dist = p1.distance(p2)
-
-            if spatial_dist < max_spatial_dist:
-                all_candidates.append(
-                    {
-                        "from_node": node_id,
-                        "to_edge": (u, v),
-                        "projection_point": p2,
-                        "spatial_dist": spatial_dist,
-                    }
-                )
-
-    # 3. Sort candidates by spatial distance (shortest first)
-    all_candidates.sort(key=lambda x: x["spatial_dist"])
-
-    # 4. Iteratively process candidates
-    for link in all_candidates:
-        u, v = link["to_edge"]
-        dead_end_node = link["from_node"]
-        proj_p = link["projection_point"]
-        spatial_dist = link["spatial_dist"]
-
-        # Check current network distance AFTER previous modifications
+    # 1) Try reading directly from bytes
+    for kwargs in read_attempts:
         try:
-            current_network_dist = nx.shortest_path_length(
-                G, source=dead_end_node, target=u, weight="length"
-            )
-        except nx.NetworkXNoPath:
-            current_network_dist = float("inf")
+            gdf = gpd.read_file(BytesIO(content), **kwargs)
+            return json.loads(gdf.to_json())
+        except Exception as exc:
+            last_exc = exc
 
-        # RE-EVALUATION: Only add if the shortcut is still significantly better
-        if current_network_dist / spatial_dist > detour_ratio:
+    # 2) Fallback: write bytes to temporary .gml file and read explicitly
+    tmp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".gml") as tmp:
+            tmp.write(content)
+            tmp_path = tmp.name
 
-            # Create unique ID for the pseudo node
-            pseudo_node_id = proj_p.coords[0]
+        for kwargs in read_attempts:
+            try:
+                gdf = gpd.read_file(tmp_path, **kwargs)
+                return json.loads(gdf.to_json())
+            except Exception as exc:
+                last_exc = exc
+    finally:
+        if tmp_path and os.path.exists(tmp_path):
+            os.remove(tmp_path)
 
-            # Add node
-            G.add_node(pseudo_node_id, tag="pseudo_connect_vertex")
+    # 3) Fallback: let GDAL WFS driver fetch/parse the source directly
+    try:
+        query = urlencode(params or {}, doseq=True)
+        full_url = f"{url}{'&' if '?' in url else '?'}{query}" if query else url
 
-            # Handle edge splitting (only if the original edge hasn't been removed yet)
-            # Note: In a greedy approach, multiple nodes might want to split the same edge.
-            # We check if the edge u-v still exists.
-            if G.has_edge(u, v):
-                G.remove_edge(u, v)
-
-                line_up = LineString([u, pseudo_node_id])
-                G.add_edge(u, pseudo_node_id, geometry=line_up, length=line_up.length)
-
-                line_pv = LineString([pseudo_node_id, v])
-                G.add_edge(pseudo_node_id, v, geometry=line_pv, length=line_pv.length)
-            else:
-                # If the edge (u,v) was already split by a previous iteration,
-                # for simplicity, we connect to the nearest node instead or skip.
-                # Here we just skip to keep the topology clean.
-                continue
-
-            # Add the interconnection
-            line_connect = LineString([dead_end_node, pseudo_node_id])
-            G.add_edge(
-                dead_end_node,
-                pseudo_node_id,
-                geometry=line_connect,
-                length=line_connect.length,
-                tag="connect_unconnected",
-            )
-
-    return G
-
-
-def add_pseudonodes_to_ref_line(
-    G,
-    edge_mapping_ref_lines,
-    ref_multiline,
-    relevant_distance: float,
-    snap_dist: float,
-    srtree_ref_lines,
-    theme_points: MultiPoint,
-):
-    if not ref_multiline is None and not ref_multiline.is_empty:
-        for point in theme_points.geoms:
-            if G.has_node(point.coords[0]):
-                continue
-            nearest_idx = srtree_ref_lines.nearest(point)
-            # Find edge in NetworkX
-            u, v = edge_mapping_ref_lines[nearest_idx]
-
-            edge_data = G.get_edge_data(u, v)
-            if not edge_data is None:
-                line = edge_data["geometry"]
-                p1, p2 = nearest_points(point, line)
-            else:
-                # This is possible when the original line is already split with a pseudonode
-                edge_list = list(G.edges(u, data=True)) + list(G.edges(v, data=True))
-                u, v, edge_data = find_closest_in_subset(point, edge_list)
-                line = edge_data["geometry"]
-                p1, p2 = nearest_points(point, line)
-            if p2.distance(Point(u)) > snap_dist and p2.distance(Point(v)) > snap_dist:
-                if p1.distance(p2) <= 1e-7:
-                    _add_pseudonode(
-                        G,
-                        p2,
-                        u,
-                        v,
-                        tag_point="pseudo_ref_vertex_1",
-                        tag_line="ref_lines",
-                    )
-                elif p1.distance(p2) <= relevant_distance:
-                    _add_pseudonode(
-                        G,
-                        p2,
-                        u,
-                        v,
-                        tag_point="pseudo_ref_vertex_2",
-                        tag_line="ref_lines",
-                    )
-            elif (
-                p2.distance(Point(u)) <= snap_dist
-                and G.nodes[u]["tag"] == "pseudo_ref_vertex"
-            ):
-                # keep the node but rename the tag
-                G.nodes[u]["tag"] = "pseudo_ref_vertex_3"
-            elif (
-                p2.distance(Point(v)) <= snap_dist
-                and G.nodes[v]["tag"] == "pseudo_ref_vertex"
-            ):
-                # keep the node but rename the tag
-                G.nodes[v]["tag"] = "pseudo_ref_vertex_3"
-    return G
-
-
-def find_closest_in_subset(target_point, edge_list):
-    # Extract geometries while keeping a reference to the original edge data
-    geoms = [data.get("geometry") for _, _, data in edge_list if data.get("geometry")]
-
-    if not geoms:
-        return None
-
-    tree = STRtree(geoms)
-    # Get the index of the nearest geometry
-    nearest_idx = tree.nearest(target_point)
-
-    return edge_list[nearest_idx]
-
-
-def remove_pseudonodes(G, tag, target_degrees=[2]):
-    """
-    Removes nodes with a specific tag and degree.
-    Replaces the connecting edges with direct, straight connections between neighbors.
-    """
-    # 1. Identify candidates
-    nodes_to_remove = [
-        n
-        for n, d in G.nodes(data=True)
-        if d.get("tag") == tag and G.degree(n) in target_degrees
-    ]
-
-    for node in nodes_to_remove:
-        # Get neighbors
-        neighbors = list(G.neighbors(node))
-
-        # 2. Connect all neighbors directly to each other (straight line)
-        for u, v in combinations(neighbors, 2):
-            if not G.has_edge(u, v):
-                # Retrieve Point geometries of the nodes
-                # Note: Assumes node IDs are (x, y) tuples or Point objects
-                pos_u = Point(u)
-                pos_v = Point(v)
-
-                # Create a new straight LineString
-                new_line = LineString([pos_u, pos_v])
-
-                # Add the new edge
-                G.add_edge(
-                    u,
-                    v,
-                    tag="connection_" + tag + "_removed",
-                    geometry=new_line,
-                    length=new_line.length,
-                )
-
-        # 3. Remove the old node (this also removes the original jagged edges)
-        G.remove_node(node)
-
-    # print(f"Cleanup complete: {len(nodes_to_remove)} nodes removed.")
-    return G
-
-
-def _add_pseudonode(G: Graph, p2, u, v, tag_point, tag_line):
-    p_coord = p2.coords[0]
-    # Remove the original edge and split it into two new edges at the point
-    G.remove_edge(u, v)
-    G.add_node(p_coord, tag=tag_point)
-    geom = LineString([u, p_coord])
-    G.add_edge(u, p_coord, tag=tag_line, geometry=geom, length=geom.length)
-    geom = LineString([p_coord, v])
-    G.add_edge(p_coord, v, tag=tag_line, geometry=geom, length=geom.length)
-
-
-def _multilinestring_to_edges(
-    G, multilinestring, node_tag, edge_tag, pseudo_coords, pseudonode_tag
-):
-    multilinestring = to_multi(multilinestring)
-    if not isinstance(multilinestring, MultiLineString):
-        return None, None
-
-    geoms_for_tree = []
-    edge_mapping = []
-
-    for line in multilinestring.geoms:
-        coords = list(line.coords)
-        for i in range(len(coords) - 1):
-            u = coords[i]
-            v = coords[i + 1]
-            geom = LineString([u, v])
-
-            # Voeg toe aan NetworkX
-            G.add_edge(u, v, tag=edge_tag, geometry=geom, length=geom.length)
-            if not u in pseudo_coords:
-                G.nodes[u]["tag"] = node_tag
-            else:
-                G.nodes[u]["tag"] = pseudonode_tag
-            if not v in pseudo_coords:
-                G.nodes[v]["tag"] = node_tag
-            else:
-                G.nodes[v]["tag"] = pseudonode_tag
-
-            # Verzamel voor de STRtree
-            geoms_for_tree.append(geom)
-            edge_mapping.append((u, v))
-
-    # Bouw de tree
-    tree = STRtree(geoms_for_tree)
-
-    # We retourneren de tree EN de mapping om de edges terug te kunnen vinden
-    return tree, edge_mapping
-
-
-def connect_network_gaps(G, snap_dist=0.001, gap_dist=0.1, merge_nodes=False):
-    all_nodes = list(G.nodes())
-    if not all_nodes:
-        return G
-
-    all_points = [Point(n) for n in all_nodes]
-    global_tree = STRtree(all_points)
-
-    nodes_to_relabel = {}
-    endpoints = [n for n, deg in G.degree() if deg <= 1]  # endpoints or floating points
-
-    for ep in endpoints:
-        ep_pt = Point(ep)
-        # Search for neighbors within gap_dist radius
-        indices = global_tree.query(ep_pt.buffer(gap_dist))
-
-        for idx in indices:
-            candidate = all_nodes[idx]
-            # Self-check: do not connect a node to itself
-            if ep == candidate:
-                continue
-
-            dist = ep_pt.distance(all_points[idx])
-
-            if dist <= gap_dist:
-                if merge_nodes and dist <= snap_dist:
-                    nodes_to_relabel[ep] = candidate
-                    break
-                else:
-                    # Only add an edge if it does not form a self-loop
-                    if ep != candidate and not G.has_edge(ep, candidate):
-                        geom = LineString([ep, candidate])
-                        G.add_edge(
-                            ep,
-                            candidate,
-                            tag="gap_closure",
-                            geometry=geom,
-                            length=geom.length,
-                        )
-                    break
-
-    # Perform node merging (relabeling)
-    if merge_nodes and nodes_to_relabel:
-        # nx.relabel_nodes moves the connections.
-        # If an edge existed between ep and candidate, it becomes a self-loop.
-        nx.relabel_nodes(G, nodes_to_relabel, copy=False)
-
-        # Explicitly remove all self-loops created by merging
-        loops = list(nx.selfloop_edges(G))
-        G.remove_edges_from(loops)
-
-        if loops:
-            logging.debug(f"Cleaned: {len(loops)} self-loops removed after merging.")
-    return G
-
-
-def connect_theme_and_reference(G, gap_dist=0.1, interconnect_dist=1.5):
-    # TODO gap_distance needed?
-    # STEP 2 make interconnection edges
-    theme_edges = [
-        (u, v) for u, v, d in G.edges(data=True) if d.get("tag") == "theme_lines"
-    ]
-    theme_sub = G.edge_subgraph(theme_edges)
-    theme_endpoints = [n for n, deg in theme_sub.degree() if deg == 1]
-    ref_node_ids = {
-        node
-        for u, v, d in G.edges(data=True)
-        if d.get("tag") in ("ref_lines", "ref_points_connection")
-        for node in (u, v)
-    }
-    extra_ref_nodes = [u for u, d in G.nodes(data=True) if d.get("tag") == "ref_points"]
-    ref_node_ids.update(extra_ref_nodes)
-    ref_sub_graph = nx.Graph()
-    if ref_node_ids:
-        ref_sub_graph.add_nodes_from((n, G.nodes[n]) for n in ref_node_ids if n in G)
-    else:
-        return G
-    nodes = list(ref_sub_graph.nodes())
-    trees = {}
-    all_pts = [Point(n) for n in nodes]
-    trees["all"] = {"pts": all_pts, "tree": STRtree(all_pts), "nodes": nodes}
-    strategies = ["all"]
-
-    for tep in theme_endpoints:
-        tep_pt = Point(tep)
-        connection_made = False
-
-        for s_key in strategies:
-            if s_key not in trees:
-                continue
-
-            s = trees[s_key]
-            n_idx = s["tree"].nearest(tep_pt)
-            if n_idx is None:
-                continue
-            target_coord = s["nodes"][n_idx]
-            dist = tep_pt.distance(s["pts"][n_idx])
-
-            if tep != target_coord and gap_dist < dist <= interconnect_dist:
-                if not G.has_edge(tep, target_coord):
-                    geom = LineString([tep, target_coord])
-                    G.add_edge(
-                        tep,
-                        target_coord,
-                        tag="interconnect_lines",
-                        geometry=geom,
-                        length=geom.length,
-                    )
-                    connection_made = True
-
-            if connection_made:
-                break
-    return G
-
-
-def connect_network_components(
-    G, interconnect_dist=2.0, edge_tags=["theme_lines", "ref_lines"]
-):
-    """
-    Connect isolated network islands of reference lines if the graph is not fully connected.
-
-    This function identifies disjoint components in the graph and attempts to bridge
-    them by finding the nearest reference nodes between different components,
-    provided they are within the specified distance threshold.
-
-    Parameters
-    ----------
-    G : nx.Graph
-        The network graph containing 'ref_lines' and 'theme_lines'.
-    interconnect_dist : float, optional
-        The maximum distance allowed to create a bridging connection between
-        components, by default 2.0.
-
-    Returns
-    -------
-    nx.Graph
-        The graph with additional 'ref_interconnect' edges where gaps were bridged.
-    """
-    # 1. Retrieve all connected components
-    components = list(nx.connected_components(G))
-    if len(components) <= 1:
-        return G  # Everything is already connected, no action needed
-
-    # 2. Collect all potential reference nodes per component
-    component_data = []
-    for i, comp in enumerate(components):
-        # Filter nodes that belong to a 'ref_lines' edge within this component
-        ref_in_comp = [
-            n
-            for n in comp
-            if any(d.get("tag") in edge_tags for _, _, d in G.edges(n, data=True))
+        wfs_read_attempts = [
+            {"path": f"WFS:{full_url}", "kwargs": {"driver": "WFS"}},
+            {"path": full_url, "kwargs": {"driver": "WFS"}},
+            {"path": f"WFS:{full_url}", "kwargs": {"driver": "WFS", "engine": "fiona"}},
+            {"path": full_url, "kwargs": {"driver": "WFS", "engine": "fiona"}},
+            {"path": full_url, "kwargs": {}},
         ]
 
-        if ref_in_comp:
-            comp_points = [Point(n) for n in ref_in_comp]
-            component_data.append(
-                {
-                    "id": i,
-                    "nodes": ref_in_comp,
-                    "points": comp_points,
-                    "tree": STRtree(comp_points),
-                }
-            )
-
-    # 3. Attempt to connect the components
-    for i in range(len(component_data)):
-        comp_a = component_data[i]
-
-        # Search for the nearest node in ALL other components
-        best_dist = float("inf")
-        best_connection = None
-
-        for j in range(len(component_data)):
-            if i == j:
-                continue
-            comp_b = component_data[j]
-
-            # For each node in A, find the nearest neighbor in B using STRtree
-            for idx_a, pt_a in enumerate(comp_a["points"]):
-                idx_b = comp_b["tree"].nearest(pt_a)
-                pt_b = comp_b["points"][idx_b]
-                dist = pt_a.distance(pt_b)
-
-                if dist < best_dist and dist <= interconnect_dist:
-                    best_dist = dist
-                    best_connection = (comp_a["nodes"][idx_a], comp_b["nodes"][idx_b])
-
-        # 4. Add the interconnecting edge
-        if best_connection:
-            u, v = best_connection
-            if not G.has_edge(u, v):
-                geom = LineString([u, v])
-                G.add_edge(
-                    u,
-                    v,
-                    tag="component_interconnect",
-                    geometry=geom,
-                    length=geom.length,
-                )
-                logging.debug(
-                    f"Component {i} connected to another component (distance: {best_dist:.3f})"
-                )
-
-    return G
-
-
-def connect_unconnected2(G, max_geo_dist=50, multi_factor=3):
-    """
-    Connects end-nodes to the nearest logical node (regardless of degree)
-    provided there is a significant topological detour in the graph.
-    """
-    # 1. Identify end-nodes (starting points for the search)
-    endnodes = [n for n, d in G.degree() if d == 1]
-
-    # 2. Index ALL nodes in the graph as potential targets
-    all_node_ids = list(G.nodes())
-    all_geoms = [Point(n) for n in all_node_ids]
-    tree = STRtree(all_geoms)
-
-    edges_to_add = []
-
-    for u_node in endnodes:
-        u_geom = Point(u_node)
-
-        # 3. Find all nodes within the geographical radius
-        # Returns indices corresponding to 'all_node_ids'
-        indices = tree.query(u_geom, predicate="dwithin", distance=max_geo_dist)
-
-        best_target = None
-        min_dist = float("inf")
-
-        for idx in indices:
-            v_node = all_node_ids[idx]
-
-            if u_node == v_node:
-                continue
-            spatial_dist = u_geom.distance(Point(v_node))
-            # 4. Check the topological 'detour'
+        for attempt in wfs_read_attempts:
             try:
-                graph_dist = nx.shortest_path_length(
-                    G, source=u_node, target=v_node, weight="length"
-                )
-            except nx.NetworkXNoPath:
-                # If they are in different components, the detour is infinite
-                graph_dist = float("inf")
+                gdf = gpd.read_file(attempt["path"], **attempt["kwargs"])
+                return json.loads(gdf.to_json())
+            except Exception as exc:
+                last_exc = exc
+    except Exception as exc:
+        last_exc = exc
 
-            # Only consider connecting if it represents a significant shortcut
-            if graph_dist >= multi_factor * spatial_dist:
-                if spatial_dist < min_dist:
-                    min_dist = spatial_dist
-                    best_target = v_node
-
-        # 5. Store the best shortcut for this specific end-node
-        if best_target:
-            line = LineString([u_geom, Point(best_target)])
-            edges_to_add.append((u_node, best_target, min_dist, line))
-
-    # 6. Add the shortcuts to the graph
-    for u, v, d, line in edges_to_add:
-        # Check to ensure we haven't already created a better connection
-        if not G.has_edge(u, v):
-            G.add_edge(
-                u, v, geometry=line, tag="connect_unconnected", length=line.length
-            )
-            # print(f"Shortcut created: Endnode {u} -> Node {v} (degree {G.degree(v)})")
-
-    return G
+    # All attempts failed
+    raise last_exc
 
 
-def connect_ref_points_to_nearest(G, ref_points, k_neighbors=2):
-    """
-    Optimized for Shapely 2.0+. Uses query_nearest to find
-    the k-closest neighbors efficiently.
-    """
-    if not ref_points or ref_points.is_empty:
-        return G
-    tag = "ref_points"
-    # 1. Add ref_points as nodes
-    new_ref_node_ids = []
-    for pt in ref_points.geoms:
-        p_coord = pt.coords[0]
-        if p_coord not in G:
-            G.add_node(p_coord, tag=tag)
-        else:
-            G.nodes[p_coord].update({"tag": tag})
-        new_ref_node_ids.append(p_coord)
+def total_vertex_distance(geom1, geom2, bidirectional=True) -> float:
+    vertices1 = get_coordinates(geom1)
+    total_distance_1 = 0.0
+    len_vertices_1 = len(vertices1)
+    for pt in vertices1:
+        total_distance_1 += Point(pt).distance(geom2)
+    total_distance = total_distance_1
+    len_vertices = len_vertices_1
 
-    ref_nodes = [(n, d) for n, d in G.nodes(data=True) if d.get("tag") == tag]
+    if bidirectional:
+        total_distance_2 = 0.0
+        vertices2 = get_coordinates(geom2)
+        len_vertices_2 = len(vertices2)
+        for pt in vertices2:
+            total_distance_2 += Point(pt).distance(geom1)
+        total_distance = total_distance + total_distance_2
+        len_vertices = len_vertices + len_vertices_2
 
-    rows = []
-    for node_id, data in ref_nodes:
-        row = data.copy()
-        row["node_id"] = node_id
-        row["geometry"] = Point(node_id)
-        rows.append(row)
-
-    gdf = gpd.GeoDataFrame(rows, geometry="geometry")
-
-    nearest = gpd.sjoin_nearest(
-        gdf, gdf, how="inner", distance_col="dist", exclusive=True
-    )
-    id_col_left = "node_id_left"
-    id_col_right = "node_id_right"
-    # Sorteer op de afstand per origineel punt (index_left)
-    nearest = nearest.sort_values(by=[id_col_left, "dist"])
-
-    # Sorteer en pak de top K buren per punt
-    # We groeperen op de index van het oorspronkelijke punt
-    top_k = nearest.sort_values(by=["dist"]).groupby(level=0).head(k_neighbors)
-
-    # 3. Voeg de edges toe
-    for idx_left, row in top_k.iterrows():
-        u = row[id_col_left]
-        v = row[id_col_right]
-        # d = row["dist"]
-        # Voeg de edge toe met de afstand als attribuut
-        if not G.has_edge(u, v):
-            geom = LineString([Point(u), Point(v)])
-            G.add_edge(
-                u, v, tag="ref_points_connection", geometry=geom, length=geom.length
-            )
-    return G
-
-
-def reconstruct_graph_for_intersections(G, tolerance=1e-6):
-    """
-    Optimized: First checks if intersections exist.
-    Only performs reconstruction if necessary, preserving all metadata.
-    """
-    # 1. Get all edge geometries
-    edge_items = [(u, v, d) for u, v, d in G.edges(data=True) if "geometry" in d]
-    if not edge_items:
-        return G
-
-    edge_geoms = [d["geometry"] for u, v, d in edge_items]
-    tree = STRtree(edge_geoms)
-
-    # 2. FAST PRE-CHECK: Find intersecting bounding boxes
-    # We look for pairs of edges that intersect, excluding neighbors
-    has_intersections = False
-    for i, geom in enumerate(edge_geoms):
-        # query returns indices of potential matches
-        possible_matches = tree.query(geom, predicate="intersects")
-
-        for match_idx in possible_matches:
-            if i >= match_idx:
-                continue  # Skip self and double counts
-
-            # Check if they cross (ignoring simple touching at endpoints)
-            if edge_geoms[i].crosses(edge_geoms[match_idx]):
-                has_intersections = True
-                break
-        if has_intersections:
-            break
-
-    # 3. SHORT-CIRCUIT: If no intersections, return original graph immediately
-    if not has_intersections:
-        # print("No intersections detected. Skipping reconstruction.")
-        return G
-
-    # 4. If intersections ARE found, only then run the reconstruction (same as before)
-    # [Rest of the reconstruction logic from the previous response]
-    return _perform_reconstruction(G, edge_geoms, tolerance)
-
-
-def _perform_reconstruction(G, old_edge_geoms, tolerance):
-    # 1. Prepare original data
-    old_nodes_data = {n: d for n, d in G.nodes(data=True)}
-    # Ensure we only index nodes that actually have geometry
-    old_node_ids = [n for n, d in G.nodes(data=True)]
-    old_node_geoms = [Point(n) for n in old_node_ids]
-
-    node_tree = STRtree(old_node_geoms)
-
-    # Prepare edges for attribute restoration
-    old_edges_list = [d for u, v, d in G.edges(data=True) if "geometry" in d]
-    edge_tree = STRtree(old_edge_geoms)
-
-    # 2. Fast Noding
-    noded_output = unary_union(old_edge_geoms)
-    new_segments = (
-        noded_output.geoms if hasattr(noded_output, "geoms") else [noded_output]
-    )
-
-    new_G = nx.Graph()
-
-    for seg in new_segments:
-        segment_node_ids = []
-        for coord in [seg.coords[0], seg.coords[-1]]:
-            p = Point(coord)
-
-            # Use query_nearest to guarantee a result if one exists
-            idx = node_tree.nearest(p)
-
-            # Check if idx is valid
-            if idx is not None:
-                nearest_geom = old_node_geoms[idx]
-                if p.distance(nearest_geom) < tolerance:
-                    # Map back to the original node ID (the coordinate tuple)
-                    orig_id = old_node_ids[idx]
-                    if orig_id not in new_G:
-                        new_G.add_node(orig_id, **old_nodes_data[orig_id])
-                    segment_node_ids.append(orig_id)
-                    continue
-
-            # If no match or distance > tolerance, it's a new intersection
-            new_id = coord
-            if new_id not in new_G:
-                new_G.add_node(new_id, geometry=p, tag="pseudo_intersection_vertex")
-            segment_node_ids.append(new_id)
-
-        # 3. Edge Attribute Restoration
-        midpoint = seg.interpolate(0.5, normalized=True)
-        edge_idx = edge_tree.nearest(midpoint)
-
-        if edge_idx is not None:
-            new_edge_data = old_edges_list[edge_idx].copy()
-            new_edge_data["geometry"] = seg
-            new_edge_data["length"] = seg.length
-            new_G.add_edge(segment_node_ids[0], segment_node_ids[1], **new_edge_data)
-
-    return new_G
-
-
-def clean_pseudo_nodes_by_snap_strategy(
-    G, snap_strategy=SnapStrategy.NO_PREFERENCE, distance_threshold=5.0
-):
-    """
-    Refines the graph by removing pseudo nodes.
-    When a node is bridged, a new straight LineString is created between neighbors.
-    """
-    if snap_strategy == SnapStrategy.NO_PREFERENCE:
-        return G
-    working_G = G.copy()
-
-    # 1. Identify nodes based on tags
-    all_nodes = list(working_G.nodes(data=True))
-    pseudo_nodes = [
-        n for n, d in all_nodes if str(d.get("tag", "")).startswith("pseudo_")
-    ]
-
-    # For PREFER_VERTICES, index non-pseudo nodes
-    real_nodes_geoms = [
-        Point(n)
-        for n, d in all_nodes
-        if not str(d.get("tag", "")).startswith("pseudo_")
-    ]
-    real_node_tree = STRtree(real_nodes_geoms) if real_nodes_geoms else None
-
-    nodes_to_remove = []
-
-    for n in pseudo_nodes:
-        if snap_strategy == SnapStrategy.ONLY_VERTICES:
-            nodes_to_remove.append(n)
-        elif snap_strategy == SnapStrategy.PREFER_VERTICES and real_node_tree:
-            p_geom = Point(n)
-            # Check if any real node is nearby
-            # TODO spatial distance or network distance?
-            if real_node_tree.query(
-                p_geom, predicate="dwithin", distance=distance_threshold
-            ).any():
-                nodes_to_remove.append(n)
-
-    # 2. Bridge nodes and create NEW straight LineStrings
-    for n in nodes_to_remove:
-        if n in working_G:
-            bridge_with_straight_line(working_G, n)
-
-    return working_G
-
-
-def bridge_with_straight_line(G, n):
-    """
-    Removes node n and connects neighbors u and v with a
-    direct LineString based on their current positions.
-    """
-    neighbors = list(G.neighbors(n))
-
-    if len(neighbors) == 2:
-        u, v = neighbors
-
-        # Get point geometries of the neighbors
-        pos_u = Point(u)
-        pos_v = Point(v)
-
-        # Create a brand new straight line between u and v
-        new_geom = LineString([pos_u, pos_v])
-
-        # Inherit data from one of the original edges (e.g., u-n)
-        old_data = G.get_edge_data(u, n)
-        new_data = old_data.copy()
-
-        # Update with new geometry and its straight-line length
-        new_data["geometry"] = new_geom
-        new_data["length"] = new_geom.length
-
-        G.add_edge(u, v, **new_data)
-        G.remove_node(n)
-
-    elif len(neighbors) < 2:
-        # Dead end
-        G.remove_node(n)
-    else:
-        # Junction (degree > 2): we leave it to preserve topology
-        pass
+    return total_distance / len_vertices

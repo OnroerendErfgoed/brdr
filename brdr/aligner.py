@@ -16,9 +16,10 @@ from typing import TYPE_CHECKING
 from typing import Union
 
 import numpy as np
-from shapely import make_valid
+from shapely import make_valid, GeometryCollection
 from shapely import to_geojson
 from shapely.geometry.base import BaseGeometry
+from shapely.prepared import prep
 
 from brdr import __version__
 from brdr.configs import AlignerConfig
@@ -77,6 +78,7 @@ from brdr.utils import (
     deep_merge,
 )
 from brdr.utils import determine_stability
+from brdr.utils import get_geodataframe_from_process_results
 from brdr.utils import get_geojsons_from_process_results
 from brdr.utils import get_geometry_difference_metrics_from_processresult
 from brdr.utils import get_geometry_difference_metrics_from_processresults
@@ -100,7 +102,7 @@ class AlignerResult:
 
     Attributes
     ----------
-    results : Dict[ThematicId, Dict[float, Optional[ProcessResult]]]
+    results : Dict[InputId, Dict[float, Optional[ProcessResult]]]
         A nested dictionary where the outer key is the theme ID and the inner key
         is the relevant distance used during processing.
     metadata : Optional[Any]
@@ -137,7 +139,7 @@ class AlignerResult:
 
         Parameters
         ----------
-        process_results : Dict[ThematicId, Dict[float, Optional[ProcessResult]]]
+        process_results : Dict[InputId, Dict[float, Optional[ProcessResult]]]
             A nested dictionary containing raw results.
             Structure: `{theme_id: {distance: result_object}}`.
         """
@@ -163,7 +165,7 @@ class AlignerResult:
 
         Returns
         -------
-        Dict[ThematicId, Dict[float, Optional[ProcessResult]]]
+        Dict[InputId, Dict[float, Optional[ProcessResult]]]
             A dictionary of filtered and enriched results.
 
         Raises
@@ -317,6 +319,56 @@ class AlignerResult:
             crs=aligner.crs,
             id_field=aligner.thematic_data.id_fieldname,
             series_prop_dict=prop_dictionary,
+        )
+
+    def get_results_as_geodataframe(
+        self,
+        aligner: "Aligner",
+        result_type: AlignerResultType = AlignerResultType.PROCESSRESULTS,
+        add_metadata: bool = False,
+        add_original_attributes: bool = False,
+    ):
+        """
+        Converts the results into a flat GeoDataFrame.
+
+        The resulting GeoDataFrame contains one row per
+        (theme_id, relevant_distance), geometry columns (result, result_diff, ...),
+        and flattened dictionary columns (e.g. properties__*).
+        """
+        if not self.results:
+            raise ValueError("Empty results: No calculated results to export.")
+
+        results = self.get_results(aligner=aligner, result_type=result_type)
+        prop_dictionary = defaultdict(dict)
+
+        for theme_id, results_dict in results.items():
+            for relevant_distance, process_result in results_dict.items():
+                if process_result is None:
+                    continue
+
+                prop_dictionary[theme_id][relevant_distance] = {}
+                feature = aligner.thematic_data.features.get(theme_id)
+
+                if add_original_attributes and feature and feature.properties:
+                    prop_dictionary[theme_id][relevant_distance].update(
+                        feature.properties
+                    )
+
+                if add_metadata:
+                    metadata_result = process_result.get("metadata", None)
+                    if metadata_result is None:
+                        logging.debug("metadata not available")
+                        continue
+                    prop_dictionary[theme_id][relevant_distance][
+                        METADATA_FIELD_NAME
+                    ] = metadata_result
+
+        return get_geodataframe_from_process_results(
+            results,
+            crs=aligner.crs,
+            id_field=aligner.thematic_data.id_fieldname,
+            series_prop_dict=prop_dictionary,
+            preferred_geometry_column="result",
         )
 
     def save_results(
@@ -830,7 +882,7 @@ class Aligner:
         relevant_distances : Iterable[float]
             A series of distances (in meters) to use for the alignment logic.
             This parameter is mandatory.
-        thematic_ids : List[ThematicId], optional
+        thematic_ids : List[InputId], optional
             A specific list of IDs to process. If None, all thematic features
             currently loaded in the aligner will be processed.
         max_workers : int, optional
@@ -962,7 +1014,7 @@ class Aligner:
         relevant_distances : List[float] or np.ndarray, optional
             A series of distances (in meters) to be analyzed.
             Defaults to a range from 0.0 to 3.0 meters with steps of 0.1m.
-        thematic_ids : List[ThematicId], optional
+        thematic_ids : List[InputId], optional
             Specific thematic IDs to process. If None, all loaded thematic
             geometries are used.
         diff_metric : DiffMetric, optional
@@ -1113,7 +1165,7 @@ class Aligner:
         ----------
         relevant_distances : Iterable[float], optional
             Distances to evaluate. Defaults to 0.0m to 3.0m (step 0.1m).
-        thematic_ids : List[ThematicId], optional
+        thematic_ids : List[InputId], optional
             List of IDs to evaluate. If None, all loaded thematic features
             are processed. Features not in this list are marked as NOT_EVALUATED.
         metadata_field : str, optional
@@ -1525,6 +1577,7 @@ class Aligner:
 
         full_total = True
         last_version_date = None
+        prepared_geometry = prep(geometry)
 
         ref_intersections = self.reference_data.items.take(
             self.reference_data.tree.query(geometry)
@@ -1534,6 +1587,8 @@ class Aligner:
             geom = None
             version_date = None
             geom_reference = self.reference_data[key_ref].geometry
+            if not prepared_geometry.intersects(geom_reference):
+                continue
             geom_intersection = make_valid(safe_intersection(geometry, geom_reference))
             if geom_intersection.is_empty or geom_intersection is None:
                 continue
@@ -1591,9 +1646,13 @@ class Aligner:
             dict_observation[LAST_VERSION_DATE] = last_version_date.strftime(
                 DATE_FORMAT
             )
+        if intersected:
+            intersected_union = safe_unary_union(intersected)
+        else:
+            intersected_union = GeometryCollection()
         geom_od = buffer_pos(
             buffer_neg(
-                safe_difference(geometry, safe_unary_union(intersected)),
+                safe_difference(geometry, intersected_union),
                 self.correction_distance,
                 mitre_limit=self.mitre_limit,
             ),
@@ -1625,7 +1684,7 @@ class Aligner:
 
         Parameters
         ----------
-        dict_processresults : Dict[ThematicId, Dict[float, Optional[ProcessResult]]], optional
+        dict_processresults : Dict[InputId, Dict[float, Optional[ProcessResult]]], optional
             A nested dictionary where keys are thematic IDs and values are dictionaries
             mapping relevant distances to `ProcessResult`[] objects.
             Required if not provided via internal state.
@@ -1638,7 +1697,7 @@ class Aligner:
 
         Returns
         -------
-        Dict[ThematicId, Dict[float, float]]
+        Dict[InputId, Dict[float, float]]
             A nested dictionary where each thematic ID maps to a dictionary of
             distances and their corresponding calculated metric values.
 
@@ -1696,7 +1755,18 @@ class Aligner:
         process_result,
     ):
         """
-        function that returns the properties of the actual observation.
+        Build observation properties for the current process result.
+
+        Parameters
+        ----------
+        process_result : ProcessResult
+            Processing output containing at least a `result` geometry.
+
+        Returns
+        -------
+        dict
+            Dictionary with derived observation flags, currently containing
+            `FULL_ACTUAL_FIELD_NAME`.
         """
         geom_process_result = process_result["result"]
         properties = {
@@ -1721,8 +1791,19 @@ class Aligner:
         base_brdr_observation=None,
     ):
         """
-        function that returns the properties of the actual observation.
-        If there is also a base_brdr_observation of the original geometry provided, also comparison-properties are added.
+        Compare current observation to a base observation and derive evaluation properties.
+
+        Parameters
+        ----------
+        process_result : ProcessResult
+            Processing output containing a `result` geometry.
+        base_brdr_observation : dict, optional
+            Observation dictionary of the original/base geometry.
+
+        Returns
+        -------
+        dict
+            Properties containing comparison metrics and an evaluation label.
         """
         geom_process_result = process_result["result"]
         threshold_od_percentage = 1
@@ -1858,6 +1939,6 @@ class Aligner:
             base_brdr_observation = _reverse_metadata_observations_to_brdr_observation(
                 base_metadata
             )
-        except:
+        except Exception:
             base_brdr_observation = None
         return base_brdr_observation

@@ -12,6 +12,12 @@ website:
       - text: Home
         href: index.qmd
         icon: house-fill
+      - text: Getting Started
+        href: getting-started.qmd
+      - text: Processor Guide
+        href: processor-selection.qmd
+      - text: Parameter Guide
+        href: parameter-cookbook.qmd
       - text: Reference
         href: reference/index.qmd
       - text: Examples
@@ -23,6 +29,9 @@ lang: en
 
 metadata-files:
   - reference/_sidebar.yml
+
+filters:
+  - machow/interlinks
 
 highlight-style: github-dark
 format:
@@ -60,6 +69,7 @@ quartodoc:
       contents:
         - Loader
         - DictLoader
+        - GeoDataFrameLoader
         - GeoJsonLoader
         - GeoJsonFileLoader
         - GeoJsonUrlLoader
@@ -81,6 +91,7 @@ quartodoc:
       contents:
         - FullReferenceStrategy
         - AlignerResultType
+        - AlignerInputType
         - OpenDomainStrategy
         - DiffMetric
         - ProcessRemark

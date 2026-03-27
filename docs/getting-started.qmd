@@ -1,0 +1,40 @@
+# Getting Started
+
+This page shows the recommended onboarding path for new `brdr` users.
+
+## Prerequisites
+
+1. Use a projected CRS with meter units.
+2. Ensure thematic and reference data are in the same CRS.
+3. Start with a small subset of features before scaling.
+
+## Step-by-step
+
+1. Create an `Aligner`.
+2. Load thematic data (`DictLoader`, `GeoJsonLoader`, `GeoDataFrameLoader`, ...).
+3. Load reference data (local or on-the-fly loaders).
+4. Run:
+   - `process(...)` for full distance series output
+   - `predict(...)` for candidate distances
+   - `evaluate(...)` for scored/classified predictions
+5. Export with `get_results_as_geojson(...)` or `save_results(...)`.
+
+## Minimal code shape
+
+```python
+from brdr.aligner import Aligner
+
+aligner = Aligner(crs="EPSG:31370")
+aligner.load_thematic_data(...)
+aligner.load_reference_data(...)
+
+aligner_result = aligner.process(relevant_distances=[0.5, 1.0, 1.5])
+results = aligner_result.get_results(aligner=aligner)
+```
+
+## Next pages
+
+- [Processor Guide](processor-selection.qmd)
+- [Parameter Guide](parameter-cookbook.qmd)
+- [Examples](examples.qmd)
+- [API reference](reference/index.qmd)

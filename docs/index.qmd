@@ -1,237 +1,111 @@
-# ``brdr``
+# `brdr`
 
-a Python library to assist in realigning geometries (OGC Simple Features) to reference borders
-
-<!-- badges: start -->
+A Python library for aligning thematic geometries (OGC Simple Features) to reference boundaries.
 
 ![PyPI - Version](https://img.shields.io/pypi/v/brdr)
-
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.11385644.svg)](https://doi.org/10.5281/zenodo.11385644)
 
-<!-- badges: end -->
+## Quick links
 
-## Quick links:
-
-- [API reference documentation](reference/index.qmd)
+- [Getting started](getting-started.qmd)
+- [Processor selection](processor-selection.qmd)
+- [Parameter cookbook](parameter-cookbook.qmd)
 - [Examples](examples.qmd)
+- [API reference](reference/index.qmd)
 
-## Description
+## What `brdr` does
 
-### Intro
+`brdr` helps you:
 
-``brdr`` is a Python package that assists in aligning geometric boundaries to reference boundaries. This is an important
-task in geographic data management to enhance data quality.
+1. Align thematic boundaries to a trusted reference layer.
+2. Evaluate geometric change over a range of relevant distances.
+3. Detect stable candidate outcomes (`predict` and `evaluate`).
+4. Export results and metrics for QA and downstream workflows.
 
-* In the context of geographic data management, it is important to have accurate and consistent boundaries for a variety
-  of applications such as calculating areas, analyzing spatial relationships, and visualizing and querying geographic
-  information.
-* ``brdr`` can be used to align boundaries from new data to reference data, ensuring that the boundaries are accurate and
-  consistent.
+## Core workflow
 
+The minimal workflow is:
 
-### Example
+1. Create an `Aligner`.
+2. Load thematic data.
+3. Load reference data.
+4. Run `process(...)`, `predict(...)`, or `evaluate(...)`.
+5. Export or inspect `AlignerResult`.
 
-The animated gif below shows the main principle of 'brdr':
-* The visualizatuion on the left:
-  * the original thematic geometry (blue),
-  * A reference layer (yellow-black).
-  * The resulting geometry after alignment with ``brdr`` (green)**
-* The graphic on the right:
-  * X-as: Relevant distance (~distance that change is allowed), that increases
-  * Y-as: Change (%) of the resulting geometry
+```{mermaid}
+flowchart LR
+    A[Create Aligner] --> B[Load thematic data]
+    B --> C[Load reference data]
+    C --> D[Run process / predict / evaluate]
+    D --> E[Inspect or export AlignerResult]
+```
 
-**brdr** will 'detect' stable situations that result in one or more predictions.
+## Visual intuition
+
+The animation below illustrates how results evolve as `relevant_distance` increases.
+
+- Left: thematic geometry, reference layer, and aligned result.
+- Right: change metric over distance.
+
+Stable zones in this curve are used for prediction logic.
+
 ![](figures/animation.gif)
-
-### Possible application fields
-
-* Geodata-management:
-    * Implementation of ``brdr`` in business-processes and tooling
-    * Bulk geodata-alignment
-    * Alignment after reprojection of data
-    * Cleaning data: In a postprocessing-phase, the algorithm executes sliver-cleanup and validity-cleaning on the
-      resulting geometries
-    * ...
-* Data-Analysis: Investigate the pattern in deviation and change between thematic and reference boundaries
-* Update-detection: Investigate the descriptive formula before and after alignment to check for (automatic)
-  alignment of geodata
-* ...
 
 ## Installation
 
-You can install the latest release of ``brdr`` from
-[GitHub](https://github.com/OnroerendErfgoed/brdr/) or
-[PyPi](https://pypi.org/project/brdr/):
+Install from PyPI:
 
-``` python
+```bash
 pip install brdr
 ```
-## API reference
-
-See  [API Reference](reference/index.qmd)
-
-## Code examples
-
-See  [Examples](examples.qmd)
-
-## Scheme
-
-```{mermaid}
-classDiagram
-    class Aligner {
-        +CRS crs
-        +Processor processor
-        +load_thematic_data(data)
-        +load_reference_data(data)
-        +process()
-        +predict()
-        +evaluate()
-    }
-
-    class Processor {
-        +process(geometry)
-    }
-
-    class AlignerResult {
-        +get_results()
-    }
-
-    Aligner "1" --* "1" Processor : uses
-    Aligner "1" --> "*" AlignerResult : generates
-```
-
-## Workflow
-
-To use ``brdr``, These are the minimal steps to execute:
-
-* Create a Aligner-class
-  * Load thematic data
-  * Load reference data
-* Process (or predict or evaluate) the thematic data
-* ProcessResults are returned:
-    * Resulting geometry
-    * Differences: parts that are 'different' from the original geometry (positive or negative)
-    * Positive differences: parts that are added to the original geometry
-    * Negative differences: parts that are removed form the original geometry
-
-## The ``brdr``- processing algorithm
-When using **brdr** to make predictions, every original geometry is processed using the **brdr**-algorithm:
-
-This algorithm is based on 2 main principles:
-
-* Principle of intentionality: Thematic boundaries can consciously or unconsciously deviate from the reference borders.
-  The algorithm should keep notice of that.
-* Selective spatial conservation of shape: The resulting geometry should re-use the shape of the reference borders where
-  aligned is of relevance.
-
-The figure below shows a schematic overview of the algorithm:
-![](figures/algorithm.png)
-
-The algorithm can be split into 3 main phases:
-
-* Initialisation:
-    * Deciding which reference polygons are candidate-polygons to re-use its shape.
-      The reference candidate polygons are selected based on spatial intersection with the thematic geometry.
-* Processing:
-    * Process all candidate-reference polygons one-by-one
-    * Calculate relevant zones for each candidate-reference-polygon
-        * relevant intersections: zones that must be present in the final result
-        * relevant differences: zones that must be excluded from the final result
-          ![](figures/relevant_zones.png)
-    * Evaluate each candidate based on their relative zones: which parts must be kept and which parts must be excluded
-      ![](figures/evaluate_candidates.png)
-    * Union all kept parts to recompose a resulting geometry
-* Post-processing:
-    * Validation/correction of differences between the original input geometry and the composed intermediate resulting
-      geometry after processing the algorithm
-    * Technical validation of inner holes and multipolygons that are created by processing the algorithm
-    * Clean-up slivers
-    * Make the resulting geometry valid
-
-* **RESULT**:
-  * A new resulting output geometry, aligned to the reference-polygons
-
-A more in-depth description of the algorithm can be found in the following article (in dutch):
-
-- Dieussaert, K., Vanvinckenroye, M., Vermeyen, M., & Van Daele, K. (2024). Grenzen verleggen.
-  Automatische correcties van geografische afbakeningen op verschuivende
-  onderlagen *Onderzoeksrapporten Agentschap Onroerend Erfgoed*,
-  <https://doi.org/10.55465/SXCW6218>.
 
 ## Development
 
-### pip-compile
+### Dependency locking
 
-```sh
+```bash
 PIP_COMPILE_ARGS="-v --strip-extras --no-header --resolver=backtracking --no-emit-options --no-emit-find-links"
 pip-compile $PIP_COMPILE_ARGS
 pip-compile $PIP_COMPILE_ARGS -o requirements-dev.txt --all-extras
 ```
 
-### tests
+### Run tests
 
-```python
-python - m
-pytest - -cov = brdr
-tests / --cov - report
-term - missing
+```bash
+pytest --cov=brdr tests --cov-report term-missing
 ```
 
-### Docker
+### Docker proof of concept
 
-As an example-usage (proof-of-concept), a Dockerfile is created to set up a GRB-specific webservice that 'predicts' one
-or multiple actual geometries for a input-geometry based on the reference source GRB.
-This webservice is based on 'brdr'.
-
-This POC can be found at [brdr-webservice (GRB-actualisator)](<https://github.com/dieuska/brdr-webservice>).
+- [brdr-webservice (Docker POC) on GitHub](https://github.com/dieuska/brdr-webservice)
+The repository includes a Docker-based proof of concept for a GRB-specific web service:
 
 ```bat
 docker build -f Dockerfile . -t grb_webservice
 docker run --rm -p 80:80 --name grb_webservice grb_webservice
-
-
-example can be found at: http://localhost:80/docs#/default/actualiser_actualiser_post
 ```
 
-## brdr for QGIS: brdrQ-plugin
+Then open:
+`http://localhost:80/docs#/default/actualiser_actualiser_post`
 
-An implementation of ``brdr`` for QGIS can be found at [GitHub-brdrQ](https://github.com/OnroerendErfgoed/brdrQ/).
-This QGIS-plugin provides a User Interface to align thematic data to a reference layer, showing the results in the QGIS
-Table of Contents.
+## QGIS integration
 
-## Motivation & citation
+`brdrQ` provides a QGIS plugin implementation of `brdr`:
 
-A more in-depth description of the algorithm can be found in the following article (in dutch):
+- [brdrQ on GitHub](https://github.com/OnroerendErfgoed/brdrQ/)
 
-- Dieussaert, K., Vanvinckenroye, M., Vermeyen, M., & Van Daele, K. (2024). Grenzen verleggen.
-  Automatische correcties van geografische afbakeningen op verschuivende
-  onderlagen *Onderzoeksrapporten Agentschap Onroerend Erfgoed*,
-  <https://doi.org/10.55465/SXCW6218>.
+## Citation
 
-## Comments and contributions
+- Dieussaert, K., Vanvinckenroye, M., Vermeyen, M., & Van Daele, K. (2024). Grenzen verleggen. Automatische correcties van geografische afbakeningen op verschuivende onderlagen. *Onderzoeksrapporten Agentschap Onroerend Erfgoed*. <https://doi.org/10.55465/SXCW6218>
 
-We would love to hear from you and your experiences with
-``brdr`` or its sister project [`brdrQ`](https://github.com/OnroerendErfgoed/brdrQ).
-The [discussions forum](https://github.com/OnroerendErfgoed/brdr/discussions/) is the place to be when:
+## Feedback and contributions
 
-- You have any questions on using ``brdr`` or ``brdrQ`` or their
-  applicability to your use cases
-- Want to share your experiences with the library
-- Have any suggestions for improvements or feature requests
-
-If you have discovered a bug in the ``brdr`` library you can report it here:
-
-<https://github.com/OnroerendErfgoed/brdr/issues>
-
-We try to keep the list of issues as clean as possible. If
-you're unsure whether something is a bug, or whether the bug is in ``brdr``
-or ``brdrQ``, we encourage you to go through the [discussions forum](https://github.com/OnroerendErfgoed/brdr/discussions)
-first.
+- Questions and usage discussions: <https://github.com/OnroerendErfgoed/brdr/discussions>
+- Bug reports and feature requests: <https://github.com/OnroerendErfgoed/brdr/issues>
 
 ## Acknowledgement
 
-This software was created by [Athumi](https://athumi.be/en/), the Flemish data utility company,
-and [Flanders Heritage Agency](https://www.onroerenderfgoed.be/flanders-heritage-agency).
+This software was created by [Athumi](https://athumi.be/en/) and [Flanders Heritage Agency](https://www.onroerenderfgoed.be/flanders-heritage-agency).
 
 ![https://athumi.be/en/](figures/athumi_logo-250x84.png)
 ![https://www.onroerenderfgoed.be/flanders-heritage-agency](figures/Vlaanderen_is_erfgoed-250x97.png)

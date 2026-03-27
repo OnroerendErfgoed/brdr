@@ -12,6 +12,7 @@ from shapely import remove_repeated_points
 from shapely.geometry.base import BaseGeometry
 from shapely.geometry.linestring import LineString
 from shapely.ops import nearest_points
+from shapely.prepared import prep
 
 from brdr.configs import ProcessorConfig
 from brdr.constants import REMARK_FIELD_NAME
@@ -22,13 +23,10 @@ from brdr.enums import SnapStrategy
 from brdr.feature_data import AlignerFeatureCollection
 from brdr.geometry_utils import (
     buffer_neg,
-    build_custom_network,
-    get_non_pseudo_coords,
 )
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import buffer_pos
 from brdr.geometry_utils import fill_and_remove_gaps
-from brdr.geometry_utils import find_best_path_in_network
 from brdr.geometry_utils import geometric_equality
 from brdr.geometry_utils import get_shape_index
 from brdr.geometry_utils import safe_difference
@@ -38,6 +36,11 @@ from brdr.geometry_utils import safe_unary_union
 from brdr.geometry_utils import safe_union
 from brdr.geometry_utils import snap_geometry_to_reference
 from brdr.geometry_utils import to_multi
+from brdr.graph_utils import (
+    build_custom_network,
+    find_best_path_in_network,
+    get_non_pseudo_coords,
+)
 from brdr.logger import Logger
 from brdr.topo_utils import _dissolve_topo, _generate_topo, _topojson_id_to_arcs
 from brdr.typings import ProcessResult, InputId
@@ -47,6 +50,28 @@ from brdr.utils import (
     flatten_iter,
 )
 from brdr.utils import union_process_result
+
+
+def _to_multi_network_fast(geom):
+    """
+    Network helper: avoid expensive union/validation when geometry is already
+    a simple point/line multi-variant. Keeps behavior equivalent for common cases.
+    """
+    if geom is None:
+        return to_multi(geom)
+    if geom.is_empty:
+        return to_multi(geom)
+    if geom.geom_type in {
+        "Point",
+        "MultiPoint",
+        "LineString",
+        "MultiLineString",
+        "GeometryCollection",
+        "Polygon",
+        "MultiPolygon",
+    }:
+        return to_multi(geom)
+    return to_multi(safe_unary_union(geom))
 
 
 class BaseProcessor(ABC):
@@ -469,12 +494,14 @@ class BaseProcessor(ABC):
         List[BaseGeometry]
             The updated list containing extracted polygons.
         """
-        if not (geom.is_empty or geom is None):
-            geometry_collection = GeometryCollection(geom)
-            for g in geometry_collection.geoms:
-                g = make_valid(g)
-                if str(g.geom_type) in ["Polygon", "MultiPolygon"]:
-                    array.append(g)
+        if geom is None or geom.is_empty:
+            return array
+        for g in get_parts(geom):
+            if g is None or g.is_empty:
+                continue
+            g = make_valid(g)
+            if str(g.geom_type) in ["Polygon", "MultiPolygon"]:
+                array.append(g)
         return array
 
     @staticmethod
@@ -491,7 +518,7 @@ class BaseProcessor(ABC):
         relevant_distance : float
             The distance used to define the 'outer' shell.
         max_outer_buffer : int
-            Value that is used to calculate the boundary of a thematic geometry wherefor the calculation has to be done. (inner part is added)
+            Buffer size used to define the outer processing band around thematic geometry.
 
         Returns
         -------
@@ -599,9 +626,6 @@ class SnapGeometryProcessor(BaseProcessor):
         ref_intersections = reference_data.items.take(
             reference_data.tree.query(input_geometry_outer_buffered)
         ).tolist()
-        ref_intersections = reference_data.items.take(
-            reference_data.tree.query(input_geometry_outer_buffered)
-        ).tolist()
 
         ref_intersections_geoms = []
         for key_ref in ref_intersections:
@@ -634,9 +658,10 @@ class SnapGeometryProcessor(BaseProcessor):
         snapped_geom = snap_geometry_to_reference(
             input_geometry,
             ref_geometrycollection,
-            snap_strategy,
-            self.config.snap_max_segment_length,
-            relevant_distance,
+            snap_strategy=snap_strategy,
+            max_segment_length=self.config.snap_max_segment_length,
+            tolerance=relevant_distance,
+            angle_threshold_degrees=self.config.angle_threshold_degrees,
         )
         snapped.append(snapped_geom)
 
@@ -784,6 +809,7 @@ class DieussaertGeometryProcessor(BaseProcessor):
             return list_process_results[0]
 
         merged_process_result = ProcessResult()
+        geometries_by_key: dict[str, list[BaseGeometry]] = {}
         for process_result in list_process_results:
             for key in process_result:
                 value = process_result[key]
@@ -808,15 +834,19 @@ class DieussaertGeometryProcessor(BaseProcessor):
                     geom = value
                     if geom is None:
                         geom = GeometryCollection()
-                    if key in merged_process_result:
-                        existing = merged_process_result[key]
-                    else:
-                        existing = GeometryCollection()
-                    merged_process_result[key] = safe_unary_union([existing, geom])
+                    geometries_by_key.setdefault(key, []).append(geom)
                 else:
                     raise ValueError(
                         f"Invalid element with key {str(key)} for ProcessResult"
                     )
+
+        for key, geoms in geometries_by_key.items():
+            if len(geoms) == 0:
+                merged_process_result[key] = GeometryCollection()
+            elif len(geoms) == 1:
+                merged_process_result[key] = geoms[0]
+            else:
+                merged_process_result[key] = safe_unary_union(geoms)
 
         return merged_process_result
 
@@ -846,15 +876,8 @@ class DieussaertGeometryProcessor(BaseProcessor):
         ref_intersections = reference_data.items.take(
             reference_data.tree.query(input_geometry_outer_buffered)
         ).tolist()
-
-        ref_intersections_geoms = []
-        for key_ref in ref_intersections:
-            ref_geom = reference_data[key_ref].geometry
-            ref_intersections_geoms.append(ref_geom)
-            if not isinstance(ref_geom, (Polygon, MultiPolygon)):
-                raise ValueError(
-                    "Dieussaert algorithm can only be used when all reference geometries are polygons or multipolygons."
-                )
+        prepared_input_outer = prep(input_geometry_outer)
+        reference_union = reference_data.union
 
         buffer_distance = relevant_distance / 2
         (
@@ -865,16 +888,23 @@ class DieussaertGeometryProcessor(BaseProcessor):
             input_geometry_outer,
             input_geometry_inner,
             relevant_distance,
-            reference_data.union,
+            reference_union,
             mitre_limit,
             correction_distance,
         )
 
-        for geom_reference in ref_intersections_geoms:
+        for key_ref in ref_intersections:
+            geom_reference = reference_data[key_ref].geometry
+            if not isinstance(geom_reference, (Polygon, MultiPolygon)):
+                raise ValueError(
+                    "Dieussaert algorithm can only be used when all reference geometries are polygons or multipolygons."
+                )
+            # Cheap boolean pre-check before expensive intersection construction
+            if not prepared_input_outer.intersects(geom_reference):
+                continue
             geom_intersection = safe_intersection(input_geometry_outer, geom_reference)
             if geom_intersection.is_empty or geom_intersection is None:
                 continue
-            self.logger.feedback_debug("calculate intersection")
             (
                 geom,
                 relevant_intersection,
@@ -887,29 +917,40 @@ class DieussaertGeometryProcessor(BaseProcessor):
                 buffer_distance=buffer_distance,
                 mitre_limit=mitre_limit,
             )
-            self.logger.feedback_debug("intersection calculated")
-            preresult = self._add_multi_polygons_from_geom_to_array(geom, preresult)
-            relevant_intersection_array = self._add_multi_polygons_from_geom_to_array(
+            self._add_multi_polygons_from_geom_to_array(geom, preresult)
+            self._add_multi_polygons_from_geom_to_array(
                 relevant_intersection, relevant_intersection_array
             )
-            relevant_diff_array = self._add_multi_polygons_from_geom_to_array(
+            self._add_multi_polygons_from_geom_to_array(
                 relevant_diff, relevant_diff_array
             )
-        relevant_intersection = safe_unary_union(relevant_intersection_array)
-        if relevant_intersection is None or relevant_intersection.is_empty:
+
+        if len(relevant_intersection_array) == 0:
             relevant_intersection = Polygon()
-        relevant_diff = safe_unary_union(relevant_diff_array)
-        if relevant_diff is None or relevant_diff.is_empty:
+        elif len(relevant_intersection_array) == 1:
+            relevant_intersection = relevant_intersection_array[0]
+        else:
+            relevant_intersection = safe_unary_union(relevant_intersection_array)
+
+        if len(relevant_diff_array) == 0:
             relevant_diff = Polygon()
+        elif len(relevant_diff_array) == 1:
+            relevant_diff = relevant_diff_array[0]
+        else:
+            relevant_diff = safe_unary_union(relevant_diff_array)
+
         preresult.append(input_geometry_inner)
-        geom_preresult = safe_unary_union(preresult)
+        if len(preresult) == 1:
+            geom_preresult = preresult[0]
+        else:
+            geom_preresult = safe_unary_union(preresult)
         process_result = self._postprocess_preresult(
             geom_preresult,
             input_geometry,
             relevant_intersection,
             relevant_diff,
             relevant_distance,
-            reference_data.union,
+            reference_union,
             mitre_limit,
             correction_distance,
         )
@@ -941,6 +982,7 @@ class DieussaertGeometryProcessor(BaseProcessor):
                 max_segment_length=self.config.partial_snap_max_segment_length,
                 snap_strategy=snap_strategy,
                 tolerance=relevant_distance,
+                angle_threshold_degrees=self.config.angle_threshold_degrees,
             )
             out.append(p_snapped)
         return safe_unary_union(out)
@@ -987,12 +1029,29 @@ class DieussaertGeometryProcessor(BaseProcessor):
         outer=False,
     ):
         """
+        Calculate open-domain geometry by snapping to a virtual reference on all sides.
 
-        :param geometry:
-        :param input_geometry_inner:
-        :param relevant_distance:
-        :param outer: when outer is True, the outer boundary is used, inner is not used
-        :return:
+        Parameters
+        ----------
+        geometry : BaseGeometry
+            Input thematic geometry.
+        input_geometry_inner : BaseGeometry
+            Inner geometry used to constrain open-domain relevance.
+        relevant_distance : float
+            Maximum distance used for open-domain snapping logic.
+        correction_distance : float
+            Technical cleanup tolerance.
+        mitre_limit : float
+            Mitre limit used in buffer operations.
+        reference_union : BaseGeometry
+            Union of reference geometries.
+        outer : bool, optional
+            If True, include outer boundary behavior when building virtual reference.
+
+        Returns
+        -------
+        tuple
+            `(geom_thematic_od, relevant_difference_array, relevant_intersection_array)`.
         """
         buffer_distance = relevant_distance / 2
         relevant_difference_array = []
@@ -1046,10 +1105,27 @@ class DieussaertGeometryProcessor(BaseProcessor):
         correction_distance,
     ):
         """
-        Calculates the intersecting parts between a thematic geometry and the Open Domain( domain, not covered by reference-polygons)
-        :param input_geometry:
-        :param relevant_distance:
-        :return:
+        Calculate intersections between thematic geometry and open-domain area.
+
+        Parameters
+        ----------
+        input_geometry : BaseGeometry
+            Input thematic geometry.
+        input_geometry_inner : BaseGeometry
+            Inner part of the thematic geometry.
+        relevant_distance : float
+            Maximum distance used for open-domain processing.
+        reference_union : BaseGeometry
+            Union of reference geometries.
+        mitre_limit : float
+            Mitre limit for buffer operations.
+        correction_distance : float
+            Technical cleanup tolerance.
+
+        Returns
+        -------
+        tuple
+            `(geom_thematic_od, relevant_difference_array, relevant_intersection_array)`.
         """
         # Calculate the intersection between thematic and Open Domain
         # buffer_distance = relevant_distance / 2
@@ -1109,6 +1185,15 @@ class DieussaertGeometryProcessor(BaseProcessor):
                 geometry=input_geometry,
                 relevant_distance=relevant_distance,
                 snap_strategy=SnapStrategy.PREFER_VERTICES,
+                mitre_limit=mitre_limit,
+                reference_union=reference_union,
+            )
+        elif self.config.od_strategy == OpenDomainStrategy.SNAP_PREFER_ENDS_AND_ANGLES:
+            self.logger.feedback_debug("OD-strategy SNAP_PREFER_ENDS_AND_ANGLES")
+            geom_thematic_od = self._od_snap(
+                geometry=input_geometry,
+                relevant_distance=relevant_distance,
+                snap_strategy=SnapStrategy.PREFER_ENDS_AND_ANGLES,
                 mitre_limit=mitre_limit,
                 reference_union=reference_union,
             )
@@ -1188,6 +1273,7 @@ class DieussaertGeometryProcessor(BaseProcessor):
 
         """
         od_overlap = 111  # define a specific value for defining overlap of OD
+        buffer_distance_x2 = 2 * buffer_distance
         if geom_reference.area == 0:
             overlap = od_overlap  # Open Domain
 
@@ -1221,6 +1307,21 @@ class DieussaertGeometryProcessor(BaseProcessor):
             buffer_distance,
             mitre_limit=mitre_limit,
         )
+        geom_difference_2_buffered = None
+
+        def _get_geom_difference_2_buffered():
+            nonlocal geom_difference_2_buffered
+            if geom_difference_2_buffered is None:
+                geom_intersection_buffered = buffer_pos(
+                    geom_intersection, buffer_distance_x2
+                )
+                geom_difference_2 = safe_difference(
+                    geom_reference, geom_intersection_buffered
+                )
+                geom_difference_2_buffered = buffer_pos(
+                    geom_difference_2, buffer_distance_x2
+                )
+            return geom_difference_2_buffered
 
         if (
             not geom_intersection_inner.is_empty
@@ -1229,7 +1330,7 @@ class DieussaertGeometryProcessor(BaseProcessor):
         ):
             geom_x = safe_intersection(
                 geom_intersection,
-                buffer_pos(geom_intersection_inner, 2 * buffer_distance),
+                buffer_pos(geom_intersection_inner, buffer_distance_x2),
             )
 
             geom_x = snap_geometry_to_reference(
@@ -1238,6 +1339,7 @@ class DieussaertGeometryProcessor(BaseProcessor):
                 max_segment_length=self.config.partial_snap_max_segment_length,
                 snap_strategy=self.config.partial_snap_strategy,
                 tolerance=2 * buffer_distance,
+                angle_threshold_degrees=self.config.angle_threshold_degrees,
             )
 
             geom = geom_x
@@ -1259,18 +1361,7 @@ class DieussaertGeometryProcessor(BaseProcessor):
                 ),
             )
             geom_x = buffer_neg_pos(geom_x, buffer_distance, mitre_limit=mitre_limit)
-
-            geom_intersection_buffered = buffer_pos(
-                geom_intersection, 2 * buffer_distance
-            )
-            geom_difference_2 = safe_difference(
-                geom_reference, geom_intersection_buffered
-            )
-            geom_difference_2_buffered = buffer_pos(
-                geom_difference_2, 2 * buffer_distance
-            )
-
-            geom_x = safe_difference(geom_x, geom_difference_2_buffered)
+            geom_x = safe_difference(geom_x, _get_geom_difference_2_buffered())
 
             geom_x = safe_intersection(geom_x, geom_reference)
 
@@ -1281,6 +1372,7 @@ class DieussaertGeometryProcessor(BaseProcessor):
                     max_segment_length=self.config.partial_snap_max_segment_length,
                     snap_strategy=self.config.partial_snap_strategy,
                     tolerance=2 * buffer_distance,
+                    angle_threshold_degrees=self.config.angle_threshold_degrees,
                 )
             geom = safe_unary_union(
                 [geom_x, geom_relevant_intersection, geom_intersection_inner]
@@ -1315,18 +1407,12 @@ class DieussaertGeometryProcessor(BaseProcessor):
                     snap_strategy=self.config.partial_snap_strategy,
                     tolerance=2 * buffer_distance,
                     max_segment_length=self.config.partial_snap_max_segment_length,
+                    angle_threshold_degrees=self.config.angle_threshold_degrees,
                 )
             elif not geom_intersection_inner.is_empty:
-                geom_intersection_buffered = buffer_pos(
-                    geom_intersection, 2 * buffer_distance
+                geom = safe_difference(
+                    geom_reference, _get_geom_difference_2_buffered()
                 )
-                geom_difference_2 = safe_difference(
-                    geom_reference, geom_intersection_buffered
-                )
-                geom_difference_2_buffered = buffer_pos(
-                    geom_difference_2, 2 * buffer_distance
-                )
-                geom = safe_difference(geom_reference, geom_difference_2_buffered)
             elif self.config.threshold_overlap_percentage < 0:
                 # if we take a value of -1, the original border will be used
                 geom = geom_intersection
@@ -1419,6 +1505,7 @@ class NetworkGeometryProcessor(BaseProcessor):
         reference = safe_unary_union(
             safe_intersection(reference_data.elements, input_geometry_buffered)
         )
+        reference_union = reference_data.union
 
         geom_processed_list = []
 
@@ -1464,7 +1551,10 @@ class NetworkGeometryProcessor(BaseProcessor):
                 geom_processed_list.append(geom_processed)
 
         # Merge all processed parts
-        geom_processed = safe_unary_union(geom_processed_list)
+        if len(geom_processed_list) == 1:
+            geom_processed = geom_processed_list[0]
+        else:
+            geom_processed = safe_unary_union(geom_processed_list)
 
         # Standard cleaning pipeline
         return self._postprocess_preresult(
@@ -1473,7 +1563,7 @@ class NetworkGeometryProcessor(BaseProcessor):
             GeometryCollection(),
             GeometryCollection(),
             relevant_distance,
-            reference_data.union,
+            reference_union,
             mitre_limit,
             correction_distance,
         )
@@ -1487,19 +1577,19 @@ class NetworkGeometryProcessor(BaseProcessor):
         close_output=False,
     ):
         geom_to_process_buffered = buffer_pos(geom_to_process, relevant_distance)
-        reference_intersection = safe_intersection(reference, geom_to_process_buffered)
-        reference_intersection = safe_unary_union(reference_intersection)
-        reference_intersection = to_multi(reference_intersection)
+        reference_intersection_raw = safe_intersection(
+            reference, geom_to_process_buffered
+        )
+        reference_intersection = _to_multi_network_fast(reference_intersection_raw)
         if reference_intersection.is_empty:
             return geom_to_process
         reference_intersection_buffered = buffer_pos(
             reference_intersection, relevant_distance
         )
-        thematic_difference = safe_difference(
+        thematic_difference_raw = safe_difference(
             geom_to_process, reference_intersection_buffered
         )
-        thematic_difference = safe_unary_union(thematic_difference)
-        thematic_difference = to_multi(thematic_difference)
+        thematic_difference = _to_multi_network_fast(thematic_difference_raw)
 
         if isinstance(geom_to_process, Point):
             if self.config.snap_strategy == SnapStrategy.NO_PREFERENCE:
@@ -1536,6 +1626,10 @@ class NetworkGeometryProcessor(BaseProcessor):
             ):
                 closed_coords = list(geom_processed.coords) + [geom_processed.coords[0]]
                 geom_processed = LineString(closed_coords)
+        if geom_processed is None:
+            return geom_processed
+        if hasattr(geom_processed, "is_valid") and geom_processed.is_valid:
+            return geom_processed
         return make_valid(geom_processed)
 
     def _get_processed_network_path(
@@ -1553,11 +1647,16 @@ class NetworkGeometryProcessor(BaseProcessor):
             reference=reference,
             reference_intersection=reference_intersection,
             relevant_distance=relevant_distance,
-            snap_strategy=self.config.snap_strategy,
             gap_threshold=0.1,
             snap_dist=correction_distance,
         )
-        return find_best_path_in_network(input_geometry, graph)
+        return find_best_path_in_network(
+            input_geometry,
+            graph,
+            snap_strategy=self.config.snap_strategy,
+            tolerance=relevant_distance,
+            angle_threshold_degrees=self.config.angle_threshold_degrees,
+        )
 
 
 class AlignerGeometryProcessor(BaseProcessor):

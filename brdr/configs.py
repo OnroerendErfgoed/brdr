@@ -16,7 +16,7 @@ class ProcessorConfig:
         single polygons for processing and merged back afterward. If False,
         multipolygons are processed as a single unit.
     max_outer_buffer: int, default 50
-        Value that is used to calculate the boundary of a thematic geometry wherefor the calculation has to be done. (inner part is added)
+        Buffer size used to define the outer processing band around thematic geometry.
     od_strategy : OpenDomainStrategy, default OpenDomainStrategy.SNAP_ALL_SIDE
         The strategy used to determine how to handle information outside the
         reference polygons (Open Domain).
@@ -42,6 +42,10 @@ class ProcessorConfig:
         The primary strategy used for snapping geometry vertices to the reference. When alignment is done by 'SnapGeometryProcessor', This strategy will be applied
     snap_max_segment_length : int, default 2
         The maximum segment length allowed during the snapping process. When alignment is done by 'SnapGeometryProcessor', the input geometry (line, lineair ring,...) will be split up by default in parts of max X meter
+    angle_threshold_degrees : float, default 150.0
+        Angle threshold used by `SnapStrategy.PREFER_VERTICES_ENDS_AND_ANGLES`.
+        Vertices with an interior angle smaller than or equal to this threshold
+        are considered angle-priority vertices.
 
     partial_snapping : bool, default False
         Whether to allow snapping of individual segments rather than the
@@ -66,6 +70,7 @@ class ProcessorConfig:
     threshold_circle_ratio: float = 0.98
     snap_strategy: SnapStrategy = SnapStrategy.PREFER_VERTICES
     snap_max_segment_length: int = 2
+    angle_threshold_degrees: float = 150.0
     partial_snapping: bool = False
     partial_snap_strategy: SnapStrategy = SnapStrategy.PREFER_VERTICES
     partial_snap_max_segment_length: int = 2

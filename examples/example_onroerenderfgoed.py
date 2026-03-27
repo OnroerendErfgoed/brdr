@@ -55,9 +55,4 @@ if __name__ == "__main__":
         aligner=aligner,
         add_metadata=True,
     )
-    print(
-        json.dumps(
-            json.loads(fcs["result"]["features"][0]["properties"]["brdr_metadata"]),
-            indent=2,
-        )
-    )
+    print(fcs["result"]["features"][0]["properties"]["brdr_metadata"])

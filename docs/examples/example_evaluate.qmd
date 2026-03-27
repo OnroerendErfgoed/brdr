@@ -1,6 +1,6 @@
 ---
 title: "Evaluation"
-description: "Example of a simple Evaluation by using **brdr**"
+description: "Evaluate predicted results and inspect scoring metadata"
 author: "Karel Dieussaert"
 date: "2026-01-07"
 categories: [Evaluation]
@@ -10,7 +10,25 @@ format:
 jupyter: python3
 ---
 # Evaluation
-This example shows a simple Evaluation by using **brdr**
+This example demonstrates `aligner.evaluate(...)`, used to classify predicted alignments with evaluation metadata.
+
+## What you learn
+
+1. How to run evaluation on a set of `relevant_distances`.
+2. How to retrieve `EVALUATED_PREDICTIONS` as GeoJSON.
+3. How to interpret key output fields such as:
+   - evaluation status
+   - prediction score
+   - selected relevant distance
+
+## Why evaluation is useful
+
+Evaluation helps when you need automated quality interpretation for batch processing, reporting, or downstream decision logic.
+
+## Notes
+
+- The example uses `FullReferenceStrategy.PREFER_FULL_REFERENCE`.
+- GRB data is loaded at runtime, so network access is required.
 
 ```{python}
 #| label: fig-plots

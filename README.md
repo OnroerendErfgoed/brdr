@@ -1,6 +1,6 @@
 # `brdr`
 
-a Python library to assist in realigning (multi-)polygons (OGC Simple Features) to reference borders
+a Python library to assist in realigning geometries (OGC Simple Features) to reference borders
 
 <!-- badges: start -->
 

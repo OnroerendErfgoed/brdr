@@ -3,31 +3,26 @@ from enum import Enum
 
 class OpenDomainStrategy(Enum):
     """
-    Strategies for processing thematic areas not covered by reference data.
-
-    In GIS terms, this defines how the algorithm handles the 'Public Domain'
-    when the reference layer (e.g., land parcels) does not provide a target.
+    Strategies for thematic areas that are not covered by the reference layer.
 
     Attributes
     ----------
     EXCLUDE : str
-        Completely remove parts of the thematic geometry not on the reference layer.
+        Exclude open-domain parts from the resulting geometry.
     AS_IS : str
-        Keep parts not covered by reference data unchanged in the result.
+        Keep open-domain parts unchanged.
     SNAP_INNER_SIDE : str
-        Snap everything within the relevant distance to the interior parcel boundary.
+        Snap open-domain parts to inner reference boundaries.
     SNAP_ALL_SIDE : str
-        Snap to both inner and outer boundaries where possible.
+        Snap open-domain parts to both inner and outer sides where applicable.
     SNAP_PREFER_VERTICES : str
-        Snap to reference polygons, prioritizing vertices over edges.
+        Snap with preference for reference vertices.
+    SNAP_PREFER_ENDS_AND_ANGLES : str
+        Snap with preference for reference vertices; first ends, then angles, then other vertices.
     SNAP_NO_PREFERENCE : str
-        Snap to the closest reference component (edge or vertex) without bias.
+        Snap without vertex/edge preference.
     SNAP_ONLY_VERTICES : str
-        Only allow snapping to existing vertices of the reference polygons.
-
-    Notes
-    -----
-
+        Restrict snapping targets to reference vertices only.
     """
 
     EXCLUDE = "EXCLUDE"
@@ -35,16 +30,27 @@ class OpenDomainStrategy(Enum):
     SNAP_INNER_SIDE = "SNAP_INNER_SIDE"
     SNAP_ALL_SIDE = "SNAP_ALL_SIDE"
     SNAP_PREFER_VERTICES = "SNAP_PREFER_VERTICES"
+    SNAP_PREFER_ENDS_AND_ANGLES = "SNAP_PREFER_ENDS_AND_ANGLES"
     SNAP_NO_PREFERENCE = "SNAP_NO_PREFERENCE"
     SNAP_ONLY_VERTICES = "SNAP_ONLY_VERTICES"
 
 
 class AlignerResultType(str, Enum):
     """
-    2 Types of resulting dictionary are available in Aligner
+    Output format of alignment runs.
 
-    * PREDICTIONS = "predictions" (only the predicted versions for specific relevenat distances are returned)
-    * PROCESSRESULTS = "processresults" (All versions of resulting geometries for all relevant distances are returned)
+    - `PREDICTIONS`: only predicted candidate results
+    - `EVALUATED_PREDICTIONS`: evaluated/scored predictions
+    - `PROCESSRESULTS`: full result set for all processed distances
+
+    Attributes
+    ----------
+    PREDICTIONS : str
+        Only predicted candidate results.
+    EVALUATED_PREDICTIONS : str
+        Predictions with evaluation labels and scores.
+    PROCESSRESULTS : str
+        Complete processing output for all requested distances.
     """
 
     PREDICTIONS = "predictions"
@@ -54,10 +60,14 @@ class AlignerResultType(str, Enum):
 
 class AlignerInputType(str, Enum):
     """
-    2 Types of input dictionary are available in Aligner
+    Role of an input dataset in the aligner pipeline.
 
-    * THEMATIC = "thematic"
-    * REFERENCE = "reference"
+    Attributes
+    ----------
+    THEMATIC : str
+        The input dataset that is being aligned.
+    REFERENCE : str
+        The target dataset used as alignment reference.
     """
 
     THEMATIC = "thematic"
@@ -66,30 +76,30 @@ class AlignerInputType(str, Enum):
 
 class DiffMetric(str, Enum):
     """
-    Metrics to quantify the change between thematic and reference data.
+    Metrics used to quantify geometric differences.
 
     Attributes
     ----------
     AREA_CHANGE : str
-        Absolute change in area (m²).
+        Absolute area difference.
     AREA_PERCENTAGE_CHANGE : str
-        Relative change in area (%).
+        Relative area difference in percent.
     SYMMETRICAL_AREA_CHANGE : str
-        The area of the symmetric difference (XOR).
+        Symmetric-difference area.
     SYMMETRICAL_AREA_PERCENTAGE_CHANGE : str
-        Symmetric difference as a percentage of original area.
+        Symmetric-difference area in percent.
     LENGTH_CHANGE : str
-        Change in length.
+        Absolute length difference.
     LENGTH_PERCENTAGE_CHANGE : str
-        Relative change in length.
+        Relative length difference in percent.
+    LENGTH_ADDED_AND_REMOVED : str
+        Combined added and removed length.
     LENGTH_REMOVED : str
-        The length of segments removed during processing.
-    LENGTH_ADDED_AND_REMOVED: str
-        The length of segments added and removed during processing.
+        Removed length only.
     TOTAL_DISTANCE : str
-        Sum of displacement of all vertices.
+        Total displacement distance.
     REFERENCE_USAGE : str
-        The extent of reference boundaries utilized (m or m²).
+        Amount of reference geometry used.
     """
 
     AREA_CHANGE = "AREA_CHANGE"
@@ -106,26 +116,26 @@ class DiffMetric(str, Enum):
 
 class ProcessRemark(str, Enum):
     """
-    Status remarks added to processed features for auditing and debugging.
+    Processing status remarks for auditing and diagnostics.
 
     Attributes
     ----------
     RESULT_UNCHANGED : str
-        The alignment did not change the geometry (within tolerance).
+        Result equals original geometry within tolerance.
     INPUT_CIRCLE : str
-        A circle was detected; input returned to prevent geometric distortion.
+        Circle-like input detected; original geometry returned.
     RESULT_EMPTY_RETURNED : str
-        The processing resulted in an empty geometry.
+        Result became empty and empty geometry was returned.
     CHANGED_GEOMETRYTYPE_EMPTY_RETURNED : str
-        Processing changed the geometry type (e.g. Polygon to Line), which is treated as invalid.
+        Geometry type changed unexpectedly; empty geometry returned.
     CHANGED_AMOUNT_GEOMETRIES : str
-        The number of parts in a Multi-geometry has changed.
+        Number of sub-geometries changed.
     NO_PREDICTION_ORIGINAL_RETURNED : str
-        No suitable prediction found; falling back to original.
+        No prediction accepted; original geometry returned.
     MULTIPLE_PREDICTIONS_ORIGINAL_RETURNED : str
-        Ambiguous result due to multiple predictions.
+        Multiple predictions prevented single choice; original returned.
     NOT_EVALUATED_ORIGINAL_RETURNED : str
-        Evaluation criteria not met.
+        Evaluation not possible; original returned.
     """
 
     RESULT_UNCHANGED = "resulting geometry equal to original geometry"
@@ -144,37 +154,34 @@ class ProcessRemark(str, Enum):
 
 class Evaluation(str, Enum):
     """
-    Classification of the alignment quality and reliability.
-
-    These values help in deciding whether a change can be accepted automatically
-    or requires manual review.
+    Classification labels for prediction quality and confidence.
 
     Attributes
     ----------
     EQUALITY_BY_ID_AND_FULL_REFERENCE : str
-        Match confirmed by both unique identifier and complete reference data.
+        Match by reference identifiers and full-reference condition.
     EQUALITY_BY_ID : str
-        Match confirmed via unique identifier only.
+        Match by reference identifiers.
     EQUALITY_BY_FULL_REFERENCE : str
-        Match confirmed via complete reference data comparison.
+        Match by full-reference condition.
     PREDICTION_UNIQUE : str
-        A single high-confidence prediction was found.
+        One unique prediction selected.
     PREDICTION_UNIQUE_AND_FULL_REFERENCE : str
-        A unique prediction that also matches the full reference.
+        One unique prediction selected with full-reference condition.
     TO_CHECK_PREDICTION_FULL : str
-        Requires review; prediction exists with full reference but lacks certainty.
+        Manual check advised; prediction selected with full-reference context.
     TO_CHECK_PREDICTION_MULTI : str
-        Requires review; multiple conflicting predictions were found.
+        Manual check advised; multiple prediction candidates.
     TO_CHECK_PREDICTION_MULTI_FULL : str
-        Requires review; multiple predictions found alongside full reference data.
+        Manual check advised; multiple candidates with full-reference context.
     TO_CHECK_ORIGINAL : str
-        Requires review against the original source data.
+        Manual check advised; keep or inspect original geometry.
     TO_CHECK_NO_PREDICTION : str
-        Requires review because no valid prediction could be generated.
+        Manual check advised; no suitable prediction found.
     NOT_EVALUATED : str
-        The alignment has not yet been processed or evaluated.
+        No evaluation performed.
     NO_CHANGE : str
-        Evaluation complete; no changes were detected or required.
+        No meaningful change detected.
     """
 
     EQUALITY_BY_ID_AND_FULL_REFERENCE = "equality_by_id_and_full_reference"
@@ -193,9 +200,20 @@ class Evaluation(str, Enum):
 
 class ProcessorID(str, Enum):
     """
-    Unique identifiers for the available alignment algorithms.
+    Stable identifiers for available processing algorithms.
 
-    References correspond to the internal Aligner documentation and methodology.
+    Attributes
+    ----------
+    DIEUSSAERT : str
+        Identifier for DieussaertGeometryProcessor.
+    SNAP : str
+        Identifier for SnapGeometryProcessor.
+    NETWORK : str
+        Identifier for NetworkGeometryProcessor.
+    ALIGNER : str
+        Identifier for AlignerGeometryProcessor.
+    TOPOLOGY : str
+        Identifier for TopologyProcessor.
     """
 
     DIEUSSAERT = "2024:dieussaert2024a"
@@ -205,31 +223,41 @@ class ProcessorID(str, Enum):
     TOPOLOGY = "2024:topology2024a"
 
 
-class AlignerResultType(str, Enum):
-    """Format of the output dictionary."""
-
-    PREDICTIONS = "predictions"
-    EVALUATED_PREDICTIONS = "evaluated_predictions"
-    PROCESSRESULTS = "processresults"
-
-
-class AlignerInputType(str, Enum):
-    """Role of the input dataset."""
-
-    THEMATIC = "thematic"
-    REFERENCE = "reference"
-
-
 class SnapStrategy(str, Enum):
-    """Geometric priority during snapping."""
+    """
+    Priority behavior used during snapping.
+
+    Attributes
+    ----------
+    ONLY_VERTICES : str
+        Snap only to reference vertices.
+    PREFER_VERTICES : str
+        Prefer vertices over edges, based on relevant distance.
+    PREFER_ENDS_AND_ANGLES : str
+        Prefer end vertices first, then sharp-angle vertices, then other vertices.
+    NO_PREFERENCE : str
+        Use nearest valid target without preference.
+    """
 
     ONLY_VERTICES = "only_vertices"
     PREFER_VERTICES = "prefer_vertices"
+    PREFER_ENDS_AND_ANGLES = "prefer_ends_and_angles"
     NO_PREFERENCE = "no_preference"
 
 
 class FullReferenceStrategy(str, Enum):
-    """Strategy for handling reference data coverage."""
+    """
+    How strongly full-reference matches are preferred.
+
+    Attributes
+    ----------
+    ONLY_FULL_REFERENCE : str
+        Keep only full-reference matches.
+    PREFER_FULL_REFERENCE : str
+        Prefer full-reference matches when available.
+    NO_FULL_REFERENCE : str
+        Do not prioritize full-reference matches.
+    """
 
     ONLY_FULL_REFERENCE = "only_full_reference"
     PREFER_FULL_REFERENCE = "prefer_full_reference"
@@ -237,7 +265,18 @@ class FullReferenceStrategy(str, Enum):
 
 
 class PredictionStrategy(str, Enum):
-    """Determines which prediction is selected as the primary result."""
+    """
+    How a primary prediction is selected from candidates.
+
+    Attributes
+    ----------
+    ALL : str
+        Keep all prediction candidates.
+    BEST : str
+        Keep only the best candidate.
+    ORIGINAL : str
+        Keep the original geometry as final choice.
+    """
 
     ALL = "all"
     BEST = "best"

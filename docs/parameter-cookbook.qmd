@@ -1,0 +1,48 @@
+# Parameter Guide
+
+This page provides practical guidance for the most important `brdr` parameters.
+
+## `relevant_distance`
+
+- Meaning: maximum spatial search/tolerance distance for alignment behavior.
+- Typical approach: evaluate a distance range, then use `predict(...)` or `evaluate(...)`.
+- Start small and increase gradually.
+
+## `correction_distance`
+
+- Meaning: technical cleanup tolerance used in post-processing.
+- Keep this small relative to your data resolution.
+- If too large, small valid features may be over-smoothed.
+
+## `mitre_limit`
+
+- Meaning: controls corner behavior in buffer operations.
+- Higher values keep sharper corners; lower values reduce spikes.
+
+## `snap_strategy`
+
+- Meaning: controls vertex/edge preference in snapping workflows.
+- Use strict vertex-based modes when reference vertices are authoritative.
+- Use no-preference mode when edge proximity is equally valid.
+
+## `od_strategy` (Open Domain)
+
+- Meaning: defines behavior where no reference coverage exists.
+- Choose explicitly based on business semantics:
+  - keep as-is
+  - exclude
+  - snap to virtual/reference boundaries
+
+## Tuning workflow
+
+1. Fix a representative sample dataset.
+2. Sweep `relevant_distance`.
+3. Inspect stability and geometric deltas.
+4. Lock `od_strategy` and `snap_strategy`.
+5. Validate on a larger holdout set.
+
+## Related
+
+- [Examples](examples.qmd)
+- [Processor Guide](processor-selection.qmd)
+- [API reference](reference/index.qmd)

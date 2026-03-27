@@ -5,15 +5,10 @@ from brdr.be.grb.enums import GRBType
 from brdr.be.grb.loader import GRBActualLoader
 from brdr.enums import AlignerResultType
 from brdr.loader import GeoJsonLoader
-from brdr.viz import show_map, plot_difference_by_relevant_distance
+from brdr.viz import plot_difference_by_relevant_distance, show_map
 
-# Press the green button in the gutter to run the script.
 if __name__ == "__main__":
-    """
-    EXAMPLE to use the predictor-function to automatically predict which resulting
-    geometries are interesting to look at (based on detection of breakpoints and
-    relevant distances of 'no-change')
-    """
+    """Example: generate predicted candidate geometries from distance series."""
 
     input_geojson = {
         "type": "FeatureCollection",
@@ -45,42 +40,39 @@ if __name__ == "__main__":
             }
         ],
     }
-    # Initiate an Aligner
+
     aligner = Aligner()
-    # Load thematic data & reference data
-    loader = GeoJsonLoader(_input=input_geojson, id_property="theme_id")
-
-    aligner.load_thematic_data(loader)
-    # Load reference data
-    loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
-    aligner.load_reference_data(loader)
-
-    # PREDICT the 'stable' relevant distances, for a series of relevant distances
-    series = np.arange(0, 310, 10, dtype=int) / 100
-    # predict which relevant distances are interesting to propose as resulting geometry
-    aligner_result = aligner.predict(
-        relevant_distances=series,
+    aligner.load_thematic_data(
+        GeoJsonLoader(_input=input_geojson, id_property="theme_id")
     )
-    dict_predictions = aligner_result.get_results(
+    aligner.load_reference_data(
+        GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
+    )
+
+    relevant_distances = np.arange(0, 310, 10, dtype=int) / 100
+    aligner_result = aligner.predict(relevant_distances=relevant_distances)
+    predictions = aligner_result.get_results(
         aligner=aligner, result_type=AlignerResultType.PREDICTIONS
     )
 
-    # SHOW results of the predictions
-    fcs = aligner_result.get_results_as_geojson(add_metadata=False, aligner=aligner)
+    geojson_results = aligner_result.get_results_as_geojson(
+        add_metadata=False, aligner=aligner
+    )
     diffs_dict = aligner.get_difference_metrics_for_thematic_data(
         dict_processresults=aligner_result.results, thematic_data=aligner.thematic_data
     )
     reference_geometries = {
         key: feat.geometry for key, feat in aligner.reference_data.features.items()
     }
-    if fcs is None or "result" not in fcs:
+
+    if geojson_results is None or "result" not in geojson_results:
         print("empty predictions")
     else:
-        print(fcs["result"])
-        for key in dict_predictions:
+        print(geojson_results["result"])
+        for key in predictions:
             plot_difference_by_relevant_distance({key: diffs_dict[key]})
             show_map(
-                {key: dict_predictions[key]},
+                {key: predictions[key]},
                 {key: aligner.thematic_data.features[key].geometry},
                 reference_geometries,
             )

@@ -11,8 +11,8 @@ from brdr.constants import REMARK_FIELD_NAME
 from brdr.geometry_utils import (
     safe_unary_union,
     safe_difference,
-    longest_linestring_from_multilinestring,
 )
+from brdr.graph_utils import longest_linestring_from_multilinestring
 from brdr.typings import ProcessResult
 from brdr.utils import geojson_geometry_to_shapely, union_process_result
 

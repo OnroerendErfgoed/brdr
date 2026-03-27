@@ -564,151 +564,193 @@ def export_to_geopackage(G, output_filename="graph_output.gpkg", crs=DEFAULT_CRS
 
 
 def export_histogram(path, df, column_name, filename="histogram.png"):
-    """
-    Creates and saves a high-quality histogram from a DataFrame column.
-
-    Parameters
-    ----------
-    path : str or Path
-        Directory where the plot will be saved.
-    df : pd.DataFrame
-        The DataFrame containing the data.
-    column_name : str
-        The name of the column to plot.
-    filename : str, optional
-        The name of the resulting image file. Default is "histogram.png".
-
-    Returns
-    -------
-    None
-    """
     if df is None or df.empty:
         print("Warning: No data available to plot histogram.")
         return
 
-    values = df[column_name].dropna().values
-    if len(values) == 0:
+    series = df[column_name].dropna()
+    values = series.values
+    n_total = len(values)
+
+    if n_total == 0:
         print("Warning: Column is empty. Skipping histogram.")
         return
 
-    # Set modern style
+    # 1. Stijl en Canvas
     plt.style.use("seaborn-v0_8-muted")
-    fig, ax = plt.subplots(figsize=(10, 6))
+    fig, ax = plt.subplots(figsize=(12, 7))
 
-    # Define bins (integer steps)
-    bins = np.arange(int(min(values)), int(max(values)) + 2, 1)
+    # 2. Discrete Bins instellen
+    # We centreren de bins door de grenzen op .5 te leggen (bijv. 0.5 tot 1.5 voor waarde 1)
+    min_val = int(min(values))
+    max_val = int(max(values))
+    bins = np.arange(min_val, max_val + 2) - 0.5
 
-    # Plot histogram
-    ax.hist(
+    # 3. Histogram Plotten
+    counts, edges, bars = ax.hist(
         values,
         bins=bins,
         color="royalblue",
         edgecolor="white",
         linewidth=1.2,
         alpha=0.85,
-        label="Object Count",
+        label=f"Objecten (N={n_total})",
     )
 
-    # X-axis configuration
-    ticks = np.arange(int(min(values)), int(max(values)) + 1, step=2)
-    ax.set_xticks(ticks)
+    # 4. X-as configuratie voor discrete waarden
+    # Toon elk heel getal op de as
+    ax.set_xticks(range(min_val, max_val + 1))
 
-    # Styling
-    ax.yaxis.grid(True, linestyle="--", alpha=0.7)
+    # 5. Waarden en Percentages bovenop de balken toevoegen
+    for bar in bars:
+        height = bar.get_height()
+        if height > 0:
+            # Bereken het percentage t.o.v. het totaal
+            percentage = (height / n_total) * 100
+
+            # Formatteer de tekst: "Aantal (0.0%)"
+            label_text = f"{int(height)}\n({percentage:.1f}%)"
+
+            ax.annotate(
+                label_text,
+                xy=(bar.get_x() + bar.get_width() / 2, height),
+                xytext=(0, 5),  # 5 points vertical offset
+                textcoords="offset points",
+                ha="center",
+                va="bottom",
+                fontsize=9,
+                fontweight="bold",
+                linespacing=1.2,  # Zorgt voor mooie witruimte tussen getal en %
+            )
+
+    # 6. Y-as limiet iets verhogen om ruimte te maken voor de tekst
+    ax.set_ylim(0, max(counts) * 1.15)
+
+    # 6. Styling & Labels
+    ax.yaxis.grid(True, linestyle="--", alpha=0.6)
     ax.set_axisbelow(True)
-    ax.set_title(f"Histogram - {column_name}", fontsize=14, pad=15, fontweight="bold")
-    ax.set_xlabel("Value", fontsize=12)
-    ax.set_ylabel("Count", fontsize=12)
 
-    # Remove top and right spines
+    # Dynamische titel met totaal aantal objecten"
+    lbl = f"Mogelijke 'false positives' ({column_name})"
+    ax.set_title(
+        "Frequentieverdeling: " + lbl + f"\n *Totaal aantal objecten: {n_total}*",
+        fontsize=15,
+        pad=20,
+        fontweight="bold",
+    )
+
+    ax.set_xlabel(lbl, fontsize=12, labelpad=10)
+    ax.set_ylabel("Frequentie (Aantal features)", fontsize=12, labelpad=10)
+
+    # Verwijder randen voor een moderne look
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
 
-    ax.legend()
+    ax.legend(loc="upper right")
     plt.tight_layout()
 
+    # Opslaan
     save_path = Path(path) / filename
-    plt.savefig(save_path, dpi=300)
-    plt.close(fig)  # Close to free up memory
-    print(f"Histogram saved to: {save_path}")
+    plt.savefig(save_path, dpi=300, bbox_inches="tight")
+    plt.close(fig)
+    print(f"Histogram succesvol opgeslagen: {save_path}")
 
 
 def export_boxplot(path, df, column_name, filename="boxplot.png"):
-    """
-    Creates and saves a horizontal boxplot from a DataFrame column.
-
-    Parameters
-    ----------
-    path : str or Path
-        Directory where the plot will be saved.
-    df : pd.DataFrame
-        The DataFrame containing the data.
-    column_name : str
-        The name of the column to plot.
-    filename : str, optional
-        The name of the resulting image file. Default is "boxplot.png".
-
-    Returns
-    -------
-    None
-    """
     if df is None or df.empty:
         print("Warning: No data available to plot boxplot.")
         return
 
-    values = df[column_name].dropna().values
-    if len(values) == 0:
+    series = df[column_name].dropna()
+    values = series.values
+    n_total = len(values)
+
+    if n_total == 0:
         print("Warning: Column is empty. Skipping boxplot.")
         return
 
-    plt.style.use("seaborn-v0_8-muted")
-    fig, ax = plt.subplots(figsize=(10, 4))
+    # 1. Statistieken en Outlier detectie (Tukey's method)
+    q1 = np.percentile(values, 25)
+    q3 = np.percentile(values, 75)
+    iqr = q3 - q1
+    lower_bound = q1 - 1.5 * iqr
+    upper_bound = q3 + 1.5 * iqr
 
-    # Plot boxplot
+    outliers = values[(values < lower_bound) | (values > upper_bound)]
+    n_outliers = len(outliers)
+    perc_outliers = (n_outliers / n_total) * 100
+
+    mean_val = np.mean(values)
+    median_val = np.median(values)
+
+    plt.style.use("seaborn-v0_8-muted")
+    fig, ax = plt.subplots(figsize=(12, 6))
+
+    # 2. Boxplot Plotten
     result = ax.boxplot(
         values,
         vert=False,
         patch_artist=True,
-        notch=False,
         showmeans=True,
         meanprops={
-            "marker": "^",
-            "markerfacecolor": "green",
-            "markeredgecolor": "green",
+            "marker": "D",
+            "markerfacecolor": "white",
+            "markeredgecolor": "black",
+            "markersize": 7,
         },
-        medianprops={"color": "black", "linewidth": 2},
+        medianprops={"color": "orange", "linewidth": 2.5},
         flierprops={
-            "markerfacecolor": "red",
+            "markerfacecolor": "#e74c3c",
             "marker": "o",
-            "markersize": 5,
-            "alpha": 0.5,
+            "markersize": 4,
+            "alpha": 0.4,
         },
     )
 
-    # Coloring the box
     for patch in result["boxes"]:
         patch.set_facecolor("royalblue")
-        patch.set_alpha(0.7)
+        patch.set_alpha(0.8)
 
-    # X-axis configuration
-    ticks = np.arange(int(min(values)), int(max(values)) + 1, step=2)
-    ax.set_xticks(ticks)
+    # 3. Annotaties voor statistiek
+    ax.text(
+        median_val,
+        1.12,
+        f"Mediaan: {median_val:.1f}",
+        color="orange",
+        fontweight="bold",
+        ha="center",
+    )
+    ax.text(
+        mean_val,
+        0.85,
+        f"Gem: {mean_val:.1f}",
+        color="black",
+        fontweight="bold",
+        ha="center",
+    )
+
+    # 4. Discrete X-as
+    min_v, max_v = int(min(values)), int(max(values))
+    ax.set_xticks(range(min_v, max_v + 1))
+
+    # 5. Uitgebreide Titel met N en Outliers
+    lbl = f"Mogelijke 'false positives' ({column_name})"
+    title_text = (
+        f"Boxplot: " + lbl + "\n"
+        f"N = {n_total}  |  Outliers: {n_outliers} ({perc_outliers:.1f}%)"
+    )
+    ax.set_title(title_text, fontsize=14, fontweight="bold", pad=20)
 
     # Styling
-    ax.set_title(f"Boxplot - {column_name}", fontsize=14, fontweight="bold", pad=15)
-    ax.set_xlabel("Value", fontsize=12)
-    ax.set_yticks([])  # Hide Y-axis labels for a single box
+    ax.set_xlabel(lbl, fontsize=11, labelpad=10)
+    ax.set_yticks([])
+    ax.grid(axis="x", linestyle="--", alpha=0.5)
 
-    ax.grid(axis="x", linestyle="--", alpha=0.6)
-    ax.set_axisbelow(True)
-
-    # Clean up spines
     for spine in ["top", "right", "left"]:
         ax.spines[spine].set_visible(False)
 
     plt.tight_layout()
-
     save_path = Path(path) / filename
-    plt.savefig(save_path, dpi=300)
+    plt.savefig(save_path, dpi=300, bbox_inches="tight")
     plt.close(fig)
-    print(f"Boxplot saved to: {save_path}")
+    print(f"Boxplot opgeslagen: {save_path} (Outliers: {n_outliers})")
