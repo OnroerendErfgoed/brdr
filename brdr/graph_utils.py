@@ -943,6 +943,8 @@ def find_best_path_in_network(
 ):
     start_point = Point(geom_to_process.coords[0])
     end_point = Point(geom_to_process.coords[-1])
+    if start_point == end_point:
+        return find_best_circle_path(graph, geom_to_process)
     node_list = list(graph.nodes)
     node_points_tree = None
     if tolerance is not None and tolerance > 0 and node_list:
@@ -970,7 +972,27 @@ def find_best_path_in_network(
     if start_node is None or end_node is None:
         return None
     if start_node == end_node:
-        return find_best_circle_path(graph, geom_to_process)
+        #We recalculate the start and end node based on the pseudonodes (NO_PREFERENCE)
+        start_node = _select_network_node_by_snap_strategy(
+            start_point,
+            graph,
+            snap_strategy=SnapStrategy.NO_PREFERENCE,
+            tolerance=tolerance,
+            angle_threshold_degrees=angle_threshold_degrees,
+            node_list=node_list,
+            node_points_tree=node_points_tree,
+        )
+        end_node = _select_network_node_by_snap_strategy(
+            end_point,
+            graph,
+            snap_strategy=SnapStrategy.NO_PREFERENCE,
+            tolerance=tolerance,
+            angle_threshold_degrees=angle_threshold_degrees,
+            node_list=node_list,
+            node_points_tree=node_points_tree,
+        )
+        if start_node == end_node:
+            return None
 
     path_found = nx.has_path(graph, start_node, end_node)
     logging.debug("Path detected? - " + str(path_found))
