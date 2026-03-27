@@ -25,7 +25,7 @@ class TestBe(unittest.TestCase):
         aligner.load_thematic_data(loader)
 
         # Use BeCadastralParcel for the reference data
-        loader = BeCadastralParcelLoader(aligner=aligner,service="wfs")
+        loader = BeCadastralParcelLoader(aligner=aligner, service="wfs")
         aligner.load_reference_data(loader)
         # EXECUTE THE ALIGNMENT
         relevant_distance = 5

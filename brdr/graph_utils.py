@@ -972,7 +972,7 @@ def find_best_path_in_network(
     if start_node is None or end_node is None:
         return None
     if start_node == end_node:
-        #We recalculate the start and end node based on the pseudonodes (NO_PREFERENCE)
+        # We recalculate the start and end node based on the pseudonodes (NO_PREFERENCE)
         start_node = _select_network_node_by_snap_strategy(
             start_point,
             graph,

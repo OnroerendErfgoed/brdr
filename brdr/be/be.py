@@ -366,9 +366,9 @@ class BeAdministrativeBoundaryLoader(GeoJsonLoader):
         self.max_pages = max_pages
         self.request_timeout = request_timeout
         self.data_dict_source["source"] = "VRBG"
-        self.data_dict_source[
-            "source_url"
-        ] = "https://geo.api.vlaanderen.be/VRBG/ogc/features/v1"
+        self.data_dict_source["source_url"] = (
+            "https://geo.api.vlaanderen.be/VRBG/ogc/features/v1"
+        )
 
     def load_data(self):
         """

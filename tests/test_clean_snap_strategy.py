@@ -15,7 +15,9 @@ from brdr.graph_utils import (
 class TestCleanSnapStrategy(unittest.TestCase):
     def test_get_end_coords_returns_original_reference_ends(self):
         original_reference = LineString([(0.0, 0.0), (2.0, 0.0), (4.0, 0.0)])
-        ref_split = MultiLineString([[(0.0, 0.0), (2.0, 0.0)], [(2.0, 0.0), (4.0, 0.0)]])
+        ref_split = MultiLineString(
+            [[(0.0, 0.0), (2.0, 0.0)], [(2.0, 0.0), (4.0, 0.0)]]
+        )
 
         end_coords = get_end_coords(original_reference, ref_split)
 
@@ -85,8 +87,6 @@ class TestCleanSnapStrategy(unittest.TestCase):
 
         self.assertNotIn(b, cleaned.nodes)
         self.assertTrue(cleaned.has_edge(a, c))
-
-
 
     def test_pseudo_tag_interacts_with_snap_strategy_in_node_selection(self):
         G = nx.Graph()

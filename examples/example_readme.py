@@ -9,9 +9,7 @@ RELEVANT_DISTANCE = 1
 aligner = Aligner(crs="EPSG:31370")
 
 # Load thematic geometry.
-thematic_geometries = {
-    THEME_ID: geom_from_wkt("POLYGON ((0 0, 0 9, 5 10, 10 0, 0 0))")
-}
+thematic_geometries = {THEME_ID: geom_from_wkt("POLYGON ((0 0, 0 9, 5 10, 10 0, 0 0))")}
 aligner.load_thematic_data(DictLoader(thematic_geometries))
 
 # Load reference geometry.
@@ -36,7 +34,7 @@ print(
     + process_results[THEME_ID][RELEVANT_DISTANCE]["result_diff_min"].wkt
 )
 
-#OPTIONAL - export results to GeoDataFrame
+# OPTIONAL - export results to GeoDataFrame
 
 # results_gdf = aligner_result.get_results_as_geodataframe(
 #     aligner=aligner,
@@ -46,4 +44,3 @@ print(
 # # GeoDataFrame export (one row per theme_id + relevant_distance).
 # print("gdf columns: " + ", ".join(results_gdf.columns.astype(str)))
 # print(results_gdf[[aligner.thematic_data.id_fieldname, "relevant_distance"]].head())
-
