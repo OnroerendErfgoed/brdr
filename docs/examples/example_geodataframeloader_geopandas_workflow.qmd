@@ -1,0 +1,24 @@
+---
+title: "GeoDataFrameLoader + GeoPandas Workflow"
+description: "Load thematic and reference geometries from GeoDataFrames and export brdr results back to GeoDataFrame"
+author: "Karel Dieussaert"
+date: "2026-03-31"
+categories: [Loader, GeoDataFrameLoader, GeoPandas, Process]
+format:
+  html:
+    code-fold: false
+jupyter: python3
+---
+# GeoDataFrameLoader + GeoPandas
+This example shows a full in-memory GeoPandas workflow:
+
+1. Build thematic and reference `GeoDataFrame` objects.
+2. Load both datasets with `GeoDataFrameLoader` from the loader API.
+3. Run `aligner.process(...)`.
+4. Export output with `aligner_result.get_results_as_geodataframe(...)`.
+
+Use this pattern when your data pipeline already works in GeoPandas and you want to keep processing in-memory.
+
+```{python}
+{{< include ../../examples/example_geodataframeloader_geopandas_workflow.py >}}
+```

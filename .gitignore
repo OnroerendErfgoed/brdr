@@ -189,3 +189,5 @@ _quarto_internal_scss_error.scss
 /docs/examples/example_lambert72_to_lambert08_files
 /docs/examples/example_lambert72_to_lambert08_files
 tests/g_out.gpkg
+/.venv-docs
+/.jupyter

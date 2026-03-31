@@ -27,7 +27,8 @@ This page provides practical guidance for the most important `brdr` parameters.
 
 ## `od_strategy` (Open Domain)
 
-- Meaning: defines behavior where no reference coverage exists.
+- Meaning: defines behavior where no **polygon reference coverage** exists.
+- Practical note: when the reference dataset has only lines/points and no polygonal coverage, open-domain strategy effects are intentionally limited.
 - Choose explicitly based on business semantics:
   - keep as-is
   - exclude

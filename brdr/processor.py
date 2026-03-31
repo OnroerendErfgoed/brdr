@@ -613,6 +613,8 @@ class SnapGeometryProcessor(BaseProcessor):
         The process considers the Open Domain (OD) strategy to determine how
         areas not covered by reference features should be handled (e.g.,
         ignored, kept as-is, or used as a virtual snapping target).
+        Open-domain strategy effects are applied when polygonal reference
+        coverage is present.
 
         Parameters
         ----------
@@ -643,9 +645,12 @@ class SnapGeometryProcessor(BaseProcessor):
         ```{mermaid}
         graph TD
             In[Input Geometry] --> OD{OD Strategy?}
-            OD -- EXCLUDE --> Snap[Snap to Real Refs]
-            OD -- AS_IS --> Keep[Keep OD part as-is]
-            OD -- OTHER --> Virtual[Create Virtual Ref]
+            OD --> Poly{Polygonal ref coverage?}
+            Poly -- No --> Snap[Snap to Real Refs]
+            Poly -- Yes --> OD2{OD Strategy?}
+            OD2 -- EXCLUDE --> Snap
+            OD2 -- AS_IS --> Keep[Keep OD part as-is]
+            OD2 -- OTHER --> Virtual[Create Virtual Ref]
             Virtual --> SnapAll[Snap to Real + Virtual Refs]
             Keep --> Merge[Merge snapped & as-is parts]
             Snap --> Post[Post-process Result]
@@ -1527,16 +1532,21 @@ class NetworkGeometryProcessor(BaseProcessor):
 
         Notes
         -----
-        The network processing follows a "deconstruct-align-reconstruct" flow:
-        Open-domain handling (`od_strategy`) is applied in the shared
-        post-processing pipeline, including linear and point outputs.
+        The network processing follows a "deconstruct-align-reconstruct" flow.
+        When polygonal reference coverage exists, `od_strategy` is applied
+        before and after the network alignment (EXCLUDE/AS_IS/SNAP_* behavior).
+        Without polygonal reference coverage, processing falls back to regular
+        network alignment against reference elements.
 
 
 
         ```{mermaid}
         graph TD
             In[Input Polygon] --> Decon[Deconstruct: Exterior & Interiors]
-            Decon --> Buff[Buffer Input to Find Network]
+            Decon --> ODCheck{Polygonal ref coverage?}
+            ODCheck -- No --> Buff[Buffer Input to Find Network]
+            ODCheck -- Yes --> ODPrep[Prepare OD handling by strategy]
+            ODPrep --> Buff
             Buff --> Align[Align Segments to Network Elements]
             Align --> Recon[Reconstruct Polygon Rings]
             Recon --> Post[Post-processing & Sliver Removal]

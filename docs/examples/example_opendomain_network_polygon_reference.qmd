@@ -1,0 +1,22 @@
+---
+title: "OpenDomain in Network Processor"
+description: "Apply all OpenDomainStrategy variants in NetworkGeometryProcessor with polygon reference coverage"
+author: "Karel Dieussaert"
+date: "2026-03-31"
+categories: [OpenDomainStrategy, NetworkGeometryProcessor, Process]
+format:
+  html:
+    code-fold: false
+jupyter: python3
+---
+# OpenDomain in NetworkGeometryProcessor
+This example shows how `OpenDomainStrategy` behaves in [NetworkGeometryProcessor](../reference/NetworkGeometryProcessor.qmd) when the reference dataset contains polygon coverage.
+
+## What you learn
+1. How to loop over all `OpenDomainStrategy` values.
+2. How to run the same input against each strategy.
+3. How to compare result type, emptiness and length.
+
+```{python}
+{{< include ../../examples/example_opendomain_network_polygon_reference.py >}}
+```
