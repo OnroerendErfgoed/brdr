@@ -29,6 +29,7 @@ from brdr.geometry_utils import buffer_pos
 from brdr.geometry_utils import fill_and_remove_gaps
 from brdr.geometry_utils import geometric_equality
 from brdr.geometry_utils import get_shape_index
+from brdr.geometry_utils import extract_points_lines_from_geometry
 from brdr.geometry_utils import safe_difference
 from brdr.geometry_utils import safe_intersection
 from brdr.geometry_utils import safe_symmetric_difference
@@ -151,6 +152,27 @@ class BaseProcessor(ABC):
             message = f"The input polygon is too large to process: input area {str(input_geometry.area)} m², limit area: {str(self.config.area_limit)} m²."
             raise ValueError(message)
 
+    @staticmethod
+    def _get_polygonal_reference_union(reference_union: BaseGeometry) -> BaseGeometry:
+        if reference_union is None or reference_union.is_empty:
+            return GeometryCollection()
+        if reference_union.geom_type in {"Polygon", "MultiPolygon"}:
+            return reference_union
+        polygons = []
+        for part in get_parts(reference_union):
+            if part is None or part.is_empty:
+                continue
+            if part.geom_type in {"Polygon", "MultiPolygon"}:
+                polygons.append(part)
+        if not polygons:
+            return GeometryCollection()
+        return safe_unary_union(polygons)
+
+    @staticmethod
+    def _has_polygonal_reference_coverage(reference_union: BaseGeometry) -> bool:
+        polygonal_union = BaseProcessor._get_polygonal_reference_union(reference_union)
+        return not polygonal_union.is_empty
+
     def _postprocess_preresult(
         self,
         geom_preresult: BaseGeometry,
@@ -237,18 +259,37 @@ class BaseProcessor(ABC):
             "MultiLineString",
             "GeometryCollection",
         ]:
+            geom_thematic_for_diff = geom_thematic
+            geom_preresult_for_diff = geom_preresult
+            polygonal_reference_union = self._get_polygonal_reference_union(
+                reference_union
+            )
+            if (
+                self.config.od_strategy == OpenDomainStrategy.EXCLUDE
+                and not polygonal_reference_union.is_empty
+            ):
+                geom_thematic_for_diff = safe_intersection(
+                    geom_thematic_for_diff, polygonal_reference_union
+                )
+                geom_preresult_for_diff = safe_intersection(
+                    geom_preresult_for_diff, polygonal_reference_union
+                )
+                if geom_thematic_for_diff is None:
+                    geom_thematic_for_diff = GeometryCollection()
+                if geom_preresult_for_diff is None:
+                    geom_preresult_for_diff = GeometryCollection()
             result_diff_plus = safe_difference(
-                geom_preresult,
-                buffer_pos(geom_thematic, correction_distance),
+                geom_preresult_for_diff,
+                buffer_pos(geom_thematic_for_diff, correction_distance),
             )
             result_diff_min = safe_difference(
-                geom_thematic,
-                buffer_pos(geom_preresult, correction_distance),
+                geom_thematic_for_diff,
+                buffer_pos(geom_preresult_for_diff, correction_distance),
             )
             result_diff = safe_unary_union([result_diff_plus, result_diff_min])
             return union_process_result(
                 {
-                    "result": geom_preresult,
+                    "result": geom_preresult_for_diff,
                     "result_diff": result_diff,
                     "result_diff_plus": result_diff_plus,
                     "result_diff_min": result_diff_min,
@@ -261,12 +302,16 @@ class BaseProcessor(ABC):
         buffer_distance = relevant_distance / 2
         result = []
         geom_thematic_for_add_delete = geom_thematic
+        polygonal_reference_union = self._get_polygonal_reference_union(reference_union)
 
-        if self.config.od_strategy == OpenDomainStrategy.EXCLUDE:
+        if (
+            self.config.od_strategy == OpenDomainStrategy.EXCLUDE
+            and not polygonal_reference_union.is_empty
+        ):
             geom_thematic_for_add_delete = safe_intersection(
-                geom_thematic_for_add_delete, reference_union
+                geom_thematic_for_add_delete, polygonal_reference_union
             )
-            geom_preresult = safe_intersection(geom_preresult, reference_union)
+            geom_preresult = safe_intersection(geom_preresult, polygonal_reference_union)
 
         if not (geom_thematic is None or geom_thematic.is_empty):
             if (
@@ -612,6 +657,10 @@ class SnapGeometryProcessor(BaseProcessor):
         snapped = []
         virtual_reference = Polygon()
         snap_strategy = self.config.snap_strategy
+        polygonal_reference_union = self._get_polygonal_reference_union(
+            reference_data.union
+        )
+        has_polygonal_od = not polygonal_reference_union.is_empty
 
         # CALCULATE INNER and OUTER INPUT GEOMETRY for performance optimization on big geometries
         # combine all parts of the input geometry to one polygon
@@ -633,17 +682,17 @@ class SnapGeometryProcessor(BaseProcessor):
             ref_intersections_geoms.append(ref_geom)
 
         # Handle Open Domain (OD)logic
-        if self.config.od_strategy != OpenDomainStrategy.EXCLUDE:
+        if has_polygonal_od and self.config.od_strategy != OpenDomainStrategy.EXCLUDE:
             virtual_reference = self._create_virtual_reference(
                 input_geometry,
                 relevant_distance,
-                reference_data.union,
+                polygonal_reference_union,
                 correction_distance,
                 mitre_limit,
                 False,
             )
 
-        if self.config.od_strategy == OpenDomainStrategy.EXCLUDE:
+        if self.config.od_strategy == OpenDomainStrategy.EXCLUDE or not has_polygonal_od:
             pass
         elif self.config.od_strategy == OpenDomainStrategy.AS_IS:
             # Intersection with virtual reference is kept as original (no snapping)
@@ -674,7 +723,7 @@ class SnapGeometryProcessor(BaseProcessor):
             GeometryCollection(),  # Relevant intersection is handled internally by snap
             GeometryCollection(),  # Relevant diff is handled internally by snap
             relevant_distance,
-            reference_data.union,
+            polygonal_reference_union,
             mitre_limit,
             correction_distance,
         )
@@ -1479,6 +1528,8 @@ class NetworkGeometryProcessor(BaseProcessor):
         Notes
         -----
         The network processing follows a "deconstruct-align-reconstruct" flow:
+        Open-domain handling (`od_strategy`) is applied in the shared
+        post-processing pipeline, including linear and point outputs.
 
 
 
@@ -1506,12 +1557,47 @@ class NetworkGeometryProcessor(BaseProcessor):
             safe_intersection(reference_data.elements, input_geometry_buffered)
         )
         reference_union = reference_data.union
+        polygonal_reference_union = self._get_polygonal_reference_union(reference_union)
+        has_polygonal_od = not polygonal_reference_union.is_empty
+
+        geometry_to_process = input_geometry
+        geometry_od_as_is = GeometryCollection()
+
+        if has_polygonal_od:
+            if self.config.od_strategy == OpenDomainStrategy.EXCLUDE:
+                clipped = safe_intersection(input_geometry, polygonal_reference_union)
+                geometry_to_process = (
+                    clipped if clipped is not None else GeometryCollection()
+                )
+            elif self.config.od_strategy == OpenDomainStrategy.AS_IS:
+                clipped = safe_intersection(input_geometry, polygonal_reference_union)
+                geometry_to_process = (
+                    clipped if clipped is not None else GeometryCollection()
+                )
+                od_as_is = safe_difference(input_geometry, polygonal_reference_union)
+                geometry_od_as_is = (
+                    od_as_is if od_as_is is not None else GeometryCollection()
+                )
+            elif self.config.od_strategy != OpenDomainStrategy.EXCLUDE:
+                virtual_reference = self._create_virtual_reference(
+                    input_geometry,
+                    relevant_distance,
+                    polygonal_reference_union,
+                    correction_distance,
+                    mitre_limit,
+                    False,
+                )
+                virtual_reference_elements = extract_points_lines_from_geometry(
+                    virtual_reference
+                )
+                reference = safe_unary_union([reference, virtual_reference_elements])
+        geometry_to_process = _to_multi_network_fast(geometry_to_process)
 
         geom_processed_list = []
 
-        if isinstance(input_geometry, MultiPolygon):
+        if isinstance(geometry_to_process, MultiPolygon):
             # Cast to MultiPolygon for consistent iteration
-            for polygon in input_geometry.geoms:
+            for polygon in geometry_to_process.geoms:
                 # 1. Process the outer boundary
                 exterior = polygon.exterior
                 exterior_processed = self._process_by_network(
@@ -1540,7 +1626,7 @@ class NetworkGeometryProcessor(BaseProcessor):
                 geom_processed_list.append(geom_processed)
         else:
             # Handling for non-polygonal geometries (e.g. LineStrings)
-            for geom in input_geometry.geoms:
+            for geom in geometry_to_process.geoms:
                 geom_processed = self._process_by_network(
                     geom,
                     reference,
@@ -1553,8 +1639,17 @@ class NetworkGeometryProcessor(BaseProcessor):
         # Merge all processed parts
         if len(geom_processed_list) == 1:
             geom_processed = geom_processed_list[0]
+        elif len(geom_processed_list) == 0:
+            geom_processed = GeometryCollection()
         else:
             geom_processed = safe_unary_union(geom_processed_list)
+
+        if (
+            has_polygonal_od
+            and self.config.od_strategy == OpenDomainStrategy.AS_IS
+            and not geometry_od_as_is.is_empty
+        ):
+            geom_processed = safe_unary_union([geom_processed, geometry_od_as_is])
 
         # Standard cleaning pipeline
         return self._postprocess_preresult(
@@ -1563,7 +1658,7 @@ class NetworkGeometryProcessor(BaseProcessor):
             GeometryCollection(),
             GeometryCollection(),
             relevant_distance,
-            reference_union,
+            polygonal_reference_union,
             mitre_limit,
             correction_distance,
         )
