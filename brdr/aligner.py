@@ -50,11 +50,9 @@ from brdr.constants import PREDICTION_SCORE
 from brdr.constants import RELEVANT_DISTANCE_DECIMALS
 from brdr.constants import RELEVANT_DISTANCE_FIELD_NAME
 from brdr.constants import REMARK_FIELD_NAME
-from brdr.constants import STABILITY
 from brdr.constants import SYMMETRICAL_AREA_CHANGE
 from brdr.constants import SYMMETRICAL_AREA_PERCENTAGE_CHANGE
 from brdr.constants import VERSION_DATE
-from brdr.constants import ZERO_STREAK
 from brdr.enums import AlignerResultType
 from brdr.enums import DiffMetric
 from brdr.enums import Evaluation
@@ -71,13 +69,13 @@ from brdr.loader import Loader
 from brdr.logger import Logger
 from brdr.processor import AlignerGeometryProcessor
 from brdr.processor import BaseProcessor
+from brdr.predictor import AlignerPredictor
+from brdr.predictor import BasePredictor
 from brdr.typings import InputId
 from brdr.typings import ProcessResult
 from brdr.utils import (
-    coverage_ratio,
     deep_merge,
 )
-from brdr.utils import determine_stability
 from brdr.utils import get_geodataframe_from_process_results
 from brdr.utils import get_geojsons_from_process_results
 from brdr.utils import get_geometry_difference_metrics_from_processresult
@@ -703,6 +701,8 @@ class Aligner:
         If True, process result observations will be computed by default.
     processor : BaseProcessor or AlignerGeometryProcessor
         The geometric processor used for alignment calculations.
+    predictor : BasePredictor or AlignerPredictor
+        The predictor strategy used to assign prediction scores on process results.
     correction_distance : float
         Distance used in buffer operations to remove slivers (technical correction).
     mitre_limit : int
@@ -746,6 +746,7 @@ class Aligner:
         self,
         *,
         processor: Optional[BaseProcessor] = None,
+        predictor: Optional[BasePredictor] = None,
         crs: str = DEFAULT_CRS,
         config: Optional[AlignerConfig] = None,
         feedback: Any = None,
@@ -757,6 +758,8 @@ class Aligner:
         ----------
         processor : BaseProcessor, optional
             The geometric processor instance. If None, AlignerGeometryProcessor is used.
+        predictor : BasePredictor, optional
+            The prediction strategy instance. If None, AlignerPredictor is used.
         crs : str, optional
             Coordinate Reference System (CRS) of the data.
             Expected to be a projected CRS with units in meters.
@@ -784,6 +787,7 @@ class Aligner:
             if processor
             else AlignerGeometryProcessor(ProcessorConfig(), feedback)
         )
+        self.predictor = predictor if predictor else AlignerPredictor(feedback)
         self.correction_distance = config.correction_distance
         self.mitre_limit = config.mitre_limit
         self.max_workers = config.max_workers
@@ -1061,86 +1065,12 @@ class Aligner:
         >>> # Predict using default distance range
         >>> prediction_results = aligner.predict(thematic_ids=["id_1", "id_2"])
         """
-
-        if thematic_ids is None:
-            thematic_ids = self.thematic_data.features.keys()
-        if any(
-            id_to_predict not in self.thematic_data.features.keys()
-            for id_to_predict in thematic_ids
-        ):
-            raise ValueError("not all ids are found in the thematic data")
-        if relevant_distances is None:
-            relevant_distances = [
-                round(k, RELEVANT_DISTANCE_DECIMALS)
-                for k in np.arange(0, 310, 10, dtype=int) / 100
-            ]
-        rd_prediction = list(relevant_distances)
-        max_relevant_distance = max(rd_prediction)
-        cvg_ratio = coverage_ratio(values=relevant_distances, min_val=0, bin_count=10)
-        cvg_ratio_threshold = 0.75
-        # cvg_ratio: indication of the rd values can be used to make a brdr_prediction_score. When there is enough coverage of predictions to determine a prediction_score we also add 0 and a long-range value(+1).
-        # Otherwise we only add a short-range value (+0.1) to check for stability
-        if cvg_ratio > cvg_ratio_threshold:
-            rd_prediction.append(round(0, RELEVANT_DISTANCE_DECIMALS))
-            rd_prediction.append(
-                round(max_relevant_distance + 0.1, RELEVANT_DISTANCE_DECIMALS)
-            )
-            rd_prediction.append(
-                round(max_relevant_distance + 1, RELEVANT_DISTANCE_DECIMALS)
-            )
-        else:
-            rd_prediction.append(
-                round(max_relevant_distance + 0.1, RELEVANT_DISTANCE_DECIMALS)
-            )
-        rd_prediction = list(set(rd_prediction))
-        rd_prediction = sorted(rd_prediction)
-
-        # Get aligner_result for all relevant_distances
-        aligner_result = self.process(
+        return self.predictor.predict(
+            aligner=self,
+            relevant_distances=relevant_distances,
             thematic_ids=thematic_ids,
-            relevant_distances=rd_prediction,
+            diff_metric=diff_metric,
         )
-        process_results = aligner_result.results
-
-        # Search for predictions
-        if diff_metric is None:
-            diff_metric = self.diff_metric
-        diffs_dict = {}
-        for theme_id, process_result in process_results.items():
-            diffs = get_geometry_difference_metrics_from_processresults(
-                process_result,
-                self.thematic_data.features.get(theme_id).geometry,
-                self.reference_data.union,
-                diff_metric=diff_metric,
-            )
-            diffs_dict[theme_id] = diffs
-            if len(diffs) != len(rd_prediction):
-                self.logger.feedback_warning(
-                    f"Number of computed diffs for thematic element {theme_id} does "
-                    f"not match the number of relevant distances."
-                )
-                continue
-            diff_values = list(diffs.values())
-            dict_stability = determine_stability(rd_prediction, diff_values)
-            prediction_count = 0
-            for rd in rd_prediction:
-                if rd not in relevant_distances:
-                    del process_results[theme_id][rd]
-                    continue
-
-                process_results[theme_id][rd]["properties"][STABILITY] = dict_stability[
-                    rd
-                ][STABILITY]
-                if dict_stability[rd][ZERO_STREAK] is not None:
-                    if cvg_ratio > cvg_ratio_threshold:
-                        prediction_count += 1
-                        process_results[theme_id][rd]["properties"][
-                            PREDICTION_SCORE
-                        ] = dict_stability[rd][ZERO_STREAK][3]
-            for rd, process_result in process_results[theme_id].items():
-                if PREDICTION_SCORE in process_result["properties"]:
-                    process_result["properties"][PREDICTION_COUNT] = prediction_count
-        return AlignerResult(process_results)
 
     def evaluate(
         self,
