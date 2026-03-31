@@ -19,7 +19,8 @@ class ProcessorConfig:
         Buffer size used to define the outer processing band around thematic geometry.
     od_strategy : OpenDomainStrategy, default OpenDomainStrategy.SNAP_ALL_SIDE
         The strategy used to determine how to handle information outside the
-        reference polygons (Open Domain).
+        reference polygons (Open Domain). For datasets without polygonal
+        reference coverage (only lines/points), open-domain effects are limited.
     threshold_overlap_percentage : int, default 50
         Threshold (%) to determine if a reference polygon should be included
         when no relevant intersections or differences exist. If set to -1,

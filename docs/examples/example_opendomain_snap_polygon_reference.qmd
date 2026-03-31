@@ -1,0 +1,21 @@
+---
+title: "OpenDomain in Snap Processor"
+description: "Compare EXCLUDE, AS_IS and SNAP_ALL_SIDE in SnapGeometryProcessor with polygon references"
+author: "Karel Dieussaert"
+date: "2026-03-31"
+categories: [OpenDomainStrategy, SnapGeometryProcessor, Process]
+format:
+  html:
+    code-fold: false
+jupyter: python3
+---
+# OpenDomain in SnapGeometryProcessor
+This example demonstrates strategy differences for [SnapGeometryProcessor](../reference/SnapGeometryProcessor.qmd) when the reference layer is polygon-based.
+
+## What you learn
+1. How `EXCLUDE`, `AS_IS` and `SNAP_ALL_SIDE` differ.
+2. How to inspect area and geometry type per strategy.
+
+```{python}
+{{< include ../../examples/example_opendomain_snap_polygon_reference.py >}}
+```
