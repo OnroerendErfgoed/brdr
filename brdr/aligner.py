@@ -59,6 +59,12 @@ from brdr.geometry_utils import safe_unary_union
 from brdr.geometry_utils import to_crs
 from brdr.loader import Loader
 from brdr.logger import Logger
+from brdr.metadata import (
+    get_metadata_observations_from_process_result as _get_metadata_observations_core,
+)
+from brdr.metadata import (
+    reverse_metadata_observations_to_brdr_observation as _reverse_metadata_observations_core,
+)
 from brdr.predictor import AlignerPredictor
 from brdr.predictor import BasePredictor
 from brdr.processor import AlignerGeometryProcessor
@@ -69,7 +75,6 @@ from brdr.utils import get_geodataframe_from_process_results
 from brdr.utils import get_geojsons_from_process_results
 from brdr.utils import get_geometry_difference_metrics_from_processresult
 from brdr.utils import get_geometry_difference_metrics_from_processresults
-from brdr.utils import is_brdr_observation
 from brdr.utils import urn_from_geom
 from brdr.utils import write_featurecollection_to_geojson
 
@@ -404,81 +409,7 @@ def _get_metadata_observations_from_process_result(
     processResult: ProcessResult,
     reference_lookup: Dict[any, any],
 ) -> List[Dict]:
-    observation = processResult["observations"]
-    actuation_metadata = processResult["metadata"]["actuation"]
-    observation_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S%z")
-    sensor_uuid = uuid.uuid4()
-    result_id = actuation_metadata["result"]
-    observation_metadata = {
-        "type": "sosa:Observation",
-        "has_feature_of_interest": result_id,
-        "made_by_sensor": sensor_uuid.urn,
-        "result_time": observation_time,
-    }
-
-    observations = []
-    for ref_id, observations_dict in observation["reference_features"].items():
-        reference_id = reference_lookup[ref_id]
-        if area := observations_dict.get("area"):
-            observations.append(
-                {
-                    **observation_metadata,
-                    "id": uuid.uuid4().urn,
-                    "observed_property": "brdr:area_overlap",
-                    "has_feature_of_interest": reference_id,
-                    "result": {"value": area, "type": "float"},
-                    "used_procedure": "brdr:observation_procedure_area_overlap",
-                    "used": result_id,
-                }
-            )
-        if percentage := observations_dict.get("percentage"):
-            observations.append(
-                {
-                    **observation_metadata,
-                    "id": uuid.uuid4().urn,
-                    "has_feature_of_interest": reference_id,
-                    "observed_property": "brdr:area_overlap_percentage",
-                    "result": {"value": percentage, "type": "float"},
-                    "used_procedure": "brdr:observation_procedure_area_overlap_percentage",
-                    "used": result_id,
-                }
-            )
-    if full := observation.get("full"):
-        observations.append(
-            {
-                **observation_metadata,
-                "id": uuid.uuid4().urn,
-                "has_feature_of_interest": result_id,
-                "observed_property": "brdr:area_overlap_full",
-                "result": {"value": full, "type": "boolean"},
-                "used_procedure": "brdr:observation_procedure_area_overlap_full",
-            }
-        )
-
-    if area := observation.get("area"):
-        observations.append(
-            {
-                **observation_metadata,
-                "id": uuid.uuid4().urn,
-                "has_feature_of_interest": result_id,
-                "observed_property": "brdr:area",
-                "result": {"value": area, "type": "float"},
-                "used_procedure": "brdr:observation_procedure_area",
-            }
-        )
-    if area_od := observation.get("area_od", {}).get("area"):
-        observations.append(
-            {
-                **observation_metadata,
-                "id": uuid.uuid4().urn,
-                "has_feature_of_interest": result_id,
-                "observed_property": "brdr:area_open_domain",
-                "result": {"value": area_od, "type": "float"},
-                "used_procedure": "brdr:observation_procedure_area_open_domain",
-            }
-        )
-
-    return observations
+    return _get_metadata_observations_core(processResult, reference_lookup)
 
 
 def _reverse_metadata_observations_to_brdr_observation(metadata: Dict) -> Dict:
@@ -517,74 +448,7 @@ def _reverse_metadata_observations_to_brdr_observation(metadata: Dict) -> Dict:
     checking for the presence of a 'ref_id' that differs from the primary
     result interest ID.
     """
-    if not metadata or not "actuation" in metadata or not "observations" in metadata:
-        return {}
-    observations = metadata["observations"]
-    actuation_metadata = metadata["actuation"]
-    # 1. Bouw een reverse lookup: {uuid: originele_id}
-    # We kijken in de reference_geometries van de actuation metadata
-    reverse_ref_lookup = {}
-    for ref_geom in actuation_metadata.get("reference_geometries", []):
-        uuid_id = ref_geom.get("id")
-        original_id = ref_geom.get("derived_from", {}).get("id")
-        if uuid_id and original_id:
-            reverse_ref_lookup[uuid_id] = original_id
-
-    # De hoofd-result ID (de FOI voor top-level zaken als 'area')
-    main_result_id = actuation_metadata.get("result")
-
-    # 2. Initialiseer de resultaatstructuur
-    reconstructed = {
-        "reference_features": {},
-        "full": None,
-        "area": None,
-        # De overige velden (brdr_version etc.) zitten niet in de observaties
-        # en moeten idealiter uit de context komen.
-    }
-    for obs in observations:
-        prop = obs.get("observed_property")
-        val = obs.get("result", {}).get("value")
-        foi = obs.get("has_feature_of_interest")
-
-        # Top-level eigenschappen (FOI is de hoofd-result ID)
-        if foi == main_result_id:
-            if prop == "brdr:area_overlap_full":
-                reconstructed["full"] = val
-            elif prop == "brdr:area":
-                reconstructed["area"] = val
-            elif prop == "brdr:area_open_domain":
-                reconstructed["area_od"] = {"area": val}
-
-        # Feature-specifieke eigenschappen (FOI is een reference-uuid)
-        elif foi in reverse_ref_lookup:
-            ref_id = reverse_ref_lookup[foi]
-            if ref_id not in reconstructed["reference_features"]:
-                reconstructed["reference_features"][ref_id] = {}
-
-            if prop == "brdr:area_overlap":
-                reconstructed["reference_features"][ref_id]["area"] = val
-            elif prop == "brdr:area_overlap_percentage":
-                reconstructed["reference_features"][ref_id]["percentage"] = val
-                if val == 100:
-                    reconstructed["reference_features"][ref_id]["full"] = True
-                else:
-                    reconstructed["reference_features"][ref_id]["full"] = False
-
-        # Get some values from a single observation
-        alignment_date = obs.get("result_time", {})
-
-    # Finalize the reconstructed structure
-    # TODO; this can be implemented better, but for now we get the information from the observation
-    reconstructed["alignment_date"] = actuation_metadata.get("result_time", None)
-    reconstructed["reference_source"] = None
-    reconstructed["brdr_version"] = None
-    reconstructed["reference_od"] = None
-
-    # Validation check
-    if not is_brdr_observation(reconstructed):
-        raise ValueError("The reconstructed object is not a valid brdr observation")
-
-    return reconstructed
+    return _reverse_metadata_observations_core(metadata)
 
 
 def aligner_metadata_decorator(f):
@@ -1240,12 +1104,100 @@ class Aligner:
         >>> print(info["full"])
         >>> print(info["reference_features"].keys())  # IDs of intersected refs
         """
+        def _count_points(geom: BaseGeometry) -> float:
+            if geom is None or geom.is_empty:
+                return 0.0
+            if geom.geom_type == "Point":
+                return 1.0
+            if geom.geom_type == "MultiPoint":
+                return float(len(geom.geoms))
+            if geom.geom_type == "GeometryCollection":
+                return float(sum(_count_points(g) for g in geom.geoms))
+            return 0.0
+
+        def _measure_type_for_geom(geom: BaseGeometry) -> str:
+            if geom.geom_type in {"Point", "MultiPoint"}:
+                return "count"
+            if geom.geom_type in {"LineString", "MultiLineString"}:
+                return "length"
+            return "area"
+
+        def _reference_metric_for_pair(
+            thematic_geom: BaseGeometry,
+            reference_geom: BaseGeometry,
+            intersection_geom: BaseGeometry,
+        ) -> tuple[str, float, float]:
+            thematic_type = _measure_type_for_geom(thematic_geom)
+            reference_type = _measure_type_for_geom(reference_geom)
+
+            # Polygon thematic geometry:
+            # - polygon refs: area overlap over reference area (existing behavior)
+            # - line refs: boundary coverage length over reference length
+            # - point refs: intersecting points over reference point count
+            if thematic_type == "area":
+                if reference_type == "area":
+                    return (
+                        "area",
+                        float(intersection_geom.area),
+                        float(reference_geom.area),
+                    )
+                if reference_type == "length":
+                    return (
+                        "length",
+                        float(intersection_geom.length),
+                        float(reference_geom.length),
+                    )
+                return (
+                    "count",
+                    _count_points(intersection_geom),
+                    _count_points(reference_geom),
+                )
+
+            # Line thematic geometry:
+            # - line/area refs: overlapping line length over thematic length
+            # - point refs: touched reference points over reference point count
+            if thematic_type == "length":
+                if reference_type == "count":
+                    return (
+                        "count",
+                        _count_points(intersection_geom),
+                        _count_points(reference_geom),
+                    )
+                return (
+                    "length",
+                    float(intersection_geom.length),
+                    float(thematic_geom.length),
+                )
+
+            # Point thematic geometry:
+            # - always point counts over thematic point count
+            return (
+                "count",
+                _count_points(intersection_geom),
+                _count_points(thematic_geom),
+            )
+
+        def _measure_value(geom: BaseGeometry, measure_type: str) -> float:
+            if geom is None or geom.is_empty:
+                return 0.0
+            if measure_type == "count":
+                return _count_points(geom)
+            if measure_type == "length":
+                return float(geom.length)
+            return float(geom.area)
+
+        measure_type = _measure_type_for_geom(geometry)
+        thematic_measure = _measure_value(geometry, measure_type)
+
         dict_observation = {
             "alignment_date": datetime.now().strftime(DATE_FORMAT),
             "brdr_version": str(__version__),
             "reference_source": self.reference_data.source,
             "full": True,
             "area": round(geometry.area, 2),
+            "length": round(geometry.length, 2),
+            "count": round(_count_points(geometry), 2),
+            "measure_type": measure_type,
             "reference_features": {},
             "reference_od": None,
         }
@@ -1269,9 +1221,17 @@ class Aligner:
                 continue
             intersected.append(geom_intersection)
 
-            geom_reference_area = geom_reference.area
-            if geom_reference_area > 0:
-                perc = round(geom_intersection.area * 100 / geom_reference.area, 2)
+            (
+                feature_measure_type,
+                intersection_measure,
+                denominator,
+            ) = _reference_metric_for_pair(
+                thematic_geom=geometry,
+                reference_geom=geom_reference,
+                intersection_geom=geom_intersection,
+            )
+            if denominator > 0:
+                perc = round(intersection_measure * 100 / denominator, 2)
             else:
                 perc = 0
             if perc < 0.01:
@@ -1291,7 +1251,12 @@ class Aligner:
 
             if perc > 99.99:
                 full = True
-                area = round(geom_reference_area, 2)
+                area = round(
+                    geom_reference.area
+                    if measure_type == "area"
+                    else geom_intersection.area,
+                    2,
+                )
                 perc = 100
                 if with_geom:
                     geom = geom_reference
@@ -1305,7 +1270,10 @@ class Aligner:
             dict_observation["reference_features"][key_ref] = {
                 "full": full,
                 "area": area,
+                "measure_type": feature_measure_type,
+                feature_measure_type: round(intersection_measure, 2),
                 "percentage": perc,
+                "de9im": geometry.relate(geom_reference),
             }
             if version_date is not None:
                 dict_observation["reference_features"][key_ref][VERSION_DATE] = (
@@ -1325,21 +1293,31 @@ class Aligner:
             intersected_union = safe_unary_union(intersected)
         else:
             intersected_union = GeometryCollection()
-        geom_od = buffer_pos(
-            buffer_neg(
-                safe_difference(geometry, intersected_union),
+        if measure_type == "area":
+            geom_od = buffer_pos(
+                buffer_neg(
+                    safe_difference(geometry, intersected_union),
+                    self.correction_distance,
+                    mitre_limit=self.mitre_limit,
+                ),
                 self.correction_distance,
                 mitre_limit=self.mitre_limit,
-            ),
-            self.correction_distance,
-            mitre_limit=self.mitre_limit,
-        )
+            )
+        else:
+            geom_od = safe_difference(geometry, intersected_union)
         if geom_od is not None:
             area_od = round(geom_od.area, 2)
-            if area_od > 0:
+            metric_od = round(_measure_value(geom_od, measure_type), 2)
+            if area_od > 0 or metric_od > 0:
                 dict_observation["reference_od"] = {"area": area_od}
+                if measure_type != "area":
+                    dict_observation["reference_od"][measure_type] = metric_od
                 if with_geom:
                     dict_observation["reference_od"]["geometry"] = to_geojson(geom_od)
+            if measure_type != "area":
+                dict_observation["full"] = metric_od == 0 and bool(
+                    dict_observation["reference_features"]
+                )
         self.logger.feedback_debug(str(dict_observation))
         return dict_observation
 

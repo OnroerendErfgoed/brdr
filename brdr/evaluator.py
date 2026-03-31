@@ -29,6 +29,9 @@ from brdr.enums import Evaluation
 from brdr.enums import FullReferenceStrategy
 from brdr.enums import ProcessRemark
 from brdr.logger import Logger
+from brdr.metadata import (
+    reverse_metadata_observations_to_brdr_observation as _reverse_metadata_observations_core,
+)
 from brdr.typings import InputId
 from brdr.utils import deep_merge
 from brdr.utils import is_brdr_observation
@@ -39,36 +42,7 @@ if TYPE_CHECKING:
 
 
 def _reverse_metadata_observations_to_brdr_observation(metadata: dict) -> dict:
-    observations = metadata["observations"]
-    result_uri = observations[0]["used"] if observations else None
-
-    brdr_observation = {
-        "area": None,
-        "full": None,
-        "reference_features": {},
-        "reference_od": None,
-        "result": result_uri,
-    }
-
-    for obs in observations:
-        prop = obs.get("observed_property", "")
-        result = obs.get("result", {}).get("value")
-        target = obs.get("has_feature_of_interest")
-
-        if prop.endswith("area_overlap"):
-            ref = brdr_observation["reference_features"].setdefault(target, {})
-            ref["area"] = result
-        elif prop.endswith("area_overlap_percentage"):
-            ref = brdr_observation["reference_features"].setdefault(target, {})
-            ref["percentage"] = result
-        elif prop.endswith("area_overlap_full"):
-            brdr_observation["full"] = result
-        elif prop.endswith("area_open_domain"):
-            brdr_observation["reference_od"] = {"area": result}
-        elif prop.endswith("area"):
-            brdr_observation["area"] = result
-
-    return brdr_observation
+    return _reverse_metadata_observations_core(metadata)
 
 
 @dataclass
@@ -595,6 +569,61 @@ class AlignerEvaluator(BaseEvaluator):
         process_result,
         base_brdr_observation=None,
     ) -> dict:
+        def _resolve_measure_type(base_obs, actual_obs) -> str:
+            for obs in (actual_obs, base_obs):
+                if isinstance(obs, dict):
+                    measure_type = obs.get("measure_type")
+                    if measure_type in {"area", "length", "count"}:
+                        return measure_type
+            return "area"
+
+        def _metric_value(ref_dict: dict, measure_type: str) -> float:
+            if not isinstance(ref_dict, dict):
+                return 0.0
+            if measure_type in {"area", "length", "count"} and measure_type in ref_dict:
+                return float(ref_dict[measure_type])
+            per_feature_type = ref_dict.get("measure_type")
+            if per_feature_type in {"area", "length", "count"} and per_feature_type in ref_dict:
+                return float(ref_dict[per_feature_type])
+            for key in ("area", "length", "count"):
+                if key in ref_dict:
+                    return float(ref_dict[key])
+            value = ref_dict.get(measure_type)
+            if value is None:
+                value = ref_dict.get("area", 0.0)
+            return float(value)
+
+        def _pair_metric_values(base_ref: dict, actual_ref: dict, default_type: str):
+            candidate_order = [default_type, "area", "length", "count"]
+            seen = set()
+            ordered = []
+            for c in candidate_order:
+                if c in {"area", "length", "count"} and c not in seen:
+                    ordered.append(c)
+                    seen.add(c)
+            for key in ordered:
+                if key in base_ref and key in actual_ref:
+                    return float(base_ref[key]), float(actual_ref[key])
+            return _metric_value(base_ref, default_type), _metric_value(
+                actual_ref, default_type
+            )
+
+        def _od_value(obs: dict, measure_type: str) -> float | None:
+            od = obs.get("reference_od")
+            if od is None:
+                return None
+            if not isinstance(od, dict):
+                return None
+            if measure_type in od:
+                return float(od[measure_type])
+            for key in ("area", "length", "count"):
+                if key in od:
+                    return float(od[key])
+            value = od.get(measure_type)
+            if value is None:
+                value = od.get("area")
+            return None if value is None else float(value)
+
         geom_process_result = process_result["result"]
         threshold_od_percentage = 1
         properties = {
@@ -625,25 +654,20 @@ class AlignerEvaluator(BaseEvaluator):
             properties[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
             return properties
         properties[FULL_BASE_FIELD_NAME] = base_brdr_observation["full"]
+        measure_type = _resolve_measure_type(
+            base_obs=base_brdr_observation,
+            actual_obs=actual_brdr_observation,
+        )
         od_alike = False
-        if (
-            base_brdr_observation["reference_od"] is None
-            and actual_brdr_observation["reference_od"] is None
-        ):
+        base_od = _od_value(base_brdr_observation, measure_type)
+        actual_od = _od_value(actual_brdr_observation, measure_type)
+        if base_od is None and actual_od is None:
             od_alike = True
-        elif (
-            base_brdr_observation["reference_od"] is None
-            or actual_brdr_observation["reference_od"] is None
-        ):
+        elif base_od is None or actual_od is None:
             od_alike = False
-        elif (
-            abs(
-                base_brdr_observation["reference_od"]["area"]
-                - actual_brdr_observation["reference_od"]["area"]
-            )
-            * 100
-            / base_brdr_observation["reference_od"]["area"]
-        ) < threshold_od_percentage:
+        elif base_od == 0:
+            od_alike = actual_od == 0
+        elif (abs(base_od - actual_od) * 100 / base_od) < threshold_od_percentage:
             od_alike = True
         properties[OD_ALIKE_FIELD_NAME] = od_alike
 
@@ -662,19 +686,18 @@ class AlignerEvaluator(BaseEvaluator):
                 ):
                     equal_reference_features = False
 
-                diff_area_reference_feature = abs(
-                    base_brdr_observation["reference_features"][key]["area"]
-                    - actual_brdr_observation["reference_features"][key]["area"]
+                base_measure, actual_measure = _pair_metric_values(
+                    base_brdr_observation["reference_features"][key],
+                    actual_brdr_observation["reference_features"][key],
+                    measure_type,
                 )
-                area = base_brdr_observation["reference_features"][key]["area"]
+                diff_area_reference_feature = abs(
+                    base_measure - actual_measure
+                )
+                area = base_measure
                 if area > 0:
                     diff_percentage_reference_feature = (
-                        abs(
-                            base_brdr_observation["reference_features"][key]["area"]
-                            - actual_brdr_observation["reference_features"][key]["area"]
-                        )
-                        * 100
-                        / base_brdr_observation["reference_features"][key]["area"]
+                        abs(base_measure - actual_measure) * 100 / area
                     )
                 else:
                     diff_percentage_reference_feature = 0
