@@ -2,6 +2,7 @@ import json
 from abc import ABC
 from abc import abstractmethod
 from copy import deepcopy
+from dataclasses import dataclass
 from typing import Any
 from typing import Iterable
 from typing import List
@@ -68,6 +69,17 @@ def _reverse_metadata_observations_to_brdr_observation(metadata: dict) -> dict:
             brdr_observation["area"] = result
 
     return brdr_observation
+
+
+@dataclass
+class _EvaluationRuntime:
+    process_results_predictions: dict
+    process_results_temp_predictions: dict
+    process_results_evaluated: dict
+    metadata_field: str
+    full_reference_strategy: FullReferenceStrategy
+    max_predictions: int
+    multi_to_best_prediction: bool
 
 
 class BaseEvaluator(ABC):
@@ -161,26 +173,92 @@ class AlignerEvaluator(BaseEvaluator):
     ) -> "AlignerResult":
         from brdr.aligner import AlignerResult
 
-        calculate_zeros = True  # boolean to check if we need to add al zero-rd results to the evaluations
+        thematic_ids, calculate_zeros = self._resolve_thematic_ids(
+            aligner=aligner, thematic_ids=thematic_ids
+        )
+        relevant_distances = self._resolve_relevant_distances(relevant_distances)
+        self._validate_evaluation_inputs(
+            aligner=aligner,
+            thematic_ids=thematic_ids,
+            relevant_distances=relevant_distances,
+        )
+
+        process_results, process_results_predictions = self._prepare_process_results(
+            aligner=aligner,
+            thematic_ids=thematic_ids,
+            relevant_distances=relevant_distances,
+            calculate_zeros=calculate_zeros,
+        )
+        runtime = _EvaluationRuntime(
+            process_results_predictions=process_results_predictions,
+            process_results_temp_predictions=deepcopy(process_results_predictions),
+            process_results_evaluated=deepcopy(process_results),
+            metadata_field=metadata_field,
+            full_reference_strategy=full_reference_strategy,
+            max_predictions=max_predictions,
+            multi_to_best_prediction=multi_to_best_prediction,
+        )
+
+        for theme_id, feat in aligner.thematic_data.features.items():
+            self._evaluate_theme(
+                aligner=aligner,
+                runtime=runtime,
+                thematic_ids=thematic_ids,
+                theme_id=theme_id,
+                original_geometry=feat.geometry,
+            )
+
+        return AlignerResult(runtime.process_results_evaluated)
+
+    def _resolve_thematic_ids(
+        self,
+        *,
+        aligner: "Aligner",
+        thematic_ids: Optional[List[InputId]],
+    ) -> tuple[list[InputId], bool]:
+        calculate_zeros = True
         if thematic_ids is None:
-            thematic_ids = aligner.thematic_data.features.keys()
-            calculate_zeros = False  # when all thematic features will be calculated, there is no need to calculate the zeros for all seperately
+            thematic_ids = list(aligner.thematic_data.features.keys())
+            calculate_zeros = False
+        else:
+            thematic_ids = list(thematic_ids)
+        return thematic_ids, calculate_zeros
+
+    def _resolve_relevant_distances(
+        self, relevant_distances: Optional[Iterable[float]]
+    ) -> list[float]:
+        if relevant_distances is None:
+            return [
+                round(k, RELEVANT_DISTANCE_DECIMALS)
+                for k in np.arange(0, 310, 10, dtype=int) / 100
+            ]
+        return list(relevant_distances)
+
+    def _validate_evaluation_inputs(
+        self,
+        *,
+        aligner: "Aligner",
+        thematic_ids: list[InputId],
+        relevant_distances: list[float],
+    ) -> None:
         if any(
             id_to_evaluate not in aligner.thematic_data.features.keys()
             for id_to_evaluate in thematic_ids
         ):
             raise ValueError("not all ids are found in the thematic data")
-        if relevant_distances is None:
-            relevant_distances = [
-                round(k, RELEVANT_DISTANCE_DECIMALS)
-                for k in np.arange(0, 310, 10, dtype=int) / 100
-            ]
-
         if 0 not in relevant_distances:
             raise ValueError(
                 "Evaluation cannot be executed when 0 is not available in the array of relevant distances"
             )
 
+    def _prepare_process_results(
+        self,
+        *,
+        aligner: "Aligner",
+        thematic_ids: list[InputId],
+        relevant_distances: list[float],
+        calculate_zeros: bool,
+    ) -> tuple[dict, dict]:
         aligner_result = aligner.predict(
             thematic_ids=thematic_ids,
             relevant_distances=relevant_distances,
@@ -190,222 +268,261 @@ class AlignerEvaluator(BaseEvaluator):
         process_results_predictions = aligner_result.get_results(
             aligner=aligner, result_type=AlignerResultType.PREDICTIONS
         )
+
         if calculate_zeros:
-            # Calculate the ZERO-situation for all, only when the predict is not done for all thematic ids
-            aligner_result_zero = aligner.process(
-                relevant_distances=[0],
-            )
+            aligner_result_zero = aligner.process(relevant_distances=[0])
             process_results_zero = aligner_result_zero.get_results(aligner=aligner)
-            process_results = deep_merge(
-                process_results_zero,
-                process_results,
+            process_results = deep_merge(process_results_zero, process_results)
+
+        return process_results, process_results_predictions
+
+    def _evaluate_theme(
+        self,
+        *,
+        aligner: "Aligner",
+        runtime: _EvaluationRuntime,
+        thematic_ids: list[InputId],
+        theme_id: InputId,
+        original_geometry: BaseGeometry,
+    ) -> None:
+        if theme_id not in thematic_ids:
+            runtime.process_results_evaluated = self.update_evaluation_with_original(
+                aligner=aligner,
+                metadata_field=runtime.metadata_field,
+                original_geometry=original_geometry,
+                process_results_evaluated=runtime.process_results_evaluated,
+                theme_id=theme_id,
+                evaluation=Evaluation.NOT_EVALUATED,
             )
-        process_results_temp_predictions = deepcopy(process_results_predictions)
-        process_results_evaluated = deepcopy(process_results)
+            return
+        self._evaluate_selected_theme(
+            aligner=aligner,
+            runtime=runtime,
+            theme_id=theme_id,
+            original_geometry=original_geometry,
+        )
 
-        for theme_id, feat in aligner.thematic_data.features.items():
-            original_geometry = feat.geometry
-            if theme_id not in thematic_ids:
-                # PART 1)NOT EVALUATED
-                process_results_evaluated = self.update_evaluation_with_original(
-                    aligner=aligner,
-                    metadata_field=metadata_field,
-                    original_geometry=original_geometry,
-                    process_results_evaluated=process_results_evaluated,
-                    theme_id=theme_id,
-                    evaluation=Evaluation.NOT_EVALUATED,
+    def _evaluate_selected_theme(
+        self,
+        *,
+        aligner: "Aligner",
+        runtime: _EvaluationRuntime,
+        theme_id: InputId,
+        original_geometry: BaseGeometry,
+    ) -> None:
+        dict_predictions_results = runtime.process_results_predictions.get(theme_id, {})
+        if dict_predictions_results == {}:
+            runtime.process_results_evaluated = self.update_evaluation_with_original(
+                aligner=aligner,
+                metadata_field=runtime.metadata_field,
+                original_geometry=original_geometry,
+                process_results_evaluated=runtime.process_results_evaluated,
+                theme_id=theme_id,
+                evaluation=Evaluation.TO_CHECK_NO_PREDICTION,
+            )
+            return
+
+        if not self._prediction_score_available(
+            process_results_temp_predictions=runtime.process_results_temp_predictions,
+            process_results_evaluated=runtime.process_results_evaluated,
+            theme_id=theme_id,
+        ):
+            runtime.process_results_evaluated = self.update_evaluation_with_original(
+                aligner=aligner,
+                metadata_field=runtime.metadata_field,
+                original_geometry=original_geometry,
+                process_results_evaluated=runtime.process_results_evaluated,
+                theme_id=theme_id,
+                evaluation=Evaluation.NOT_EVALUATED,
+            )
+            return
+
+        scores = []
+        distances = []
+        predictions = []
+        observation_match = False
+        latest_props = None
+        base_brdr_observation = self.get_brdr_observation_from_properties(
+            aligner=aligner,
+            id_theme=theme_id,
+            base_metadata_field=runtime.metadata_field,
+        )
+
+        for dist in sorted(dict_predictions_results.keys()):
+            outcome = self._score_prediction_candidate(
+                aligner=aligner,
+                runtime=runtime,
+                theme_id=theme_id,
+                dist=dist,
+                prediction_result=dict_predictions_results[dist],
+                base_brdr_observation=base_brdr_observation,
+                scores=scores,
+                distances=distances,
+                predictions=predictions,
+            )
+            status = outcome["status"]
+            latest_props = outcome["props"]
+            if status == "observation_match":
+                observation_match = True
+
+        best_ix = sorted(range(len(scores)), reverse=True, key=lambda i: scores[i])
+        len_best_ix = len(best_ix)
+        if not self._handle_no_observation_match(
+            runtime=runtime,
+            theme_id=theme_id,
+            best_ix=best_ix,
+            len_best_ix=len_best_ix,
+            observation_match=observation_match,
+            predictions=predictions,
+            latest_props=latest_props,
+        ):
+            return
+
+        if runtime.max_predictions > 0 and len_best_ix > runtime.max_predictions:
+            best_ix = best_ix[: runtime.max_predictions]
+        if len(best_ix) > 0:
+            for ix in best_ix:
+                distance = distances[ix]
+                prediction = predictions[ix]
+                runtime.process_results_evaluated[theme_id][distance] = prediction
+        else:
+            runtime.process_results_evaluated = self.update_evaluation_with_original(
+                aligner=aligner,
+                metadata_field=runtime.metadata_field,
+                original_geometry=original_geometry,
+                process_results_evaluated=runtime.process_results_evaluated,
+                theme_id=theme_id,
+                evaluation=Evaluation.TO_CHECK_NO_PREDICTION,
+            )
+
+    def _prediction_score_available(
+        self,
+        *,
+        process_results_temp_predictions: dict,
+        process_results_evaluated: dict,
+        theme_id: InputId,
+    ) -> bool:
+        for dist in process_results_temp_predictions[theme_id]:
+            if not PREDICTION_SCORE in process_results_evaluated[theme_id][dist][
+                "properties"
+            ]:
+                return False
+        return True
+
+    def _score_prediction_candidate(
+        self,
+        *,
+        aligner: "Aligner",
+        runtime: _EvaluationRuntime,
+        theme_id: InputId,
+        dist: float,
+        prediction_result: dict,
+        base_brdr_observation: dict | None,
+        scores: list[float],
+        distances: list[float],
+        predictions: list[dict],
+    ) -> dict:
+        props = deepcopy(runtime.process_results_evaluated[theme_id][dist]["properties"])
+        props_evaluation = self.get_observation_comparison_properties(
+            aligner=aligner,
+            process_result=prediction_result,
+            base_brdr_observation=base_brdr_observation,
+        )
+        props.update(props_evaluation)
+
+        full = props[FULL_ACTUAL_FIELD_NAME]
+        if (
+            runtime.full_reference_strategy == FullReferenceStrategy.ONLY_FULL_REFERENCE
+            and not full
+        ):
+            return {"status": "ignored", "props": props}
+        if (
+            props[EVALUATION_FIELD_NAME]
+            in (Evaluation.TO_CHECK_NO_PREDICTION, Evaluation.NOT_EVALUATED)
+            and props[PREDICTION_COUNT] == 1
+        ):
+            props[EVALUATION_FIELD_NAME] = Evaluation.PREDICTION_UNIQUE
+        elif (
+            props[EVALUATION_FIELD_NAME]
+            in (Evaluation.TO_CHECK_NO_PREDICTION, Evaluation.NOT_EVALUATED)
+            and props[PREDICTION_COUNT] > 1
+        ):
+            props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_PREDICTION_MULTI
+        elif props[EVALUATION_FIELD_NAME] not in (
+            Evaluation.TO_CHECK_NO_PREDICTION,
+            Evaluation.NOT_EVALUATED,
+        ):
+            props[PREDICTION_SCORE] = 100
+            scores.clear()
+            distances.clear()
+            predictions.clear()
+            scores.append(props[PREDICTION_SCORE])
+            distances.append(dist)
+            runtime.process_results_evaluated[theme_id][dist]["properties"] = props
+            predictions.append(runtime.process_results_evaluated[theme_id][dist])
+            return {"status": "observation_match", "props": props}
+        if full:
+            if runtime.full_reference_strategy != FullReferenceStrategy.NO_FULL_REFERENCE:
+                props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_PREDICTION_FULL
+                prediction_score = props[PREDICTION_SCORE] + 50
+                if prediction_score > 100:
+                    prediction_score = 100
+                props[PREDICTION_SCORE] = prediction_score
+            else:
+                props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_PREDICTION_MULTI_FULL
+
+        scores.append(props[PREDICTION_SCORE])
+        distances.append(dist)
+        runtime.process_results_temp_predictions[theme_id][dist]["properties"] = props
+        predictions.append(runtime.process_results_temp_predictions[theme_id][dist])
+        return {"status": "scored", "props": props}
+
+    def _handle_no_observation_match(
+        self,
+        *,
+        runtime: _EvaluationRuntime,
+        theme_id: InputId,
+        best_ix: list[int],
+        len_best_ix: int,
+        observation_match: bool,
+        predictions: list[dict],
+        latest_props: dict | None,
+    ) -> bool:
+        if observation_match:
+            return True
+
+        if len_best_ix == 1:
+            props = predictions[0]["properties"]
+            if FULL_ACTUAL_FIELD_NAME in props and props[FULL_ACTUAL_FIELD_NAME]:
+                predictions[0]["properties"][
+                    EVALUATION_FIELD_NAME
+                ] = Evaluation.PREDICTION_UNIQUE_AND_FULL_REFERENCE
+            else:
+                predictions[0]["properties"][EVALUATION_FIELD_NAME] = (
+                    Evaluation.PREDICTION_UNIQUE
                 )
 
-            # Features are split up in 2 groups: TO_EVALUATE and NOT_TO_EVALUATE (original returned)
-            # The evaluated features will be split up:
-            #   *No prediction available
-            #   *Predictions available
+        if (
+            len_best_ix > 1
+            and runtime.max_predictions == 1
+            and not runtime.multi_to_best_prediction
+        ):
+            relevant_distance = round(0, RELEVANT_DISTANCE_DECIMALS)
+            props = latest_props if latest_props is not None else {}
+            props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_ORIGINAL
+            props[PREDICTION_SCORE] = -1
+            if REMARK_FIELD_NAME in props:
+                remarks = props[REMARK_FIELD_NAME]
+            else:
+                remarks = []
+            remarks.append(ProcessRemark.MULTIPLE_PREDICTIONS_ORIGINAL_RETURNED)
+            props[REMARK_FIELD_NAME] = remarks
+            runtime.process_results_evaluated[theme_id][relevant_distance][
+                "properties"
+            ].update(props)
+            return False
 
-            # PART 2: TO_EVALUATE
-            elif theme_id in thematic_ids:
-
-                if (
-                    theme_id not in process_results_predictions.keys()
-                    or process_results_predictions[theme_id] == {}
-                ):
-                    # No predictions available
-                    process_results_evaluated = self.update_evaluation_with_original(
-                        aligner=aligner,
-                        metadata_field=metadata_field,
-                        original_geometry=original_geometry,
-                        process_results_evaluated=process_results_evaluated,
-                        theme_id=theme_id,
-                        evaluation=Evaluation.TO_CHECK_NO_PREDICTION,
-                    )
-                    continue
-                # Check if prediction_scores are available to do the evaluation
-                prediction_score_available = True
-                for dist in process_results_temp_predictions[theme_id]:
-                    if (
-                        not PREDICTION_SCORE
-                        in process_results_evaluated[theme_id][dist]["properties"]
-                    ):
-                        prediction_score_available = False
-                # thematic objects that do not have a prediction_score from predict() are not evaluated and returned as they are
-                if not prediction_score_available:
-                    process_results_evaluated = self.update_evaluation_with_original(
-                        aligner=aligner,
-                        metadata_field=metadata_field,
-                        original_geometry=original_geometry,
-                        process_results_evaluated=process_results_evaluated,
-                        theme_id=theme_id,
-                        evaluation=Evaluation.NOT_EVALUATED,
-                    )
-                    continue
-
-                # When there are predictions available
-                dict_predictions_results = process_results_predictions[theme_id]
-                scores = []
-                distances = []
-                predictions = []
-                observation_match = False
-                base_brdr_observation = self.get_brdr_observation_from_properties(
-                    aligner=aligner,
-                    id_theme=theme_id,
-                    base_metadata_field=metadata_field,
-                )
-                for dist in sorted(dict_predictions_results.keys()):
-                    props = deepcopy(
-                        process_results_evaluated[theme_id][dist]["properties"]
-                    )
-                    props_evaluation = self.get_observation_comparison_properties(
-                        aligner=aligner,
-                        process_result=dict_predictions_results[dist],
-                        base_brdr_observation=base_brdr_observation,
-                    )
-                    props.update(props_evaluation)
-
-                    full = props[FULL_ACTUAL_FIELD_NAME]
-                    if (
-                        full_reference_strategy
-                        == FullReferenceStrategy.ONLY_FULL_REFERENCE
-                        and not full
-                    ):
-                        # this prediction is ignored
-                        continue
-                    if (
-                        props[EVALUATION_FIELD_NAME]
-                        in (Evaluation.TO_CHECK_NO_PREDICTION, Evaluation.NOT_EVALUATED)
-                        and props[PREDICTION_COUNT] == 1
-                    ):
-                        props[EVALUATION_FIELD_NAME] = Evaluation.PREDICTION_UNIQUE
-                        # TODO can we add continue here? No, because this can get overwritten by prediction_unique_full
-                    elif (
-                        props[EVALUATION_FIELD_NAME]
-                        in (Evaluation.TO_CHECK_NO_PREDICTION, Evaluation.NOT_EVALUATED)
-                        and props[PREDICTION_COUNT] > 1
-                    ):
-                        props[EVALUATION_FIELD_NAME] = (
-                            Evaluation.TO_CHECK_PREDICTION_MULTI
-                        )
-                    elif props[EVALUATION_FIELD_NAME] not in (
-                        Evaluation.TO_CHECK_NO_PREDICTION,
-                        Evaluation.NOT_EVALUATED,
-                    ):
-                        # this prediction has a equality based on observation so the rest is not checked anymore
-                        observation_match = True
-                        props[PREDICTION_SCORE] = 100
-                        scores = []
-                        distances = []
-                        predictions = []
-                        scores.append(props[PREDICTION_SCORE])
-                        distances.append(dist)
-                        process_results_evaluated[theme_id][dist]["properties"] = props
-                        predictions.append(process_results_evaluated[theme_id][dist])
-                        continue
-                    if full:
-                        if (
-                            full_reference_strategy
-                            != FullReferenceStrategy.NO_FULL_REFERENCE
-                        ):
-                            props[EVALUATION_FIELD_NAME] = (
-                                Evaluation.TO_CHECK_PREDICTION_FULL
-                            )
-                            prediction_score = props[PREDICTION_SCORE] + 50
-                            if prediction_score > 100:
-                                prediction_score = 100
-                            props[PREDICTION_SCORE] = prediction_score
-                        else:
-                            props[EVALUATION_FIELD_NAME] = (
-                                Evaluation.TO_CHECK_PREDICTION_MULTI_FULL
-                            )
-
-                    scores.append(props[PREDICTION_SCORE])
-                    distances.append(dist)
-                    process_results_temp_predictions[theme_id][dist][
-                        "properties"
-                    ] = props
-                    predictions.append(process_results_temp_predictions[theme_id][dist])
-
-                # get max amount of best-scoring predictions
-                best_ix = sorted(
-                    range(len(scores)), reverse=True, key=lambda i: scores[i]
-                )
-                len_best_ix = len(best_ix)
-
-                if not observation_match:
-                    # if there is only one prediction left,  evaluation is set to PREDICTION_UNIQUE_FULL
-                    if len_best_ix == 1 and not observation_match:
-                        props = predictions[0]["properties"]
-                        if (
-                            FULL_ACTUAL_FIELD_NAME in props
-                            and props[FULL_ACTUAL_FIELD_NAME]
-                        ):
-                            predictions[0]["properties"][
-                                EVALUATION_FIELD_NAME
-                            ] = Evaluation.PREDICTION_UNIQUE_AND_FULL_REFERENCE
-                        else:
-                            predictions[0]["properties"][
-                                EVALUATION_FIELD_NAME
-                            ] = Evaluation.PREDICTION_UNIQUE
-
-                    # if there are multiple predictions, but we want only one and we ask for the original
-                    if (
-                        len_best_ix > 1
-                        and max_predictions == 1
-                        and not multi_to_best_prediction
-                        and not observation_match
-                    ):
-                        relevant_distance = round(0, RELEVANT_DISTANCE_DECIMALS)
-                        props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_ORIGINAL
-                        props[PREDICTION_SCORE] = -1
-                        if REMARK_FIELD_NAME in props:
-                            remarks = props[REMARK_FIELD_NAME]
-                        else:
-                            remarks = []
-                        remarks.append(
-                            ProcessRemark.MULTIPLE_PREDICTIONS_ORIGINAL_RETURNED
-                        )
-                        props[REMARK_FIELD_NAME] = remarks
-                        process_results_evaluated[theme_id][relevant_distance][
-                            "properties"
-                        ].update(props)
-                        continue
-
-                if max_predictions > 0 and len_best_ix > max_predictions:
-                    best_ix = best_ix[:max_predictions]
-                if len(best_ix) > 0:
-                    for ix in best_ix:
-                        distance = distances[ix]
-                        prediction = predictions[ix]
-                        process_results_evaluated[theme_id][distance] = prediction
-                else:
-                    # #when no evaluated predictions, the original is returned
-                    process_results_evaluated = self.update_evaluation_with_original(
-                        aligner=aligner,
-                        metadata_field=metadata_field,
-                        original_geometry=original_geometry,
-                        process_results_evaluated=process_results_evaluated,
-                        theme_id=theme_id,
-                        evaluation=Evaluation.TO_CHECK_NO_PREDICTION,
-                    )
-
-        return AlignerResult(process_results_evaluated)
+        return True
 
     def update_evaluation_with_original(
         self,
