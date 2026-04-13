@@ -22,7 +22,9 @@ class TopPredictionOnlyPredictor(AlignerPredictor):
             ]
             if not with_score:
                 continue
-            best_rd, _ = max(with_score, key=lambda item: item[1]["properties"][PREDICTION_SCORE])
+            best_rd, _ = max(
+                with_score, key=lambda item: item[1]["properties"][PREDICTION_SCORE]
+            )
             for rd in list(by_distance.keys()):
                 if rd != best_rd:
                     del by_distance[rd]

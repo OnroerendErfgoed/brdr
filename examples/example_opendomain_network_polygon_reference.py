@@ -21,9 +21,9 @@ if __name__ == "__main__":
         aligner.load_thematic_data(DictLoader(thematic))
         aligner.load_reference_data(DictLoader(reference))
 
-        result = aligner.process([relevant_distance]).results["line_1"][relevant_distance][
-            "result"
-        ]
+        result = aligner.process([relevant_distance]).results["line_1"][
+            relevant_distance
+        ]["result"]
         print(
             f"{strategy.value}: type={result.geom_type}, empty={result.is_empty}, length={round(result.length, 3)}"
         )
