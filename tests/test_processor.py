@@ -3,8 +3,8 @@ import unittest
 import numpy as np
 from shapely import GeometryCollection
 from shapely import from_wkt
-from shapely.geometry import Point
 from shapely.geometry import LineString
+from shapely.geometry import Point
 
 from brdr.aligner import Aligner
 from brdr.configs import ProcessorConfig
@@ -81,9 +81,7 @@ class TestProcessor(unittest.TestCase):
     def test_postprocess_linear_od_exclude_clips_to_polygon_reference(self):
         thematic = LineString([(0, 0), (4, 0)])
         preresult = LineString([(0, 0), (4, 0)])
-        reference_union = from_wkt(
-            "POLYGON ((1 -1, 3 -1, 3 1, 1 1, 1 -1))"
-        )
+        reference_union = from_wkt("POLYGON ((1 -1, 3 -1, 3 1, 1 1, 1 -1))")
 
         processor_exclude = _DummyProcessor(
             ProcessorConfig(od_strategy=OpenDomainStrategy.EXCLUDE)
@@ -140,9 +138,7 @@ class TestProcessor(unittest.TestCase):
     def test_postprocess_point_od_exclude_clips_to_polygon_reference(self):
         thematic = Point(0, 0)
         preresult = Point(0, 0)
-        reference_union = from_wkt(
-            "POLYGON ((1 -1, 3 -1, 3 1, 1 1, 1 -1))"
-        )
+        reference_union = from_wkt("POLYGON ((1 -1, 3 -1, 3 1, 1 1, 1 -1))")
 
         processor_exclude = _DummyProcessor(
             ProcessorConfig(od_strategy=OpenDomainStrategy.EXCLUDE)
@@ -188,9 +184,7 @@ class TestProcessor(unittest.TestCase):
 
     def test_network_all_od_strategies_with_polygon_reference(self):
         thematic_dict = {"theme_id": from_wkt("LINESTRING (0 0, 10 0)")}
-        reference_dict = {
-            "ref_id": from_wkt("POLYGON ((2 -1, 8 -1, 8 1, 2 1, 2 -1))")
-        }
+        reference_dict = {"ref_id": from_wkt("POLYGON ((2 -1, 8 -1, 8 1, 2 1, 2 -1))")}
 
         for od_strategy in OpenDomainStrategy:
             aligner = Aligner(

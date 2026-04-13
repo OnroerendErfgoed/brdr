@@ -1,10 +1,10 @@
 import numpy as np
+from shapely import from_wkt
 
 from brdr.aligner import Aligner, AlignerResult
 from brdr.constants import PREDICTION_SCORE
 from brdr.loader import DictLoader
 from brdr.predictor import AlignerPredictor
-from shapely import from_wkt
 
 
 class TopPredictionOnlyPredictor(AlignerPredictor):
@@ -22,7 +22,9 @@ class TopPredictionOnlyPredictor(AlignerPredictor):
             ]
             if not with_score:
                 continue
-            best_rd, _ = max(with_score, key=lambda item: item[1]["properties"][PREDICTION_SCORE])
+            best_rd, _ = max(
+                with_score, key=lambda item: item[1]["properties"][PREDICTION_SCORE]
+            )
             for rd in list(by_distance.keys()):
                 if rd != best_rd:
                     del by_distance[rd]
