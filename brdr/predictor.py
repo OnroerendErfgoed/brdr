@@ -131,6 +131,9 @@ class AlignerPredictor(BasePredictor):
                     rd
                 ][STABILITY]
                 if dict_stability[rd][ZERO_STREAK] is not None:
+                    result_geom = process_results[theme_id][rd].get("result")
+                    if result_geom is None or result_geom.is_empty:
+                        continue
                     if cvg_ratio > cvg_ratio_threshold:
                         prediction_count += 1
                         process_results[theme_id][rd]["properties"][
