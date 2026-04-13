@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.9.36">
+<meta name="generator" content="quarto-1.9.37">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -39,10 +39,10 @@ ul.task-list li input[type="checkbox"] {
 <script src="site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="site_libs/quarto-html/anchor.min.js"></script>
 <link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-dbc92dda8186f57fa2e333fbb71d6a9d.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-23bbe8b5e4efc1e257f6d59dce478b08.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-4fb5ef05a860c8bf409e4f2b79d95a28.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-d601f195343c5adbdba1989941cef7e8.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -143,11 +143,13 @@ ul.task-list li input[type="checkbox"] {
   <li><a href="#parameter-guide" id="toc-parameter-guide" class="nav-link active" data-scroll-target="#parameter-guide">Parameter Guide</a>
   <ul class="collapse">
   <li><a href="#relevant_distance" id="toc-relevant_distance" class="nav-link" data-scroll-target="#relevant_distance"><code>relevant_distance</code></a></li>
+  <li><a href="#profile_performance" id="toc-profile_performance" class="nav-link" data-scroll-target="#profile_performance"><code>profile_performance</code></a></li>
   <li><a href="#correction_distance" id="toc-correction_distance" class="nav-link" data-scroll-target="#correction_distance"><code>correction_distance</code></a></li>
   <li><a href="#mitre_limit" id="toc-mitre_limit" class="nav-link" data-scroll-target="#mitre_limit"><code>mitre_limit</code></a></li>
   <li><a href="#snap_strategy" id="toc-snap_strategy" class="nav-link" data-scroll-target="#snap_strategy"><code>snap_strategy</code></a></li>
   <li><a href="#od_strategy-open-domain" id="toc-od_strategy-open-domain" class="nav-link" data-scroll-target="#od_strategy-open-domain"><code>od_strategy</code> (Open Domain)</a></li>
   <li><a href="#tuning-workflow" id="toc-tuning-workflow" class="nav-link" data-scroll-target="#tuning-workflow">Tuning workflow</a></li>
+  <li><a href="#performance-notes" id="toc-performance-notes" class="nav-link" data-scroll-target="#performance-notes">Performance notes</a></li>
   <li><a href="#related" id="toc-related" class="nav-link" data-scroll-target="#related">Related</a></li>
   </ul></li>
   </ul>
@@ -168,6 +170,16 @@ ul.task-list li input[type="checkbox"] {
 <li>Meaning: maximum spatial search/tolerance distance for alignment behavior.</li>
 <li>Typical approach: evaluate a distance range, then use <code>predict(...)</code> or <code>evaluate(...)</code>.</li>
 <li>Start small and increase gradually.</li>
+</ul>
+</section>
+<section id="profile_performance" class="level2">
+<h2 class="anchored" data-anchor-id="profile_performance"><code>profile_performance</code></h2>
+<ul>
+<li>Location: <code>AlignerConfig(profile_performance=...)</code></li>
+<li>Meaning: enable lightweight internal timing during <code>process(...)</code>.</li>
+<li>Output: timings are available in <code>AlignerResult.metadata["performance"]</code>.</li>
+<li>Default: <code>False</code>.</li>
+<li>Recommendation: enable for tuning/benchmarking runs, disable for normal production runs.</li>
 </ul>
 </section>
 <section id="correction_distance" class="level2">
@@ -196,7 +208,8 @@ ul.task-list li input[type="checkbox"] {
 <section id="od_strategy-open-domain" class="level2">
 <h2 class="anchored" data-anchor-id="od_strategy-open-domain"><code>od_strategy</code> (Open Domain)</h2>
 <ul>
-<li>Meaning: defines behavior where no reference coverage exists.</li>
+<li>Meaning: defines behavior where no <strong>polygon reference coverage</strong> exists.</li>
+<li>Practical note: when the reference dataset has only lines/points and no polygonal coverage, open-domain strategy effects are intentionally limited.</li>
 <li>Choose explicitly based on business semantics:
 <ul>
 <li>keep as-is</li>
@@ -210,10 +223,19 @@ ul.task-list li input[type="checkbox"] {
 <ol type="1">
 <li>Fix a representative sample dataset.</li>
 <li>Sweep <code>relevant_distance</code>.</li>
+<li>Enable <code>profile_performance</code> and inspect <code>metadata["performance"]</code>.</li>
 <li>Inspect stability and geometric deltas.</li>
 <li>Lock <code>od_strategy</code> and <code>snap_strategy</code>.</li>
 <li>Validate on a larger holdout set.</li>
 </ol>
+</section>
+<section id="performance-notes" class="level2">
+<h2 class="anchored" data-anchor-id="performance-notes">Performance notes</h2>
+<ul>
+<li><code>brdr</code> reuses reference candidates per thematic geometry across multiple relevant distances.</li>
+<li><code>evaluate(...)</code> includes caching for repeated observation comparisons on identical predicted geometries.</li>
+<li>These optimizations are transparent; no extra configuration is needed besides optional profiling.</li>
+</ul>
 </section>
 <section id="related" class="level2">
 <h2 class="anchored" data-anchor-id="related">Related</h2>

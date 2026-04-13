@@ -6,8 +6,11 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
+<meta name="author" content="Karel Dieussaert">
+<meta name="dcterms.date" content="2026-03-31">
+<meta name="description" content="Inject a custom evaluator that enriches evaluated results with custom properties">
 
-<title>BRDR - Aligning borders</title>
+<title>Custom Evaluator Strategy – BRDR - Aligning borders</title>
 <style>
 /* Default styles provided by pandoc.
 ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
@@ -61,23 +64,23 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </style>
 
 
-<script src="site_libs/quarto-nav/quarto-nav.js"></script>
-<script src="site_libs/quarto-nav/headroom.min.js"></script>
-<script src="site_libs/clipboard/clipboard.min.js"></script>
-<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
-<script src="site_libs/quarto-search/fuse.min.js"></script>
-<script src="site_libs/quarto-search/quarto-search.js"></script>
-<meta name="quarto:offset" content="./">
-<script src="site_libs/quarto-html/quarto.js" type="module"></script>
-<script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
-<script src="site_libs/quarto-html/popper.min.js"></script>
-<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
-<script src="site_libs/quarto-html/anchor.min.js"></script>
-<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-23bbe8b5e4efc1e257f6d59dce478b08.css" rel="stylesheet" id="quarto-text-highlighting-styles">
-<script src="site_libs/bootstrap/bootstrap.min.js"></script>
-<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-d601f195343c5adbdba1989941cef7e8.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-23bbe8b5e4efc1e257f6d59dce478b08.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-d601f195343c5adbdba1989941cef7e8.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -105,9 +108,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     "search-label": "Search"
   }
 }</script>
-<script src="site_libs/quarto-diagram/mermaid.min.js"></script>
-<script src="site_libs/quarto-diagram/mermaid-init.js"></script>
-<link href="site_libs/quarto-diagram/mermaid.css" rel="stylesheet">
 
 
 </head>
@@ -119,11 +119,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
       <div class="navbar-container container-fluid">
       <div class="navbar-brand-container mx-auto">
-    <a href="./index.html" class="navbar-brand navbar-brand-logo">
-    <img src="./static/logo.svg" alt="" class="navbar-logo light-content">
-    <img src="./static/logo.svg" alt="" class="navbar-logo dark-content">
+    <a href="../index.html" class="navbar-brand navbar-brand-logo">
+    <img src="../static/logo.svg" alt="" class="navbar-logo light-content">
+    <img src="../static/logo.svg" alt="" class="navbar-logo dark-content">
     </a>
-    <a class="navbar-brand" href="./index.html">
+    <a class="navbar-brand" href="../index.html">
     <span class="navbar-title">BRDR - Aligning borders</span>
     </a>
   </div>
@@ -134,32 +134,32 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
           <div class="collapse navbar-collapse" id="navbarCollapse">
             <ul class="navbar-nav navbar-nav-scroll me-auto">
   <li class="nav-item">
-    <a class="nav-link active" href="./index.html" aria-current="page"> <i class="bi bi-house-fill" role="img">
+    <a class="nav-link" href="../index.html"> <i class="bi bi-house-fill" role="img">
 </i> 
 <span class="menu-text">Home</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./getting-started.html"> 
+    <a class="nav-link" href="../getting-started.html"> 
 <span class="menu-text">Getting Started</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./processor-selection.html"> 
+    <a class="nav-link" href="../processor-selection.html"> 
 <span class="menu-text">Processor Guide</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./parameter-cookbook.html"> 
+    <a class="nav-link" href="../parameter-cookbook.html"> 
 <span class="menu-text">Parameter Guide</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./reference/index.html"> 
+    <a class="nav-link" href="../reference/index.html"> 
 <span class="menu-text">Reference</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./examples.html"> 
+    <a class="nav-link" href="../examples.html"> 
 <span class="menu-text">Examples</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./qa.html"> 
+    <a class="nav-link" href="../qa.html"> 
 <span class="menu-text">Q &amp; A</span></a>
   </li>  
 </ul>
@@ -178,145 +178,146 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#brdr" id="toc-brdr" class="nav-link active" data-scroll-target="#brdr"><code>brdr</code></a>
+  <li><a href="#custom-evaluator-strategy" id="toc-custom-evaluator-strategy" class="nav-link active" data-scroll-target="#custom-evaluator-strategy">Custom Evaluator Strategy</a>
   <ul class="collapse">
-  <li><a href="#quick-links" id="toc-quick-links" class="nav-link" data-scroll-target="#quick-links">Quick links</a></li>
-  <li><a href="#what-brdr-does" id="toc-what-brdr-does" class="nav-link" data-scroll-target="#what-brdr-does">What <code>brdr</code> does</a></li>
-  <li><a href="#core-workflow" id="toc-core-workflow" class="nav-link" data-scroll-target="#core-workflow">Core workflow</a></li>
-  <li><a href="#visual-intuition" id="toc-visual-intuition" class="nav-link" data-scroll-target="#visual-intuition">Visual intuition</a></li>
-  <li><a href="#installation" id="toc-installation" class="nav-link" data-scroll-target="#installation">Installation</a></li>
-  <li><a href="#development" id="toc-development" class="nav-link" data-scroll-target="#development">Development</a>
-  <ul class="collapse">
-  <li><a href="#dependency-locking" id="toc-dependency-locking" class="nav-link" data-scroll-target="#dependency-locking">Dependency locking</a></li>
-  <li><a href="#run-tests" id="toc-run-tests" class="nav-link" data-scroll-target="#run-tests">Run tests</a></li>
-  <li><a href="#docker-proof-of-concept" id="toc-docker-proof-of-concept" class="nav-link" data-scroll-target="#docker-proof-of-concept">Docker proof of concept</a></li>
-  </ul></li>
-  <li><a href="#qgis-integration" id="toc-qgis-integration" class="nav-link" data-scroll-target="#qgis-integration">QGIS integration</a></li>
-  <li><a href="#citation" id="toc-citation" class="nav-link" data-scroll-target="#citation">Citation</a></li>
-  <li><a href="#feedback-and-contributions" id="toc-feedback-and-contributions" class="nav-link" data-scroll-target="#feedback-and-contributions">Feedback and contributions</a></li>
-  <li><a href="#acknowledgement" id="toc-acknowledgement" class="nav-link" data-scroll-target="#acknowledgement">Acknowledgement</a></li>
+  <li><a href="#what-you-learn" id="toc-what-you-learn" class="nav-link" data-scroll-target="#what-you-learn">What you learn</a></li>
   </ul></li>
   </ul>
-<div class="toc-actions"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/index.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
+<div class="toc-actions"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/examples/example_custom_evaluator_strategy.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
 <!-- main -->
-<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"></header>
+<main class="content" id="quarto-document-content">
 
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Custom Evaluator Strategy</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">Evaluation</div>
+    <div class="quarto-category">Evaluator</div>
+    <div class="quarto-category">Advanced</div>
+  </div>
+  </div>
 
-
-
-<section id="brdr" class="level1">
-<h1><code>brdr</code></h1>
-<p>A Python library for aligning thematic geometries (OGC Simple Features) to reference boundaries.</p>
-<p><img src="https://img.shields.io/pypi/v/brdr.png" class="img-fluid" alt="PyPI - Version"> <a href="https://doi.org/10.5281/zenodo.11385644"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.11385644.svg" class="img-fluid" alt="DOI"></a></p>
-<section id="quick-links" class="level2">
-<h2 class="anchored" data-anchor-id="quick-links">Quick links</h2>
-<ul>
-<li><a href="./getting-started.html">Getting started</a></li>
-<li><a href="./processor-selection.html">Processor selection</a></li>
-<li><a href="./parameter-cookbook.html">Parameter cookbook</a></li>
-<li><a href="./examples.html">Examples</a></li>
-<li><a href="./reference/index.html">API reference</a></li>
-</ul>
-</section>
-<section id="what-brdr-does" class="level2">
-<h2 class="anchored" data-anchor-id="what-brdr-does">What <code>brdr</code> does</h2>
-<p><code>brdr</code> helps you:</p>
-<ol type="1">
-<li>Align thematic boundaries to a trusted reference layer.</li>
-<li>Evaluate geometric change over a range of relevant distances.</li>
-<li>Detect stable candidate outcomes (<code>predict</code> and <code>evaluate</code>).</li>
-<li>Export results and metrics for QA and downstream workflows.</li>
-</ol>
-</section>
-<section id="core-workflow" class="level2">
-<h2 class="anchored" data-anchor-id="core-workflow">Core workflow</h2>
-<p>The minimal workflow is:</p>
-<ol type="1">
-<li>Create an <code>Aligner</code>.</li>
-<li>Load thematic data.</li>
-<li>Load reference data.</li>
-<li>Run <code>process(...)</code>, <code>predict(...)</code>, or <code>evaluate(...)</code>.</li>
-<li>Export or inspect <code>AlignerResult</code>.</li>
-</ol>
-<div class="cell" data-layout-align="default">
-<div class="cell-output-display">
 <div>
-<p></p><figure class="figure"><p></p>
-<div>
-<pre class="mermaid mermaid-js">flowchart LR
-    A[Create Aligner] --&gt; B[Load thematic data]
-    B --&gt; C[Load reference data]
-    C --&gt; D[Run process / predict / evaluate]
-    D --&gt; E[Inspect or export AlignerResult]
-</pre>
+  <div class="description">
+    Inject a custom evaluator that enriches evaluated results with custom properties
+  </div>
 </div>
-<p></p></figure><p></p>
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Karel Dieussaert </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">March 31, 2026</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="custom-evaluator-strategy" class="level1">
+<h1>Custom Evaluator Strategy</h1>
+<p>This example extends <a href="../reference/Aligner.evaluate.qmd">AlignerEvaluator</a> and injects the evaluator into <a href="../reference/Aligner.html">Aligner</a>.</p>
+<section id="what-you-learn" class="level2">
+<h2 class="anchored" data-anchor-id="what-you-learn">What you learn</h2>
+<ol type="1">
+<li>How to subclass the default evaluator.</li>
+<li>How to append custom output properties after standard evaluation.</li>
+<li>How to run evaluation with the custom evaluator instance.</li>
+</ol>
+<div id="fc2a6a57" class="cell" data-execution_count="1">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.aligner <span class="im">import</span> Aligner, AlignerResult</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.constants <span class="im">import</span> EVALUATION_FIELD_NAME</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.constants <span class="im">import</span> RELEVANT_DISTANCE_FIELD_NAME</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.evaluator <span class="im">import</span> AlignerEvaluator</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.loader <span class="im">import</span> DictLoader</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> shapely <span class="im">import</span> from_wkt</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> TaggedEvaluator(AlignerEvaluator):</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="co">    Add a custom tag to each evaluated process result.</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co">    """</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> evaluate(<span class="va">self</span>, <span class="op">**</span>kwargs) <span class="op">-&gt;</span> AlignerResult:</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>        result <span class="op">=</span> <span class="bu">super</span>().evaluate(<span class="op">**</span>kwargs)</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> _, by_distance <span class="kw">in</span> result.results.items():</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>            <span class="cf">for</span> _, process_result <span class="kw">in</span> by_distance.items():</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>                <span class="cf">if</span> process_result <span class="kw">is</span> <span class="va">None</span>:</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">continue</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>                process_result[<span class="st">"properties"</span>][<span class="st">"custom_evaluator_tag"</span>] <span class="op">=</span> <span class="st">"checked"</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> result</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="va">__name__</span> <span class="op">==</span> <span class="st">"__main__"</span>:</span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""Example: inject a custom evaluator into Aligner."""</span></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>    thematic <span class="op">=</span> {</span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>        <span class="st">"theme_1"</span>: from_wkt(<span class="st">"POLYGON ((0 0, 0 9, 5 10, 10 0, 0 0))"</span>),</span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>    reference <span class="op">=</span> {</span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>        <span class="st">"ref_1"</span>: from_wkt(<span class="st">"POLYGON ((0 1, 0 10, 8 10, 10 1, 0 1))"</span>),</span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a>    aligner <span class="op">=</span> Aligner(evaluator<span class="op">=</span>TaggedEvaluator())</span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a>    aligner.load_thematic_data(DictLoader(thematic))</span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a>    aligner.load_reference_data(DictLoader(reference))</span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a>    distances <span class="op">=</span> np.arange(<span class="dv">0</span>, <span class="dv">210</span>, <span class="dv">10</span>, dtype<span class="op">=</span><span class="bu">int</span>) <span class="op">/</span> <span class="dv">100</span></span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a>    evaluated <span class="op">=</span> aligner.evaluate(</span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a>        relevant_distances<span class="op">=</span>distances,</span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a>        metadata_field<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a>    ).get_results(aligner<span class="op">=</span>aligner)</span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> _, by_distance <span class="kw">in</span> evaluated.items():</span>
+<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> _, process_result <span class="kw">in</span> by_distance.items():</span>
+<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> process_result <span class="kw">is</span> <span class="va">None</span>:</span>
+<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a>                <span class="cf">continue</span></span>
+<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(</span>
+<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a>                <span class="ss">f"distance=</span><span class="sc">{</span>process_result[<span class="st">'properties'</span>][RELEVANT_DISTANCE_FIELD_NAME]<span class="sc">}</span><span class="ss">, "</span></span>
+<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a>                <span class="ss">f"evaluation=</span><span class="sc">{</span>process_result[<span class="st">'properties'</span>]<span class="sc">.</span>get(EVALUATION_FIELD_NAME)<span class="sc">}</span><span class="ss">, "</span></span>
+<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a>                <span class="ss">f"tag=</span><span class="sc">{</span>process_result[<span class="st">'properties'</span>]<span class="sc">.</span>get(<span class="st">'custom_evaluator_tag'</span>)<span class="sc">}</span><span class="ss">"</span></span>
+<span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a>            )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>distance=0.0, evaluation=Evaluation.TO_CHECK_PREDICTION_MULTI, tag=checked
+distance=0.1, evaluation=None, tag=checked
+distance=0.2, evaluation=None, tag=checked
+distance=0.3, evaluation=None, tag=checked
+distance=0.4, evaluation=None, tag=checked
+distance=0.5, evaluation=None, tag=checked
+distance=0.6, evaluation=None, tag=checked
+distance=0.7, evaluation=None, tag=checked
+distance=0.8, evaluation=None, tag=checked
+distance=0.9, evaluation=None, tag=checked
+distance=1.0, evaluation=None, tag=checked
+distance=1.1, evaluation=Evaluation.TO_CHECK_PREDICTION_MULTI, tag=checked
+distance=1.2, evaluation=None, tag=checked
+distance=1.3, evaluation=None, tag=checked
+distance=1.4, evaluation=None, tag=checked
+distance=1.5, evaluation=None, tag=checked
+distance=1.6, evaluation=None, tag=checked
+distance=1.7, evaluation=None, tag=checked
+distance=1.8, evaluation=None, tag=checked
+distance=1.9, evaluation=None, tag=checked
+distance=2.0, evaluation=None, tag=checked</code></pre>
 </div>
 </div>
-</div>
-</section>
-<section id="visual-intuition" class="level2">
-<h2 class="anchored" data-anchor-id="visual-intuition">Visual intuition</h2>
-<p>The animation below illustrates how results evolve as <code>relevant_distance</code> increases.</p>
-<ul>
-<li>Left: thematic geometry, reference layer, and aligned result.</li>
-<li>Right: change metric over distance.</li>
-</ul>
-<p>Stable zones in this curve are used for prediction logic.</p>
-<p><img src="figures/animation.gif" class="img-fluid"></p>
-</section>
-<section id="installation" class="level2">
-<h2 class="anchored" data-anchor-id="installation">Installation</h2>
-<p>Install from PyPI:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install brdr</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</section>
-<section id="development" class="level2">
-<h2 class="anchored" data-anchor-id="development">Development</h2>
-<section id="dependency-locking" class="level3">
-<h3 class="anchored" data-anchor-id="dependency-locking">Dependency locking</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="va">PIP_COMPILE_ARGS</span><span class="op">=</span><span class="st">"-v --strip-extras --no-header --resolver=backtracking --no-emit-options --no-emit-find-links"</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">pip-compile</span> <span class="va">$PIP_COMPILE_ARGS</span></span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="ex">pip-compile</span> <span class="va">$PIP_COMPILE_ARGS</span> <span class="at">-o</span> requirements-dev.txt <span class="at">--all-extras</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</section>
-<section id="run-tests" class="level3">
-<h3 class="anchored" data-anchor-id="run-tests">Run tests</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pytest</span> <span class="at">--cov</span><span class="op">=</span>brdr tests <span class="at">--cov-report</span> term-missing</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</section>
-<section id="docker-proof-of-concept" class="level3">
-<h3 class="anchored" data-anchor-id="docker-proof-of-concept">Docker proof of concept</h3>
-<ul>
-<li><a href="https://github.com/dieuska/brdr-webservice">brdr-webservice (Docker POC) on GitHub</a> The repository includes a Docker-based proof of concept for a GRB-specific web service:</li>
-</ul>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode bat code-with-copy"><code class="sourceCode dosbat"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>docker build <span class="at">-f</span> Dockerfile . <span class="at">-t</span> grb_webservice</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>docker run -<span class="at">-rm</span> <span class="at">-p</span> 80:80 -<span class="at">-name</span> grb_webservice grb_webservice</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Then open: <code>http://localhost:80/docs#/default/actualiser_actualiser_post</code></p>
-</section>
-</section>
-<section id="qgis-integration" class="level2">
-<h2 class="anchored" data-anchor-id="qgis-integration">QGIS integration</h2>
-<p><code>brdrQ</code> provides a QGIS plugin implementation of <code>brdr</code>:</p>
-<ul>
-<li><a href="https://github.com/OnroerendErfgoed/brdrQ/">brdrQ on GitHub</a></li>
-</ul>
-</section>
-<section id="citation" class="level2">
-<h2 class="anchored" data-anchor-id="citation">Citation</h2>
-<ul>
-<li>Dieussaert, K., Vanvinckenroye, M., Vermeyen, M., &amp; Van Daele, K. (2024). Grenzen verleggen. Automatische correcties van geografische afbakeningen op verschuivende onderlagen. <em>Onderzoeksrapporten Agentschap Onroerend Erfgoed</em>. <a href="https://doi.org/10.55465/SXCW6218" class="uri">https://doi.org/10.55465/SXCW6218</a></li>
-</ul>
-</section>
-<section id="feedback-and-contributions" class="level2">
-<h2 class="anchored" data-anchor-id="feedback-and-contributions">Feedback and contributions</h2>
-<ul>
-<li>Questions and usage discussions: <a href="https://github.com/OnroerendErfgoed/brdr/discussions" class="uri">https://github.com/OnroerendErfgoed/brdr/discussions</a></li>
-<li>Bug reports and feature requests: <a href="https://github.com/OnroerendErfgoed/brdr/issues" class="uri">https://github.com/OnroerendErfgoed/brdr/issues</a></li>
-</ul>
-</section>
-<section id="acknowledgement" class="level2">
-<h2 class="anchored" data-anchor-id="acknowledgement">Acknowledgement</h2>
-<p>This software was created by <a href="https://athumi.be/en/">Athumi</a> and <a href="https://www.onroerenderfgoed.be/flanders-heritage-agency">Flanders Heritage Agency</a>.</p>
-<p><img src="figures/athumi_logo-250x84.png" class="img-fluid" alt="https://athumi.be/en/"> <img src="figures/Vlaanderen_is_erfgoed-250x97.png" class="img-fluid" alt="https://www.onroerenderfgoed.be/flanders-heritage-agency"></p>
 
 
 </section>
@@ -724,8 +725,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   });
   </script>
 </div> <!-- /content -->
+<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/examples/example_custom_evaluator_strategy.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer><hr>
+<p><a href="../examples.html">&lt;- Back to examples overview</a></p>
 
 
 
 
-<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/index.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>
+</body></html>

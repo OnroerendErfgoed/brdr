@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.9.36">
+<meta name="generator" content="quarto-1.9.37">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -77,10 +77,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-dbc92dda8186f57fa2e333fbb71d6a9d.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-23bbe8b5e4efc1e257f6d59dce478b08.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-4fb5ef05a860c8bf409e4f2b79d95a28.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-d601f195343c5adbdba1989941cef7e8.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -248,7 +248,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li><code>result_diff_min</code>: area removed by alignment</li>
 </ul></li>
 </ul>
-<div id="fb175846" class="cell" data-execution_count="1">
+<div id="4389cc84" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.aligner <span class="im">import</span> Aligner</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.geometry_utils <span class="im">import</span> geom_from_wkt</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.loader <span class="im">import</span> DictLoader</span>
@@ -296,7 +296,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a><span class="co"># print("gdf columns: " + ", ".join(results_gdf.columns.astype(str)))</span></span>
 <span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a><span class="co"># print(results_gdf[[aligner.thematic_data.id_fieldname, "relevant_distance"]].head())</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>result: POLYGON ((0.1685303876974549 0.4444297669803975, 0.0761204674887134 0.6173165676349098, 0.0192147195967695 0.8049096779838716, 0 1, 0 10, 4.999999999999999 10, 9.500000000000004 1, 9.381966011250102 1, 9.36275129165333 0.8049096779838723, 9.305845543761384 0.6173165676348947, 9.213435623552671 0.4444297669804294, 9.089072792436635 0.2928932188134386, 8.937536244269706 0.1685303876974548, 8.76464944361519 0.0761204674887132, 8.577056333266233 0.0192147195967696, 8.3819660112501 -1.734723475976807e-18, 0.9999999999999997 -1.734723475976807e-18, 0.8049096779838718 0.0192147195967696, 0.6173165676349087 0.0761204674887139, 0.4444297669803966 0.1685303876974555, 0.2928932188134523 0.2928932188134525, 0.1685303876974549 0.4444297669803975))
+<pre><code>result: POLYGON ((0.2928932188134523 0.2928932188134525, 0.1685303876974549 0.4444297669803975, 0.0761204674887134 0.6173165676349098, 0.0192147195967695 0.8049096779838716, 0 1, 0 10, 4.999999999999999 10, 9.500000000000004 1, 9.381966011250102 1, 9.36275129165333 0.8049096779838723, 9.305845543761384 0.6173165676348947, 9.213435623552671 0.4444297669804294, 9.089072792436635 0.2928932188134386, 8.937536244269706 0.1685303876974548, 8.76464944361519 0.0761204674887132, 8.577056333266233 0.0192147195967696, 8.3819660112501 -1.734723475976807e-18, 0.9999999999999997 -1.734723475976807e-18, 0.8049096779838718 0.0192147195967696, 0.6173165676349087 0.0761204674887139, 0.4444297669803966 0.1685303876974555, 0.2928932188134523 0.2928932188134525))
 added area: POLYGON ((0 10, 4.99850865709512 10, 4.9985376179666465 9.99970752359333, 0 9, 0 10))
 removed area: MULTIPOLYGON (((8.513713891647056 0, 8.76464944361519 0.0761204674887132, 8.937536244269706 0.1685303876974548, 9.089072792436633 0.2928932188134385, 9.213435623552671 0.4444297669804296, 9.305845543761384 0.6173165676348947, 9.36275129165333 0.8049096779838723, 9.381966011250102 1, 9.5 1, 10 0, 8.513713891647056 0)), ((1.734723475976807e-18 0.86825211960305, 0.0761204674887134 0.6173165676349098, 0.1685303876974549 0.4444297669803975, 0.2928932188134523 0.2928932188134525, 0.4444297669803966 0.1685303876974556, 0.6173165676349087 0.0761204674887139, 0.8682521196030504 0, 1.734723475976807e-18 0, 1.734723475976807e-18 0.86825211960305)))</code></pre>
 </div>

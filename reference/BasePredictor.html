@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>processorid – BRDR - Aligning borders</title>
+<title>basepredictor – BRDR - Aligning borders</title>
 <style>
 /* Default styles provided by pandoc.
 ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
@@ -170,7 +170,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/FullReferenceStrategy.html">Enumerators</a></li><li class="breadcrumb-item"><a href="../reference/ProcessorID.html">ProcessorID</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/BasePredictor.html">Prediction</a></li><li class="breadcrumb-item"><a href="../reference/BasePredictor.html">BasePredictor</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
     </div>
@@ -351,7 +351,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/BasePredictor.html" class="sidebar-item-text sidebar-link">
+  <a href="../reference/BasePredictor.html" class="sidebar-item-text sidebar-link active">
  <span class="menu-text">BasePredictor</span></a>
   </div>
 </li>
@@ -451,7 +451,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/ProcessorID.html" class="sidebar-item-text sidebar-link active">
+  <a href="../reference/ProcessorID.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">ProcessorID</span></a>
   </div>
 </li>
@@ -612,68 +612,55 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#brdr.enums.ProcessorID" id="toc-brdr.enums.ProcessorID" class="nav-link active" data-scroll-target="#brdr.enums.ProcessorID">ProcessorID</a>
+  <li><a href="#brdr.predictor.BasePredictor" id="toc-brdr.predictor.BasePredictor" class="nav-link active" data-scroll-target="#brdr.predictor.BasePredictor">BasePredictor</a>
   <ul class="collapse">
-  <li><a href="#attributes" id="toc-attributes" class="nav-link" data-scroll-target="#attributes">Attributes</a></li>
+  <li><a href="#methods" id="toc-methods" class="nav-link" data-scroll-target="#methods">Methods</a>
+  <ul class="collapse">
+  <li><a href="#brdr.predictor.BasePredictor.predict" id="toc-brdr.predictor.BasePredictor.predict" class="nav-link" data-scroll-target="#brdr.predictor.BasePredictor.predict">predict</a></li>
+  </ul></li>
   </ul></li>
   </ul>
-<div class="toc-actions"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/reference/ProcessorID.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
+<div class="toc-actions"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/reference/BasePredictor.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
 <!-- main -->
-<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/FullReferenceStrategy.html">Enumerators</a></li><li class="breadcrumb-item"><a href="../reference/ProcessorID.html">ProcessorID</a></li></ol></nav></header>
+<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/BasePredictor.html">Prediction</a></li><li class="breadcrumb-item"><a href="../reference/BasePredictor.html">BasePredictor</a></li></ol></nav></header>
 
 
 
 
-<section id="brdr.enums.ProcessorID" class="level1">
-<h1>ProcessorID</h1>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>enums.ProcessorID()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Stable identifiers for available processing algorithms.</p>
-<section id="attributes" class="level2 doc-section doc-section-attributes">
-<h2 class="doc-section doc-section-attributes anchored" data-anchor-id="attributes">Attributes</h2>
+<section id="brdr.predictor.BasePredictor" class="level1">
+<h1>BasePredictor</h1>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>predictor.BasePredictor(feedback<span class="op">=</span><span class="va">None</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Abstract base class for prediction strategies.</p>
+<p>A predictor analyzes process results across a series of relevant distances and marks interesting candidate results with prediction metadata.</p>
+<section id="methods" class="level2">
+<h2 class="anchored" data-anchor-id="methods">Methods</h2>
 <table class="caption-top table">
-<colgroup>
-<col style="width: 16%">
-<col style="width: 19%">
-<col style="width: 63%">
-</colgroup>
 <thead>
 <tr class="header">
 <th>Name</th>
-<th>Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td>DIEUSSAERT</td>
-<td><code>str</code></td>
-<td>Identifier for DieussaertGeometryProcessor.</td>
-</tr>
-<tr class="even">
-<td>SNAP</td>
-<td><code>str</code></td>
-<td>Identifier for SnapGeometryProcessor.</td>
-</tr>
-<tr class="odd">
-<td>NETWORK</td>
-<td><code>str</code></td>
-<td>Identifier for NetworkGeometryProcessor.</td>
-</tr>
-<tr class="even">
-<td>ALIGNER</td>
-<td><code>str</code></td>
-<td>Identifier for AlignerGeometryProcessor.</td>
-</tr>
-<tr class="odd">
-<td>TOPOLOGY</td>
-<td><code>str</code></td>
-<td>Identifier for TopologyProcessor.</td>
+<td><a href="#brdr.predictor.BasePredictor.predict">predict</a></td>
+<td>Execute prediction strategy for the given aligner context.</td>
 </tr>
 </tbody>
 </table>
+<section id="brdr.predictor.BasePredictor.predict" class="level3">
+<h3 class="anchored" data-anchor-id="brdr.predictor.BasePredictor.predict">predict</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>predictor.BasePredictor.predict(</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    aligner,</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    relevant_distances<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    thematic_ids<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    diff_metric<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Execute prediction strategy for the given aligner context.</p>
 
 
+</section>
 </section>
 </section>
 
@@ -1083,4 +1070,4 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 
-<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/reference/ProcessorID.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>
+<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/reference/BasePredictor.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>

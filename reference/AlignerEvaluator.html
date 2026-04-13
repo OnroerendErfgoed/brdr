@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>processorid – BRDR - Aligning borders</title>
+<title>alignerevaluator – BRDR - Aligning borders</title>
 <style>
 /* Default styles provided by pandoc.
 ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
@@ -170,7 +170,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/FullReferenceStrategy.html">Enumerators</a></li><li class="breadcrumb-item"><a href="../reference/ProcessorID.html">ProcessorID</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/BaseEvaluator.html">Evaluation</a></li><li class="breadcrumb-item"><a href="../reference/AlignerEvaluator.html">AlignerEvaluator</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
     </div>
@@ -380,7 +380,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/AlignerEvaluator.html" class="sidebar-item-text sidebar-link">
+  <a href="../reference/AlignerEvaluator.html" class="sidebar-item-text sidebar-link active">
  <span class="menu-text">AlignerEvaluator</span></a>
   </div>
 </li>
@@ -451,7 +451,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/ProcessorID.html" class="sidebar-item-text sidebar-link active">
+  <a href="../reference/ProcessorID.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">ProcessorID</span></a>
   </div>
 </li>
@@ -612,69 +612,22 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#brdr.enums.ProcessorID" id="toc-brdr.enums.ProcessorID" class="nav-link active" data-scroll-target="#brdr.enums.ProcessorID">ProcessorID</a>
-  <ul class="collapse">
-  <li><a href="#attributes" id="toc-attributes" class="nav-link" data-scroll-target="#attributes">Attributes</a></li>
-  </ul></li>
+  <li><a href="#brdr.evaluator.AlignerEvaluator" id="toc-brdr.evaluator.AlignerEvaluator" class="nav-link active" data-scroll-target="#brdr.evaluator.AlignerEvaluator">AlignerEvaluator</a></li>
   </ul>
-<div class="toc-actions"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/reference/ProcessorID.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
+<div class="toc-actions"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/reference/AlignerEvaluator.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
 <!-- main -->
-<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/FullReferenceStrategy.html">Enumerators</a></li><li class="breadcrumb-item"><a href="../reference/ProcessorID.html">ProcessorID</a></li></ol></nav></header>
+<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/BaseEvaluator.html">Evaluation</a></li><li class="breadcrumb-item"><a href="../reference/AlignerEvaluator.html">AlignerEvaluator</a></li></ol></nav></header>
 
 
 
 
-<section id="brdr.enums.ProcessorID" class="level1">
-<h1>ProcessorID</h1>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>enums.ProcessorID()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Stable identifiers for available processing algorithms.</p>
-<section id="attributes" class="level2 doc-section doc-section-attributes">
-<h2 class="doc-section doc-section-attributes anchored" data-anchor-id="attributes">Attributes</h2>
-<table class="caption-top table">
-<colgroup>
-<col style="width: 16%">
-<col style="width: 19%">
-<col style="width: 63%">
-</colgroup>
-<thead>
-<tr class="header">
-<th>Name</th>
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>DIEUSSAERT</td>
-<td><code>str</code></td>
-<td>Identifier for DieussaertGeometryProcessor.</td>
-</tr>
-<tr class="even">
-<td>SNAP</td>
-<td><code>str</code></td>
-<td>Identifier for SnapGeometryProcessor.</td>
-</tr>
-<tr class="odd">
-<td>NETWORK</td>
-<td><code>str</code></td>
-<td>Identifier for NetworkGeometryProcessor.</td>
-</tr>
-<tr class="even">
-<td>ALIGNER</td>
-<td><code>str</code></td>
-<td>Identifier for AlignerGeometryProcessor.</td>
-</tr>
-<tr class="odd">
-<td>TOPOLOGY</td>
-<td><code>str</code></td>
-<td>Identifier for TopologyProcessor.</td>
-</tr>
-</tbody>
-</table>
+<section id="brdr.evaluator.AlignerEvaluator" class="level1">
+<h1>AlignerEvaluator</h1>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>evaluator.AlignerEvaluator(feedback<span class="op">=</span><span class="va">None</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Default evaluator implementation with the original Aligner evaluate logic.</p>
 
 
-</section>
 </section>
 
 </main> <!-- /main -->
@@ -1083,4 +1036,4 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 
-<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/reference/ProcessorID.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>
+<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/reference/AlignerEvaluator.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>

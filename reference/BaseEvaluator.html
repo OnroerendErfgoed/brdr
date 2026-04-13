@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>processorid – BRDR - Aligning borders</title>
+<title>baseevaluator – BRDR - Aligning borders</title>
 <style>
 /* Default styles provided by pandoc.
 ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
@@ -170,7 +170,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/FullReferenceStrategy.html">Enumerators</a></li><li class="breadcrumb-item"><a href="../reference/ProcessorID.html">ProcessorID</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/BaseEvaluator.html">Evaluation</a></li><li class="breadcrumb-item"><a href="../reference/BaseEvaluator.html">BaseEvaluator</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
     </div>
@@ -374,7 +374,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <ul id="quarto-sidebar-section-6" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/BaseEvaluator.html" class="sidebar-item-text sidebar-link">
+  <a href="../reference/BaseEvaluator.html" class="sidebar-item-text sidebar-link active">
  <span class="menu-text">BaseEvaluator</span></a>
   </div>
 </li>
@@ -451,7 +451,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/ProcessorID.html" class="sidebar-item-text sidebar-link active">
+  <a href="../reference/ProcessorID.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">ProcessorID</span></a>
   </div>
 </li>
@@ -612,68 +612,113 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#brdr.enums.ProcessorID" id="toc-brdr.enums.ProcessorID" class="nav-link active" data-scroll-target="#brdr.enums.ProcessorID">ProcessorID</a>
+  <li><a href="#brdr.evaluator.BaseEvaluator" id="toc-brdr.evaluator.BaseEvaluator" class="nav-link active" data-scroll-target="#brdr.evaluator.BaseEvaluator">BaseEvaluator</a>
   <ul class="collapse">
-  <li><a href="#attributes" id="toc-attributes" class="nav-link" data-scroll-target="#attributes">Attributes</a></li>
+  <li><a href="#methods" id="toc-methods" class="nav-link" data-scroll-target="#methods">Methods</a>
+  <ul class="collapse">
+  <li><a href="#brdr.evaluator.BaseEvaluator.evaluate" id="toc-brdr.evaluator.BaseEvaluator.evaluate" class="nav-link" data-scroll-target="#brdr.evaluator.BaseEvaluator.evaluate">evaluate</a></li>
+  <li><a href="#brdr.evaluator.BaseEvaluator.get_brdr_observation_from_properties" id="toc-brdr.evaluator.BaseEvaluator.get_brdr_observation_from_properties" class="nav-link" data-scroll-target="#brdr.evaluator.BaseEvaluator.get_brdr_observation_from_properties">get_brdr_observation_from_properties</a></li>
+  <li><a href="#brdr.evaluator.BaseEvaluator.get_observation_comparison_properties" id="toc-brdr.evaluator.BaseEvaluator.get_observation_comparison_properties" class="nav-link" data-scroll-target="#brdr.evaluator.BaseEvaluator.get_observation_comparison_properties">get_observation_comparison_properties</a></li>
+  <li><a href="#brdr.evaluator.BaseEvaluator.get_observation_properties" id="toc-brdr.evaluator.BaseEvaluator.get_observation_properties" class="nav-link" data-scroll-target="#brdr.evaluator.BaseEvaluator.get_observation_properties">get_observation_properties</a></li>
+  <li><a href="#brdr.evaluator.BaseEvaluator.update_evaluation_with_original" id="toc-brdr.evaluator.BaseEvaluator.update_evaluation_with_original" class="nav-link" data-scroll-target="#brdr.evaluator.BaseEvaluator.update_evaluation_with_original">update_evaluation_with_original</a></li>
+  </ul></li>
   </ul></li>
   </ul>
-<div class="toc-actions"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/reference/ProcessorID.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
+<div class="toc-actions"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/reference/BaseEvaluator.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
 <!-- main -->
-<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/FullReferenceStrategy.html">Enumerators</a></li><li class="breadcrumb-item"><a href="../reference/ProcessorID.html">ProcessorID</a></li></ol></nav></header>
+<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/BaseEvaluator.html">Evaluation</a></li><li class="breadcrumb-item"><a href="../reference/BaseEvaluator.html">BaseEvaluator</a></li></ol></nav></header>
 
 
 
 
-<section id="brdr.enums.ProcessorID" class="level1">
-<h1>ProcessorID</h1>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>enums.ProcessorID()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Stable identifiers for available processing algorithms.</p>
-<section id="attributes" class="level2 doc-section doc-section-attributes">
-<h2 class="doc-section doc-section-attributes anchored" data-anchor-id="attributes">Attributes</h2>
+<section id="brdr.evaluator.BaseEvaluator" class="level1">
+<h1>BaseEvaluator</h1>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>evaluator.BaseEvaluator(feedback<span class="op">=</span><span class="va">None</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Abstract base class for evaluation strategies.</p>
+<p>An evaluator compares predictions with the source observation context and selects the most relevant candidate geometries.</p>
+<section id="methods" class="level2">
+<h2 class="anchored" data-anchor-id="methods">Methods</h2>
 <table class="caption-top table">
-<colgroup>
-<col style="width: 16%">
-<col style="width: 19%">
-<col style="width: 63%">
-</colgroup>
 <thead>
 <tr class="header">
 <th>Name</th>
-<th>Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td>DIEUSSAERT</td>
-<td><code>str</code></td>
-<td>Identifier for DieussaertGeometryProcessor.</td>
+<td><a href="#brdr.evaluator.BaseEvaluator.evaluate">evaluate</a></td>
+<td>Execute evaluation strategy for the given aligner context.</td>
 </tr>
 <tr class="even">
-<td>SNAP</td>
-<td><code>str</code></td>
-<td>Identifier for SnapGeometryProcessor.</td>
+<td><a href="#brdr.evaluator.BaseEvaluator.get_brdr_observation_from_properties">get_brdr_observation_from_properties</a></td>
+<td>Extract a BRDR observation from thematic feature properties.</td>
 </tr>
 <tr class="odd">
-<td>NETWORK</td>
-<td><code>str</code></td>
-<td>Identifier for NetworkGeometryProcessor.</td>
+<td><a href="#brdr.evaluator.BaseEvaluator.get_observation_comparison_properties">get_observation_comparison_properties</a></td>
+<td>Compare current observation against base observation.</td>
 </tr>
 <tr class="even">
-<td>ALIGNER</td>
-<td><code>str</code></td>
-<td>Identifier for AlignerGeometryProcessor.</td>
+<td><a href="#brdr.evaluator.BaseEvaluator.get_observation_properties">get_observation_properties</a></td>
+<td>Build observation properties for a process result.</td>
 </tr>
 <tr class="odd">
-<td>TOPOLOGY</td>
-<td><code>str</code></td>
-<td>Identifier for TopologyProcessor.</td>
+<td><a href="#brdr.evaluator.BaseEvaluator.update_evaluation_with_original">update_evaluation_with_original</a></td>
+<td>Update evaluated output by returning the original geometry.</td>
 </tr>
 </tbody>
 </table>
+<section id="brdr.evaluator.BaseEvaluator.evaluate" class="level3">
+<h3 class="anchored" data-anchor-id="brdr.evaluator.BaseEvaluator.evaluate">evaluate</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>evaluator.BaseEvaluator.evaluate(</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    aligner,</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    relevant_distances<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    thematic_ids<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    metadata_field<span class="op">=</span>METADATA_FIELD_NAME,</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    full_reference_strategy<span class="op">=</span>FullReferenceStrategy.NO_FULL_REFERENCE,</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    max_predictions<span class="op">=-</span><span class="dv">1</span>,</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    multi_to_best_prediction<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Execute evaluation strategy for the given aligner context.</p>
+</section>
+<section id="brdr.evaluator.BaseEvaluator.get_brdr_observation_from_properties" class="level3">
+<h3 class="anchored" data-anchor-id="brdr.evaluator.BaseEvaluator.get_brdr_observation_from_properties">get_brdr_observation_from_properties</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>evaluator.BaseEvaluator.get_brdr_observation_from_properties(</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    aligner,</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    id_theme,</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    base_metadata_field,</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Extract a BRDR observation from thematic feature properties.</p>
+</section>
+<section id="brdr.evaluator.BaseEvaluator.get_observation_comparison_properties" class="level3">
+<h3 class="anchored" data-anchor-id="brdr.evaluator.BaseEvaluator.get_observation_comparison_properties">get_observation_comparison_properties</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>evaluator.BaseEvaluator.get_observation_comparison_properties(</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    aligner,</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    process_result,</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    base_brdr_observation<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Compare current observation against base observation.</p>
+</section>
+<section id="brdr.evaluator.BaseEvaluator.get_observation_properties" class="level3">
+<h3 class="anchored" data-anchor-id="brdr.evaluator.BaseEvaluator.get_observation_properties">get_observation_properties</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>evaluator.BaseEvaluator.get_observation_properties(aligner, process_result)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Build observation properties for a process result.</p>
+</section>
+<section id="brdr.evaluator.BaseEvaluator.update_evaluation_with_original" class="level3">
+<h3 class="anchored" data-anchor-id="brdr.evaluator.BaseEvaluator.update_evaluation_with_original">update_evaluation_with_original</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>evaluator.BaseEvaluator.update_evaluation_with_original(</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    aligner,</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    metadata_field,</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    original_geometry,</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    process_results_evaluated,</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    theme_id,</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    evaluation,</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Update evaluated output by returning the original geometry.</p>
 
 
+</section>
 </section>
 </section>
 
@@ -1083,4 +1128,4 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 
-<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/reference/ProcessorID.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>
+<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/reference/BaseEvaluator.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>

@@ -2,14 +2,20 @@
   {
     "listing": "/examples.html",
     "items": [
+      "/examples/example_compare_to_reference_de9im.html",
+      "/examples/example_custom_evaluator_strategy.html",
+      "/examples/example_opendomain_network_polygon_reference.html",
+      "/examples/example_geodataframeloader_geopandas_workflow.html",
+      "/examples/example_opendomain_snap_polygon_reference.html",
+      "/examples/example_custom_predictor_strategy.html",
       "/examples/example_lambert72_to_lambert08.html",
       "/examples/example_geojsonloader.html",
       "/examples/example_readme.html",
-      "/examples/example_evaluate.html",
-      "/examples/example_predict.html",
-      "/examples/example_dictloader.html",
+      "/examples/example_animation.html",
       "/examples/example_networkgeometryprocessor.html",
-      "/examples/example_animation.html"
+      "/examples/example_dictloader.html",
+      "/examples/example_evaluate.html",
+      "/examples/example_predict.html"
     ]
   }
 ]
