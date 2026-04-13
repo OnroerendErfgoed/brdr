@@ -298,8 +298,17 @@ def safe_intersection(geom_a: BaseGeometry, geom_b: BaseGeometry) -> BaseGeometr
     # function to solve exceptional error: shapely.errors.GEOSException:
     # TopologyException: found non-noded intersection between LINESTRING
     # see: https://gis.stackexchange.com/questions/50399
+    if geom_a is None or geom_b is None:
+        return GeometryCollection()
+    if geom_a.is_empty or geom_b.is_empty:
+        return GeometryCollection()
     try:
-        geom = intersection(geom_a, geom_b)
+        if geom_a.is_valid and geom_b.is_valid:
+            return intersection(geom_a, geom_b)
+        geom = intersection(
+            make_valid(geom_a) if not geom_a.is_valid else geom_a,
+            make_valid(geom_b) if not geom_b.is_valid else geom_b,
+        )
     except GEOSException:
         try:
             logging.warning(
@@ -317,18 +326,47 @@ def safe_unary_union(geometries):
     if geometries is None:
         return GeometryCollection()
     if isinstance(geometries, BaseGeometry):
+        if geometries.is_empty:
+            return geometries
+        if geometries.is_valid:
+            return geometries
         return make_valid(geometries)
     if not isinstance(geometries, (list, tuple)):
         geometries = list(geometries)
     if len(geometries) == 0:
         return GeometryCollection()
     if len(geometries) == 1:
-        return make_valid(geometries[0])
+        geom = geometries[0]
+        if geom is None:
+            return GeometryCollection()
+        if geom.is_empty:
+            return geom
+        if geom.is_valid:
+            return geom
+        return make_valid(geom)
     try:
-        unioned_geom = make_valid(unary_union(geometries))
-    except:
-        geometries = [make_valid(g) for g in geometries]
-        unioned_geom = make_valid(unary_union(geometries))
+        unioned_geom = unary_union(geometries)
+        if unioned_geom is None:
+            return GeometryCollection()
+        if unioned_geom.is_empty or unioned_geom.is_valid:
+            return unioned_geom
+        unioned_geom = make_valid(unioned_geom)
+    except Exception:
+        cleaned_geometries = []
+        for g in geometries:
+            if g is None:
+                continue
+            if g.is_empty or g.is_valid:
+                cleaned_geometries.append(g)
+            else:
+                cleaned_geometries.append(make_valid(g))
+        if len(cleaned_geometries) == 0:
+            return GeometryCollection()
+        unioned_geom = unary_union(cleaned_geometries)
+        if unioned_geom is None:
+            return GeometryCollection()
+        if not (unioned_geom.is_empty or unioned_geom.is_valid):
+            unioned_geom = make_valid(unioned_geom)
 
     return unioned_geom
 
@@ -363,8 +401,19 @@ def safe_difference(geom_a, geom_b):
     # function to solve exceptional error: shapely.errors.GEOSException:
     # TopologyException: found non-noded intersection between LINESTRING
     # see: https://gis.stackexchange.com/questions/50399
+    if geom_a is None:
+        return GeometryCollection()
+    if geom_a.is_empty:
+        return geom_a
+    if geom_b is None or geom_b.is_empty:
+        return geom_a
     try:
-        geom = difference(geom_a, geom_b)
+        if geom_a.is_valid and geom_b.is_valid:
+            return difference(geom_a, geom_b)
+        geom = difference(
+            make_valid(geom_a) if not geom_a.is_valid else geom_a,
+            make_valid(geom_b) if not geom_b.is_valid else geom_b,
+        )
     except GEOSException:
         logging.debug("difference_error")
         try:
