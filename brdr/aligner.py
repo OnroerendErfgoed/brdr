@@ -2,8 +2,8 @@ import logging
 import os
 import uuid
 from collections import defaultdict
+from concurrent.futures import as_completed
 from concurrent.futures import ThreadPoolExecutor
-from concurrent.futures import wait
 from datetime import datetime
 from typing import Any
 from typing import Dict
@@ -827,7 +827,7 @@ class Aligner:
                     f"thematic id {str(thematic_id)} processed with "
                     f"relevant distances (m) [{str(relevant_distances)}]"
                 )
-                process_results[thematic_id] = {}
+                process_results[thematic_id] = {rd: None for rd in relevant_distances}
                 for rd in relevant_distances:
                     try:
                         fn = process_geom_for_rd
@@ -852,9 +852,10 @@ class Aligner:
         else:
             with ThreadPoolExecutor(max_workers) as executor:
                 run_process(executor)
-                self.logger.feedback_debug("waiting all started RD calculations")
-                wait(list(futures.values()))
-                for (key, rd), future in futures.items():
+                self.logger.feedback_debug("processing started RD calculations")
+                future_to_key = {future: key_rd for key_rd, future in futures.items()}
+                for future in as_completed(future_to_key):
+                    key, rd = future_to_key[future]
                     process_results[key][rd] = future.result()
 
         self.logger.feedback_info(
