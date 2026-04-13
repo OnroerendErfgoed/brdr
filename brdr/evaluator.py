@@ -1,7 +1,6 @@
 import json
 from abc import ABC
 from abc import abstractmethod
-from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any
 from typing import Iterable
@@ -54,6 +53,29 @@ class _EvaluationRuntime:
     full_reference_strategy: FullReferenceStrategy
     max_predictions: int
     multi_to_best_prediction: bool
+
+
+def _clone_process_results(process_results: dict) -> dict:
+    """
+    Clone process results without deep-copying geometry objects.
+
+    Geometries are treated as immutable payloads; only container dictionaries and
+    mutable property/metadata/observation dictionaries are copied.
+    """
+    cloned = {}
+    for theme_id, rd_dict in (process_results or {}).items():
+        cloned[theme_id] = {}
+        for rd, process_result in (rd_dict or {}).items():
+            if process_result is None:
+                cloned[theme_id][rd] = None
+                continue
+            result_copy = dict(process_result)
+            for key in ("properties", "metadata", "observations"):
+                value = result_copy.get(key)
+                if isinstance(value, dict):
+                    result_copy[key] = dict(value)
+            cloned[theme_id][rd] = result_copy
+    return cloned
 
 
 class BaseEvaluator(ABC):
@@ -165,8 +187,10 @@ class AlignerEvaluator(BaseEvaluator):
         )
         runtime = _EvaluationRuntime(
             process_results_predictions=process_results_predictions,
-            process_results_temp_predictions=deepcopy(process_results_predictions),
-            process_results_evaluated=deepcopy(process_results),
+            process_results_temp_predictions=_clone_process_results(
+                process_results_predictions
+            ),
+            process_results_evaluated=_clone_process_results(process_results),
             metadata_field=metadata_field,
             full_reference_strategy=full_reference_strategy,
             max_predictions=max_predictions,
@@ -244,7 +268,9 @@ class AlignerEvaluator(BaseEvaluator):
         )
 
         if calculate_zeros:
-            aligner_result_zero = aligner.process(relevant_distances=[0])
+            aligner_result_zero = aligner.process(
+                relevant_distances=[0], thematic_ids=thematic_ids
+            )
             process_results_zero = aligner_result_zero.get_results(aligner=aligner)
             process_results = deep_merge(process_results_zero, process_results)
 
@@ -396,7 +422,7 @@ class AlignerEvaluator(BaseEvaluator):
         distances: list[float],
         predictions: list[dict],
     ) -> dict:
-        props = deepcopy(runtime.process_results_evaluated[theme_id][dist]["properties"])
+        props = dict(runtime.process_results_evaluated[theme_id][dist]["properties"])
         props_evaluation = self.get_observation_comparison_properties(
             aligner=aligner,
             process_result=prediction_result,
@@ -511,10 +537,17 @@ class AlignerEvaluator(BaseEvaluator):
         relevant_distance = round(0, RELEVANT_DISTANCE_DECIMALS)
         try:
             process_result = process_results_evaluated[theme_id][relevant_distance]
-            props = deepcopy(process_result["properties"])
+            props = dict(process_result["properties"])
         except Exception:
             process_result = {"result": original_geometry}
             props = {}
+        if theme_id not in process_results_evaluated:
+            process_results_evaluated[theme_id] = {}
+        if relevant_distance not in process_results_evaluated[theme_id]:
+            process_results_evaluated[theme_id][relevant_distance] = {
+                "result": original_geometry,
+                "properties": {},
+            }
         base_brdr_observation = self.get_brdr_observation_from_properties(
             aligner=aligner,
             id_theme=theme_id,

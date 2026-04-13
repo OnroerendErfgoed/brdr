@@ -199,13 +199,19 @@ class AlignerResult:
                     (LENGTH_CHANGE, DiffMetric.LENGTH_CHANGE),
                     (LENGTH_PERCENTAGE_CHANGE, DiffMetric.LENGTH_PERCENTAGE_CHANGE),
                 ]
+                has_all_metrics = all(
+                    metric_key in properties for metric_key, _ in metrics_to_calc
+                )
+                if has_all_metrics:
+                    continue
 
                 for prop_key, metric_enum in metrics_to_calc:
-                    properties[prop_key] = (
-                        get_geometry_difference_metrics_from_processresult(
-                            process_result, original_geometry, None, metric_enum
+                    if prop_key not in properties:
+                        properties[prop_key] = (
+                            get_geometry_difference_metrics_from_processresult(
+                                process_result, original_geometry, None, metric_enum
+                            )
                         )
-                    )
 
                 # Check for Geometry Count Change
                 resulting_geom = process_result["result"]
@@ -217,7 +223,8 @@ class AlignerResult:
                 if original_geometry_length != resulting_geometry_length:
                     remark = ProcessRemark.CHANGED_AMOUNT_GEOMETRIES
                     remarks = properties.get(REMARK_FIELD_NAME, [])
-                    remarks.append(remark)
+                    if remark not in remarks:
+                        remarks.append(remark)
                     properties[REMARK_FIELD_NAME] = remarks
 
         if result_type == AlignerResultType.PROCESSRESULTS:
