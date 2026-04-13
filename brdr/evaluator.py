@@ -169,6 +169,8 @@ class AlignerEvaluator(BaseEvaluator):
     ) -> "AlignerResult":
         from brdr.aligner import AlignerResult
 
+        self._observation_cache: dict[bytes, dict | None] = {}
+        self._base_observation_cache: dict[InputId, dict | None] = {}
         thematic_ids, calculate_zeros = self._resolve_thematic_ids(
             aligner=aligner, thematic_ids=thematic_ids
         )
@@ -197,16 +199,48 @@ class AlignerEvaluator(BaseEvaluator):
             multi_to_best_prediction=multi_to_best_prediction,
         )
 
-        for theme_id, feat in aligner.thematic_data.features.items():
-            self._evaluate_theme(
-                aligner=aligner,
-                runtime=runtime,
-                thematic_ids=thematic_ids,
-                theme_id=theme_id,
-                original_geometry=feat.geometry,
-            )
+        try:
+            for theme_id, feat in aligner.thematic_data.features.items():
+                self._evaluate_theme(
+                    aligner=aligner,
+                    runtime=runtime,
+                    thematic_ids=thematic_ids,
+                    theme_id=theme_id,
+                    original_geometry=feat.geometry,
+                )
 
-        return AlignerResult(runtime.process_results_evaluated)
+            return AlignerResult(runtime.process_results_evaluated)
+        finally:
+            self._observation_cache = {}
+            self._base_observation_cache = {}
+
+    def _get_observation_cached(
+        self,
+        *,
+        aligner: "Aligner",
+        process_result: dict,
+    ) -> dict | None:
+        if process_result is None:
+            return None
+        observation = process_result.get("observations")
+        if is_brdr_observation(observation):
+            return observation
+        geom_process_result = process_result.get("result")
+        if geom_process_result is None or geom_process_result.is_empty:
+            process_result["observations"] = None
+            return None
+        try:
+            cache_key = geom_process_result.wkb
+        except Exception:
+            cache_key = None
+        if cache_key is not None and cache_key in self._observation_cache:
+            process_result["observations"] = self._observation_cache[cache_key]
+            return process_result["observations"]
+        observation = aligner.compare_to_reference(geom_process_result)
+        process_result["observations"] = observation
+        if cache_key is not None:
+            self._observation_cache[cache_key] = observation
+        return observation
 
     def _resolve_thematic_ids(
         self,
@@ -582,10 +616,10 @@ class AlignerEvaluator(BaseEvaluator):
         properties = {
             FULL_ACTUAL_FIELD_NAME: None,
         }
-        actual_brdr_observation = process_result.get(
-            "observations"
-        ) or aligner.compare_to_reference(geom_process_result)
-        process_result["observations"] = actual_brdr_observation
+        actual_brdr_observation = self._get_observation_cached(
+            aligner=aligner,
+            process_result=process_result,
+        )
         if (
             actual_brdr_observation is None
             or geom_process_result is None
@@ -673,9 +707,10 @@ class AlignerEvaluator(BaseEvaluator):
         )
         properties.update(props)
 
-        actual_brdr_observation = process_result.get(
-            "observations"
-        ) or aligner.compare_to_reference(geom_process_result)
+        actual_brdr_observation = self._get_observation_cached(
+            aligner=aligner,
+            process_result=process_result,
+        )
         if (
             actual_brdr_observation is None
             or geom_process_result is None
@@ -781,6 +816,8 @@ class AlignerEvaluator(BaseEvaluator):
         id_theme: Any,
         base_metadata_field: str,
     ) -> dict:
+        if id_theme in self._base_observation_cache:
+            return self._base_observation_cache[id_theme]
         try:
             base_metadata = aligner.thematic_data.features.get(id_theme).properties[
                 base_metadata_field
@@ -793,4 +830,5 @@ class AlignerEvaluator(BaseEvaluator):
             )
         except Exception:
             base_brdr_observation = None
+        self._base_observation_cache[id_theme] = base_brdr_observation
         return base_brdr_observation
