@@ -1,10 +1,10 @@
+from shapely import from_wkt
+
 from brdr.aligner import Aligner
 from brdr.configs import ProcessorConfig
 from brdr.enums import OpenDomainStrategy
 from brdr.loader import DictLoader
 from brdr.processor import NetworkGeometryProcessor
-from shapely import from_wkt
-
 
 if __name__ == "__main__":
     """Example: compare OD strategies in NetworkGeometryProcessor with polygon references."""

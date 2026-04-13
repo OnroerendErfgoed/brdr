@@ -3,8 +3,8 @@ import unittest
 import numpy as np
 from shapely import GeometryCollection
 from shapely import from_wkt
-from shapely.geometry import Point
 from shapely.geometry import LineString
+from shapely.geometry import Point
 
 from brdr.aligner import Aligner
 from brdr.configs import ProcessorConfig

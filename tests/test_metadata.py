@@ -147,9 +147,7 @@ def test_compare_to_reference_line_uses_length_metric():
 def test_compare_to_reference_polygon_against_line_uses_line_metric():
     aligner = Aligner()
     aligner.load_thematic_data(
-        DictLoader(
-            {"theme_id_1": from_wkt("POLYGON ((0 0,0 2,2 2,2 0,0 0))")}
-        )
+        DictLoader({"theme_id_1": from_wkt("POLYGON ((0 0,0 2,2 2,2 0,0 0))")})
     )
     aligner.load_reference_data(
         DictLoader({"ref_id_1": from_wkt("LINESTRING (-1 1, 3 1)")})
@@ -164,7 +162,9 @@ def test_compare_to_reference_polygon_against_line_uses_line_metric():
 
 def test_compare_to_reference_line_against_polygon_uses_length_metric():
     aligner = Aligner()
-    aligner.load_thematic_data(DictLoader({"theme_id_1": from_wkt("LINESTRING (0 0,4 0)")}))
+    aligner.load_thematic_data(
+        DictLoader({"theme_id_1": from_wkt("LINESTRING (0 0,4 0)")})
+    )
     aligner.load_reference_data(
         DictLoader({"ref_id_1": from_wkt("POLYGON ((1 -1,1 1,3 1,3 -1,1 -1))")})
     )

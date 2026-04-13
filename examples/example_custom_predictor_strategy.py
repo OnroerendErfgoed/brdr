@@ -1,10 +1,10 @@
 import numpy as np
+from shapely import from_wkt
 
 from brdr.aligner import Aligner, AlignerResult
 from brdr.constants import PREDICTION_SCORE
 from brdr.loader import DictLoader
 from brdr.predictor import AlignerPredictor
-from shapely import from_wkt
 
 
 class TopPredictionOnlyPredictor(AlignerPredictor):

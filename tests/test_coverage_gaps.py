@@ -335,7 +335,9 @@ def test_evaluator_comparison_properties_support_metric_fallbacks():
     base_obs = _valid_brdr_obs(
         full=False,
         measure_type="count",
-        reference_features={"r1": {"full": True, "count": 2.0, "measure_type": "count"}},
+        reference_features={
+            "r1": {"full": True, "count": 2.0, "measure_type": "count"}
+        },
         reference_od=None,
     )
 
