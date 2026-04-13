@@ -1,9 +1,11 @@
 import logging
 import os
+import threading
+import time
 import uuid
 from collections import defaultdict
+from concurrent.futures import as_completed
 from concurrent.futures import ThreadPoolExecutor
-from concurrent.futures import wait
 from datetime import datetime
 from typing import Any
 from typing import Dict
@@ -82,6 +84,36 @@ from brdr.utils import write_featurecollection_to_geojson
 
 if TYPE_CHECKING:
     from brdr.aligner import Aligner
+
+
+class _PerfCollector:
+    """Thread-safe lightweight performance accumulator."""
+
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._timings: dict[str, float] = defaultdict(float)
+        self._counts: dict[str, int] = defaultdict(int)
+
+    def add(self, key: str, seconds: float) -> None:
+        with self._lock:
+            self._timings[key] += float(seconds)
+            self._counts[key] += 1
+
+    def snapshot(self) -> dict[str, dict[str, float | int]]:
+        with self._lock:
+            keys = sorted(set(self._timings.keys()) | set(self._counts.keys()))
+            return {
+                key: {
+                    "seconds_total": round(self._timings.get(key, 0.0), 6),
+                    "count": int(self._counts.get(key, 0)),
+                    "seconds_avg": round(
+                        self._timings.get(key, 0.0)
+                        / max(1, self._counts.get(key, 0)),
+                        6,
+                    ),
+                }
+                for key in keys
+            }
 
 
 class AlignerResult:
@@ -199,13 +231,19 @@ class AlignerResult:
                     (LENGTH_CHANGE, DiffMetric.LENGTH_CHANGE),
                     (LENGTH_PERCENTAGE_CHANGE, DiffMetric.LENGTH_PERCENTAGE_CHANGE),
                 ]
+                has_all_metrics = all(
+                    metric_key in properties for metric_key, _ in metrics_to_calc
+                )
+                if has_all_metrics:
+                    continue
 
                 for prop_key, metric_enum in metrics_to_calc:
-                    properties[prop_key] = (
-                        get_geometry_difference_metrics_from_processresult(
-                            process_result, original_geometry, None, metric_enum
+                    if prop_key not in properties:
+                        properties[prop_key] = (
+                            get_geometry_difference_metrics_from_processresult(
+                                process_result, original_geometry, None, metric_enum
+                            )
                         )
-                    )
 
                 # Check for Geometry Count Change
                 resulting_geom = process_result["result"]
@@ -217,7 +255,8 @@ class AlignerResult:
                 if original_geometry_length != resulting_geometry_length:
                     remark = ProcessRemark.CHANGED_AMOUNT_GEOMETRIES
                     remarks = properties.get(REMARK_FIELD_NAME, [])
-                    remarks.append(remark)
+                    if remark not in remarks:
+                        remarks.append(remark)
                     properties[REMARK_FIELD_NAME] = remarks
 
         if result_type == AlignerResultType.PROCESSRESULTS:
@@ -787,6 +826,9 @@ class Aligner:
         """
         if relevant_distances is None:
             raise ValueError("provide at least 1 relevant distance")
+        relevant_distances = list(relevant_distances)
+        if len(relevant_distances) == 0:
+            raise ValueError("provide at least 1 relevant distance")
         if thematic_ids is None:
             thematic_ids = self.thematic_data.features.keys()
         if any(
@@ -796,6 +838,8 @@ class Aligner:
             raise ValueError("not all ids are found in the thematic data")
         if max_workers is None:
             max_workers = self.max_workers
+        perf_collector = _PerfCollector() if self.config.profile_performance else None
+        t_process_start = time.perf_counter()
 
         self.logger.feedback_debug("Process series" + str(relevant_distances))
 
@@ -803,15 +847,29 @@ class Aligner:
         futures = {}
 
         @aligner_metadata_decorator
-        def process_geom_for_rd(thematic_id, geometry, relevant_distance, aligner=self):
-            return aligner.processor.process(
+        def process_geom_for_rd(
+            thematic_id,
+            geometry,
+            relevant_distance,
+            aligner=self,
+            reference_candidates=None,
+            reference_elements_candidates=None,
+        ):
+            t0 = time.perf_counter()
+            result = aligner.processor.process(
                 correction_distance=aligner.correction_distance,
                 reference_data=aligner.reference_data,
                 mitre_limit=aligner.mitre_limit,
                 input_geometry=geometry,
                 relevant_distance=relevant_distance,
                 thematic_data=aligner.thematic_data,
+                reference_candidates=reference_candidates,
+                reference_elements_candidates=reference_elements_candidates,
+                perf_collector=perf_collector,
             )
+            if perf_collector is not None:
+                perf_collector.add("aligner.process.single_rd_total", time.perf_counter() - t0)
+            return result
 
         def run_process(executor: ThreadPoolExecutor = None):
             for thematic_id in thematic_ids:
@@ -820,17 +878,55 @@ class Aligner:
                     f"thematic id {str(thematic_id)} processed with "
                     f"relevant distances (m) [{str(relevant_distances)}]"
                 )
-                process_results[thematic_id] = {}
+                process_results[thematic_id] = {rd: None for rd in relevant_distances}
+                reference_candidates = None
+                reference_elements_candidates = None
+                if len(relevant_distances) > 1:
+                    t_pre = time.perf_counter()
+                    try:
+                        factor = self.processor.config.buffer_multiplication_factor
+                        outer_buffer = self.processor.config.max_outer_buffer
+                    except AttributeError:
+                        factor = 1.01
+                        outer_buffer = 0
+                    max_rd = max(relevant_distances)
+                    search_geom = buffer_pos(
+                        geom, max_rd * factor + outer_buffer, self.mitre_limit
+                    )
+                    reference_candidates = self.reference_data.items.take(
+                        self.reference_data.tree.query(search_geom)
+                    ).tolist()
+                    # Preselect linear/point reference elements once per thematic
+                    # geometry and reuse across all relevant distances.
+                    reference_elements_candidates = safe_unary_union(
+                        safe_intersection(self.reference_data.elements, search_geom)
+                    )
+                    if perf_collector is not None:
+                        perf_collector.add(
+                            "aligner.process.reference_preselection",
+                            time.perf_counter() - t_pre,
+                        )
                 for rd in relevant_distances:
                     try:
                         fn = process_geom_for_rd
                         if executor:
                             futures[(thematic_id, rd)] = executor.submit(
-                                fn, thematic_id, geom, rd, self
+                                fn,
+                                thematic_id,
+                                geom,
+                                rd,
+                                self,
+                                reference_candidates,
+                                reference_elements_candidates,
                             )
                         else:
                             process_results[thematic_id][rd] = fn(
-                                thematic_id, geom, rd, self
+                                thematic_id,
+                                geom,
+                                rd,
+                                self,
+                                reference_candidates,
+                                reference_elements_candidates,
                             )
                     except ValueError as e:
                         self.logger.feedback_warning(
@@ -845,16 +941,22 @@ class Aligner:
         else:
             with ThreadPoolExecutor(max_workers) as executor:
                 run_process(executor)
-                self.logger.feedback_debug("waiting all started RD calculations")
-                wait(list(futures.values()))
-                for (key, rd), future in futures.items():
+                self.logger.feedback_debug("processing started RD calculations")
+                future_to_key = {future: key_rd for key_rd, future in futures.items()}
+                for future in as_completed(future_to_key):
+                    key, rd = future_to_key[future]
                     process_results[key][rd] = future.result()
 
         self.logger.feedback_info(
             "End of processing series: " + str(relevant_distances)
         )
 
-        return AlignerResult(process_results)
+        aligner_result = AlignerResult(process_results)
+        if perf_collector is not None:
+            perf_collector.add("aligner.process.total", time.perf_counter() - t_process_start)
+            aligner_result.metadata = aligner_result.metadata or {}
+            aligner_result.metadata["performance"] = perf_collector.snapshot()
+        return aligner_result
 
     def predict(
         self,

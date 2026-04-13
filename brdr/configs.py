@@ -102,6 +102,8 @@ class AlignerConfig:
         If True, detailed metadata about the alignment process will be added to ProcessResult
     add_observations : bool, default False
         If True, observations of the resulting geometry are added to metadata.
+    profile_performance : bool, default False
+        If True, collect lightweight runtime metrics during processing.
     """
 
     correction_distance: float = 0.01
@@ -110,3 +112,4 @@ class AlignerConfig:
     max_workers: int = None
     log_metadata: bool = False
     add_observations: bool = False
+    profile_performance: bool = False

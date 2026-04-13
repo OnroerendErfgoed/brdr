@@ -1,5 +1,6 @@
 from abc import ABC
 from abc import abstractmethod
+import time
 from typing import List, Any
 
 from shapely import GeometryCollection, MultiPoint
@@ -605,6 +606,7 @@ class SnapGeometryProcessor(BaseProcessor):
         input_geometry: BaseGeometry,
         mitre_limit: float,
         relevant_distance: float,
+        reference_candidates: list[InputId] | None = None,
         **kwargs: Any,
     ) -> ProcessResult:
         """
@@ -658,6 +660,8 @@ class SnapGeometryProcessor(BaseProcessor):
             Merge --> Post
         ```
         """
+        perf_collector = kwargs.get("perf_collector")
+        t_total = time.perf_counter()
         self.check_area_limit(input_geometry)
         snapped = []
         virtual_reference = Polygon()
@@ -677,9 +681,18 @@ class SnapGeometryProcessor(BaseProcessor):
             input_geometry_outer,
             relevant_distance * self.config.buffer_multiplication_factor,
         )
-        ref_intersections = reference_data.items.take(
-            reference_data.tree.query(input_geometry_outer_buffered)
-        ).tolist()
+        t_query = time.perf_counter()
+        if reference_candidates is None:
+            ref_intersections = reference_data.items.take(
+                reference_data.tree.query(input_geometry_outer_buffered)
+            ).tolist()
+        else:
+            ref_intersections = reference_candidates
+        if perf_collector is not None:
+            perf_collector.add(
+                "processor.snap.reference_query",
+                time.perf_counter() - t_query,
+            )
 
         ref_intersections_geoms = []
         for key_ref in ref_intersections:
@@ -708,6 +721,7 @@ class SnapGeometryProcessor(BaseProcessor):
             ref_intersections_geoms.append(virtual_reference)
 
         # Execute the core snapping algorithm
+        t_snap = time.perf_counter()
         ref_geometrycollection = GeometryCollection(ref_intersections_geoms)
         snapped_geom = snap_geometry_to_reference(
             input_geometry,
@@ -718,10 +732,13 @@ class SnapGeometryProcessor(BaseProcessor):
             angle_threshold_degrees=self.config.angle_threshold_degrees,
         )
         snapped.append(snapped_geom)
+        if perf_collector is not None:
+            perf_collector.add("processor.snap.core", time.perf_counter() - t_snap)
 
         # Merge parts and clean the result
         geom_preresult = safe_unary_union(snapped)
 
+        t_post = time.perf_counter()
         result_dict = self._postprocess_preresult(
             geom_preresult,
             input_geometry,
@@ -732,6 +749,9 @@ class SnapGeometryProcessor(BaseProcessor):
             mitre_limit,
             correction_distance,
         )
+        if perf_collector is not None:
+            perf_collector.add("processor.snap.postprocess", time.perf_counter() - t_post)
+            perf_collector.add("processor.snap.total", time.perf_counter() - t_total)
 
         return result_dict
 
@@ -760,6 +780,7 @@ class DieussaertGeometryProcessor(BaseProcessor):
         relevant_distance: float,
         mitre_limit: float,
         correction_distance: float,
+        reference_candidates: list[InputId] | None = None,
         **kwargs: Any,
     ) -> ProcessResult:
         """
@@ -813,6 +834,7 @@ class DieussaertGeometryProcessor(BaseProcessor):
                 "Dieussaert algorithm can only be used when input geometry is polygon or multipolygon."
             )
         self.check_area_limit(input_geometry)
+        perf_collector = kwargs.get("perf_collector")
         if (
             not self.config.multi_as_single_modus
             or input_geometry is None
@@ -825,6 +847,8 @@ class DieussaertGeometryProcessor(BaseProcessor):
                 mitre_limit=mitre_limit,
                 reference_data=reference_data,
                 correction_distance=correction_distance,
+                reference_candidates=reference_candidates,
+                perf_collector=perf_collector,
             )
         else:
             input_geometry = to_multi(input_geometry)
@@ -836,6 +860,8 @@ class DieussaertGeometryProcessor(BaseProcessor):
                     mitre_limit=mitre_limit,
                     reference_data=reference_data,
                     correction_distance=correction_distance,
+                    reference_candidates=reference_candidates,
+                    perf_collector=perf_collector,
                 )
                 list_with_process_results.append(process_result)
             return self._merge_process_results(list_with_process_results)
@@ -912,10 +938,13 @@ class DieussaertGeometryProcessor(BaseProcessor):
         relevant_distance: float,
         mitre_limit: float,
         correction_distance: float,
+        reference_candidates: list[InputId] | None = None,
+        perf_collector=None,
     ) -> ProcessResult:
         """
         Internal core logic for the Dieussaert algorithm on a single geometry.
         """
+        t_total = time.perf_counter()
 
         # CALCULATE INNER and OUTER INPUT GEOMETRY for performance optimization on big geometries
         # combine all parts of the input geometry to one polygon
@@ -927,9 +956,18 @@ class DieussaertGeometryProcessor(BaseProcessor):
             input_geometry_outer,
             relevant_distance * self.config.buffer_multiplication_factor,
         )
-        ref_intersections = reference_data.items.take(
-            reference_data.tree.query(input_geometry_outer_buffered)
-        ).tolist()
+        t_query = time.perf_counter()
+        if reference_candidates is None:
+            ref_intersections = reference_data.items.take(
+                reference_data.tree.query(input_geometry_outer_buffered)
+            ).tolist()
+        else:
+            ref_intersections = reference_candidates
+        if perf_collector is not None:
+            perf_collector.add(
+                "processor.dieussaert.reference_query",
+                time.perf_counter() - t_query,
+            )
         prepared_input_outer = prep(input_geometry_outer)
         reference_union = reference_data.union
 
@@ -947,6 +985,7 @@ class DieussaertGeometryProcessor(BaseProcessor):
             correction_distance,
         )
 
+        t_intersections = time.perf_counter()
         for key_ref in ref_intersections:
             geom_reference = reference_data[key_ref].geometry
             if not isinstance(geom_reference, (Polygon, MultiPolygon)):
@@ -978,6 +1017,11 @@ class DieussaertGeometryProcessor(BaseProcessor):
             self._add_multi_polygons_from_geom_to_array(
                 relevant_diff, relevant_diff_array
             )
+        if perf_collector is not None:
+            perf_collector.add(
+                "processor.dieussaert.reference_loop",
+                time.perf_counter() - t_intersections,
+            )
 
         if len(relevant_intersection_array) == 0:
             relevant_intersection = Polygon()
@@ -998,6 +1042,7 @@ class DieussaertGeometryProcessor(BaseProcessor):
             geom_preresult = preresult[0]
         else:
             geom_preresult = safe_unary_union(preresult)
+        t_post = time.perf_counter()
         process_result = self._postprocess_preresult(
             geom_preresult,
             input_geometry,
@@ -1008,6 +1053,12 @@ class DieussaertGeometryProcessor(BaseProcessor):
             mitre_limit,
             correction_distance,
         )
+        if perf_collector is not None:
+            perf_collector.add(
+                "processor.dieussaert.postprocess",
+                time.perf_counter() - t_post,
+            )
+            perf_collector.add("processor.dieussaert.total", time.perf_counter() - t_total)
         return process_result
 
     def _od_snap(
@@ -1553,8 +1604,11 @@ class NetworkGeometryProcessor(BaseProcessor):
             Post --> End[Final ProcessResult]
         ```
         """
+        perf_collector = kwargs.get("perf_collector")
+        t_total = time.perf_counter()
         self.check_area_limit(input_geometry)
         input_geometry = to_multi(input_geometry)
+        reference_elements_candidates = kwargs.get("reference_elements_candidates")
 
         # Determine the search area for relevant network elements
         input_geometry_buffered = buffer_pos(
@@ -1563,9 +1617,20 @@ class NetworkGeometryProcessor(BaseProcessor):
         )
 
         # Fetch linear/point elements from reference that fall within the buffer
-        reference = safe_unary_union(
-            safe_intersection(reference_data.elements, input_geometry_buffered)
+        base_reference_elements = (
+            reference_elements_candidates
+            if reference_elements_candidates is not None
+            else reference_data.elements
         )
+        t_query = time.perf_counter()
+        reference = safe_unary_union(
+            safe_intersection(base_reference_elements, input_geometry_buffered)
+        )
+        if perf_collector is not None:
+            perf_collector.add(
+                "processor.network.reference_query",
+                time.perf_counter() - t_query,
+            )
         reference_union = reference_data.union
         polygonal_reference_union = self._get_polygonal_reference_union(reference_union)
         has_polygonal_od = not polygonal_reference_union.is_empty
@@ -1605,6 +1670,7 @@ class NetworkGeometryProcessor(BaseProcessor):
 
         geom_processed_list = []
 
+        t_core = time.perf_counter()
         if isinstance(geometry_to_process, MultiPolygon):
             # Cast to MultiPolygon for consistent iteration
             for polygon in geometry_to_process.geoms:
@@ -1645,6 +1711,8 @@ class NetworkGeometryProcessor(BaseProcessor):
                     close_output=False,
                 )
                 geom_processed_list.append(geom_processed)
+        if perf_collector is not None:
+            perf_collector.add("processor.network.core", time.perf_counter() - t_core)
 
         # Merge all processed parts
         if len(geom_processed_list) == 1:
@@ -1662,7 +1730,8 @@ class NetworkGeometryProcessor(BaseProcessor):
             geom_processed = safe_unary_union([geom_processed, geometry_od_as_is])
 
         # Standard cleaning pipeline
-        return self._postprocess_preresult(
+        t_post = time.perf_counter()
+        result = self._postprocess_preresult(
             geom_processed,
             input_geometry,
             GeometryCollection(),
@@ -1672,6 +1741,10 @@ class NetworkGeometryProcessor(BaseProcessor):
             mitre_limit,
             correction_distance,
         )
+        if perf_collector is not None:
+            perf_collector.add("processor.network.postprocess", time.perf_counter() - t_post)
+            perf_collector.add("processor.network.total", time.perf_counter() - t_total)
+        return result
 
     def _process_by_network(
         self,
@@ -1846,7 +1919,8 @@ class AlignerGeometryProcessor(BaseProcessor):
               E --> K
         ```
         """
-
+        perf_collector = kwargs.get("perf_collector")
+        t_total = time.perf_counter()
         if isinstance(input_geometry, GeometryCollection):
             raise ValueError(
                 "GeometryCollection as input is not supported. Please use the individual geometries from the GeometryCollection as input."
@@ -1871,25 +1945,45 @@ class AlignerGeometryProcessor(BaseProcessor):
                     self.config,
                     self.logger.feedback,
                 )
-                return processor.process(
+                t_dieussaert = time.perf_counter()
+                result = processor.process(
                     input_geometry=input_geometry,
                     reference_data=reference_data,
                     relevant_distance=relevant_distance,
                     mitre_limit=mitre_limit,
                     correction_distance=correction_distance,
+                    **kwargs,
                 )
+                if perf_collector is not None:
+                    perf_collector.add(
+                        "processor.dispatch.dieussaert",
+                        time.perf_counter() - t_dieussaert,
+                    )
+                    perf_collector.add(
+                        "processor.dispatch.total", time.perf_counter() - t_total
+                    )
+                return result
             except ValueError as e:
                 self.logger.feedback_debug(
                     f"Dieussaert processing failed with error: {str(e)}. Trying Network-based processing."
                 )
         processor = NetworkGeometryProcessor(self.config, self.logger.feedback)
-        return processor.process(
+        t_network = time.perf_counter()
+        result = processor.process(
             input_geometry=input_geometry,
             reference_data=reference_data,
             relevant_distance=relevant_distance,
             mitre_limit=mitre_limit,
             correction_distance=correction_distance,
+            **kwargs,
         )
+        if perf_collector is not None:
+            perf_collector.add(
+                "processor.dispatch.network",
+                time.perf_counter() - t_network,
+            )
+            perf_collector.add("processor.dispatch.total", time.perf_counter() - t_total)
+        return result
 
 
 class TopologyProcessor(BaseProcessor):
