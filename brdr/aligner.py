@@ -1,11 +1,11 @@
-import json
 import logging
 import os
+import threading
+import time
 import uuid
 from collections import defaultdict
+from concurrent.futures import as_completed
 from concurrent.futures import ThreadPoolExecutor
-from concurrent.futures import wait
-from copy import deepcopy
 from datetime import datetime
 from typing import Any
 from typing import Dict
@@ -33,33 +33,25 @@ from brdr.constants import (
 from brdr.constants import AREA_PERCENTAGE_CHANGE
 from brdr.constants import DATE_FORMAT
 from brdr.constants import DEFAULT_CRS
-from brdr.constants import DIFF_AREA_FIELD_NAME
-from brdr.constants import DIFF_PERCENTAGE_FIELD_NAME
-from brdr.constants import EQUAL_REFERENCE_FEATURES_FIELD_NAME
 from brdr.constants import EVALUATION_FIELD_NAME
-from brdr.constants import FULL_ACTUAL_FIELD_NAME
-from brdr.constants import FULL_BASE_FIELD_NAME
 from brdr.constants import ID_THEME_FIELD_NAME
 from brdr.constants import LAST_VERSION_DATE
 from brdr.constants import LENGTH_CHANGE
 from brdr.constants import LENGTH_PERCENTAGE_CHANGE
 from brdr.constants import NR_CALCULATION_FIELD_NAME
-from brdr.constants import OD_ALIKE_FIELD_NAME
-from brdr.constants import PREDICTION_COUNT
 from brdr.constants import PREDICTION_SCORE
-from brdr.constants import RELEVANT_DISTANCE_DECIMALS
 from brdr.constants import RELEVANT_DISTANCE_FIELD_NAME
 from brdr.constants import REMARK_FIELD_NAME
-from brdr.constants import STABILITY
 from brdr.constants import SYMMETRICAL_AREA_CHANGE
 from brdr.constants import SYMMETRICAL_AREA_PERCENTAGE_CHANGE
 from brdr.constants import VERSION_DATE
-from brdr.constants import ZERO_STREAK
 from brdr.enums import AlignerResultType
 from brdr.enums import DiffMetric
 from brdr.enums import Evaluation
 from brdr.enums import FullReferenceStrategy
 from brdr.enums import ProcessRemark
+from brdr.evaluator import AlignerEvaluator
+from brdr.evaluator import BaseEvaluator
 from brdr.feature_data import AlignerFeatureCollection
 from brdr.geometry_utils import buffer_neg
 from brdr.geometry_utils import buffer_pos
@@ -69,20 +61,22 @@ from brdr.geometry_utils import safe_unary_union
 from brdr.geometry_utils import to_crs
 from brdr.loader import Loader
 from brdr.logger import Logger
+from brdr.metadata import (
+    get_metadata_observations_from_process_result as _get_metadata_observations_core,
+)
+from brdr.metadata import (
+    reverse_metadata_observations_to_brdr_observation as _reverse_metadata_observations_core,
+)
+from brdr.predictor import AlignerPredictor
+from brdr.predictor import BasePredictor
 from brdr.processor import AlignerGeometryProcessor
 from brdr.processor import BaseProcessor
 from brdr.typings import InputId
 from brdr.typings import ProcessResult
-from brdr.utils import (
-    coverage_ratio,
-    deep_merge,
-)
-from brdr.utils import determine_stability
 from brdr.utils import get_geodataframe_from_process_results
 from brdr.utils import get_geojsons_from_process_results
 from brdr.utils import get_geometry_difference_metrics_from_processresult
 from brdr.utils import get_geometry_difference_metrics_from_processresults
-from brdr.utils import is_brdr_observation
 from brdr.utils import urn_from_geom
 from brdr.utils import write_featurecollection_to_geojson
 
@@ -90,6 +84,35 @@ from brdr.utils import write_featurecollection_to_geojson
 
 if TYPE_CHECKING:
     from brdr.aligner import Aligner
+
+
+class _PerfCollector:
+    """Thread-safe lightweight performance accumulator."""
+
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._timings: dict[str, float] = defaultdict(float)
+        self._counts: dict[str, int] = defaultdict(int)
+
+    def add(self, key: str, seconds: float) -> None:
+        with self._lock:
+            self._timings[key] += float(seconds)
+            self._counts[key] += 1
+
+    def snapshot(self) -> dict[str, dict[str, float | int]]:
+        with self._lock:
+            keys = sorted(set(self._timings.keys()) | set(self._counts.keys()))
+            return {
+                key: {
+                    "seconds_total": round(self._timings.get(key, 0.0), 6),
+                    "count": int(self._counts.get(key, 0)),
+                    "seconds_avg": round(
+                        self._timings.get(key, 0.0) / max(1, self._counts.get(key, 0)),
+                        6,
+                    ),
+                }
+                for key in keys
+            }
 
 
 class AlignerResult:
@@ -207,13 +230,19 @@ class AlignerResult:
                     (LENGTH_CHANGE, DiffMetric.LENGTH_CHANGE),
                     (LENGTH_PERCENTAGE_CHANGE, DiffMetric.LENGTH_PERCENTAGE_CHANGE),
                 ]
+                has_all_metrics = all(
+                    metric_key in properties for metric_key, _ in metrics_to_calc
+                )
+                if has_all_metrics:
+                    continue
 
                 for prop_key, metric_enum in metrics_to_calc:
-                    properties[prop_key] = (
-                        get_geometry_difference_metrics_from_processresult(
-                            process_result, original_geometry, None, metric_enum
+                    if prop_key not in properties:
+                        properties[prop_key] = (
+                            get_geometry_difference_metrics_from_processresult(
+                                process_result, original_geometry, None, metric_enum
+                            )
                         )
-                    )
 
                 # Check for Geometry Count Change
                 resulting_geom = process_result["result"]
@@ -225,7 +254,8 @@ class AlignerResult:
                 if original_geometry_length != resulting_geometry_length:
                     remark = ProcessRemark.CHANGED_AMOUNT_GEOMETRIES
                     remarks = properties.get(REMARK_FIELD_NAME, [])
-                    remarks.append(remark)
+                    if remark not in remarks:
+                        remarks.append(remark)
                     properties[REMARK_FIELD_NAME] = remarks
 
         if result_type == AlignerResultType.PROCESSRESULTS:
@@ -417,81 +447,7 @@ def _get_metadata_observations_from_process_result(
     processResult: ProcessResult,
     reference_lookup: Dict[any, any],
 ) -> List[Dict]:
-    observation = processResult["observations"]
-    actuation_metadata = processResult["metadata"]["actuation"]
-    observation_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S%z")
-    sensor_uuid = uuid.uuid4()
-    result_id = actuation_metadata["result"]
-    observation_metadata = {
-        "type": "sosa:Observation",
-        "has_feature_of_interest": result_id,
-        "made_by_sensor": sensor_uuid.urn,
-        "result_time": observation_time,
-    }
-
-    observations = []
-    for ref_id, observations_dict in observation["reference_features"].items():
-        reference_id = reference_lookup[ref_id]
-        if area := observations_dict.get("area"):
-            observations.append(
-                {
-                    **observation_metadata,
-                    "id": uuid.uuid4().urn,
-                    "observed_property": "brdr:area_overlap",
-                    "has_feature_of_interest": reference_id,
-                    "result": {"value": area, "type": "float"},
-                    "used_procedure": "brdr:observation_procedure_area_overlap",
-                    "used": result_id,
-                }
-            )
-        if percentage := observations_dict.get("percentage"):
-            observations.append(
-                {
-                    **observation_metadata,
-                    "id": uuid.uuid4().urn,
-                    "has_feature_of_interest": reference_id,
-                    "observed_property": "brdr:area_overlap_percentage",
-                    "result": {"value": percentage, "type": "float"},
-                    "used_procedure": "brdr:observation_procedure_area_overlap_percentage",
-                    "used": result_id,
-                }
-            )
-    if full := observation.get("full"):
-        observations.append(
-            {
-                **observation_metadata,
-                "id": uuid.uuid4().urn,
-                "has_feature_of_interest": result_id,
-                "observed_property": "brdr:area_overlap_full",
-                "result": {"value": full, "type": "boolean"},
-                "used_procedure": "brdr:observation_procedure_area_overlap_full",
-            }
-        )
-
-    if area := observation.get("area"):
-        observations.append(
-            {
-                **observation_metadata,
-                "id": uuid.uuid4().urn,
-                "has_feature_of_interest": result_id,
-                "observed_property": "brdr:area",
-                "result": {"value": area, "type": "float"},
-                "used_procedure": "brdr:observation_procedure_area",
-            }
-        )
-    if area_od := observation.get("area_od", {}).get("area"):
-        observations.append(
-            {
-                **observation_metadata,
-                "id": uuid.uuid4().urn,
-                "has_feature_of_interest": result_id,
-                "observed_property": "brdr:area_open_domain",
-                "result": {"value": area_od, "type": "float"},
-                "used_procedure": "brdr:observation_procedure_area_open_domain",
-            }
-        )
-
-    return observations
+    return _get_metadata_observations_core(processResult, reference_lookup)
 
 
 def _reverse_metadata_observations_to_brdr_observation(metadata: Dict) -> Dict:
@@ -530,74 +486,7 @@ def _reverse_metadata_observations_to_brdr_observation(metadata: Dict) -> Dict:
     checking for the presence of a 'ref_id' that differs from the primary
     result interest ID.
     """
-    if not metadata or not "actuation" in metadata or not "observations" in metadata:
-        return {}
-    observations = metadata["observations"]
-    actuation_metadata = metadata["actuation"]
-    # 1. Bouw een reverse lookup: {uuid: originele_id}
-    # We kijken in de reference_geometries van de actuation metadata
-    reverse_ref_lookup = {}
-    for ref_geom in actuation_metadata.get("reference_geometries", []):
-        uuid_id = ref_geom.get("id")
-        original_id = ref_geom.get("derived_from", {}).get("id")
-        if uuid_id and original_id:
-            reverse_ref_lookup[uuid_id] = original_id
-
-    # De hoofd-result ID (de FOI voor top-level zaken als 'area')
-    main_result_id = actuation_metadata.get("result")
-
-    # 2. Initialiseer de resultaatstructuur
-    reconstructed = {
-        "reference_features": {},
-        "full": None,
-        "area": None,
-        # De overige velden (brdr_version etc.) zitten niet in de observaties
-        # en moeten idealiter uit de context komen.
-    }
-    for obs in observations:
-        prop = obs.get("observed_property")
-        val = obs.get("result", {}).get("value")
-        foi = obs.get("has_feature_of_interest")
-
-        # Top-level eigenschappen (FOI is de hoofd-result ID)
-        if foi == main_result_id:
-            if prop == "brdr:area_overlap_full":
-                reconstructed["full"] = val
-            elif prop == "brdr:area":
-                reconstructed["area"] = val
-            elif prop == "brdr:area_open_domain":
-                reconstructed["area_od"] = {"area": val}
-
-        # Feature-specifieke eigenschappen (FOI is een reference-uuid)
-        elif foi in reverse_ref_lookup:
-            ref_id = reverse_ref_lookup[foi]
-            if ref_id not in reconstructed["reference_features"]:
-                reconstructed["reference_features"][ref_id] = {}
-
-            if prop == "brdr:area_overlap":
-                reconstructed["reference_features"][ref_id]["area"] = val
-            elif prop == "brdr:area_overlap_percentage":
-                reconstructed["reference_features"][ref_id]["percentage"] = val
-                if val == 100:
-                    reconstructed["reference_features"][ref_id]["full"] = True
-                else:
-                    reconstructed["reference_features"][ref_id]["full"] = False
-
-        # Get some values from a single observation
-        alignment_date = obs.get("result_time", {})
-
-    # Finalize the reconstructed structure
-    # TODO; this can be implemented better, but for now we get the information from the observation
-    reconstructed["alignment_date"] = actuation_metadata.get("result_time", None)
-    reconstructed["reference_source"] = None
-    reconstructed["brdr_version"] = None
-    reconstructed["reference_od"] = None
-
-    # Validation check
-    if not is_brdr_observation(reconstructed):
-        raise ValueError("The reconstructed object is not a valid brdr observation")
-
-    return reconstructed
+    return _reverse_metadata_observations_core(metadata)
 
 
 def aligner_metadata_decorator(f):
@@ -703,6 +592,10 @@ class Aligner:
         If True, process result observations will be computed by default.
     processor : BaseProcessor or AlignerGeometryProcessor
         The geometric processor used for alignment calculations.
+    predictor : BasePredictor or AlignerPredictor
+        The predictor strategy used to assign prediction scores on process results.
+    evaluator : BaseEvaluator or AlignerEvaluator
+        The evaluator strategy used to evaluate predicted candidates.
     correction_distance : float
         Distance used in buffer operations to remove slivers (technical correction).
     mitre_limit : int
@@ -746,6 +639,8 @@ class Aligner:
         self,
         *,
         processor: Optional[BaseProcessor] = None,
+        predictor: Optional[BasePredictor] = None,
+        evaluator: Optional[BaseEvaluator] = None,
         crs: str = DEFAULT_CRS,
         config: Optional[AlignerConfig] = None,
         feedback: Any = None,
@@ -757,6 +652,10 @@ class Aligner:
         ----------
         processor : BaseProcessor, optional
             The geometric processor instance. If None, AlignerGeometryProcessor is used.
+        predictor : BasePredictor, optional
+            The prediction strategy instance. If None, AlignerPredictor is used.
+        evaluator : BaseEvaluator, optional
+            The evaluation strategy instance. If None, AlignerEvaluator is used.
         crs : str, optional
             Coordinate Reference System (CRS) of the data.
             Expected to be a projected CRS with units in meters.
@@ -784,6 +683,8 @@ class Aligner:
             if processor
             else AlignerGeometryProcessor(ProcessorConfig(), feedback)
         )
+        self.predictor = predictor if predictor else AlignerPredictor(feedback)
+        self.evaluator = evaluator if evaluator else AlignerEvaluator(feedback)
         self.correction_distance = config.correction_distance
         self.mitre_limit = config.mitre_limit
         self.max_workers = config.max_workers
@@ -924,6 +825,9 @@ class Aligner:
         """
         if relevant_distances is None:
             raise ValueError("provide at least 1 relevant distance")
+        relevant_distances = list(relevant_distances)
+        if len(relevant_distances) == 0:
+            raise ValueError("provide at least 1 relevant distance")
         if thematic_ids is None:
             thematic_ids = self.thematic_data.features.keys()
         if any(
@@ -933,6 +837,8 @@ class Aligner:
             raise ValueError("not all ids are found in the thematic data")
         if max_workers is None:
             max_workers = self.max_workers
+        perf_collector = _PerfCollector() if self.config.profile_performance else None
+        t_process_start = time.perf_counter()
 
         self.logger.feedback_debug("Process series" + str(relevant_distances))
 
@@ -940,15 +846,31 @@ class Aligner:
         futures = {}
 
         @aligner_metadata_decorator
-        def process_geom_for_rd(thematic_id, geometry, relevant_distance, aligner=self):
-            return aligner.processor.process(
+        def process_geom_for_rd(
+            thematic_id,
+            geometry,
+            relevant_distance,
+            aligner=self,
+            reference_candidates=None,
+            reference_elements_candidates=None,
+        ):
+            t0 = time.perf_counter()
+            result = aligner.processor.process(
                 correction_distance=aligner.correction_distance,
                 reference_data=aligner.reference_data,
                 mitre_limit=aligner.mitre_limit,
                 input_geometry=geometry,
                 relevant_distance=relevant_distance,
                 thematic_data=aligner.thematic_data,
+                reference_candidates=reference_candidates,
+                reference_elements_candidates=reference_elements_candidates,
+                perf_collector=perf_collector,
             )
+            if perf_collector is not None:
+                perf_collector.add(
+                    "aligner.process.single_rd_total", time.perf_counter() - t0
+                )
+            return result
 
         def run_process(executor: ThreadPoolExecutor = None):
             for thematic_id in thematic_ids:
@@ -957,17 +879,55 @@ class Aligner:
                     f"thematic id {str(thematic_id)} processed with "
                     f"relevant distances (m) [{str(relevant_distances)}]"
                 )
-                process_results[thematic_id] = {}
+                process_results[thematic_id] = {rd: None for rd in relevant_distances}
+                reference_candidates = None
+                reference_elements_candidates = None
+                if len(relevant_distances) > 1:
+                    t_pre = time.perf_counter()
+                    try:
+                        factor = self.processor.config.buffer_multiplication_factor
+                        outer_buffer = self.processor.config.max_outer_buffer
+                    except AttributeError:
+                        factor = 1.01
+                        outer_buffer = 0
+                    max_rd = max(relevant_distances)
+                    search_geom = buffer_pos(
+                        geom, max_rd * factor + outer_buffer, self.mitre_limit
+                    )
+                    reference_candidates = self.reference_data.items.take(
+                        self.reference_data.tree.query(search_geom)
+                    ).tolist()
+                    # Preselect linear/point reference elements once per thematic
+                    # geometry and reuse across all relevant distances.
+                    reference_elements_candidates = safe_unary_union(
+                        safe_intersection(self.reference_data.elements, search_geom)
+                    )
+                    if perf_collector is not None:
+                        perf_collector.add(
+                            "aligner.process.reference_preselection",
+                            time.perf_counter() - t_pre,
+                        )
                 for rd in relevant_distances:
                     try:
                         fn = process_geom_for_rd
                         if executor:
                             futures[(thematic_id, rd)] = executor.submit(
-                                fn, thematic_id, geom, rd, self
+                                fn,
+                                thematic_id,
+                                geom,
+                                rd,
+                                self,
+                                reference_candidates,
+                                reference_elements_candidates,
                             )
                         else:
                             process_results[thematic_id][rd] = fn(
-                                thematic_id, geom, rd, self
+                                thematic_id,
+                                geom,
+                                rd,
+                                self,
+                                reference_candidates,
+                                reference_elements_candidates,
                             )
                     except ValueError as e:
                         self.logger.feedback_warning(
@@ -982,16 +942,24 @@ class Aligner:
         else:
             with ThreadPoolExecutor(max_workers) as executor:
                 run_process(executor)
-                self.logger.feedback_debug("waiting all started RD calculations")
-                wait(list(futures.values()))
-                for (key, rd), future in futures.items():
+                self.logger.feedback_debug("processing started RD calculations")
+                future_to_key = {future: key_rd for key_rd, future in futures.items()}
+                for future in as_completed(future_to_key):
+                    key, rd = future_to_key[future]
                     process_results[key][rd] = future.result()
 
         self.logger.feedback_info(
             "End of processing series: " + str(relevant_distances)
         )
 
-        return AlignerResult(process_results)
+        aligner_result = AlignerResult(process_results)
+        if perf_collector is not None:
+            perf_collector.add(
+                "aligner.process.total", time.perf_counter() - t_process_start
+            )
+            aligner_result.metadata = aligner_result.metadata or {}
+            aligner_result.metadata["performance"] = perf_collector.snapshot()
+        return aligner_result
 
     def predict(
         self,
@@ -1061,86 +1029,12 @@ class Aligner:
         >>> # Predict using default distance range
         >>> prediction_results = aligner.predict(thematic_ids=["id_1", "id_2"])
         """
-
-        if thematic_ids is None:
-            thematic_ids = self.thematic_data.features.keys()
-        if any(
-            id_to_predict not in self.thematic_data.features.keys()
-            for id_to_predict in thematic_ids
-        ):
-            raise ValueError("not all ids are found in the thematic data")
-        if relevant_distances is None:
-            relevant_distances = [
-                round(k, RELEVANT_DISTANCE_DECIMALS)
-                for k in np.arange(0, 310, 10, dtype=int) / 100
-            ]
-        rd_prediction = list(relevant_distances)
-        max_relevant_distance = max(rd_prediction)
-        cvg_ratio = coverage_ratio(values=relevant_distances, min_val=0, bin_count=10)
-        cvg_ratio_threshold = 0.75
-        # cvg_ratio: indication of the rd values can be used to make a brdr_prediction_score. When there is enough coverage of predictions to determine a prediction_score we also add 0 and a long-range value(+1).
-        # Otherwise we only add a short-range value (+0.1) to check for stability
-        if cvg_ratio > cvg_ratio_threshold:
-            rd_prediction.append(round(0, RELEVANT_DISTANCE_DECIMALS))
-            rd_prediction.append(
-                round(max_relevant_distance + 0.1, RELEVANT_DISTANCE_DECIMALS)
-            )
-            rd_prediction.append(
-                round(max_relevant_distance + 1, RELEVANT_DISTANCE_DECIMALS)
-            )
-        else:
-            rd_prediction.append(
-                round(max_relevant_distance + 0.1, RELEVANT_DISTANCE_DECIMALS)
-            )
-        rd_prediction = list(set(rd_prediction))
-        rd_prediction = sorted(rd_prediction)
-
-        # Get aligner_result for all relevant_distances
-        aligner_result = self.process(
+        return self.predictor.predict(
+            aligner=self,
+            relevant_distances=relevant_distances,
             thematic_ids=thematic_ids,
-            relevant_distances=rd_prediction,
+            diff_metric=diff_metric,
         )
-        process_results = aligner_result.results
-
-        # Search for predictions
-        if diff_metric is None:
-            diff_metric = self.diff_metric
-        diffs_dict = {}
-        for theme_id, process_result in process_results.items():
-            diffs = get_geometry_difference_metrics_from_processresults(
-                process_result,
-                self.thematic_data.features.get(theme_id).geometry,
-                self.reference_data.union,
-                diff_metric=diff_metric,
-            )
-            diffs_dict[theme_id] = diffs
-            if len(diffs) != len(rd_prediction):
-                self.logger.feedback_warning(
-                    f"Number of computed diffs for thematic element {theme_id} does "
-                    f"not match the number of relevant distances."
-                )
-                continue
-            diff_values = list(diffs.values())
-            dict_stability = determine_stability(rd_prediction, diff_values)
-            prediction_count = 0
-            for rd in rd_prediction:
-                if rd not in relevant_distances:
-                    del process_results[theme_id][rd]
-                    continue
-
-                process_results[theme_id][rd]["properties"][STABILITY] = dict_stability[
-                    rd
-                ][STABILITY]
-                if dict_stability[rd][ZERO_STREAK] is not None:
-                    if cvg_ratio > cvg_ratio_threshold:
-                        prediction_count += 1
-                        process_results[theme_id][rd]["properties"][
-                            PREDICTION_SCORE
-                        ] = dict_stability[rd][ZERO_STREAK][3]
-            for rd, process_result in process_results[theme_id].items():
-                if PREDICTION_SCORE in process_result["properties"]:
-                    process_result["properties"][PREDICTION_COUNT] = prediction_count
-        return AlignerResult(process_results)
 
     def evaluate(
         self,
@@ -1224,245 +1118,15 @@ class Aligner:
         >>> # Evaluate with a limit of 1 best prediction per feature
         >>> results = aligner.evaluate(thematic_ids=["id_01"],full_reference_strategy=FullReferenceStrategy.ONLY_FULL_REFERENCE,max_predictions=1)
         """
-        calculate_zeros = True  # boolean to check if we need to add al zero-rd results to the evaluations
-        if thematic_ids is None:
-            thematic_ids = self.thematic_data.features.keys()
-            calculate_zeros = False  # when all thematic features will be calculated, there is no need to calculate the zeros for all seperately
-        if any(
-            id_to_evaluate not in self.thematic_data.features.keys()
-            for id_to_evaluate in thematic_ids
-        ):
-            raise ValueError("not all ids are found in the thematic data")
-        if relevant_distances is None:
-            relevant_distances = [
-                round(k, RELEVANT_DISTANCE_DECIMALS)
-                for k in np.arange(0, 310, 10, dtype=int) / 100
-            ]
-
-        if 0 not in relevant_distances:
-            raise ValueError(
-                "Evaluation cannot be executed when 0 is not available in the array of relevant distances"
-            )
-
-        aligner_result = self.predict(
-            thematic_ids=thematic_ids,
+        return self.evaluator.evaluate(
+            aligner=self,
             relevant_distances=relevant_distances,
-            diff_metric=self.diff_metric,
+            thematic_ids=thematic_ids,
+            metadata_field=metadata_field,
+            full_reference_strategy=full_reference_strategy,
+            max_predictions=max_predictions,
+            multi_to_best_prediction=multi_to_best_prediction,
         )
-        process_results = aligner_result.get_results(aligner=self)
-        process_results_predictions = aligner_result.get_results(
-            aligner=self, result_type=AlignerResultType.PREDICTIONS
-        )
-        if calculate_zeros:
-            # Calculate the ZERO-situation for all, only when the predict is not done for all thematic ids
-            aligner_result_zero = self.process(
-                relevant_distances=[0],
-            )
-            process_results_zero = aligner_result_zero.get_results(aligner=self)
-            process_results = deep_merge(
-                process_results_zero,
-                process_results,
-            )
-        process_results_temp_predictions = deepcopy(process_results_predictions)
-        process_results_evaluated = deepcopy(process_results)
-
-        for theme_id, feat in self.thematic_data.features.items():
-            original_geometry = feat.geometry
-            if theme_id not in thematic_ids:
-                # PART 1)NOT EVALUATED
-                process_results_evaluated = self._update_evaluation_with_original(
-                    metadata_field,
-                    original_geometry,
-                    process_results_evaluated,
-                    theme_id,
-                    Evaluation.NOT_EVALUATED,
-                )
-
-            # Features are split up in 2 groups: TO_EVALUATE and NOT_TO_EVALUATE (original returned)
-            # The evaluated features will be split up:
-            #   *No prediction available
-            #   *Predictions available
-
-            # PART 2: TO_EVALUATE
-            elif theme_id in thematic_ids:
-
-                if (
-                    theme_id not in process_results_predictions.keys()
-                    or process_results_predictions[theme_id] == {}
-                ):
-                    # No predictions available
-                    process_results_evaluated = self._update_evaluation_with_original(
-                        metadata_field,
-                        original_geometry,
-                        process_results_evaluated,
-                        theme_id,
-                        Evaluation.TO_CHECK_NO_PREDICTION,
-                    )
-                    continue
-                # Check if prediction_scores are available to do the evaluation
-                prediction_score_available = True
-                for dist in process_results_temp_predictions[theme_id]:
-                    if (
-                        not PREDICTION_SCORE
-                        in process_results_evaluated[theme_id][dist]["properties"]
-                    ):
-                        prediction_score_available = False
-                # thematic objects that do not have a prediction_score from predict() are not evaluated and returned as they are
-                if not prediction_score_available:
-                    process_results_evaluated = self._update_evaluation_with_original(
-                        metadata_field,
-                        original_geometry,
-                        process_results_evaluated,
-                        theme_id,
-                        Evaluation.NOT_EVALUATED,
-                    )
-                    continue
-
-                # When there are predictions available
-                dict_predictions_results = process_results_predictions[theme_id]
-                scores = []
-                distances = []
-                predictions = []
-                observation_match = False
-                base_brdr_observation = self._get_brdr_observation_from_properties(
-                    id_theme=theme_id,
-                    base_metadata_field=metadata_field,
-                )
-                for dist in sorted(dict_predictions_results.keys()):
-                    props = deepcopy(
-                        process_results_evaluated[theme_id][dist]["properties"]
-                    )
-                    props_evaluation = self.get_observation_comparison_properties(
-                        process_result=dict_predictions_results[dist],
-                        base_brdr_observation=base_brdr_observation,
-                    )
-                    props.update(props_evaluation)
-
-                    full = props[FULL_ACTUAL_FIELD_NAME]
-                    if (
-                        full_reference_strategy
-                        == FullReferenceStrategy.ONLY_FULL_REFERENCE
-                        and not full
-                    ):
-                        # this prediction is ignored
-                        continue
-                    if (
-                        props[EVALUATION_FIELD_NAME]
-                        in (Evaluation.TO_CHECK_NO_PREDICTION, Evaluation.NOT_EVALUATED)
-                        and props[PREDICTION_COUNT] == 1
-                    ):
-                        props[EVALUATION_FIELD_NAME] = Evaluation.PREDICTION_UNIQUE
-                        # TODO can we add continue here? No, because this can get overwritten by prediction_unique_full
-                    elif (
-                        props[EVALUATION_FIELD_NAME]
-                        in (Evaluation.TO_CHECK_NO_PREDICTION, Evaluation.NOT_EVALUATED)
-                        and props[PREDICTION_COUNT] > 1
-                    ):
-                        props[EVALUATION_FIELD_NAME] = (
-                            Evaluation.TO_CHECK_PREDICTION_MULTI
-                        )
-                    elif props[EVALUATION_FIELD_NAME] not in (
-                        Evaluation.TO_CHECK_NO_PREDICTION,
-                        Evaluation.NOT_EVALUATED,
-                    ):
-                        # this prediction has a equality based on observation so the rest is not checked anymore
-                        observation_match = True
-                        props[PREDICTION_SCORE] = 100
-                        scores = []
-                        distances = []
-                        predictions = []
-                        scores.append(props[PREDICTION_SCORE])
-                        distances.append(dist)
-                        process_results_evaluated[theme_id][dist]["properties"] = props
-                        predictions.append(process_results_evaluated[theme_id][dist])
-                        continue
-                    if full:
-                        if (
-                            full_reference_strategy
-                            != FullReferenceStrategy.NO_FULL_REFERENCE
-                        ):
-                            props[EVALUATION_FIELD_NAME] = (
-                                Evaluation.TO_CHECK_PREDICTION_FULL
-                            )
-                            prediction_score = props[PREDICTION_SCORE] + 50
-                            if prediction_score > 100:
-                                prediction_score = 100
-                            props[PREDICTION_SCORE] = prediction_score
-                        else:
-                            props[EVALUATION_FIELD_NAME] = (
-                                Evaluation.TO_CHECK_PREDICTION_MULTI_FULL
-                            )
-
-                    scores.append(props[PREDICTION_SCORE])
-                    distances.append(dist)
-                    process_results_temp_predictions[theme_id][dist][
-                        "properties"
-                    ] = props
-                    predictions.append(process_results_temp_predictions[theme_id][dist])
-
-                # get max amount of best-scoring predictions
-                best_ix = sorted(
-                    range(len(scores)), reverse=True, key=lambda i: scores[i]
-                )
-                len_best_ix = len(best_ix)
-
-                if not observation_match:
-                    # if there is only one prediction left,  evaluation is set to PREDICTION_UNIQUE_FULL
-                    if len_best_ix == 1 and not observation_match:
-                        props = predictions[0]["properties"]
-                        if (
-                            FULL_ACTUAL_FIELD_NAME in props
-                            and props[FULL_ACTUAL_FIELD_NAME]
-                        ):
-                            predictions[0]["properties"][
-                                EVALUATION_FIELD_NAME
-                            ] = Evaluation.PREDICTION_UNIQUE_AND_FULL_REFERENCE
-                        else:
-                            predictions[0]["properties"][
-                                EVALUATION_FIELD_NAME
-                            ] = Evaluation.PREDICTION_UNIQUE
-
-                    # if there are multiple predictions, but we want only one and we ask for the original
-                    if (
-                        len_best_ix > 1
-                        and max_predictions == 1
-                        and not multi_to_best_prediction
-                        and not observation_match
-                    ):
-                        relevant_distance = round(0, RELEVANT_DISTANCE_DECIMALS)
-                        props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_ORIGINAL
-                        props[PREDICTION_SCORE] = -1
-                        if REMARK_FIELD_NAME in props:
-                            remarks = props[REMARK_FIELD_NAME]
-                        else:
-                            remarks = []
-                        remarks.append(
-                            ProcessRemark.MULTIPLE_PREDICTIONS_ORIGINAL_RETURNED
-                        )
-                        props[REMARK_FIELD_NAME] = remarks
-                        process_results_evaluated[theme_id][relevant_distance][
-                            "properties"
-                        ].update(props)
-                        continue
-
-                if max_predictions > 0 and len_best_ix > max_predictions:
-                    best_ix = best_ix[:max_predictions]
-                if len(best_ix) > 0:
-                    for ix in best_ix:
-                        distance = distances[ix]
-                        prediction = predictions[ix]
-                        process_results_evaluated[theme_id][distance] = prediction
-                else:
-                    # #when no evaluated predictions, the original is returned
-                    process_results_evaluated = self._update_evaluation_with_original(
-                        metadata_field,
-                        original_geometry,
-                        process_results_evaluated,
-                        theme_id,
-                        Evaluation.TO_CHECK_NO_PREDICTION,
-                    )
-
-        return AlignerResult(process_results_evaluated)
 
     def _update_evaluation_with_original(
         self,
@@ -1472,34 +1136,14 @@ class Aligner:
         theme_id: str | int,
         evaluation: Evaluation,
     ) -> Any:
-        relevant_distance = round(0, RELEVANT_DISTANCE_DECIMALS)
-        try:
-            process_result = process_results_evaluated[theme_id][relevant_distance]
-            props = deepcopy(process_result["properties"])
-        except:
-            process_result = {"result": original_geometry}
-            props = {}
-        base_brdr_observation = self._get_brdr_observation_from_properties(
-            id_theme=theme_id,
-            base_metadata_field=metadata_field,
+        return self.evaluator.update_evaluation_with_original(
+            aligner=self,
+            metadata_field=metadata_field,
+            original_geometry=original_geometry,
+            process_results_evaluated=process_results_evaluated,
+            theme_id=theme_id,
+            evaluation=evaluation,
         )
-        props_evaluation = self.get_observation_comparison_properties(
-            process_result=process_result,
-            base_brdr_observation=base_brdr_observation,
-        )
-        props.update(props_evaluation)
-        props[EVALUATION_FIELD_NAME] = evaluation
-        props[PREDICTION_SCORE] = -1
-        if REMARK_FIELD_NAME in props:
-            remarks = props[REMARK_FIELD_NAME]
-        else:
-            remarks = []
-        remarks.append(ProcessRemark.NOT_EVALUATED_ORIGINAL_RETURNED)
-        props[REMARK_FIELD_NAME] = remarks
-        process_results_evaluated[theme_id][relevant_distance]["properties"].update(
-            props
-        )
-        return process_results_evaluated
 
     def compare_to_reference(
         self, geometry: BaseGeometry, with_geom: bool = False
@@ -1565,12 +1209,101 @@ class Aligner:
         >>> print(info["full"])
         >>> print(info["reference_features"].keys())  # IDs of intersected refs
         """
+
+        def _count_points(geom: BaseGeometry) -> float:
+            if geom is None or geom.is_empty:
+                return 0.0
+            if geom.geom_type == "Point":
+                return 1.0
+            if geom.geom_type == "MultiPoint":
+                return float(len(geom.geoms))
+            if geom.geom_type == "GeometryCollection":
+                return float(sum(_count_points(g) for g in geom.geoms))
+            return 0.0
+
+        def _measure_type_for_geom(geom: BaseGeometry) -> str:
+            if geom.geom_type in {"Point", "MultiPoint"}:
+                return "count"
+            if geom.geom_type in {"LineString", "MultiLineString"}:
+                return "length"
+            return "area"
+
+        def _reference_metric_for_pair(
+            thematic_geom: BaseGeometry,
+            reference_geom: BaseGeometry,
+            intersection_geom: BaseGeometry,
+        ) -> tuple[str, float, float]:
+            thematic_type = _measure_type_for_geom(thematic_geom)
+            reference_type = _measure_type_for_geom(reference_geom)
+
+            # Polygon thematic geometry:
+            # - polygon refs: area overlap over reference area (existing behavior)
+            # - line refs: boundary coverage length over reference length
+            # - point refs: intersecting points over reference point count
+            if thematic_type == "area":
+                if reference_type == "area":
+                    return (
+                        "area",
+                        float(intersection_geom.area),
+                        float(reference_geom.area),
+                    )
+                if reference_type == "length":
+                    return (
+                        "length",
+                        float(intersection_geom.length),
+                        float(reference_geom.length),
+                    )
+                return (
+                    "count",
+                    _count_points(intersection_geom),
+                    _count_points(reference_geom),
+                )
+
+            # Line thematic geometry:
+            # - line/area refs: overlapping line length over thematic length
+            # - point refs: touched reference points over reference point count
+            if thematic_type == "length":
+                if reference_type == "count":
+                    return (
+                        "count",
+                        _count_points(intersection_geom),
+                        _count_points(reference_geom),
+                    )
+                return (
+                    "length",
+                    float(intersection_geom.length),
+                    float(thematic_geom.length),
+                )
+
+            # Point thematic geometry:
+            # - always point counts over thematic point count
+            return (
+                "count",
+                _count_points(intersection_geom),
+                _count_points(thematic_geom),
+            )
+
+        def _measure_value(geom: BaseGeometry, measure_type: str) -> float:
+            if geom is None or geom.is_empty:
+                return 0.0
+            if measure_type == "count":
+                return _count_points(geom)
+            if measure_type == "length":
+                return float(geom.length)
+            return float(geom.area)
+
+        measure_type = _measure_type_for_geom(geometry)
+        thematic_measure = _measure_value(geometry, measure_type)
+
         dict_observation = {
             "alignment_date": datetime.now().strftime(DATE_FORMAT),
             "brdr_version": str(__version__),
             "reference_source": self.reference_data.source,
             "full": True,
             "area": round(geometry.area, 2),
+            "length": round(geometry.length, 2),
+            "count": round(_count_points(geometry), 2),
+            "measure_type": measure_type,
             "reference_features": {},
             "reference_od": None,
         }
@@ -1594,9 +1327,17 @@ class Aligner:
                 continue
             intersected.append(geom_intersection)
 
-            geom_reference_area = geom_reference.area
-            if geom_reference_area > 0:
-                perc = round(geom_intersection.area * 100 / geom_reference.area, 2)
+            (
+                feature_measure_type,
+                intersection_measure,
+                denominator,
+            ) = _reference_metric_for_pair(
+                thematic_geom=geometry,
+                reference_geom=geom_reference,
+                intersection_geom=geom_intersection,
+            )
+            if denominator > 0:
+                perc = round(intersection_measure * 100 / denominator, 2)
             else:
                 perc = 0
             if perc < 0.01:
@@ -1616,7 +1357,14 @@ class Aligner:
 
             if perc > 99.99:
                 full = True
-                area = round(geom_reference_area, 2)
+                area = round(
+                    (
+                        geom_reference.area
+                        if measure_type == "area"
+                        else geom_intersection.area
+                    ),
+                    2,
+                )
                 perc = 100
                 if with_geom:
                     geom = geom_reference
@@ -1630,7 +1378,10 @@ class Aligner:
             dict_observation["reference_features"][key_ref] = {
                 "full": full,
                 "area": area,
+                "measure_type": feature_measure_type,
+                feature_measure_type: round(intersection_measure, 2),
                 "percentage": perc,
+                "de9im": geometry.relate(geom_reference),
             }
             if version_date is not None:
                 dict_observation["reference_features"][key_ref][VERSION_DATE] = (
@@ -1650,21 +1401,31 @@ class Aligner:
             intersected_union = safe_unary_union(intersected)
         else:
             intersected_union = GeometryCollection()
-        geom_od = buffer_pos(
-            buffer_neg(
-                safe_difference(geometry, intersected_union),
+        if measure_type == "area":
+            geom_od = buffer_pos(
+                buffer_neg(
+                    safe_difference(geometry, intersected_union),
+                    self.correction_distance,
+                    mitre_limit=self.mitre_limit,
+                ),
                 self.correction_distance,
                 mitre_limit=self.mitre_limit,
-            ),
-            self.correction_distance,
-            mitre_limit=self.mitre_limit,
-        )
+            )
+        else:
+            geom_od = safe_difference(geometry, intersected_union)
         if geom_od is not None:
             area_od = round(geom_od.area, 2)
-            if area_od > 0:
+            metric_od = round(_measure_value(geom_od, measure_type), 2)
+            if area_od > 0 or metric_od > 0:
                 dict_observation["reference_od"] = {"area": area_od}
+                if measure_type != "area":
+                    dict_observation["reference_od"][measure_type] = metric_od
                 if with_geom:
                     dict_observation["reference_od"]["geometry"] = to_geojson(geom_od)
+            if measure_type != "area":
+                dict_observation["full"] = metric_od == 0 and bool(
+                    dict_observation["reference_features"]
+                )
         self.logger.feedback_debug(str(dict_observation))
         return dict_observation
 
@@ -1768,177 +1529,7 @@ class Aligner:
             Dictionary with derived observation flags, currently containing
             `FULL_ACTUAL_FIELD_NAME`.
         """
-        geom_process_result = process_result["result"]
-        properties = {
-            FULL_ACTUAL_FIELD_NAME: None,
-        }
-        actual_brdr_observation = process_result.get(
-            "observations"
-        ) or self.compare_to_reference(geom_process_result)
-        process_result["observations"] = actual_brdr_observation
-        if (
-            actual_brdr_observation is None
-            or geom_process_result is None
-            or geom_process_result.is_empty
-        ):
-            return properties
-        properties[FULL_ACTUAL_FIELD_NAME] = actual_brdr_observation["full"]
-        return properties
-
-    def get_observation_comparison_properties(
-        self,
-        process_result,
-        base_brdr_observation=None,
-    ):
-        """
-        Compare current observation to a base observation and derive evaluation properties.
-
-        Parameters
-        ----------
-        process_result : ProcessResult
-            Processing output containing a `result` geometry.
-        base_brdr_observation : dict, optional
-            Observation dictionary of the original/base geometry.
-
-        Returns
-        -------
-        dict
-            Properties containing comparison metrics and an evaluation label.
-        """
-        geom_process_result = process_result["result"]
-        threshold_od_percentage = 1
-        properties = {
-            EVALUATION_FIELD_NAME: Evaluation.TO_CHECK_NO_PREDICTION,
-            FULL_BASE_FIELD_NAME: None,
-            FULL_ACTUAL_FIELD_NAME: None,
-            OD_ALIKE_FIELD_NAME: None,
-            EQUAL_REFERENCE_FEATURES_FIELD_NAME: None,
-            DIFF_PERCENTAGE_FIELD_NAME: None,
-            DIFF_AREA_FIELD_NAME: None,
-        }
-        props = self.get_observation_properties(process_result)
-        properties.update(props)
-
-        actual_brdr_observation = process_result.get(
-            "observations"
-        ) or self.compare_to_reference(geom_process_result)
-        if (
-            actual_brdr_observation is None
-            or geom_process_result is None
-            or geom_process_result.is_empty
-        ):
-            return properties
-
-        if not is_brdr_observation(base_brdr_observation):
-            properties[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
-            return properties
-        properties[FULL_BASE_FIELD_NAME] = base_brdr_observation["full"]
-        od_alike = False
-        if (
-            base_brdr_observation["reference_od"] is None
-            and actual_brdr_observation["reference_od"] is None
-        ):
-            od_alike = True
-        elif (
-            base_brdr_observation["reference_od"] is None
-            or actual_brdr_observation["reference_od"] is None
-        ):
-            od_alike = False
-        elif (
-            abs(
-                base_brdr_observation["reference_od"]["area"]
-                - actual_brdr_observation["reference_od"]["area"]
-            )
-            * 100
-            / base_brdr_observation["reference_od"]["area"]
-        ) < threshold_od_percentage:
-            od_alike = True
-        properties[OD_ALIKE_FIELD_NAME] = od_alike
-
-        equal_reference_features = False
-        if (
-            base_brdr_observation["reference_features"].keys()
-            == actual_brdr_observation["reference_features"].keys()
-        ):
-            equal_reference_features = True
-            max_diff_area_reference_feature = 0
-            max_diff_percentage_reference_feature = 0
-            for key in base_brdr_observation["reference_features"].keys():
-                if (
-                    base_brdr_observation["reference_features"][key]["full"]
-                    != actual_brdr_observation["reference_features"][key]["full"]
-                ):
-                    equal_reference_features = False
-
-                diff_area_reference_feature = abs(
-                    base_brdr_observation["reference_features"][key]["area"]
-                    - actual_brdr_observation["reference_features"][key]["area"]
-                )
-                area = base_brdr_observation["reference_features"][key]["area"]
-                if area > 0:
-                    diff_percentage_reference_feature = (
-                        abs(
-                            base_brdr_observation["reference_features"][key]["area"]
-                            - actual_brdr_observation["reference_features"][key]["area"]
-                        )
-                        * 100
-                        / base_brdr_observation["reference_features"][key]["area"]
-                    )
-                else:
-                    diff_percentage_reference_feature = 0
-                if diff_area_reference_feature > max_diff_area_reference_feature:
-                    max_diff_area_reference_feature = diff_area_reference_feature
-                if (
-                    diff_percentage_reference_feature
-                    > max_diff_percentage_reference_feature
-                ):
-                    max_diff_percentage_reference_feature = (
-                        diff_percentage_reference_feature
-                    )
-            properties[EQUAL_REFERENCE_FEATURES_FIELD_NAME] = equal_reference_features
-            properties[DIFF_AREA_FIELD_NAME] = max_diff_area_reference_feature
-            properties[DIFF_PERCENTAGE_FIELD_NAME] = (
-                max_diff_percentage_reference_feature
-            )
-        # EVALUATION
-        if (
-            equal_reference_features
-            and od_alike
-            and base_brdr_observation["full"]
-            and actual_brdr_observation["full"]
-        ):  # observation is the same, and both geometries are 'full'
-            properties[EVALUATION_FIELD_NAME] = (
-                Evaluation.EQUALITY_BY_ID_AND_FULL_REFERENCE
-            )
-        elif (
-            equal_reference_features
-            and od_alike
-            and base_brdr_observation["full"] == actual_brdr_observation["full"]
-        ):  # observation is the same,  both geometries are not 'full'
-            properties[EVALUATION_FIELD_NAME] = Evaluation.EQUALITY_BY_ID
-        elif (
-            base_brdr_observation["full"]
-            and actual_brdr_observation["full"]
-            and od_alike
-        ):  # observation not the same but geometries are full
-            properties[EVALUATION_FIELD_NAME] = Evaluation.EQUALITY_BY_FULL_REFERENCE
-        else:
-            properties[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_NO_PREDICTION
-        return properties
-
-    def _get_brdr_observation_from_properties(
-        self, id_theme: Any, base_metadata_field: str
-    ) -> dict:
-        try:
-            base_metadata = self.thematic_data.features.get(id_theme).properties[
-                base_metadata_field
-            ]
-            if isinstance(base_metadata, str):
-                base_metadata = json.loads(base_metadata)
-
-            base_brdr_observation = _reverse_metadata_observations_to_brdr_observation(
-                base_metadata
-            )
-        except Exception:
-            base_brdr_observation = None
-        return base_brdr_observation
+        return self.evaluator.get_observation_properties(
+            aligner=self,
+            process_result=process_result,
+        )

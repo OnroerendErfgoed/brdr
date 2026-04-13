@@ -152,14 +152,13 @@ More examples can be found in [Examples](https://github.com/OnroerendErfgoed/brd
 To use `brdr`, follow these steps:
 
 * Create a Aligner-class with specific parameters:
-    * relevant_distance (m) (default: 1): Distance-parameter used to decide which parts will be aligned, and which parts
-      remain unchanged.
-    * od_strategy (enum) (default: SNAP_SINGLE_SIDE): Strategy to align geodata that is not covered by reference-data
+    * od_strategy (enum, `ProcessorConfig`, default: `SNAP_ALL_SIDE`): Strategy to align geodata in open domain
+      (not covered by reference polygons).
     * threshold_overlap_percentage (%)(0-100) (default 50)
     * crs: The Coordinate Reference System (CRS) (default: EPSG:31370 - Belgian Lambert72)
 * Load thematic data
 * Load reference data
-* Process (align) the thematic data
+* Process (align) the thematic data with `relevant_distance` values passed to `process(...)`, `predict(...)` or `evaluate(...)`
 * Results are returned:
     * Resulting geometry
     * Differences: parts that are 'different' from the original geometry (positive or negative)

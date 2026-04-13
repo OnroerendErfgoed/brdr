@@ -8,9 +8,9 @@ Use this guide to choose the right processor for your use case.
 |---|---|---|---|---|
 | `AlignerGeometryProcessor` (default) | General use | Medium | Auto-selects by context | Recommended default entrypoint |
 | `DieussaertGeometryProcessor` | Polygon-to-polygon alignment | Fast | Polygon/MultiPolygon focused | Usually best first choice for parcel-like workflows |
-| `NetworkGeometryProcessor` | Generic point/line/polygon network behavior | Slower | Broadest support | Use when network-like behavior is required |
+| `NetworkGeometryProcessor` | Generic point/line/polygon network behavior | Slower | Broadest support | Use when network-like behavior is required; supports OD strategy behavior for polygon-reference coverage |
 | `TopologyProcessor` | Shared-boundary consistency between neighboring features | Slower | Topology-aware arc workflow | Experimental and specialized |
-| `SnapGeometryProcessor` | Direct vertex/edge snapping behavior | Case-dependent | Depends on snap strategy | Good for explicit snap-driven workflows |
+| `SnapGeometryProcessor` | Direct vertex/edge snapping behavior | Case-dependent | Depends on snap strategy | Good for explicit snap-driven workflows; OD strategy effects are relevant with polygon-reference coverage |
 
 ## Practical recommendation
 

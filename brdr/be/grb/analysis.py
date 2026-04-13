@@ -337,7 +337,12 @@ def get_folder_path(analysis_name, add_timestamp=True):
     return output_dir
 
 
-def export_wkt_columns_to_geojson(df, wkt_columns, path, crs=DEFAULT_CRS):
+def export_wkt_columns_to_geojson(
+    df,
+    path,
+    wkt_columns=[ORIGINAL_WKT, BRDR_WKT, FALSE_POSITIVE_WKT, DOUBT_WKT],
+    crs=DEFAULT_CRS,
+):
     """
     Exports multiple WKT columns from a DataFrame to separate GeoJSON files,
     ensuring that other WKT columns are excluded from the properties.
@@ -356,6 +361,20 @@ def export_wkt_columns_to_geojson(df, wkt_columns, path, crs=DEFAULT_CRS):
     output_path = Path(path)
     output_path.mkdir(parents=True, exist_ok=True)
 
+    def _safe_wkt_to_geometry(value):
+        """
+        Converts a single WKT value to a shapely geometry.
+        Invalid, missing, or non-string values become an empty GeometryCollection.
+        """
+        if pd.isna(value):
+            return GeometryCollection()
+        if not isinstance(value, (str, bytes)):
+            return GeometryCollection()
+        try:
+            return wkt.loads(value)
+        except Exception:
+            return GeometryCollection()
+
     for col in wkt_columns:
         if col not in df.columns:
             print(f"Warning: Column '{col}' not found in DataFrame. Skipping.")
@@ -368,8 +387,8 @@ def export_wkt_columns_to_geojson(df, wkt_columns, path, crs=DEFAULT_CRS):
         # 2. Select properties + the current WKT column
         temp_df = df[property_cols + [col]].copy()
 
-        # 3. Convert WKT string to actual geometry
-        temp_df["geometry"] = temp_df[col].apply(wkt.loads)
+        # 3. Convert WKT string to actual geometry safely
+        temp_df["geometry"] = temp_df[col].apply(_safe_wkt_to_geometry)
 
         # 4. Initialize GeoDataFrame
         gdf = gpd.GeoDataFrame(temp_df, geometry="geometry", crs=crs)

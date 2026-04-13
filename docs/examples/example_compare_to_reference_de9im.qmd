@@ -1,0 +1,22 @@
+---
+title: "Compare-to-Reference with DE-9IM"
+description: "Inspect measure_type, OD metrics and DE-9IM relation strings from compare_to_reference"
+author: "Karel Dieussaert"
+date: "2026-03-31"
+categories: [Metadata, DE-9IM, Observation]
+format:
+  html:
+    code-fold: false
+jupyter: python3
+---
+# compare_to_reference with DE-9IM
+This example uses `Aligner.compare_to_reference(...)` from [Aligner](../reference/Aligner.qmd) to inspect relation metadata between one thematic geometry and multiple reference geometries.
+
+## What you learn
+1. How to read generic `measure_type` and `reference_od`.
+2. How to inspect `de9im` per intersecting reference feature.
+3. How mixed reference geometry types behave in observation output.
+
+```{python}
+{{< include ../../examples/example_compare_to_reference_de9im.py >}}
+```

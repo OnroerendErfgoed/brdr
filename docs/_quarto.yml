@@ -85,6 +85,13 @@ quartodoc:
         - NetworkGeometryProcessor
         - SnapGeometryProcessor
         - TopologyProcessor
+    - title: Prediction & Evaluation
+      desc: Strategy classes for prediction and evaluation customization.
+      contents:
+        - name: predictor.BasePredictor
+        - name: predictor.AlignerPredictor
+        - name: evaluator.BaseEvaluator
+        - name: evaluator.AlignerEvaluator
     - title: Enumerators
       package: brdr.enums
       desc: Enums used in the brdr package.

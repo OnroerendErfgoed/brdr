@@ -223,3 +223,61 @@
 - Possibility to get results in a GeoDataFrame
 - Cleanup of documentation
 - Internal refactoring: added graph_utils.py
+
+# 0.16.0
+
+- Performance improvements in `evaluate(...)`:
+  - reduced heavy deep-copy overhead
+  - limited zero-distance recalculation to selected thematic IDs
+  - observation caching for repeated predicted geometries
+  - caching of base observations per thematic ID
+- Performance improvements in processing flow:
+  - reference candidate reuse across relevant distances
+  - network reference-element preselection/caching
+  - streaming completion of parallel tasks while preserving deterministic result ordering
+- Added optional lightweight performance profiling:
+  - `AlignerConfig(profile_performance=True)`
+  - timings exposed in `AlignerResult.metadata["performance"]`
+- Geometry robustness and speed improvements:
+  - optimized fast-path behavior in `safe_unary_union`, `safe_intersection`, and `safe_difference`
+  - corrected length-difference metric conditions
+- Predictor fix:
+  - empty resulting geometries are no longer retained as predictions
+- GRB compatibility:
+  - added fallback enum values for `WBN` and `WGO`
+- Documentation updates:
+  - updated release documentation and parameter guide with current behavior and performance notes
+- Closed tickets in GitHub milestone `0.16.0`:
+  - [#148] research: is it possible to "calculate" the formula when processing, instead of afterwards?
+  - [#186] check consistancy in the logging
+  - [#187] stability of the API
+  - [#188] augment the test-coverage
+  - [#189] full api-documentation
+  - [#190] implementation of brdr-provenance
+  - [#218] add python 3.13 (and 3.14) support --> follow up needed
+  - [#221] process_by_network: improve predictions when no "fully stable" points are found
+  - [#237] optimize predictor-logic
+  - [#238] refactoring possibilities
+  - [#241] implement loader for other country(fe BAG-data?)
+  - [#242] review the attributes "brdr_diff_index" and "brdr_diff_index_percentage"
+  - [#243] create generic reference loaders: WFSReferenceLoader and FeatureAPIReferenceLoader
+  - [#248] CRS-handling: transforming syntax
+  - [#250] Naming public facing functions
+  - [#252] process_by_network - bug
+  - [#253] refactoring of the input/output to Featureclass
+  - [#254] refactor: create wrapped AlignerResultClass
+  - [#255] make ENUM from remarks
+  - [#256] clean up all TODO from code
+  - [#257] Check Enum names
+  - [#277] area_limit: processConfig or Aligner-attribute?
+  - [#279] Aligner evaluate: (check input params; switch to dict instad of list of IDs?
+  - [#282] adding worker (parallel execution) to predict()
+  - [#283] decide what to return when presresult is empty
+  - [#284] removing TODOs in code
+  - [#288] metadata: get source-information implemented into Loaders
+  - [#289] Observation: adding DE-9IM intersection matrix in compare_to_reference() and metadata
+  - [#291] evaluate(): reverse function metadata-observations to brdr_observations
+  - [#293] multi-threadinf for on-the-fly loaders?
+  - [#302] networkprocessor: research these cases
+  - [#311] metadata (observations) has to be impoved for points and lines
+  - [#333] remove empty geometries from predictions?

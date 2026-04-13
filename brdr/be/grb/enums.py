@@ -27,6 +27,8 @@ class GRBTypeLoader:
                 "ADP": "Administratieve percelen",
                 "GBG": "gebouwen",
                 "KNW": "kunstwerken",
+                "WBN": "wegbaan",
+                "WGO": "wegopdeling",
             }
         return Enum("GRBType", dict_values)
 

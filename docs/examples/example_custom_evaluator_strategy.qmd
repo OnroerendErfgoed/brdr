@@ -1,0 +1,22 @@
+---
+title: "Custom Evaluator Strategy"
+description: "Inject a custom evaluator that enriches evaluated results with custom properties"
+author: "Karel Dieussaert"
+date: "2026-03-31"
+categories: [Evaluation, Evaluator, Advanced]
+format:
+  html:
+    code-fold: false
+jupyter: python3
+---
+# Custom Evaluator Strategy
+This example extends [AlignerEvaluator](../reference/Aligner.evaluate.qmd) and injects the evaluator into [Aligner](../reference/Aligner.qmd).
+
+## What you learn
+1. How to subclass the default evaluator.
+2. How to append custom output properties after standard evaluation.
+3. How to run evaluation with the custom evaluator instance.
+
+```{python}
+{{< include ../../examples/example_custom_evaluator_strategy.py >}}
+```

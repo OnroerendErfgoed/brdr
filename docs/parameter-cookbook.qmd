@@ -8,6 +8,14 @@ This page provides practical guidance for the most important `brdr` parameters.
 - Typical approach: evaluate a distance range, then use `predict(...)` or `evaluate(...)`.
 - Start small and increase gradually.
 
+## `profile_performance`
+
+- Location: `AlignerConfig(profile_performance=...)`
+- Meaning: enable lightweight internal timing during `process(...)`.
+- Output: timings are available in `AlignerResult.metadata["performance"]`.
+- Default: `False`.
+- Recommendation: enable for tuning/benchmarking runs, disable for normal production runs.
+
 ## `correction_distance`
 
 - Meaning: technical cleanup tolerance used in post-processing.
@@ -27,7 +35,8 @@ This page provides practical guidance for the most important `brdr` parameters.
 
 ## `od_strategy` (Open Domain)
 
-- Meaning: defines behavior where no reference coverage exists.
+- Meaning: defines behavior where no **polygon reference coverage** exists.
+- Practical note: when the reference dataset has only lines/points and no polygonal coverage, open-domain strategy effects are intentionally limited.
 - Choose explicitly based on business semantics:
   - keep as-is
   - exclude
@@ -37,9 +46,16 @@ This page provides practical guidance for the most important `brdr` parameters.
 
 1. Fix a representative sample dataset.
 2. Sweep `relevant_distance`.
-3. Inspect stability and geometric deltas.
-4. Lock `od_strategy` and `snap_strategy`.
-5. Validate on a larger holdout set.
+3. Enable `profile_performance` and inspect `metadata["performance"]`.
+4. Inspect stability and geometric deltas.
+5. Lock `od_strategy` and `snap_strategy`.
+6. Validate on a larger holdout set.
+
+## Performance notes
+
+- `brdr` reuses reference candidates per thematic geometry across multiple relevant distances.
+- `evaluate(...)` includes caching for repeated observation comparisons on identical predicted geometries.
+- These optimizations are transparent; no extra configuration is needed besides optional profiling.
 
 ## Related
 

@@ -1,0 +1,22 @@
+---
+title: "Custom Predictor Strategy"
+description: "Inject a custom predictor that retains only the highest-scoring prediction"
+author: "Karel Dieussaert"
+date: "2026-03-31"
+categories: [Prediction, Predictor, Advanced]
+format:
+  html:
+    code-fold: false
+jupyter: python3
+---
+# Custom Predictor Strategy
+This example extends `AlignerPredictor` and injects it into [Aligner](../reference/Aligner.qmd).
+
+## What you learn
+1. How to subclass the default predictor.
+2. How to add custom selection logic after default scoring.
+3. How to plug the predictor into `Aligner(...)`.
+
+```{python}
+{{< include ../../examples/example_custom_predictor_strategy.py >}}
+```

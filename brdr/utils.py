@@ -651,14 +651,14 @@ def get_geometry_difference_metrics_from_processresult(
         if original.length != 0:
             diff = diff * 100 / original.length
     elif diff_metric == DiffMetric.LENGTH_REMOVED:
-        if not result_diff_min is None or result_diff_min.is_empty:
+        if result_diff_min is not None and not result_diff_min.is_empty:
             diff = result_diff_min.length
     elif diff_metric == DiffMetric.LENGTH_ADDED_AND_REMOVED:
-        if not result_diff_min is None or result_diff_min.is_empty:
+        if result_diff_min is not None and not result_diff_min.is_empty:
             diff_min = result_diff_min.length
         else:
             diff_min = 0
-        if not result_diff_plus is None or result_diff_plus.is_empty:
+        if result_diff_plus is not None and not result_diff_plus.is_empty:
             diff_plus = result_diff_plus.length
         else:
             diff_plus = 0

@@ -19,7 +19,8 @@ class ProcessorConfig:
         Buffer size used to define the outer processing band around thematic geometry.
     od_strategy : OpenDomainStrategy, default OpenDomainStrategy.SNAP_ALL_SIDE
         The strategy used to determine how to handle information outside the
-        reference polygons (Open Domain).
+        reference polygons (Open Domain). For datasets without polygonal
+        reference coverage (only lines/points), open-domain effects are limited.
     threshold_overlap_percentage : int, default 50
         Threshold (%) to determine if a reference polygon should be included
         when no relevant intersections or differences exist. If set to -1,
@@ -101,6 +102,8 @@ class AlignerConfig:
         If True, detailed metadata about the alignment process will be added to ProcessResult
     add_observations : bool, default False
         If True, observations of the resulting geometry are added to metadata.
+    profile_performance : bool, default False
+        If True, collect lightweight runtime metrics during processing.
     """
 
     correction_distance: float = 0.01
@@ -109,3 +112,4 @@ class AlignerConfig:
     max_workers: int = None
     log_metadata: bool = False
     add_observations: bool = False
+    profile_performance: bool = False

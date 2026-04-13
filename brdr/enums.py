@@ -3,7 +3,12 @@ from enum import Enum
 
 class OpenDomainStrategy(Enum):
     """
-    Strategies for thematic areas that are not covered by the reference layer.
+    Strategies for thematic areas that are not covered by reference polygons.
+
+    Notes
+    -----
+    Open-domain behavior is primarily meaningful when polygonal reference
+    coverage is available.
 
     Attributes
     ----------
