@@ -403,9 +403,10 @@ class AlignerEvaluator(BaseEvaluator):
         theme_id: InputId,
     ) -> bool:
         for dist in process_results_temp_predictions[theme_id]:
-            if not PREDICTION_SCORE in process_results_evaluated[theme_id][dist][
-                "properties"
-            ]:
+            if (
+                not PREDICTION_SCORE
+                in process_results_evaluated[theme_id][dist]["properties"]
+            ):
                 return False
         return True
 
@@ -462,7 +463,10 @@ class AlignerEvaluator(BaseEvaluator):
             predictions.append(runtime.process_results_evaluated[theme_id][dist])
             return {"status": "observation_match", "props": props}
         if full:
-            if runtime.full_reference_strategy != FullReferenceStrategy.NO_FULL_REFERENCE:
+            if (
+                runtime.full_reference_strategy
+                != FullReferenceStrategy.NO_FULL_REFERENCE
+            ):
                 props[EVALUATION_FIELD_NAME] = Evaluation.TO_CHECK_PREDICTION_FULL
                 prediction_score = props[PREDICTION_SCORE] + 50
                 if prediction_score > 100:
@@ -498,9 +502,9 @@ class AlignerEvaluator(BaseEvaluator):
                     EVALUATION_FIELD_NAME
                 ] = Evaluation.PREDICTION_UNIQUE_AND_FULL_REFERENCE
             else:
-                predictions[0]["properties"][EVALUATION_FIELD_NAME] = (
-                    Evaluation.PREDICTION_UNIQUE
-                )
+                predictions[0]["properties"][
+                    EVALUATION_FIELD_NAME
+                ] = Evaluation.PREDICTION_UNIQUE
 
         if (
             len_best_ix > 1
@@ -616,7 +620,10 @@ class AlignerEvaluator(BaseEvaluator):
             if measure_type in {"area", "length", "count"} and measure_type in ref_dict:
                 return float(ref_dict[measure_type])
             per_feature_type = ref_dict.get("measure_type")
-            if per_feature_type in {"area", "length", "count"} and per_feature_type in ref_dict:
+            if (
+                per_feature_type in {"area", "length", "count"}
+                and per_feature_type in ref_dict
+            ):
                 return float(ref_dict[per_feature_type])
             for key in ("area", "length", "count"):
                 if key in ref_dict:
@@ -724,9 +731,7 @@ class AlignerEvaluator(BaseEvaluator):
                     actual_brdr_observation["reference_features"][key],
                     measure_type,
                 )
-                diff_area_reference_feature = abs(
-                    base_measure - actual_measure
-                )
+                diff_area_reference_feature = abs(base_measure - actual_measure)
                 area = base_measure
                 if area > 0:
                     diff_percentage_reference_feature = (

@@ -312,7 +312,9 @@ class BaseProcessor(ABC):
             geom_thematic_for_add_delete = safe_intersection(
                 geom_thematic_for_add_delete, polygonal_reference_union
             )
-            geom_preresult = safe_intersection(geom_preresult, polygonal_reference_union)
+            geom_preresult = safe_intersection(
+                geom_preresult, polygonal_reference_union
+            )
 
         if not (geom_thematic is None or geom_thematic.is_empty):
             if (
@@ -710,7 +712,10 @@ class SnapGeometryProcessor(BaseProcessor):
                 False,
             )
 
-        if self.config.od_strategy == OpenDomainStrategy.EXCLUDE or not has_polygonal_od:
+        if (
+            self.config.od_strategy == OpenDomainStrategy.EXCLUDE
+            or not has_polygonal_od
+        ):
             pass
         elif self.config.od_strategy == OpenDomainStrategy.AS_IS:
             # Intersection with virtual reference is kept as original (no snapping)
@@ -750,7 +755,9 @@ class SnapGeometryProcessor(BaseProcessor):
             correction_distance,
         )
         if perf_collector is not None:
-            perf_collector.add("processor.snap.postprocess", time.perf_counter() - t_post)
+            perf_collector.add(
+                "processor.snap.postprocess", time.perf_counter() - t_post
+            )
             perf_collector.add("processor.snap.total", time.perf_counter() - t_total)
 
         return result_dict
@@ -1058,7 +1065,9 @@ class DieussaertGeometryProcessor(BaseProcessor):
                 "processor.dieussaert.postprocess",
                 time.perf_counter() - t_post,
             )
-            perf_collector.add("processor.dieussaert.total", time.perf_counter() - t_total)
+            perf_collector.add(
+                "processor.dieussaert.total", time.perf_counter() - t_total
+            )
         return process_result
 
     def _od_snap(
@@ -1742,7 +1751,9 @@ class NetworkGeometryProcessor(BaseProcessor):
             correction_distance,
         )
         if perf_collector is not None:
-            perf_collector.add("processor.network.postprocess", time.perf_counter() - t_post)
+            perf_collector.add(
+                "processor.network.postprocess", time.perf_counter() - t_post
+            )
             perf_collector.add("processor.network.total", time.perf_counter() - t_total)
         return result
 
@@ -1982,7 +1993,9 @@ class AlignerGeometryProcessor(BaseProcessor):
                 "processor.dispatch.network",
                 time.perf_counter() - t_network,
             )
-            perf_collector.add("processor.dispatch.total", time.perf_counter() - t_total)
+            perf_collector.add(
+                "processor.dispatch.total", time.perf_counter() - t_total
+            )
         return result
 
 

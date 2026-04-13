@@ -337,7 +337,12 @@ def get_folder_path(analysis_name, add_timestamp=True):
     return output_dir
 
 
-def export_wkt_columns_to_geojson(df, path,wkt_columns=[ORIGINAL_WKT, BRDR_WKT, FALSE_POSITIVE_WKT, DOUBT_WKT], crs=DEFAULT_CRS):
+def export_wkt_columns_to_geojson(
+    df,
+    path,
+    wkt_columns=[ORIGINAL_WKT, BRDR_WKT, FALSE_POSITIVE_WKT, DOUBT_WKT],
+    crs=DEFAULT_CRS,
+):
     """
     Exports multiple WKT columns from a DataFrame to separate GeoJSON files,
     ensuring that other WKT columns are excluded from the properties.

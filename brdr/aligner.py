@@ -107,8 +107,7 @@ class _PerfCollector:
                     "seconds_total": round(self._timings.get(key, 0.0), 6),
                     "count": int(self._counts.get(key, 0)),
                     "seconds_avg": round(
-                        self._timings.get(key, 0.0)
-                        / max(1, self._counts.get(key, 0)),
+                        self._timings.get(key, 0.0) / max(1, self._counts.get(key, 0)),
                         6,
                     ),
                 }
@@ -868,7 +867,9 @@ class Aligner:
                 perf_collector=perf_collector,
             )
             if perf_collector is not None:
-                perf_collector.add("aligner.process.single_rd_total", time.perf_counter() - t0)
+                perf_collector.add(
+                    "aligner.process.single_rd_total", time.perf_counter() - t0
+                )
             return result
 
         def run_process(executor: ThreadPoolExecutor = None):
@@ -953,7 +954,9 @@ class Aligner:
 
         aligner_result = AlignerResult(process_results)
         if perf_collector is not None:
-            perf_collector.add("aligner.process.total", time.perf_counter() - t_process_start)
+            perf_collector.add(
+                "aligner.process.total", time.perf_counter() - t_process_start
+            )
             aligner_result.metadata = aligner_result.metadata or {}
             aligner_result.metadata["performance"] = perf_collector.snapshot()
         return aligner_result
@@ -1206,6 +1209,7 @@ class Aligner:
         >>> print(info["full"])
         >>> print(info["reference_features"].keys())  # IDs of intersected refs
         """
+
         def _count_points(geom: BaseGeometry) -> float:
             if geom is None or geom.is_empty:
                 return 0.0
@@ -1354,9 +1358,11 @@ class Aligner:
             if perc > 99.99:
                 full = True
                 area = round(
-                    geom_reference.area
-                    if measure_type == "area"
-                    else geom_intersection.area,
+                    (
+                        geom_reference.area
+                        if measure_type == "area"
+                        else geom_intersection.area
+                    ),
                     2,
                 )
                 perc = 100
