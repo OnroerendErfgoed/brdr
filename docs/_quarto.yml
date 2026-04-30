@@ -85,6 +85,7 @@ quartodoc:
         - AlignerGeometryProcessor
         - DieussaertGeometryProcessor
         - NetworkGeometryProcessor
+        - AnchorGeometryProcessor
         - SnapGeometryProcessor
         - TopologyProcessor
     - title: Prediction
