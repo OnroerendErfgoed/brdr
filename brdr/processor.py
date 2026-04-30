@@ -1837,11 +1837,11 @@ class NetworkGeometryProcessor(BaseProcessor):
         self,
         geom_to_process,
         reference,
-        reference_feature_records,
-        relevant_distance,
-        correction_distance,
-        close_output=False,
+        reference_feature_records=None,
         precomputed_ref_direction_index=None,
+        relevant_distance=1,
+        correction_distance=0.01,
+        close_output=False,
     ):
         geom_to_process_buffered = buffer_pos(geom_to_process, relevant_distance)
         reference_intersection_raw = safe_intersection(

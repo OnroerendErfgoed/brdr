@@ -1,0 +1,68 @@
+# Export Guide
+
+This guide summarizes the new export API for `AlignerResult` and `AlignerFeatureCollection`.
+
+## Unified export API
+
+Use one entry point:
+
+```python
+result.export(
+    aligner=aligner,
+    format="geojson",   # gdf | geojson | json | parquet | gpkg
+    path=None,          # required for file formats
+    profile="full",     # minimal | full | analysis
+    fields=None,        # optional whitelist
+    include_geometry=True,
+    include_metadata=True,
+)
+```
+
+For `AlignerFeatureCollection`:
+
+```python
+collection.export(
+    format="gpkg",
+    path="output/features.gpkg",
+    layer="features",
+    profile="full",
+)
+```
+
+## Shortcuts
+
+### `AlignerResult`
+
+```python
+gdf = result.to_gdf(aligner, profile="analysis")
+geojson = result.to_geojson(aligner, profile="full")
+result.to_geojson_file(aligner, "output/results.geojson")
+result.to_parquet(aligner, "output/results.parquet")
+result.to_gpkg(aligner, "output/results.gpkg", layer="aligned")
+```
+
+### `AlignerFeatureCollection`
+
+```python
+gdf = collection.to_gdf(profile="minimal")
+geojson = collection.to_geojson_dict(profile="full")
+collection.to_geojson_file("output/features.geojson")
+collection.to_parquet("output/features.parquet")
+collection.to_gpkg("output/features.gpkg", layer="features")
+```
+
+## Profiles
+
+- `minimal`: id + geometry (compact transport format)
+- `full`: all default output columns
+- `analysis`: currently equivalent to `full` for feature collections, and keeps analysis columns for result exports
+
+## Backward compatibility
+
+Existing methods continue to work:
+
+- `AlignerResult.get_results_as_geojson(...)`
+- `AlignerResult.get_results_as_geodataframe(...)`
+- `AlignerResult.save_results(...)`
+- `AlignerFeatureCollection.to_geojson(...)`
+- `AlignerFeatureCollection.to_geodataframe()`

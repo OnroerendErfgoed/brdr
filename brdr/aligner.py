@@ -3,6 +3,7 @@ import os
 import threading
 import time
 import uuid
+import json
 from collections import defaultdict
 from concurrent.futures import as_completed
 from concurrent.futures import ThreadPoolExecutor
@@ -16,6 +17,7 @@ from typing import TYPE_CHECKING
 from typing import Union
 
 import numpy as np
+import geopandas as gpd
 from shapely import make_valid, GeometryCollection
 from shapely import to_geojson
 from shapely.geometry.base import BaseGeometry
@@ -167,6 +169,8 @@ class AlignerResult:
             Structure: `{theme_id: {distance: result_object}}`.
         """
         self.results = process_results
+        self._geojson_cache: Dict[tuple, Dict[str, Any]] = {}
+        self._geodataframe_cache: Dict[tuple, Any] = {}
 
     def get_results(
         self,
@@ -318,6 +322,15 @@ class AlignerResult:
         """
         if not self.results:
             raise ValueError("Empty results: No calculated results to export.")
+        cache_key = (
+            id(aligner),
+            result_type.value,
+            bool(add_metadata),
+            bool(add_original_attributes),
+        )
+        cached = self._geojson_cache.get(cache_key)
+        if cached is not None:
+            return cached
 
         results = self.get_results(aligner=aligner, result_type=result_type)
         prop_dictionary = defaultdict(dict)
@@ -344,12 +357,14 @@ class AlignerResult:
                         METADATA_FIELD_NAME
                     ] = metadata_result
 
-        return get_geojsons_from_process_results(
+        output = get_geojsons_from_process_results(
             results,
             crs=aligner.crs,
             id_field=aligner.thematic_data.id_fieldname,
             series_prop_dict=prop_dictionary,
         )
+        self._geojson_cache[cache_key] = output
+        return output
 
     def get_results_as_geodataframe(
         self,
@@ -367,6 +382,15 @@ class AlignerResult:
         """
         if not self.results:
             raise ValueError("Empty results: No calculated results to export.")
+        cache_key = (
+            id(aligner),
+            result_type.value,
+            bool(add_metadata),
+            bool(add_original_attributes),
+        )
+        cached = self._geodataframe_cache.get(cache_key)
+        if cached is not None:
+            return cached.copy()
 
         results = self.get_results(aligner=aligner, result_type=result_type)
         prop_dictionary = defaultdict(dict)
@@ -393,12 +417,296 @@ class AlignerResult:
                         METADATA_FIELD_NAME
                     ] = metadata_result
 
-        return get_geodataframe_from_process_results(
+        output = get_geodataframe_from_process_results(
             results,
             crs=aligner.crs,
             id_field=aligner.thematic_data.id_fieldname,
             series_prop_dict=prop_dictionary,
             preferred_geometry_column="result",
+        )
+        self._geodataframe_cache[cache_key] = output
+        return output.copy()
+
+    @staticmethod
+    def _apply_profile_to_result_gdf(
+        gdf: "gpd.GeoDataFrame", id_fieldname: str, profile: str
+    ) -> "gpd.GeoDataFrame":
+        profile = (profile or "full").lower()
+        if profile == "full":
+            return gdf
+        if profile == "minimal":
+            keep = [
+                c
+                for c in [id_fieldname, "relevant_distance", "result", "geometry"]
+                if c in gdf.columns
+            ]
+            return gdf[keep].copy()
+        if profile == "analysis":
+            # Analysis keeps all computed output columns.
+            return gdf
+        raise ValueError(
+            f"Unknown profile '{profile}'. Expected one of: minimal, full, analysis."
+        )
+
+    def to_gdf(
+        self,
+        aligner: "Aligner",
+        *,
+        result_type: AlignerResultType = AlignerResultType.PROCESSRESULTS,
+        profile: str = "full",
+        fields: list[str] | None = None,
+        include_geometry: bool = True,
+        add_metadata: bool = False,
+        add_original_attributes: bool = False,
+    ) -> "gpd.GeoDataFrame":
+        """
+        Export processed results as a GeoDataFrame.
+
+        Parameters
+        ----------
+        aligner : Aligner
+            Aligner instance used to resolve thematic id field and CRS.
+        result_type : AlignerResultType, optional
+            Result subset to export.
+        profile : str, optional
+            Output profile: ``minimal``, ``full`` or ``analysis``.
+        fields : list[str], optional
+            Optional whitelist of columns to keep.
+        include_geometry : bool, optional
+            Whether to keep the active geometry column.
+        add_metadata : bool, optional
+            Include BRDR metadata columns when available.
+        add_original_attributes : bool, optional
+            Include original thematic properties.
+        """
+        gdf = self.get_results_as_geodataframe(
+            aligner=aligner,
+            result_type=result_type,
+            add_metadata=add_metadata,
+            add_original_attributes=add_original_attributes,
+        )
+        gdf = self._apply_profile_to_result_gdf(gdf, aligner.thematic_data.id_fieldname, profile)
+        if fields is not None:
+            wanted = set(fields) | {aligner.thematic_data.id_fieldname, "relevant_distance"}
+            if include_geometry:
+                if gdf.geometry.name in gdf.columns:
+                    wanted.add(gdf.geometry.name)
+                if "result" in gdf.columns:
+                    wanted.add("result")
+            keep = [c for c in gdf.columns if c in wanted]
+            gdf = gdf[keep].copy()
+        elif not include_geometry and gdf.geometry.name in gdf.columns:
+            gdf = gdf.drop(columns=[gdf.geometry.name])
+        return gdf
+
+    def to_geojson(
+        self,
+        aligner: "Aligner",
+        *,
+        result_type: AlignerResultType = AlignerResultType.PROCESSRESULTS,
+        profile: str = "full",
+        fields: list[str] | None = None,
+        include_geometry: bool = True,
+        include_metadata: bool = True,
+        add_original_attributes: bool = False,
+    ) -> dict[str, Any]:
+        """
+        Export processed results as GeoJSON (dictionary payload).
+        """
+        if profile == "full" and fields is None and include_geometry:
+            return self.get_results_as_geojson(
+                aligner=aligner,
+                result_type=result_type,
+                add_metadata=include_metadata,
+                add_original_attributes=add_original_attributes,
+            )
+        gdf = self.to_gdf(
+            aligner=aligner,
+            result_type=result_type,
+            profile=profile,
+            fields=fields,
+            include_geometry=include_geometry,
+            add_metadata=include_metadata,
+            add_original_attributes=add_original_attributes,
+        )
+        if include_geometry and gdf.geometry.name in gdf.columns:
+            return json.loads(gdf.to_json())
+        return {"type": "FeatureCollection", "features": gdf.to_dict(orient="records")}
+
+    def to_geojson_file(
+        self,
+        aligner: "Aligner",
+        path: str,
+        *,
+        result_type: AlignerResultType = AlignerResultType.PROCESSRESULTS,
+        profile: str = "full",
+        fields: list[str] | None = None,
+        include_geometry: bool = True,
+        include_metadata: bool = True,
+        add_original_attributes: bool = False,
+    ) -> dict:
+        """
+        Write processed results to a GeoJSON file.
+        """
+        payload = self.to_geojson(
+            aligner=aligner,
+            result_type=result_type,
+            profile=profile,
+            fields=fields,
+            include_geometry=include_geometry,
+            include_metadata=include_metadata,
+            add_original_attributes=add_original_attributes,
+        )
+        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+        with open(path, "w", encoding="utf-8") as fp:
+            json.dump(payload, fp, ensure_ascii=False)
+        return {"path": path, "format": "geojson"}
+
+    def to_parquet(
+        self,
+        aligner: "Aligner",
+        path: str,
+        *,
+        result_type: AlignerResultType = AlignerResultType.PROCESSRESULTS,
+        profile: str = "full",
+        fields: list[str] | None = None,
+        include_geometry: bool = True,
+        include_metadata: bool = True,
+        add_original_attributes: bool = False,
+    ) -> dict:
+        """
+        Write processed results to a Parquet file.
+        """
+        gdf = self.to_gdf(
+            aligner=aligner,
+            result_type=result_type,
+            profile=profile,
+            fields=fields,
+            include_geometry=include_geometry,
+            add_metadata=include_metadata,
+            add_original_attributes=add_original_attributes,
+        )
+        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+        gdf.to_parquet(path)
+        return {"path": path, "format": "parquet", "feature_count": len(gdf)}
+
+    def to_gpkg(
+        self,
+        aligner: "Aligner",
+        path: str,
+        *,
+        layer: str = "results",
+        result_type: AlignerResultType = AlignerResultType.PROCESSRESULTS,
+        profile: str = "full",
+        fields: list[str] | None = None,
+        include_geometry: bool = True,
+        include_metadata: bool = True,
+        add_original_attributes: bool = False,
+    ) -> dict:
+        """
+        Write processed results to a GeoPackage file.
+        """
+        gdf = self.to_gdf(
+            aligner=aligner,
+            result_type=result_type,
+            profile=profile,
+            fields=fields,
+            include_geometry=include_geometry,
+            add_metadata=include_metadata,
+            add_original_attributes=add_original_attributes,
+        )
+        geometry_col = getattr(getattr(gdf, "geometry", None), "name", None)
+        if geometry_col is None or geometry_col not in gdf.columns:
+            raise ValueError("GeoPackage export requires geometry.")
+        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+        gdf.to_file(path, layer=layer, driver="GPKG")
+        return {"path": path, "format": "gpkg", "feature_count": len(gdf), "layer": layer}
+
+    def export(
+        self,
+        aligner: "Aligner",
+        format: str,
+        path: str | None = None,
+        *,
+        layer: str | None = None,
+        result_type: AlignerResultType = AlignerResultType.PROCESSRESULTS,
+        profile: str = "full",
+        crs: str | int | None = None,
+        fields: list[str] | None = None,
+        include_geometry: bool = True,
+        include_metadata: bool = True,
+        add_original_attributes: bool = False,
+    ):
+        """
+        Unified export entry point for processed alignment results.
+
+        Supported formats: ``gdf``, ``geojson``, ``json``, ``parquet``, ``gpkg``.
+        """
+        fmt = (format or "").lower()
+        if fmt == "gdf":
+            gdf = self.to_gdf(
+                aligner=aligner,
+                result_type=result_type,
+                profile=profile,
+                fields=fields,
+                include_geometry=include_geometry,
+                add_metadata=include_metadata,
+                add_original_attributes=add_original_attributes,
+            )
+            if crs is not None and include_geometry and "geometry" in gdf.columns:
+                gdf = gdf.to_crs(crs)
+            return gdf
+        if fmt in {"geojson", "json"}:
+            if path:
+                return self.to_geojson_file(
+                    aligner=aligner,
+                    path=path,
+                    result_type=result_type,
+                    profile=profile,
+                    fields=fields,
+                    include_geometry=include_geometry,
+                    include_metadata=include_metadata,
+                    add_original_attributes=add_original_attributes,
+                )
+            payload = self.to_geojson(
+                aligner=aligner,
+                result_type=result_type,
+                profile=profile,
+                fields=fields,
+                include_geometry=include_geometry,
+                include_metadata=include_metadata,
+                add_original_attributes=add_original_attributes,
+            )
+            return payload
+        if fmt == "parquet":
+            if not path:
+                raise ValueError("Path is required for parquet export.")
+            return self.to_parquet(
+                aligner=aligner,
+                path=path,
+                result_type=result_type,
+                profile=profile,
+                fields=fields,
+                include_geometry=include_geometry,
+                include_metadata=include_metadata,
+                add_original_attributes=add_original_attributes,
+            )
+        if fmt == "gpkg":
+            if not path:
+                raise ValueError("Path is required for gpkg export.")
+            return self.to_gpkg(
+                aligner=aligner,
+                path=path,
+                layer=layer or "results",
+                result_type=result_type,
+                profile=profile,
+                fields=fields,
+                include_geometry=include_geometry,
+                include_metadata=include_metadata,
+                add_original_attributes=add_original_attributes,
+            )
+        raise ValueError(
+            f"Unknown export format '{format}'. Supported: gdf, geojson, json, parquet, gpkg."
         )
 
     def save_results(

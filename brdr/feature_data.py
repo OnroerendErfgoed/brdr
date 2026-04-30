@@ -1,5 +1,8 @@
 from typing import Any, Dict
+import json
+import os
 
+import geopandas as gpd
 import numpy as np
 from geojson import FeatureCollection
 from pyproj import CRS
@@ -148,6 +151,7 @@ class AlignerFeatureCollection:
         self._elements = None
         self._items = None
         self._reference_lookup = None
+        self._gdf_cache = None
 
     def __getitem__(self, key: InputId):
         return self.features[key]
@@ -328,3 +332,260 @@ class AlignerFeatureCollection:
             crs_geojson = {"type": "name", "properties": {"name": from_crs(self.crs)}}
         geojson = FeatureCollection(features, crs=crs_geojson)
         return geojson
+
+    @staticmethod
+    def _apply_profile_to_gdf(
+        gdf: "gpd.GeoDataFrame", id_fieldname: str, profile: str
+    ) -> "gpd.GeoDataFrame":
+        profile = (profile or "full").lower()
+        if profile == "full":
+            return gdf
+        if profile == "minimal":
+            keep = [c for c in [id_fieldname, "geometry"] if c in gdf.columns]
+            return gdf[keep].copy()
+        if profile == "analysis":
+            # For feature collections, "analysis" equals full by default.
+            return gdf
+        raise ValueError(
+            f"Unknown profile '{profile}'. Expected one of: minimal, full, analysis."
+        )
+
+    def to_geodataframe(self) -> "gpd.GeoDataFrame":
+        """
+        Convert this collection to a GeoDataFrame.
+
+        Returns
+        -------
+        gpd.GeoDataFrame
+            GeoDataFrame with identifier column and geometry.
+        """
+        if self._gdf_cache is not None:
+            return self._gdf_cache.copy()
+
+        rows = []
+        for key, feat in self.features.items():
+            row = dict(feat.properties or {})
+            row[self.id_fieldname] = key
+            row["data_id"] = feat.data_id
+            row["geometry"] = feat.geometry
+            row["brdr_id"] = feat.brdr_id
+            rows.append(row)
+
+        if len(rows) == 0:
+            gdf = gpd.GeoDataFrame(columns=[self.id_fieldname, "geometry"], crs=self.crs)
+        else:
+            gdf = gpd.GeoDataFrame(rows, geometry="geometry", crs=self.crs)
+        self._gdf_cache = gdf
+        return gdf.copy()
+
+    def to_gdf(
+        self,
+        *,
+        profile: str = "full",
+        fields: list[str] | None = None,
+        include_geometry: bool = True,
+    ) -> "gpd.GeoDataFrame":
+        """
+        Export the collection as a GeoDataFrame.
+
+        Parameters
+        ----------
+        profile : str, optional
+            Output profile: ``minimal``, ``full`` or ``analysis``.
+        fields : list[str], optional
+            Optional whitelist of columns to keep.
+        include_geometry : bool, optional
+            Whether to keep the geometry column.
+        """
+        gdf = self.to_geodataframe()
+        gdf = self._apply_profile_to_gdf(gdf, self.id_fieldname, profile)
+        if fields is not None:
+            wanted = set(fields) | {self.id_fieldname}
+            if include_geometry and "geometry" in gdf.columns:
+                wanted.add("geometry")
+            keep = [c for c in gdf.columns if c in wanted]
+            gdf = gdf[keep].copy()
+        elif not include_geometry and "geometry" in gdf.columns:
+            gdf = gdf.drop(columns=["geometry"])
+        return gdf
+
+    def to_geojson_dict(
+        self,
+        *,
+        profile: str = "full",
+        fields: list[str] | None = None,
+        include_geometry: bool = True,
+        geom_attributes: bool = False,
+    ) -> dict:
+        """
+        Export the collection as a GeoJSON-like dictionary.
+        """
+        if profile == "full" and fields is None and include_geometry:
+            return self.to_geojson(geom_attributes=geom_attributes)
+        gdf = self.to_gdf(
+            profile=profile,
+            fields=fields,
+            include_geometry=include_geometry,
+        )
+        if include_geometry and "geometry" in gdf.columns:
+            return json.loads(gdf.to_json())
+        rows = gdf.to_dict(orient="records")
+        return {"type": "FeatureCollection", "features": rows}
+
+    def to_geojson_file(
+        self,
+        path: str,
+        *,
+        profile: str = "full",
+        fields: list[str] | None = None,
+        include_geometry: bool = True,
+    ) -> dict:
+        """
+        Write the collection to a GeoJSON file.
+        """
+        data = self.to_geojson_dict(
+            profile=profile, fields=fields, include_geometry=include_geometry
+        )
+        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+        with open(path, "w", encoding="utf-8") as fp:
+            json.dump(data, fp, ensure_ascii=False)
+        return {"path": path, "format": "geojson", "feature_count": len(self.features)}
+
+    def to_parquet(
+        self,
+        path: str,
+        *,
+        profile: str = "full",
+        fields: list[str] | None = None,
+        include_geometry: bool = True,
+    ) -> dict:
+        """
+        Write the collection to a Parquet file.
+        """
+        gdf = self.to_gdf(
+            profile=profile, fields=fields, include_geometry=include_geometry
+        )
+        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+        gdf.to_parquet(path)
+        return {"path": path, "format": "parquet", "feature_count": len(gdf)}
+
+    def to_gpkg(
+        self,
+        path: str,
+        *,
+        layer: str = "results",
+        profile: str = "full",
+        fields: list[str] | None = None,
+        include_geometry: bool = True,
+    ) -> dict:
+        """
+        Write the collection to a GeoPackage file.
+        """
+        gdf = self.to_gdf(
+            profile=profile, fields=fields, include_geometry=include_geometry
+        )
+        geometry_col = getattr(getattr(gdf, "geometry", None), "name", None)
+        if geometry_col is None or geometry_col not in gdf.columns:
+            raise ValueError("GeoPackage export requires geometry.")
+        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+        gdf.to_file(path, layer=layer, driver="GPKG")
+        return {"path": path, "format": "gpkg", "feature_count": len(gdf), "layer": layer}
+
+    def export(
+        self,
+        format: str,
+        path: str | None = None,
+        *,
+        layer: str | None = None,
+        profile: str = "full",
+        fields: list[str] | None = None,
+        include_geometry: bool = True,
+        include_metadata: bool = True,
+    ):
+        """
+        Unified export entry point for feature collections.
+
+        Supported formats: ``gdf``, ``geojson``, ``json``, ``parquet``, ``gpkg``.
+        """
+        del include_metadata  # currently unused for feature collections
+        format_normalized = (format or "").lower()
+        if format_normalized == "gdf":
+            return self.to_gdf(
+                profile=profile, fields=fields, include_geometry=include_geometry
+            )
+        if format_normalized in {"geojson", "json"}:
+            if path:
+                return self.to_geojson_file(
+                    path,
+                    profile=profile,
+                    fields=fields,
+                    include_geometry=include_geometry,
+                )
+            return self.to_geojson_dict(
+                profile=profile, fields=fields, include_geometry=include_geometry
+            )
+        if format_normalized == "parquet":
+            if not path:
+                raise ValueError("Path is required for parquet export.")
+            return self.to_parquet(
+                path,
+                profile=profile,
+                fields=fields,
+                include_geometry=include_geometry,
+            )
+        if format_normalized == "gpkg":
+            if not path:
+                raise ValueError("Path is required for gpkg export.")
+            return self.to_gpkg(
+                path,
+                layer=layer or "results",
+                profile=profile,
+                fields=fields,
+                include_geometry=include_geometry,
+            )
+        raise ValueError(
+            f"Unknown export format '{format}'. Supported: gdf, geojson, json, parquet, gpkg."
+        )
+
+    @classmethod
+    def from_geodataframe(
+        cls,
+        gdf: "gpd.GeoDataFrame",
+        *,
+        id_fieldname: str,
+        is_reference: bool = False,
+        source: dict[str, str] | None = None,
+    ) -> "AlignerFeatureCollection":
+        """
+        Build an AlignerFeatureCollection from a GeoDataFrame.
+        """
+        if id_fieldname not in gdf.columns:
+            raise KeyError(f"Column '{id_fieldname}' not found in GeoDataFrame")
+        features = {}
+        geom_col = gdf.geometry.name
+        prop_cols = [
+            c
+            for c in gdf.columns
+            if c not in {id_fieldname, "data_id", geom_col, "brdr_id"}
+        ]
+        for _, row in gdf.iterrows():
+            data_id = row.get("data_id", None)
+            if data_id is None:
+                data_id = row[id_fieldname]
+            props = {c: row[c] for c in prop_cols}
+            brdr_id = row.get("brdr_id", None)
+            if brdr_id is None:
+                brdr_id = str(data_id)
+            features[data_id] = AlignerFeature(
+                data_id=data_id,
+                brdr_id=brdr_id,
+                geometry=row[geom_col],
+                properties=props,
+            )
+        return cls(
+            features=features,
+            source=source or {},
+            id_fieldname=id_fieldname,
+            crs=gdf.crs,
+            is_reference=is_reference,
+        )
