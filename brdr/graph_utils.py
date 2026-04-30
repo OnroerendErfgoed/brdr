@@ -1031,6 +1031,7 @@ def build_custom_network(
     reference_intersection,
     relevant_distance,
     reference_feature_records=None,
+    precomputed_ref_direction_index=None,
     gap_threshold=0.1,
     snap_dist=0.01,
     directed=False,
@@ -1043,12 +1044,14 @@ def build_custom_network(
     G = nx.DiGraph() if directed else nx.Graph()
     ref_direction_index = None
     if directed:
-        ref_direction_index = _build_reference_segment_index(
-            reference_feature_records=reference_feature_records,
-            oneway_field=oneway_field,
-            oneway_forward_values=oneway_forward_values,
-            oneway_reverse_values=oneway_reverse_values,
-        )
+        ref_direction_index = precomputed_ref_direction_index
+        if ref_direction_index is None:
+            ref_direction_index = _build_reference_segment_index(
+                reference_feature_records=reference_feature_records,
+                oneway_field=oneway_field,
+                oneway_forward_values=oneway_forward_values,
+                oneway_reverse_values=oneway_reverse_values,
+            )
 
     ref_multiline, ref_points = multilinestring_multipoint_from_reference_intersection(
         reference_intersection
