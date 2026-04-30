@@ -189,7 +189,7 @@ class TestExamples:
             key: feat.geometry for key, feat in aligner0.thematic_data.features.items()
         }
 
-        # gebruik de actuele adp-percelen adp= administratieve percelen
+        # use current ADP parcels (ADP = administrative parcels)
         config = ProcessorConfig()
         config.multi_as_single_modus = True
         processor = AlignerGeometryProcessor(config=config)

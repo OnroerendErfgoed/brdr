@@ -143,3 +143,89 @@ class AlignerPredictor(BasePredictor):
                 if PREDICTION_SCORE in process_result["properties"]:
                     process_result["properties"][PREDICTION_COUNT] = prediction_count
         return AlignerResult(process_results)
+
+
+class ConservativeAlignerPredictor(AlignerPredictor):
+    """
+    Conservative predictor that keeps only high-confidence stable predictions.
+
+    This strategy runs the default prediction logic first, then narrows the
+    predicted candidates per thematic feature to reduce ambiguity.
+    """
+
+    def __init__(
+        self,
+        feedback=None,
+        *,
+        min_prediction_score: float = 60.0,
+        score_tolerance_from_best: float = 5.0,
+        require_stable: bool = True,
+    ):
+        super().__init__(feedback=feedback)
+        self.min_prediction_score = float(min_prediction_score)
+        self.score_tolerance_from_best = float(score_tolerance_from_best)
+        self.require_stable = bool(require_stable)
+
+    def predict(
+        self,
+        *,
+        aligner: "Aligner",
+        relevant_distances: Optional[Union[List[float], np.ndarray]] = None,
+        thematic_ids: Optional[List[InputId]] = None,
+        diff_metric: Optional[DiffMetric] = None,
+    ) -> "AlignerResult":
+        result = super().predict(
+            aligner=aligner,
+            relevant_distances=relevant_distances,
+            thematic_ids=thematic_ids,
+            diff_metric=diff_metric,
+        )
+        process_results = result.results
+
+        for theme_id, rd_results in process_results.items():
+            candidates: list[tuple[float, dict, float]] = []
+            for rd, process_result in rd_results.items():
+                if not process_result:
+                    continue
+                props = process_result.get("properties", {})
+                if PREDICTION_SCORE not in props:
+                    continue
+                if self.require_stable and not props.get(STABILITY, False):
+                    continue
+                score = float(props.get(PREDICTION_SCORE, -1))
+                candidates.append((rd, process_result, score))
+
+            if not candidates:
+                for process_result in rd_results.values():
+                    if not process_result:
+                        continue
+                    props = process_result.get("properties", {})
+                    props.pop(PREDICTION_SCORE, None)
+                    props.pop(PREDICTION_COUNT, None)
+                continue
+
+            best_score = max(score for _, _, score in candidates)
+            score_cutoff = max(
+                self.min_prediction_score, best_score - self.score_tolerance_from_best
+            )
+            kept_rds = {
+                rd
+                for rd, _, score in candidates
+                if score >= score_cutoff and score >= self.min_prediction_score
+            }
+            if not kept_rds:
+                # Fallback: keep the single best candidate.
+                best_rd = max(candidates, key=lambda item: item[2])[0]
+                kept_rds = {best_rd}
+
+            for rd, process_result in rd_results.items():
+                if not process_result:
+                    continue
+                props = process_result.get("properties", {})
+                if rd in kept_rds and PREDICTION_SCORE in props:
+                    props[PREDICTION_COUNT] = len(kept_rds)
+                else:
+                    props.pop(PREDICTION_SCORE, None)
+                    props.pop(PREDICTION_COUNT, None)
+
+        return result

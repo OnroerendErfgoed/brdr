@@ -49,3 +49,15 @@ if __name__ == "__main__":
     print(
         "removed area: " + process_result[id][relevant_distance]["result_diff_min"].wkt
     )
+
+    # Example: keep only a small subset of OSM attributes, but still include
+    # directional tags useful for directed network processing.
+    road_tags = {"highway": True}
+    loader_lite = OSMLoader(
+        osm_tags=road_tags,
+        aligner=aligner,
+        included_attributes=("osm_id", "element", "highway", "name"),
+        include_directional_attributes=True,
+    )
+    aligner.load_reference_data(loader_lite)
+    print("Loaded OSM roads with filtered attributes + directional tags.")

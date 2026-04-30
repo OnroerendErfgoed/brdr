@@ -230,7 +230,7 @@ def get_false_positive_grb_parcels_dataframe(
                 # print (brdr_parcel_count)
 
             fp_parcels = parcel_buffer_counts[1]
-            # En welke zijn dit dan? Deze mee oplijsten
+            # Which ones are these? Include them in the listing as well
             if not (score is None or score == -1):
                 # vip-buffer minus brdr
                 fp_parcels = list(

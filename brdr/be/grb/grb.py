@@ -158,7 +158,8 @@ def update_featurecollection_to_actual_grb(
             )
             last_version_date = None
 
-    # als lastversiondate nog altijd 'now' is dan is er eigenlijk geen versiedate aanwezig in de data, en dan zetten we alle features op affected
+    # If last_version_date is still 'now', no version date is present in the data,
+    # so mark all features as affected.
     if last_version_date is not None:
         datetime_start = last_version_date
         datetime_end = datetime.now().date()

@@ -1,5 +1,6 @@
 from abc import ABC
 from abc import abstractmethod
+from dataclasses import replace
 import time
 from typing import List, Any
 
@@ -1618,6 +1619,7 @@ class NetworkGeometryProcessor(BaseProcessor):
         self.check_area_limit(input_geometry)
         input_geometry = to_multi(input_geometry)
         reference_elements_candidates = kwargs.get("reference_elements_candidates")
+        reference_candidates = kwargs.get("reference_candidates")
 
         # Determine the search area for relevant network elements
         input_geometry_buffered = buffer_pos(
@@ -1631,6 +1633,29 @@ class NetworkGeometryProcessor(BaseProcessor):
             if reference_elements_candidates is not None
             else reference_data.elements
         )
+        if reference_candidates is None:
+            reference_candidate_ids = reference_data.items.take(
+                reference_data.tree.query(input_geometry_buffered)
+            ).tolist()
+        else:
+            reference_candidate_ids = reference_candidates
+        reference_feature_records = []
+        for key_ref in reference_candidate_ids:
+            feat = reference_data.features.get(key_ref)
+            if feat is None:
+                continue
+            feat_geom = feat.geometry
+            if feat_geom is None or feat_geom.is_empty:
+                continue
+            if not feat_geom.intersects(input_geometry_buffered):
+                continue
+            reference_feature_records.append(
+                {
+                    "id": key_ref,
+                    "geometry": feat_geom,
+                    "properties": feat.properties or {},
+                }
+            )
         t_query = time.perf_counter()
         reference = safe_unary_union(
             safe_intersection(base_reference_elements, input_geometry_buffered)
@@ -1688,6 +1713,7 @@ class NetworkGeometryProcessor(BaseProcessor):
                 exterior_processed = self._process_by_network(
                     exterior,
                     reference,
+                    reference_feature_records,
                     relevant_distance,
                     correction_distance=correction_distance,
                     close_output=True,
@@ -1700,6 +1726,7 @@ class NetworkGeometryProcessor(BaseProcessor):
                     i_processed = self._process_by_network(
                         i,
                         reference,
+                        reference_feature_records,
                         relevant_distance,
                         correction_distance=correction_distance,
                         close_output=True,
@@ -1715,6 +1742,7 @@ class NetworkGeometryProcessor(BaseProcessor):
                 geom_processed = self._process_by_network(
                     geom,
                     reference,
+                    reference_feature_records,
                     relevant_distance,
                     correction_distance=correction_distance,
                     close_output=False,
@@ -1761,6 +1789,7 @@ class NetworkGeometryProcessor(BaseProcessor):
         self,
         geom_to_process,
         reference,
+        reference_feature_records,
         relevant_distance,
         correction_distance,
         close_output=False,
@@ -1803,6 +1832,7 @@ class NetworkGeometryProcessor(BaseProcessor):
             geom_processed = self._get_processed_network_path(
                 input_geometry=geom_to_process,
                 reference=reference,
+                reference_feature_records=reference_feature_records,
                 reference_intersection=reference_intersection,
                 thematic_difference=thematic_difference,
                 relevant_distance=relevant_distance,
@@ -1825,6 +1855,7 @@ class NetworkGeometryProcessor(BaseProcessor):
         self,
         input_geometry,
         reference,
+        reference_feature_records,
         reference_intersection,
         thematic_difference,
         relevant_distance,
@@ -1834,10 +1865,17 @@ class NetworkGeometryProcessor(BaseProcessor):
             input_geometry=input_geometry,
             theme_multiline=thematic_difference,
             reference=reference,
+            reference_feature_records=reference_feature_records,
             reference_intersection=reference_intersection,
             relevant_distance=relevant_distance,
             gap_threshold=0.1,
             snap_dist=correction_distance,
+            directed=self.config.network_use_directed_graph,
+            oneway_field=self.config.network_oneway_field,
+            oneway_forward_values=self.config.network_oneway_forward_values,
+            oneway_reverse_values=self.config.network_oneway_reverse_values,
+            allow_connector_edges_when_directed=self.config.network_allow_connector_edges_when_directed,
+            directed_connector_penalty_factor=self.config.network_directed_connector_penalty_factor,
         )
         return find_best_path_in_network(
             input_geometry,
@@ -1846,6 +1884,22 @@ class NetworkGeometryProcessor(BaseProcessor):
             tolerance=relevant_distance,
             angle_threshold_degrees=self.config.angle_threshold_degrees,
         )
+
+
+class DirectedNetworkGeometryProcessor(NetworkGeometryProcessor):
+    """
+    Thin wrapper around NetworkGeometryProcessor with directed-graph mode enabled.
+
+    This subclass keeps all routing and processing logic identical to
+    `NetworkGeometryProcessor`, but forces `network_use_directed_graph=True`
+    in its local config copy.
+    """
+
+    processor_id = ProcessorID.NETWORK
+
+    def __init__(self, config: ProcessorConfig, feedback: Any = None):
+        directed_config = replace(config, network_use_directed_graph=True)
+        super().__init__(config=directed_config, feedback=feedback)
 
 
 class AlignerGeometryProcessor(BaseProcessor):

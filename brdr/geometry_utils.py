@@ -1467,7 +1467,7 @@ def to_multi(geometry, geomtype=None):
             or isinstance(geometry, MultiLineString)
             or isinstance(geometry, MultiPolygon)
         ):
-            return geometry  # Het is al een multi-variant
+            return geometry  # Already a multi-variant
         elif isinstance(geometry, GeometryCollection):
             multi_geoms = []
             for geom in geometry.geoms:
