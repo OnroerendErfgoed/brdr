@@ -1,4 +1,4 @@
-import logging
+﻿import logging
 from itertools import combinations
 from math import inf
 
@@ -28,8 +28,182 @@ from brdr.geometry_utils import (
 )
 
 
+def _is_directed_graph(G):
+    return hasattr(G, "is_directed") and G.is_directed()
+
+
+def _has_edge_any_direction(G, u, v):
+    return G.has_edge(u, v) or (_is_directed_graph(G) and G.has_edge(v, u))
+
+
+def _add_edge_auto(G, u, v, bidirectional_for_directed=True, **attrs):
+    G.add_edge(u, v, **attrs)
+    if _is_directed_graph(G) and bidirectional_for_directed and u != v:
+        reverse_attrs = attrs.copy()
+        geom = reverse_attrs.get("geometry")
+        if isinstance(geom, LineString):
+            reverse_attrs["geometry"] = LineString(list(geom.coords)[::-1])
+        G.add_edge(v, u, **reverse_attrs)
+
+
+def _remove_edge_auto(G, u, v):
+    if G.has_edge(u, v):
+        G.remove_edge(u, v)
+    if _is_directed_graph(G) and G.has_edge(v, u):
+        G.remove_edge(v, u)
+
+
+def _iter_line_geometries(geometry):
+    if geometry is None or geometry.is_empty:
+        return
+    if isinstance(geometry, LineString):
+        yield geometry
+    elif isinstance(geometry, MultiLineString):
+        for line in geometry.geoms:
+            yield line
+    elif isinstance(geometry, Polygon):
+        yield LineString(geometry.exterior.coords)
+        for ring in geometry.interiors:
+            yield LineString(ring.coords)
+    elif isinstance(geometry, MultiPolygon):
+        for poly in geometry.geoms:
+            yield LineString(poly.exterior.coords)
+            for ring in poly.interiors:
+                yield LineString(ring.coords)
+    elif isinstance(geometry, GeometryCollection):
+        for geom in geometry.geoms:
+            yield from _iter_line_geometries(geom)
+
+
+def _normalize_oneway_value(value):
+    if value is None:
+        return ""
+    if isinstance(value, bool):
+        return "yes" if value else "no"
+    return str(value).strip().lower()
+
+
+def _classify_oneway(properties, oneway_field, oneway_forward_values, oneway_reverse_values):
+    value = _normalize_oneway_value((properties or {}).get(oneway_field))
+    if value in {v.lower() for v in oneway_forward_values}:
+        return "forward"
+    if value in {v.lower() for v in oneway_reverse_values}:
+        return "reverse"
+    return "both"
+
+
+def _build_reference_segment_index(
+    reference_feature_records,
+    oneway_field,
+    oneway_forward_values,
+    oneway_reverse_values,
+):
+    segment_geoms = []
+    segment_meta = []
+    for record in reference_feature_records or []:
+        geometry = record.get("geometry")
+        properties = record.get("properties") or {}
+        oneway_mode = _classify_oneway(
+            properties,
+            oneway_field,
+            oneway_forward_values,
+            oneway_reverse_values,
+        )
+        for line in _iter_line_geometries(geometry):
+            coords = list(line.coords)
+            for i in range(len(coords) - 1):
+                a = coords[i]
+                b = coords[i + 1]
+                seg = LineString([a, b])
+                if seg.length <= 0:
+                    continue
+                segment_geoms.append(seg)
+                segment_meta.append({"a": a, "b": b, "oneway_mode": oneway_mode})
+    if not segment_geoms:
+        return None
+    return STRtree(segment_geoms), segment_meta
+
+
+def _ref_edge_direction_from_index(u, v, direction_index):
+    if direction_index is None:
+        return "both"
+    tree, meta = direction_index
+    midpoint = LineString([u, v]).interpolate(0.5, normalized=True)
+    idx = tree.nearest(midpoint)
+    if idx is None:
+        return "both"
+    matched = meta[int(idx)]
+    mode = matched["oneway_mode"]
+    if mode == "both":
+        return "both"
+    source_vec = np.array(
+        [matched["b"][0] - matched["a"][0], matched["b"][1] - matched["a"][1]],
+        dtype=float,
+    )
+    target_vec = np.array([v[0] - u[0], v[1] - u[1]], dtype=float)
+    if np.linalg.norm(source_vec) == 0 or np.linalg.norm(target_vec) == 0:
+        return "both"
+    same_dir = float(np.dot(source_vec, target_vec)) >= 0.0
+    if mode == "forward":
+        return "uv" if same_dir else "vu"
+    if mode == "reverse":
+        return "vu" if same_dir else "uv"
+    return "both"
+
+
+def _add_reference_edge(G, u, v, direction_index=None, **attrs):
+    if not _is_directed_graph(G):
+        G.add_edge(u, v, **attrs)
+        return
+    direction = _ref_edge_direction_from_index(u, v, direction_index)
+    if direction == "uv":
+        _add_edge_auto(G, u, v, bidirectional_for_directed=False, **attrs)
+    elif direction == "vu":
+        _add_edge_auto(G, v, u, bidirectional_for_directed=False, **attrs)
+    else:
+        _add_edge_auto(G, u, v, bidirectional_for_directed=True, **attrs)
+
+
+def _apply_directed_connector_penalty(G, penalty_factor):
+    if not _is_directed_graph(G) or penalty_factor <= 1:
+        return
+    connector_tags = {
+        "gap_closure",
+        "interconnect_lines",
+        "component_interconnect",
+        "connect_unconnected",
+        "connection_pseudo_ref_vertex_removed",
+        "connection_pseudo_theme_vertex_removed",
+    }
+    for _, _, data in G.edges(data=True):
+        if data.get("tag") in connector_tags and "length" in data:
+            try:
+                data["length"] = float(data["length"]) * float(penalty_factor)
+            except (TypeError, ValueError):
+                continue
+
+
+def _strip_theme_edges_for_directed_routing(G):
+    if not _is_directed_graph(G):
+        return G
+    removable_tags = {"theme_lines", "connection_pseudo_theme_vertex_removed"}
+    edges_to_remove = [
+        (u, v)
+        for u, v, d in G.edges(data=True)
+        if d.get("tag") in removable_tags
+    ]
+    if edges_to_remove:
+        G.remove_edges_from(edges_to_remove)
+    return G
+
+
 def _is_angle_graph_node(graph, node_id, angle_threshold_degrees=150.0):
-    neighbors = list(graph.neighbors(node_id))
+    if _is_directed_graph(graph):
+        neighbors = list(
+            set(graph.predecessors(node_id)).union(set(graph.successors(node_id)))
+        )
+    else:
+        neighbors = list(graph.neighbors(node_id))
     if len(neighbors) < 2:
         return False
     center = np.array([float(node_id[0]), float(node_id[1])], dtype=float)
@@ -127,12 +301,62 @@ def get_thematic_points(input_geometry, reference_intersection):
 
 def _add_pseudonode(G: Graph, p2, u, v, tag_point, tag_line):
     p_coord = p2.coords[0]
-    G.remove_edge(u, v)
+    has_uv = G.has_edge(u, v)
+    has_vu = _is_directed_graph(G) and G.has_edge(v, u)
+    _remove_edge_auto(G, u, v)
     G.add_node(p_coord, tag=tag_point)
-    geom = LineString([u, p_coord])
-    G.add_edge(u, p_coord, tag=tag_line, geometry=geom, length=geom.length)
-    geom = LineString([p_coord, v])
-    G.add_edge(p_coord, v, tag=tag_line, geometry=geom, length=geom.length)
+    if not _is_directed_graph(G):
+        geom = LineString([u, p_coord])
+        _add_edge_auto(
+            G, u, p_coord, tag=tag_line, geometry=geom, length=geom.length
+        )
+        geom = LineString([p_coord, v])
+        _add_edge_auto(
+            G, p_coord, v, tag=tag_line, geometry=geom, length=geom.length
+        )
+        return
+    if has_uv:
+        geom = LineString([u, p_coord])
+        _add_edge_auto(
+            G,
+            u,
+            p_coord,
+            bidirectional_for_directed=False,
+            tag=tag_line,
+            geometry=geom,
+            length=geom.length,
+        )
+        geom = LineString([p_coord, v])
+        _add_edge_auto(
+            G,
+            p_coord,
+            v,
+            bidirectional_for_directed=False,
+            tag=tag_line,
+            geometry=geom,
+            length=geom.length,
+        )
+    if has_vu:
+        geom = LineString([v, p_coord])
+        _add_edge_auto(
+            G,
+            v,
+            p_coord,
+            bidirectional_for_directed=False,
+            tag=tag_line,
+            geometry=geom,
+            length=geom.length,
+        )
+        geom = LineString([p_coord, u])
+        _add_edge_auto(
+            G,
+            p_coord,
+            u,
+            bidirectional_for_directed=False,
+            tag=tag_line,
+            geometry=geom,
+            length=geom.length,
+        )
 
 
 def find_closest_in_subset(target_point, edge_list):
@@ -202,20 +426,25 @@ def add_pseudonodes_to_ref_line(
 
 
 def remove_pseudonodes(G, tag, target_degrees=[2]):
+    degree_graph = G.to_undirected() if _is_directed_graph(G) else G
     nodes_to_remove = [
         n
         for n, d in G.nodes(data=True)
-        if d.get("tag") == tag and G.degree(n) in target_degrees
+        if d.get("tag") == tag and degree_graph.degree(n) in target_degrees
     ]
 
     for node in nodes_to_remove:
-        neighbors = list(G.neighbors(node))
+        if _is_directed_graph(G):
+            neighbors = sorted(set(G.predecessors(node)).union(set(G.successors(node))))
+        else:
+            neighbors = list(G.neighbors(node))
         for u, v in combinations(neighbors, 2):
-            if not G.has_edge(u, v):
+            if not _has_edge_any_direction(G, u, v):
                 pos_u = Point(u)
                 pos_v = Point(v)
                 new_line = LineString([pos_u, pos_v])
-                G.add_edge(
+                _add_edge_auto(
+                    G,
                     u,
                     v,
                     tag="connection_" + tag + "_removed",
@@ -235,6 +464,7 @@ def _multilinestring_to_edges(
     pseudonode_tag,
     end_coords=None,
     endnode_tag=None,
+    ref_direction_index=None,
 ):
     multilinestring = to_multi(multilinestring)
     if not isinstance(multilinestring, MultiLineString):
@@ -251,7 +481,18 @@ def _multilinestring_to_edges(
             v = coords[i + 1]
             geom = LineString([u, v])
 
-            G.add_edge(u, v, tag=edge_tag, geometry=geom, length=geom.length)
+            if edge_tag == "ref_lines":
+                _add_reference_edge(
+                    G,
+                    u,
+                    v,
+                    direction_index=ref_direction_index,
+                    tag=edge_tag,
+                    geometry=geom,
+                    length=geom.length,
+                )
+            else:
+                _add_edge_auto(G, u, v, tag=edge_tag, geometry=geom, length=geom.length)
             if not u in pseudo_coords:
                 G.nodes[u]["tag"] = node_tag
             else:
@@ -280,7 +521,8 @@ def connect_network_gaps(G, snap_dist=0.001, gap_dist=0.1, merge_nodes=False):
     all_points = [Point(n) for n in all_nodes]
     global_tree = STRtree(all_points)
     nodes_to_relabel = {}
-    endpoints = [n for n, deg in G.degree() if deg <= 1]
+    degree_graph = G.to_undirected() if _is_directed_graph(G) else G
+    endpoints = [n for n, deg in degree_graph.degree() if deg <= 1]
 
     for ep in endpoints:
         ep_pt = Point(ep)
@@ -297,9 +539,10 @@ def connect_network_gaps(G, snap_dist=0.001, gap_dist=0.1, merge_nodes=False):
                 nodes_to_relabel[ep] = candidate
                 break
             else:
-                if ep != candidate and not G.has_edge(ep, candidate):
+                if ep != candidate and not _has_edge_any_direction(G, ep, candidate):
                     geom = LineString([ep, candidate])
-                    G.add_edge(
+                    _add_edge_auto(
+                        G,
                         ep,
                         candidate,
                         tag="gap_closure",
@@ -324,7 +567,8 @@ def connect_theme_and_reference(G, gap_dist=0.1, interconnect_dist=1.5):
     if not theme_edges:
         return G
     theme_sub = G.edge_subgraph(theme_edges)
-    theme_endpoints = [n for n, deg in theme_sub.degree() if deg == 1]
+    degree_graph = theme_sub.to_undirected() if _is_directed_graph(theme_sub) else theme_sub
+    theme_endpoints = [n for n, deg in degree_graph.degree() if deg == 1]
     if not theme_endpoints:
         return G
     ref_node_ids = {
@@ -352,9 +596,10 @@ def connect_theme_and_reference(G, gap_dist=0.1, interconnect_dist=1.5):
         target_coord = nodes[n_idx]
         dist = tep_pt.distance(all_pts[n_idx])
         if tep != target_coord and gap_dist < dist <= interconnect_dist:
-            if not G.has_edge(tep, target_coord):
+            if not _has_edge_any_direction(G, tep, target_coord):
                 geom = LineString([tep, target_coord])
-                G.add_edge(
+                _add_edge_auto(
+                    G,
                     tep,
                     target_coord,
                     tag="interconnect_lines",
@@ -367,7 +612,10 @@ def connect_theme_and_reference(G, gap_dist=0.1, interconnect_dist=1.5):
 def connect_network_components(
     G, interconnect_dist=2.0, edge_tags=["theme_lines", "ref_lines"]
 ):
-    components = list(nx.connected_components(G))
+    if _is_directed_graph(G):
+        components = list(nx.weakly_connected_components(G))
+    else:
+        components = list(nx.connected_components(G))
     if len(components) <= 1:
         return G
 
@@ -416,9 +664,10 @@ def connect_network_components(
 
         if best_connection:
             u, v = best_connection
-            if not G.has_edge(u, v):
+            if not _has_edge_any_direction(G, u, v):
                 geom = LineString([u, v])
-                G.add_edge(
+                _add_edge_auto(
+                    G,
                     u,
                     v,
                     tag="component_interconnect",
@@ -432,7 +681,8 @@ def connect_network_components(
 
 
 def connect_unconnected_greedy(G, max_spatial_dist=50, detour_ratio=3.0):
-    dead_ends = [n for n, d in G.degree() if d == 1]
+    degree_graph = G.to_undirected() if _is_directed_graph(G) else G
+    dead_ends = [n for n, d in degree_graph.degree() if d == 1]
     target_edges = []
     for u, v, data in G.edges(data=True):
         if "geometry" in data:
@@ -473,16 +723,21 @@ def connect_unconnected_greedy(G, max_spatial_dist=50, detour_ratio=3.0):
         if current_network_dist / spatial_dist > detour_ratio:
             pseudo_node_id = proj_p.coords[0]
             G.add_node(pseudo_node_id, tag="pseudo_connect_vertex")
-            if G.has_edge(u, v):
-                G.remove_edge(u, v)
+            if _has_edge_any_direction(G, u, v):
+                _remove_edge_auto(G, u, v)
                 line_up = LineString([u, pseudo_node_id])
-                G.add_edge(u, pseudo_node_id, geometry=line_up, length=line_up.length)
+                _add_edge_auto(
+                    G, u, pseudo_node_id, geometry=line_up, length=line_up.length
+                )
                 line_pv = LineString([pseudo_node_id, v])
-                G.add_edge(pseudo_node_id, v, geometry=line_pv, length=line_pv.length)
+                _add_edge_auto(
+                    G, pseudo_node_id, v, geometry=line_pv, length=line_pv.length
+                )
             else:
                 continue
             line_connect = LineString([dead_end_node, pseudo_node_id])
-            G.add_edge(
+            _add_edge_auto(
+                G,
                 dead_end_node,
                 pseudo_node_id,
                 geometry=line_connect,
@@ -525,9 +780,10 @@ def connect_ref_points_to_nearest(G, ref_points, k_neighbors=2):
             nearest_idx = nearest_idx[np.argsort(d2[nearest_idx])]
             for j in nearest_idx:
                 v = ref_nodes[int(j)]
-                if not G.has_edge(u, v):
+                if not _has_edge_any_direction(G, u, v):
                     geom = LineString([Point(u), Point(v)])
-                    G.add_edge(
+                    _add_edge_auto(
+                        G,
                         u,
                         v,
                         tag="ref_points_connection",
@@ -543,9 +799,10 @@ def connect_ref_points_to_nearest(G, ref_points, k_neighbors=2):
             nearest_idx = nearest_idx[np.argsort(d2[nearest_idx])]
             for j in nearest_idx:
                 v = ref_nodes[int(j)]
-                if not G.has_edge(u, v):
+                if not _has_edge_any_direction(G, u, v):
                     geom = LineString([Point(u), Point(v)])
-                    G.add_edge(
+                    _add_edge_auto(
+                        G,
                         u,
                         v,
                         tag="ref_points_connection",
@@ -590,7 +847,7 @@ def _perform_reconstruction(G, old_edge_geoms, tolerance):
     new_segments = (
         noded_output.geoms if hasattr(noded_output, "geoms") else [noded_output]
     )
-    new_G = nx.Graph()
+    new_G = nx.DiGraph() if _is_directed_graph(G) else nx.Graph()
 
     for seg in new_segments:
         segment_node_ids = []
@@ -616,7 +873,13 @@ def _perform_reconstruction(G, old_edge_geoms, tolerance):
             new_edge_data = old_edges_list[edge_idx].copy()
             new_edge_data["geometry"] = seg
             new_edge_data["length"] = seg.length
-            new_G.add_edge(segment_node_ids[0], segment_node_ids[1], **new_edge_data)
+            _add_edge_auto(
+                new_G,
+                segment_node_ids[0],
+                segment_node_ids[1],
+                bidirectional_for_directed=False,
+                **new_edge_data,
+            )
     return new_G
 
 
@@ -739,16 +1002,56 @@ def _select_network_node_by_snap_strategy(
     return nearest_node(point, node_list)
 
 
+def _candidate_rank_for_snap_strategy(
+    point,
+    graph,
+    node,
+    snap_strategy=SnapStrategy.NO_PREFERENCE,
+    angle_threshold_degrees=150.0,
+    endnode_tag="is_reference_line_end",
+):
+    dist = float(Point(node).distance(point))
+    is_real = not _is_pseudo_graph_node(graph, node)
+    if snap_strategy == SnapStrategy.PREFER_ENDS_AND_ANGLES:
+        is_end = bool(graph.nodes[node].get(endnode_tag, False))
+        is_angle = _is_angle_graph_node(graph, node, angle_threshold_degrees)
+        # Lower tuple is better.
+        return (0 if is_end else 1 if is_angle else 2, 0 if is_real else 1, dist)
+    if snap_strategy == SnapStrategy.ONLY_VERTICES:
+        return (0 if is_real else 1, dist)
+    if snap_strategy == SnapStrategy.PREFER_VERTICES:
+        return (0 if is_real else 1, dist)
+    return (0, 0 if is_real else 1, dist)
+
+
 def build_custom_network(
     input_geometry,
     theme_multiline,
     reference,
     reference_intersection,
     relevant_distance,
+    reference_feature_records=None,
+    precomputed_ref_direction_index=None,
     gap_threshold=0.1,
     snap_dist=0.01,
+    directed=False,
+    oneway_field="oneway",
+    oneway_forward_values=("yes", "1", "true", "forward"),
+    oneway_reverse_values=("-1", "reverse", "backward"),
+    allow_connector_edges_when_directed=True,
+    directed_connector_penalty_factor=10.0,
 ):
-    G = nx.Graph()
+    G = nx.DiGraph() if directed else nx.Graph()
+    ref_direction_index = None
+    if directed:
+        ref_direction_index = precomputed_ref_direction_index
+        if ref_direction_index is None:
+            ref_direction_index = _build_reference_segment_index(
+                reference_feature_records=reference_feature_records,
+                oneway_field=oneway_field,
+                oneway_forward_values=oneway_forward_values,
+                oneway_reverse_values=oneway_reverse_values,
+            )
 
     ref_multiline, ref_points = multilinestring_multipoint_from_reference_intersection(
         reference_intersection
@@ -777,6 +1080,7 @@ def build_custom_network(
         edge_tag="ref_lines",
         end_coords=ref_end_coords,
         endnode_tag=ref_endnode_tag,
+        ref_direction_index=ref_direction_index,
     )
 
     G = add_pseudonodes_to_ref_line(
@@ -791,24 +1095,25 @@ def build_custom_network(
 
     connect_ref_points_to_nearest(G, ref_points, 2)
 
-    G = connect_network_gaps(
-        G=G,
-        gap_dist=gap_threshold,
-        snap_dist=snap_dist,
-        merge_nodes=False,
-    )
+    if (not directed) or allow_connector_edges_when_directed:
+        G = connect_network_gaps(
+            G=G,
+            gap_dist=gap_threshold,
+            snap_dist=snap_dist,
+            merge_nodes=False,
+        )
 
-    G = connect_theme_and_reference(
-        G=G,
-        gap_dist=gap_threshold,
-        interconnect_dist=2 * relevant_distance,
-    )
+        G = connect_theme_and_reference(
+            G=G,
+            gap_dist=gap_threshold,
+            interconnect_dist=2 * relevant_distance,
+        )
 
-    G = connect_network_components(
-        G,
-        interconnect_dist=5 * relevant_distance,
-        edge_tags=["ref_lines", "ref_points_connection"],
-    )
+        G = connect_network_components(
+            G,
+            interconnect_dist=5 * relevant_distance,
+            edge_tags=["ref_lines", "ref_points_connection"],
+        )
     remove_pseudonodes(G, tag="pseudo_ref_vertex", target_degrees=[1])
     remove_pseudonodes(G, tag="pseudo_theme_vertex", target_degrees=[2])
     max_unconnected_distance = 50
@@ -816,23 +1121,48 @@ def build_custom_network(
     if unconnected_distance > max_unconnected_distance:
         unconnected_distance = max_unconnected_distance
     unconnected_distance = 50
-    G = connect_unconnected_greedy(
-        G, max_spatial_dist=unconnected_distance, detour_ratio=5
-    )
+    if (not directed) or allow_connector_edges_when_directed:
+        G = connect_unconnected_greedy(
+            G, max_spatial_dist=unconnected_distance, detour_ratio=5
+        )
     remove_pseudonodes(G, tag="pseudo_theme_vertex", target_degrees=[1, 2])
+    if directed:
+        G = _strip_theme_edges_for_directed_routing(G)
     G = reconstruct_graph_for_intersections(G)
+    _apply_directed_connector_penalty(
+        G, directed_connector_penalty_factor if directed else 1.0
+    )
     return G
-
-
 def find_best_circle_path(graph, geom_to_process, max_total_combis=1000):
-    min_dist = inf
-    best_cycle_line = None
+    """
+    Find the best closed ring from polygonized graph edges.
+
+    When multiple polygons are present, select polygons that overlap
+    geom_to_process by more than 50% of their own area and union them.
+    """
+
+    def _symdiff_score(poly):
+        if not isinstance(poly, Polygon):
+            return inf
+        return poly.symmetric_difference(geom_to_process).area
+
+    def _best_exterior_from_geom(geom):
+        if isinstance(geom, Polygon):
+            return geom.exterior
+        if isinstance(geom, (MultiPolygon, GeometryCollection)):
+            polygons = [g for g in geom.geoms if isinstance(g, Polygon)]
+            if not polygons:
+                return None
+            return min(polygons, key=_symdiff_score).exterior
+        return None
+
     edges = [data["geometry"] for u, v, data in graph.edges(data=True)]
     polygonized = polygonize(edges)
     if isinstance(polygonized, GeometryCollection):
         individual_polygons = list(polygonized.geoms)
     else:
         individual_polygons = list(polygonized)
+    individual_polygons = [p for p in individual_polygons if isinstance(p, Polygon)]
 
     if not individual_polygons:
         return None
@@ -840,33 +1170,21 @@ def find_best_circle_path(graph, geom_to_process, max_total_combis=1000):
         poly = individual_polygons[0]
         return poly.exterior if hasattr(poly, "exterior") else None
 
-    num_to_include = 0
-    for n in range(1, len(individual_polygons) + 1):
-        if (2**n) - 1 > max_total_combis:
-            break
-        num_to_include = n
-    if len(individual_polygons) > num_to_include:
-        combined = safe_unary_union(individual_polygons)
-        if isinstance(combined, Polygon):
-            return combined.exterior if hasattr(combined, "exterior") else None
-        elif isinstance(combined, (MultiPolygon, GeometryCollection)):
-            largest_poly = max(combined.geoms, key=lambda p: p.area)
-            return largest_poly.exterior if hasattr(largest_poly, "exterior") else None
-        else:
-            return None
+    overlap_selected = []
+    for poly in individual_polygons:
+        if poly.area <= 0:
+            continue
+        overlap_area = poly.intersection(geom_to_process).area
+        overlap_ratio = overlap_area / poly.area
+        if overlap_ratio > 0.5:
+            overlap_selected.append(poly)
 
-    for i in range(1, len(individual_polygons) + 1):
-        for combi in combinations(individual_polygons, i):
-            combined_poly = safe_unary_union(combi)
-            if hasattr(combined_poly, "exterior"):
-                cycle_line = combined_poly.exterior
-                vertex_distance = total_vertex_distance(cycle_line, geom_to_process)
-                if vertex_distance < min_dist:
-                    min_dist = vertex_distance
-                    best_cycle_line = cycle_line
-                    if min_dist < 1e-7:
-                        return best_cycle_line
-    return best_cycle_line
+    if overlap_selected:
+        combined = safe_unary_union(overlap_selected)
+        return _best_exterior_from_geom(combined)
+
+    combined = safe_unary_union(individual_polygons)
+    return _best_exterior_from_geom(combined)
 
 
 def longest_linestring_from_multilinestring(multilinestring):
@@ -941,10 +1259,92 @@ def find_best_path_in_network(
     tolerance=None,
     angle_threshold_degrees=150.0,
 ):
+    def _ordered_candidates(point, base_choice, is_start=True):
+        if node_list is None or len(node_list) == 0:
+            return []
+        candidates = _candidate_nodes_within_tolerance(
+            point,
+            node_list,
+            tolerance,
+            node_points_tree=node_points_tree,
+            node_set=set(node_list),
+        )
+        if not candidates:
+            candidates = [base_choice] if base_choice is not None else []
+        if _is_directed_graph(graph):
+            # In directed mode we prefer candidates that can actually depart/arrive.
+            if is_start:
+                candidates = [n for n in candidates if graph.out_degree(n) > 0] or candidates
+            else:
+                candidates = [n for n in candidates if graph.in_degree(n) > 0] or candidates
+        candidates = sorted(
+            candidates,
+            key=lambda n: _candidate_rank_for_snap_strategy(
+                point,
+                graph,
+                n,
+                snap_strategy=snap_strategy,
+                angle_threshold_degrees=angle_threshold_degrees,
+            ),
+        )
+        if base_choice is not None and base_choice in candidates:
+            candidates.remove(base_choice)
+            candidates.insert(0, base_choice)
+        # Keep bounded to avoid combinatorial blow-up on dense graphs.
+        return candidates[:20]
+
+    def _select_best_directed_pair(start_point, end_point, start_node, end_node):
+        if not _is_directed_graph(graph):
+            return start_node, end_node
+        start_candidates = _ordered_candidates(start_point, start_node, is_start=True)
+        end_candidates = _ordered_candidates(end_point, end_node, is_start=False)
+        if not start_candidates or not end_candidates:
+            return start_node, end_node
+
+        best_pair = None
+        best_score = float("inf")
+        for s in start_candidates:
+            for e in end_candidates:
+                if s == e:
+                    continue
+                if not nx.has_path(graph, s, e):
+                    continue
+                try:
+                    path_len = float(
+                        nx.shortest_path_length(graph, source=s, target=e, weight="length")
+                    )
+                except Exception:
+                    continue
+                s_rank = _candidate_rank_for_snap_strategy(
+                    start_point,
+                    graph,
+                    s,
+                    snap_strategy=snap_strategy,
+                    angle_threshold_degrees=angle_threshold_degrees,
+                )
+                e_rank = _candidate_rank_for_snap_strategy(
+                    end_point,
+                    graph,
+                    e,
+                    snap_strategy=snap_strategy,
+                    angle_threshold_degrees=angle_threshold_degrees,
+                )
+                # Prioritize strategy ranking first, then local snap distance, then route length.
+                snap_penalty = s_rank[2] + e_rank[2]
+                strategy_penalty = (s_rank[0] + e_rank[0]) * 1000 + (s_rank[1] + e_rank[1]) * 100
+                score = strategy_penalty + snap_penalty + 0.01 * path_len
+                if score < best_score:
+                    best_score = score
+                    best_pair = (s, e)
+        if best_pair is not None:
+            return best_pair
+        return start_node, end_node
+
     start_point = Point(geom_to_process.coords[0])
     end_point = Point(geom_to_process.coords[-1])
     if start_point == end_point:
-        return find_best_circle_path(graph, geom_to_process)
+        circle_graph = graph.to_undirected() if _is_directed_graph(graph) else graph
+        return find_best_circle_path(circle_graph, geom_to_process)
     node_list = list(graph.nodes)
     node_points_tree = None
     if tolerance is not None and tolerance > 0 and node_list:
@@ -994,13 +1394,24 @@ def find_best_path_in_network(
         if start_node == end_node:
             return None
 
+    if _is_directed_graph(graph):
+        start_node, end_node = _select_best_directed_pair(
+            start_point, end_point, start_node, end_node
+        )
+
     path_found = nx.has_path(graph, start_node, end_node)
     logging.debug("Path detected? - " + str(path_found))
     if not path_found:
         graph = connect_network_components(
             graph,
             50,
-            edge_tags=["theme_lines", "ref_lines", "interconnect", "gap_closure"],
+            edge_tags=[
+                "theme_lines",
+                "ref_lines",
+                "interconnect",
+                "interconnect_lines",
+                "gap_closure",
+            ],
         )
 
     all_paths_generator = nx.all_simple_paths(
@@ -1029,12 +1440,20 @@ def find_best_path_in_network(
 
 
 def bridge_with_straight_line(G, n):
-    neighbors = list(G.neighbors(n))
+    if _is_directed_graph(G):
+        neighbors = sorted(set(G.predecessors(n)).union(set(G.successors(n))))
+    else:
+        neighbors = list(G.neighbors(n))
 
     if len(neighbors) == 2:
         u, v = neighbors
         old_data_un = G.get_edge_data(u, n) or {}
         old_data_nv = G.get_edge_data(n, v) or {}
+        if _is_directed_graph(G):
+            if not old_data_un:
+                old_data_un = G.get_edge_data(n, u) or {}
+            if not old_data_nv:
+                old_data_nv = G.get_edge_data(v, n) or {}
         geom_un = old_data_un.get("geometry")
         geom_nv = old_data_nv.get("geometry")
 
@@ -1065,7 +1484,7 @@ def bridge_with_straight_line(G, n):
         new_data = old_data_un.copy()
         new_data["geometry"] = new_geom
         new_data["length"] = new_geom.length
-        G.add_edge(u, v, **new_data)
+        _add_edge_auto(G, u, v, **new_data)
         G.remove_node(n)
 
     elif len(neighbors) < 2:
@@ -1373,3 +1792,4 @@ __all__ = [
     "bridge_with_straight_line",
     "clean_pseudo_nodes_by_snap_strategy",
 ]
+

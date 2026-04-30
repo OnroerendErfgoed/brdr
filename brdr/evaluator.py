@@ -837,3 +837,93 @@ class AlignerEvaluator(BaseEvaluator):
             base_brdr_observation = None
         self._base_observation_cache[id_theme] = base_brdr_observation
         return base_brdr_observation
+
+
+class ConservativeAlignerEvaluator(AlignerEvaluator):
+    """
+    Evaluator that prefers safer outcomes in ambiguous multi-prediction cases.
+
+    Strategy:
+    - run default evaluation logic;
+    - if multiple evaluated predictions are present and the score gap between
+      best and second-best is small, return the original geometry for manual check;
+    - otherwise optionally keep only the top prediction.
+    """
+
+    def __init__(
+        self,
+        feedback=None,
+        *,
+        ambiguity_delta: float = 5.0,
+        force_single_prediction: bool = True,
+    ):
+        super().__init__(feedback=feedback)
+        self.ambiguity_delta = float(ambiguity_delta)
+        self.force_single_prediction = bool(force_single_prediction)
+
+    def evaluate(
+        self,
+        *,
+        aligner: "Aligner",
+        relevant_distances: Optional[Iterable[float]] = None,
+        thematic_ids: Optional[List[InputId]] = None,
+        metadata_field: str = METADATA_FIELD_NAME,
+        full_reference_strategy: FullReferenceStrategy = FullReferenceStrategy.NO_FULL_REFERENCE,
+        max_predictions: int = -1,
+        multi_to_best_prediction: bool = True,
+    ) -> "AlignerResult":
+        from brdr.aligner import AlignerResult
+
+        result = super().evaluate(
+            aligner=aligner,
+            relevant_distances=relevant_distances,
+            thematic_ids=thematic_ids,
+            metadata_field=metadata_field,
+            full_reference_strategy=full_reference_strategy,
+            max_predictions=max_predictions,
+            multi_to_best_prediction=multi_to_best_prediction,
+        )
+        evaluated = result.results
+
+        for theme_id, rd_results in evaluated.items():
+            scored: list[tuple[float, float]] = []
+            for rd, process_result in rd_results.items():
+                if not process_result:
+                    continue
+                props = process_result.get("properties", {})
+                if PREDICTION_SCORE not in props:
+                    continue
+                score = props.get(PREDICTION_SCORE)
+                if score is None or float(score) < 0:
+                    continue
+                scored.append((rd, float(score)))
+
+            if len(scored) <= 1:
+                continue
+            scored.sort(key=lambda item: item[1], reverse=True)
+            top_rd, top_score = scored[0]
+            second_score = scored[1][1]
+            score_gap = top_score - second_score
+
+            if score_gap < self.ambiguity_delta:
+                original_geometry = aligner.thematic_data.features.get(theme_id).geometry
+                evaluated = self.update_evaluation_with_original(
+                    aligner=aligner,
+                    metadata_field=metadata_field,
+                    original_geometry=original_geometry,
+                    process_results_evaluated=evaluated,
+                    theme_id=theme_id,
+                    evaluation=Evaluation.TO_CHECK_ORIGINAL,
+                )
+                if 0 in evaluated.get(theme_id, {}):
+                    evaluated[theme_id] = {0: evaluated[theme_id][0]}
+                continue
+
+            if self.force_single_prediction:
+                keep = rd_results.get(top_rd)
+                if keep is not None:
+                    keep_props = keep.get("properties", {})
+                    keep_props[PREDICTION_COUNT] = 1
+                    evaluated[theme_id] = {top_rd: keep}
+
+        return AlignerResult(evaluated)

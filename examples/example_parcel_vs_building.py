@@ -22,7 +22,7 @@ if __name__ == "__main__":
     )
     aligner_x.load_reference_data(
         GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner_x)
-    )  # gebruik de actuele adp-percelen adp= administratieve percelen
+    )  # use current ADP parcels (ADP = administrative parcels)
 
     aligner_y = Aligner()
     # Load thematic data & reference data (buildings)
@@ -33,7 +33,7 @@ if __name__ == "__main__":
     )
     aligner_y.load_reference_data(
         GRBActualLoader(grb_type=GRBType.GBG, partition=1000, aligner=aligner_y)
-    )  # gebruik de actuele adp-percelen adp= administratieve percelen
+    )  # use current ADP parcels (ADP = administrative parcels)
 
     # Example how to use a series (for histogram)
     series = np.arange(0, 310, 10, dtype=int) / 100
