@@ -4,7 +4,9 @@ from dataclasses import replace
 import time
 from typing import List, Any
 
+import networkx as nx
 from shapely import GeometryCollection, MultiPoint
+from shapely import MultiLineString
 from shapely import MultiPolygon
 from shapely import Point
 from shapely import Polygon
@@ -1900,6 +1902,216 @@ class DirectedNetworkGeometryProcessor(NetworkGeometryProcessor):
     def __init__(self, config: ProcessorConfig, feedback: Any = None):
         directed_config = replace(config, network_use_directed_graph=True)
         super().__init__(config=directed_config, feedback=feedback)
+
+
+class LinearReferencingGeometryProcessor(BaseProcessor):
+    """
+    Processor that aligns linear geometries using an anchor-based linear referencing flow.
+
+    The implementation builds a reference graph from nearby linear reference elements,
+    snaps line anchors to graph nodes, and reconstructs the route between anchors using
+    shortest-path routing. For polygon inputs this processor delegates to
+    NetworkGeometryProcessor.
+    """
+
+    processor_id = ProcessorID.LINEAR_REFERENCING
+
+    def process(
+        self,
+        *,
+        input_geometry: BaseGeometry,
+        reference_data: AlignerFeatureCollection,
+        mitre_limit: float,
+        correction_distance: float,
+        relevant_distance: float,
+        **kwargs: Any,
+    ) -> ProcessResult:
+        self.check_area_limit(input_geometry)
+
+        if isinstance(input_geometry, (Polygon, MultiPolygon)):
+            # Keep polygon handling consistent by delegating to the network processor.
+            processor = NetworkGeometryProcessor(config=self.config, feedback=self.feedback)
+            return processor.process(
+                input_geometry=input_geometry,
+                reference_data=reference_data,
+                mitre_limit=mitre_limit,
+                correction_distance=correction_distance,
+                relevant_distance=relevant_distance,
+                **kwargs,
+            )
+
+        input_multi = to_multi(input_geometry)
+        search_geom = buffer_pos(
+            input_multi, relevant_distance * self.config.buffer_multiplication_factor
+        )
+        reference_subset = safe_intersection(reference_data.elements, search_geom)
+        reference_lines = self._extract_reference_lines(reference_subset)
+        if not reference_lines:
+            return self._postprocess_preresult(
+                input_multi,
+                input_multi,
+                GeometryCollection(),
+                GeometryCollection(),
+                relevant_distance,
+                reference_data.union,
+                mitre_limit,
+                correction_distance,
+            )
+
+        graph = self._build_reference_graph(reference_lines)
+        if graph.number_of_edges() == 0:
+            return self._postprocess_preresult(
+                input_multi,
+                input_multi,
+                GeometryCollection(),
+                GeometryCollection(),
+                relevant_distance,
+                reference_data.union,
+                mitre_limit,
+                correction_distance,
+            )
+
+        aligned_parts = []
+        for part in get_parts(input_multi):
+            if part is None or part.is_empty:
+                continue
+            if isinstance(part, Point):
+                aligned_parts.append(self._snap_point_to_graph(part, graph))
+                continue
+            if isinstance(part, LineString):
+                aligned_parts.append(
+                    self._align_linestring_linear_referencing(
+                        part,
+                        graph,
+                        relevant_distance=relevant_distance,
+                    )
+                )
+                continue
+            if isinstance(part, MultiLineString):
+                for ls in part.geoms:
+                    aligned_parts.append(
+                        self._align_linestring_linear_referencing(
+                            ls,
+                            graph,
+                            relevant_distance=relevant_distance,
+                        )
+                    )
+
+        if not aligned_parts:
+            geom_processed = GeometryCollection()
+        elif len(aligned_parts) == 1:
+            geom_processed = aligned_parts[0]
+        else:
+            geom_processed = safe_unary_union(aligned_parts)
+
+        return self._postprocess_preresult(
+            geom_processed,
+            input_multi,
+            GeometryCollection(),
+            GeometryCollection(),
+            relevant_distance,
+            reference_data.union,
+            mitre_limit,
+            correction_distance,
+        )
+
+    @staticmethod
+    def _extract_reference_lines(reference_geom: BaseGeometry) -> list[LineString]:
+        lines = []
+        if reference_geom is None or reference_geom.is_empty:
+            return lines
+        for part in get_parts(reference_geom):
+            if isinstance(part, LineString):
+                if part.length > 0:
+                    lines.append(part)
+            elif isinstance(part, MultiLineString):
+                for line in part.geoms:
+                    if line.length > 0:
+                        lines.append(line)
+        return lines
+
+    @staticmethod
+    def _build_reference_graph(lines: list[LineString]) -> nx.Graph:
+        graph = nx.Graph()
+        for line in lines:
+            coords = list(line.coords)
+            if len(coords) < 2:
+                continue
+            for i in range(len(coords) - 1):
+                a = tuple(coords[i])
+                b = tuple(coords[i + 1])
+                seg = LineString([a, b])
+                length = float(seg.length)
+                if length <= 0:
+                    continue
+                if graph.has_edge(a, b):
+                    existing = graph[a][b].get("length", float("inf"))
+                    if length >= existing:
+                        continue
+                graph.add_edge(a, b, length=length, geometry=seg)
+        return graph
+
+    @staticmethod
+    def _nearest_node(point: Point, graph: nx.Graph) -> tuple | None:
+        if graph.number_of_nodes() == 0:
+            return None
+        px, py = point.x, point.y
+        best_node = None
+        best_dist = float("inf")
+        for node in graph.nodes:
+            dx = node[0] - px
+            dy = node[1] - py
+            dist = dx * dx + dy * dy
+            if dist < best_dist:
+                best_dist = dist
+                best_node = node
+        return best_node
+
+    def _snap_point_to_graph(self, point: Point, graph: nx.Graph) -> Point:
+        node = self._nearest_node(point, graph)
+        if node is None:
+            return point
+        return Point(node[0], node[1])
+
+    @staticmethod
+    def _anchor_points(line: LineString, relevant_distance: float) -> list[Point]:
+        if line.length == 0:
+            return [Point(line.coords[0])]
+        anchors = [Point(line.coords[0])]
+        if line.length > (4 * relevant_distance):
+            anchors.append(line.interpolate(0.5, normalized=True))
+        anchors.append(Point(line.coords[-1]))
+        return anchors
+
+    def _align_linestring_linear_referencing(
+        self, line: LineString, graph: nx.Graph, relevant_distance: float
+    ) -> LineString:
+        if line is None or line.is_empty or line.length == 0:
+            return line
+        anchors = self._anchor_points(line, relevant_distance)
+        anchor_nodes = []
+        for anchor in anchors:
+            node = self._nearest_node(anchor, graph)
+            if node is None:
+                return line
+            if not anchor_nodes or node != anchor_nodes[-1]:
+                anchor_nodes.append(node)
+        if len(anchor_nodes) < 2:
+            return line
+
+        route_coords = [anchor_nodes[0]]
+        for i in range(len(anchor_nodes) - 1):
+            start = anchor_nodes[i]
+            end = anchor_nodes[i + 1]
+            try:
+                path_nodes = nx.shortest_path(graph, start, end, weight="length")
+            except (nx.NetworkXNoPath, nx.NodeNotFound):
+                return line
+            route_coords.extend(path_nodes[1:])
+
+        if len(route_coords) < 2:
+            return line
+        return LineString(route_coords)
 
 
 class AlignerGeometryProcessor(BaseProcessor):

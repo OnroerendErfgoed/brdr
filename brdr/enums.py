@@ -215,6 +215,8 @@ class ProcessorID(str, Enum):
         Identifier for SnapGeometryProcessor.
     NETWORK : str
         Identifier for NetworkGeometryProcessor.
+    LINEAR_REFERENCING : str
+        Identifier for LinearReferencingGeometryProcessor.
     ALIGNER : str
         Identifier for AlignerGeometryProcessor.
     TOPOLOGY : str
@@ -224,6 +226,7 @@ class ProcessorID(str, Enum):
     DIEUSSAERT = "2024:dieussaert2024a"
     SNAP = "2024:snap2024a"
     NETWORK = "2024:network2024a"
+    LINEAR_REFERENCING = "2024:linearreferencing2024a"
     ALIGNER = "2024:aligner2024a"
     TOPOLOGY = "2024:topology2024a"
 

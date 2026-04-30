@@ -13,6 +13,7 @@ from brdr.geometry_utils import safe_difference
 from brdr.loader import DictLoader
 from brdr.processor import BaseProcessor
 from brdr.processor import NetworkGeometryProcessor
+from brdr.processor import LinearReferencingGeometryProcessor
 
 
 class _DummyProcessor(BaseProcessor):
@@ -196,3 +197,17 @@ class TestProcessor(unittest.TestCase):
             aligner.load_reference_data(DictLoader(reference_dict))
             result = aligner.process([1]).results["theme_id"][1]["result"]
             assert result is not None
+
+    def test_linearreferencinggeometryprocessor_aligns_linestring_to_reference_network(self):
+        thematic_dict = {"theme_id": from_wkt("LINESTRING (0 0.2, 10 0.2)")}
+        reference_dict = {"ref_id": from_wkt("LINESTRING (0 0, 10 0)")}
+
+        processor = LinearReferencingGeometryProcessor(config=ProcessorConfig())
+        aligner = Aligner(processor=processor)
+        aligner.load_thematic_data(DictLoader(thematic_dict))
+        aligner.load_reference_data(DictLoader(reference_dict))
+
+        result = aligner.process([1]).results["theme_id"][1]["result"]
+        assert result is not None
+        assert result.geom_type in {"LineString", "MultiLineString"}
+        assert result.distance(reference_dict["ref_id"]) < 1e-8
