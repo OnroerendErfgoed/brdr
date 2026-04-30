@@ -47,6 +47,9 @@ class ProcessorConfig:
         Angle threshold used by `SnapStrategy.PREFER_VERTICES_ENDS_AND_ANGLES`.
         Vertices with an interior angle smaller than or equal to this threshold
         are considered angle-priority vertices.
+    max_anchor_distance : float, default 10.0
+        Maximum spacing (meters) for periodic anchor points on long, mostly
+        straight thematic lines in AnchorGeometryProcessor.
     network_use_directed_graph : bool, default False
         If True, the NetworkGeometryProcessor builds a directed graph and can
         enforce one-way constraints from reference feature attributes.
@@ -85,6 +88,7 @@ class ProcessorConfig:
     snap_strategy: SnapStrategy = SnapStrategy.PREFER_VERTICES
     snap_max_segment_length: int = 2
     angle_threshold_degrees: float = 150.0
+    max_anchor_distance: float = 10.0
     network_use_directed_graph: bool = False
     network_oneway_field: str = "oneway"
     network_oneway_forward_values: tuple[str, ...] = ("yes", "1", "true", "forward")

@@ -18,6 +18,8 @@ website:
         href: processor-selection.qmd
       - text: Parameter Guide
         href: parameter-cookbook.qmd
+      - text: Export Guide
+        href: export-guide.qmd
       - text: Reference
         href: reference/index.qmd
       - text: Examples
@@ -83,6 +85,7 @@ quartodoc:
         - AlignerGeometryProcessor
         - DieussaertGeometryProcessor
         - NetworkGeometryProcessor
+        - AnchorGeometryProcessor
         - SnapGeometryProcessor
         - TopologyProcessor
     - title: Prediction

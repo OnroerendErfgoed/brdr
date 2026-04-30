@@ -26,6 +26,7 @@ from brdr.enums import ProcessorID
 from brdr.enums import SnapStrategy
 from brdr.feature_data import AlignerFeatureCollection
 from brdr.geometry_utils import (
+    _angle_between_vectors_degrees,
     buffer_neg,
 )
 from brdr.geometry_utils import buffer_neg_pos
@@ -42,10 +43,13 @@ from brdr.geometry_utils import safe_union
 from brdr.geometry_utils import snap_geometry_to_reference
 from brdr.geometry_utils import to_multi
 from brdr.graph_utils import (
+    _add_reference_edge,
     _build_reference_segment_index,
+    _select_network_node_by_snap_strategy,
     build_custom_network,
     find_best_path_in_network,
     get_non_pseudo_coords,
+    nearest_node,
 )
 from brdr.logger import Logger
 from brdr.topo_utils import _dissolve_topo, _generate_topo, _topojson_id_to_arcs
@@ -1837,11 +1841,11 @@ class NetworkGeometryProcessor(BaseProcessor):
         self,
         geom_to_process,
         reference,
-        reference_feature_records,
-        relevant_distance,
-        correction_distance,
-        close_output=False,
+        reference_feature_records=None,
         precomputed_ref_direction_index=None,
+        relevant_distance=1,
+        correction_distance=0.01,
+        close_output=False,
     ):
         geom_to_process_buffered = buffer_pos(geom_to_process, relevant_distance)
         reference_intersection_raw = safe_intersection(
@@ -1954,17 +1958,36 @@ class DirectedNetworkGeometryProcessor(NetworkGeometryProcessor):
         super().__init__(config=directed_config, feedback=feedback)
 
 
-class LinearReferencingGeometryProcessor(BaseProcessor):
+class AnchorGeometryProcessor(BaseProcessor):
     """
-    Processor that aligns linear geometries using an anchor-based linear referencing flow.
+    Processor that aligns linear geometries using an anchor-guided routing flow.
 
-    The implementation builds a reference graph from nearby linear reference elements,
-    snaps line anchors to graph nodes, and reconstructs the route between anchors using
-    shortest-path routing. For polygon inputs this processor delegates to
-    NetworkGeometryProcessor.
+    Anchor routing keeps start and end points as mandatory anchors, adds thematic
+    sharp-angle vertices as anchors (threshold from
+    ``ProcessorConfig.angle_threshold_degrees``), and inserts periodic anchors
+    on long stretches (spacing from ``ProcessorConfig.max_anchor_distance``).
+
+    Routing behavior is two-phase:
+    1. Anchor matching is validated on a local reference subset (within
+       ``relevant_distance``).
+    2. If anchors are matched locally, segment routing can use the full
+       reference line network.
+
+    Anchors without a local match are preserved as original thematic points and
+    are kept in the reconstructed route.
+
+    When ``ProcessorConfig.network_use_directed_graph`` is enabled, the
+    processor builds a directed reference graph and applies one-way constraints
+    via the same oneway parameters used by ``NetworkGeometryProcessor``.
+
+    For polygon inputs this processor delegates to ``NetworkGeometryProcessor``.
     """
 
-    processor_id = ProcessorID.LINEAR_REFERENCING
+    processor_id = ProcessorID.ANCHOR
+
+    def __init__(self, config: ProcessorConfig, feedback: Any = None):
+        super().__init__(config=config, feedback=feedback)
+        self._directed_ref_index_cache = {}
 
     def process(
         self,
@@ -1978,6 +2001,7 @@ class LinearReferencingGeometryProcessor(BaseProcessor):
     ) -> ProcessResult:
         self.check_area_limit(input_geometry)
         reference_elements_candidates = kwargs.get("reference_elements_candidates")
+        reference_candidates = kwargs.get("reference_candidates")
 
         if isinstance(input_geometry, (Polygon, MultiPolygon)):
             # Keep polygon handling consistent by delegating to the network processor.
@@ -2001,8 +2025,67 @@ class LinearReferencingGeometryProcessor(BaseProcessor):
             else reference_data.elements
         )
         reference_subset = safe_intersection(base_reference_elements, search_geom)
-        reference_lines = self._extract_reference_lines(reference_subset)
-        if not reference_lines:
+        reference_parts = extract_points_lines_from_geometry(reference_subset)
+        reference_lines_local = [
+            part
+            for part in get_parts(reference_parts)
+            if isinstance(part, LineString) and part.length > 0
+        ]
+        reference_parts_full = extract_points_lines_from_geometry(base_reference_elements)
+        reference_lines_full = [
+            part
+            for part in get_parts(reference_parts_full)
+            if isinstance(part, LineString) and part.length > 0
+        ]
+        reference_feature_records = None
+        precomputed_ref_direction_index = None
+        if self.config.network_use_directed_graph:
+            if reference_candidates is None:
+                reference_candidate_ids = reference_data.items.take(
+                    reference_data.tree.query(search_geom)
+                ).tolist()
+            else:
+                reference_candidate_ids = reference_candidates
+            reference_feature_records = []
+            filtered_reference_ids = []
+            for key_ref in reference_candidate_ids:
+                feat = reference_data.features.get(key_ref)
+                if feat is None:
+                    continue
+                feat_geom = feat.geometry
+                if feat_geom is None or feat_geom.is_empty:
+                    continue
+                if not feat_geom.intersects(search_geom):
+                    continue
+                filtered_reference_ids.append(key_ref)
+                reference_feature_records.append(
+                    {
+                        "id": key_ref,
+                        "geometry": feat_geom,
+                        "properties": feat.properties or {},
+                    }
+                )
+            direction_cache_key = (
+                id(reference_data.features),
+                tuple(filtered_reference_ids),
+                self.config.network_oneway_field,
+                tuple(self.config.network_oneway_forward_values),
+                tuple(self.config.network_oneway_reverse_values),
+            )
+            precomputed_ref_direction_index = self._directed_ref_index_cache.get(
+                direction_cache_key
+            )
+            if precomputed_ref_direction_index is None:
+                precomputed_ref_direction_index = _build_reference_segment_index(
+                    reference_feature_records=reference_feature_records,
+                    oneway_field=self.config.network_oneway_field,
+                    oneway_forward_values=self.config.network_oneway_forward_values,
+                    oneway_reverse_values=self.config.network_oneway_reverse_values,
+                )
+                self._directed_ref_index_cache[direction_cache_key] = (
+                    precomputed_ref_direction_index
+                )
+        if not reference_lines_local or not reference_lines_full:
             return self._postprocess_preresult(
                 input_multi,
                 input_multi,
@@ -2014,8 +2097,15 @@ class LinearReferencingGeometryProcessor(BaseProcessor):
                 correction_distance,
             )
 
-        graph = self._build_reference_graph(reference_lines)
-        if graph.number_of_edges() == 0:
+        anchor_selection_graph = self._build_reference_graph(
+            reference_lines_local,
+            precomputed_ref_direction_index=precomputed_ref_direction_index,
+        )
+        graph = self._build_reference_graph(
+            reference_lines_full,
+            precomputed_ref_direction_index=precomputed_ref_direction_index,
+        )
+        if anchor_selection_graph.number_of_edges() == 0 or graph.number_of_edges() == 0:
             return self._postprocess_preresult(
                 input_multi,
                 input_multi,
@@ -2032,24 +2122,31 @@ class LinearReferencingGeometryProcessor(BaseProcessor):
             if part is None or part.is_empty:
                 continue
             if isinstance(part, Point):
-                aligned_parts.append(self._snap_point_to_graph(part, graph))
+                if self._has_nearby_snap_candidate(
+                    part, anchor_selection_graph, relevant_distance
+                ):
+                    aligned_parts.append(self._snap_point_to_graph(part, graph))
+                else:
+                    aligned_parts.append(part)
                 continue
             if isinstance(part, LineString):
                 aligned_parts.append(
-                    self._align_linestring_linear_referencing(
+                    self._align_linestring_anchor_routing(
                         part,
                         graph,
                         relevant_distance=relevant_distance,
+                        anchor_selection_graph=anchor_selection_graph,
                     )
                 )
                 continue
             if isinstance(part, MultiLineString):
                 for ls in part.geoms:
                     aligned_parts.append(
-                        self._align_linestring_linear_referencing(
+                        self._align_linestring_anchor_routing(
                             ls,
                             graph,
                             relevant_distance=relevant_distance,
+                            anchor_selection_graph=anchor_selection_graph,
                         )
                     )
 
@@ -2071,24 +2168,16 @@ class LinearReferencingGeometryProcessor(BaseProcessor):
             correction_distance,
         )
 
-    @staticmethod
-    def _extract_reference_lines(reference_geom: BaseGeometry) -> list[LineString]:
-        lines = []
-        if reference_geom is None or reference_geom.is_empty:
-            return lines
-        for part in get_parts(reference_geom):
-            if isinstance(part, LineString):
-                if part.length > 0:
-                    lines.append(part)
-            elif isinstance(part, MultiLineString):
-                for line in part.geoms:
-                    if line.length > 0:
-                        lines.append(line)
-        return lines
-
-    @staticmethod
-    def _build_reference_graph(lines: list[LineString]) -> nx.Graph:
-        graph = nx.Graph()
+    def _build_reference_graph(
+        self,
+        lines: list[LineString],
+        precomputed_ref_direction_index=None,
+    ) -> nx.Graph:
+        graph = (
+            nx.DiGraph()
+            if self.config.network_use_directed_graph
+            else nx.Graph()
+        )
         for line in lines:
             coords = list(line.coords)
             if len(coords) < 2:
@@ -2104,65 +2193,173 @@ class LinearReferencingGeometryProcessor(BaseProcessor):
                     existing = graph[a][b].get("length", float("inf"))
                     if length >= existing:
                         continue
-                graph.add_edge(a, b, length=length, geometry=seg)
+                if self.config.network_use_directed_graph:
+                    _add_reference_edge(
+                        graph,
+                        a,
+                        b,
+                        direction_index=precomputed_ref_direction_index,
+                        length=length,
+                        geometry=seg,
+                        tag="ref_lines",
+                    )
+                else:
+                    graph.add_edge(a, b, length=length, geometry=seg, tag="ref_lines")
         return graph
 
-    @staticmethod
-    def _nearest_node(point: Point, graph: nx.Graph) -> tuple | None:
-        if graph.number_of_nodes() == 0:
-            return None
-        px, py = point.x, point.y
-        best_node = None
-        best_dist = float("inf")
-        for node in graph.nodes:
-            dx = node[0] - px
-            dy = node[1] - py
-            dist = dx * dx + dy * dy
-            if dist < best_dist:
-                best_dist = dist
-                best_node = node
-        return best_node
-
     def _snap_point_to_graph(self, point: Point, graph: nx.Graph) -> Point:
-        node = self._nearest_node(point, graph)
+        if graph.number_of_nodes() == 0:
+            return point
+        node = _select_network_node_by_snap_strategy(
+            point,
+            graph,
+            snap_strategy=self.config.snap_strategy,
+            tolerance=None,
+            angle_threshold_degrees=self.config.angle_threshold_degrees,
+            node_list=list(graph.nodes),
+            node_points_tree=None,
+        )
+        if node is None:
+            node = nearest_node(point, graph.nodes)
         if node is None:
             return point
         return Point(node[0], node[1])
 
-    @staticmethod
-    def _anchor_points(line: LineString, relevant_distance: float) -> list[Point]:
+    def _has_nearby_snap_candidate(
+        self, point: Point, graph: nx.Graph, relevant_distance: float
+    ) -> bool:
+        if graph.number_of_nodes() == 0:
+            return False
+        node = _select_network_node_by_snap_strategy(
+            point,
+            graph,
+            snap_strategy=self.config.snap_strategy,
+            tolerance=relevant_distance,
+            angle_threshold_degrees=self.config.angle_threshold_degrees,
+            node_list=list(graph.nodes),
+            node_points_tree=None,
+        )
+        if node is None:
+            return False
+        return Point(node).distance(point) <= float(relevant_distance)
+
+    def _anchor_points(self, line: LineString, relevant_distance: float) -> list[Point]:
         if line.length == 0:
             return [Point(line.coords[0])]
-        anchors = [Point(line.coords[0])]
-        if line.length > (4 * relevant_distance):
-            anchors.append(line.interpolate(0.5, normalized=True))
-        anchors.append(Point(line.coords[-1]))
-        return anchors
+        coords = list(line.coords)
+        anchor_distances = {0.0, float(line.length)}
 
-    def _align_linestring_linear_referencing(
-        self, line: LineString, graph: nx.Graph, relevant_distance: float
+        # Add thematic vertices with a sharp angle as mandatory anchors.
+        angle_threshold = float(self.config.angle_threshold_degrees)
+        for i in range(1, len(coords) - 1):
+            prev_pt = coords[i - 1]
+            cur_pt = coords[i]
+            next_pt = coords[i + 1]
+            u = (prev_pt[0] - cur_pt[0], prev_pt[1] - cur_pt[1])
+            v = (next_pt[0] - cur_pt[0], next_pt[1] - cur_pt[1])
+            norm_u = (u[0] * u[0] + u[1] * u[1]) ** 0.5
+            norm_v = (v[0] * v[0] + v[1] * v[1]) ** 0.5
+            if norm_u == 0 or norm_v == 0:
+                continue
+            angle = float(_angle_between_vectors_degrees(u, v))
+            if angle <= angle_threshold:
+                d = float(line.project(Point(cur_pt)))
+                anchor_distances.add(d)
+
+        # Add periodic anchors for long straight stretches.
+        step = max(float(self.config.max_anchor_distance), 1e-9)
+        d = step
+        while d < float(line.length):
+            anchor_distances.add(float(d))
+            d += step
+
+        ordered_distances = sorted(anchor_distances)
+        return [line.interpolate(d) for d in ordered_distances]
+
+    def _align_linestring_anchor_routing(
+        self,
+        line: LineString,
+        graph: nx.Graph,
+        relevant_distance: float,
+        anchor_selection_graph: nx.Graph | None = None,
     ) -> LineString:
         if line is None or line.is_empty or line.length == 0:
             return line
         anchors = self._anchor_points(line, relevant_distance)
-        anchor_nodes = []
+        selection_graph = (
+            anchor_selection_graph if anchor_selection_graph is not None else graph
+        )
+        selection_nodes = list(selection_graph.nodes)
+        route_nodes = list(graph.nodes)
+        anchor_targets: list[dict[str, Any]] = []
         for anchor in anchors:
-            node = self._nearest_node(anchor, graph)
-            if node is None:
+            if selection_graph.number_of_nodes() == 0 or graph.number_of_nodes() == 0:
                 return line
-            if not anchor_nodes or node != anchor_nodes[-1]:
-                anchor_nodes.append(node)
-        if len(anchor_nodes) < 2:
+            selection_node = _select_network_node_by_snap_strategy(
+                anchor,
+                selection_graph,
+                snap_strategy=self.config.snap_strategy,
+                tolerance=relevant_distance,
+                angle_threshold_degrees=self.config.angle_threshold_degrees,
+                node_list=selection_nodes,
+                node_points_tree=None,
+            )
+            if (
+                selection_node is None
+                or Point(selection_node).distance(anchor) > float(relevant_distance)
+            ):
+                anchor_targets.append({"coord": (anchor.x, anchor.y), "node": None})
+                continue
+            selection_point = Point(selection_node[0], selection_node[1])
+            node = _select_network_node_by_snap_strategy(
+                selection_point,
+                graph,
+                snap_strategy=self.config.snap_strategy,
+                tolerance=None,
+                angle_threshold_degrees=self.config.angle_threshold_degrees,
+                node_list=route_nodes,
+                node_points_tree=None,
+            )
+            if node is None:
+                node = nearest_node(selection_point, graph.nodes)
+            if node is None:
+                anchor_targets.append({"coord": (anchor.x, anchor.y), "node": None})
+                continue
+            coord = (float(node[0]), float(node[1]))
+            if not anchor_targets or coord != anchor_targets[-1]["coord"]:
+                anchor_targets.append({"coord": coord, "node": node})
+        if len(anchor_targets) < 2:
             return line
 
-        route_coords = [anchor_nodes[0]]
-        for i in range(len(anchor_nodes) - 1):
-            start = anchor_nodes[i]
-            end = anchor_nodes[i + 1]
+        route_coords = [anchor_targets[0]["coord"]]
+        for i in range(len(anchor_targets) - 1):
+            start_target = anchor_targets[i]
+            end_target = anchor_targets[i + 1]
+            start_node = start_target.get("node")
+            end_node = end_target.get("node")
+            if start_node is None or end_node is None:
+                if route_coords[-1] != end_target["coord"]:
+                    route_coords.append(end_target["coord"])
+                continue
+
+            anchor_segment = LineString([start_node, end_node])
+            path_line = find_best_path_in_network(
+                anchor_segment,
+                graph,
+                snap_strategy=self.config.snap_strategy,
+                tolerance=relevant_distance,
+                angle_threshold_degrees=self.config.angle_threshold_degrees,
+            )
+            if path_line is not None and not path_line.is_empty:
+                path_nodes = list(path_line.coords)
+                route_coords.extend(path_nodes[1:])
+                continue
             try:
-                path_nodes = nx.shortest_path(graph, start, end, weight="length")
+                path_nodes = nx.shortest_path(graph, start_node, end_node, weight="length")
             except (nx.NetworkXNoPath, nx.NodeNotFound):
-                return line
+                if route_coords[-1] != end_target["coord"]:
+                    route_coords.append(end_target["coord"])
+                continue
             route_coords.extend(path_nodes[1:])
 
         if len(route_coords) < 2:

@@ -2,16 +2,17 @@ import requests
 
 from brdr.aligner import Aligner
 from brdr.be.be import BeAdministrativeBoundaryLoader
+from brdr.be.enums import VRBGType
 from brdr.geometry_utils import geom_from_wkt
 from brdr.loader import DictLoader
 
 
-def _discover_vrbg_collection() -> str:
+def _discover_vrbg_collection(preferred: VRBGType = VRBGType.REFGEM) -> str:
     """
     Discover a VRBG collection id.
 
     Preference:
-    1. A collection id containing 'gemeente' (municipality-like naming).
+    1. The requested `preferred` collection id (default: `Refgem`).
     2. The first collection id returned by the API.
     """
     url = "https://geo.api.vlaanderen.be/VRBG/ogc/features/v1/collections"
@@ -22,8 +23,10 @@ def _discover_vrbg_collection() -> str:
     if not collections:
         raise ValueError("No VRBG collections found")
 
-    preferred = next((c for c in collections if "gemeente" in c.lower()), None)
-    return preferred or collections[0]
+    preferred_value = preferred.value if isinstance(preferred, VRBGType) else str(preferred)
+    if preferred_value in collections:
+        return preferred_value
+    return collections[0]
 
 
 if __name__ == "__main__":
@@ -40,7 +43,8 @@ if __name__ == "__main__":
     }
     aligner.load_thematic_data(DictLoader(data_dict=thematic_dict))
 
-    collection_id = _discover_vrbg_collection()
+    # Recommended for municipality boundaries: Refgem
+    collection_id = _discover_vrbg_collection(preferred=VRBGType.REFGEM)
     print(f"Using VRBG collection: {collection_id}")
 
     loader = BeAdministrativeBoundaryLoader(
@@ -57,3 +61,19 @@ if __name__ == "__main__":
     aligner_result = aligner.process(relevant_distances=[relevant_distance])
     process_results = aligner_result.get_results(aligner=aligner)
     print("result:", process_results[thematic_id][relevant_distance]["result"].wkt)
+
+    # Example exports
+    aligner_result.export(
+        aligner=aligner,
+        format="geojson",
+        path="examples/output/vrbg_processresults.geojson",
+        profile="full",
+    )
+    aligner_result.export(
+        aligner=aligner,
+        format="gpkg",
+        path="examples/output/vrbg_processresults.gpkg",
+        layer="vrbg_results",
+        profile="full",
+    )
+    print("Exports written to examples/output/")
