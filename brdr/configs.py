@@ -88,7 +88,7 @@ class ProcessorConfig:
     snap_strategy: SnapStrategy = SnapStrategy.PREFER_VERTICES
     snap_max_segment_length: int = 2
     angle_threshold_degrees: float = 150.0
-    max_anchor_distance: float = 10.0
+    max_anchor_distance: float = 50.0
     network_use_directed_graph: bool = False
     network_oneway_field: str = "oneway"
     network_oneway_forward_values: tuple[str, ...] = ("yes", "1", "true", "forward")
