@@ -1,8 +1,8 @@
-black==25.12.0
+black==26.3.1
     # via brdr (pyproject.toml)
 build==1.2.1
     # via pip-tools
-certifi==2024.2.2
+certifi==2026.2.25
     # via
     #   pyogrio
     #   pyproj
@@ -21,7 +21,7 @@ cycler==0.12.1
     # via matplotlib
 flake8==7.1.1
     # via brdr (pyproject.toml)
-fonttools==4.51.0
+fonttools==4.62.1
     # via matplotlib
 geojson==3.2.0
     # via brdr (pyproject.toml)
@@ -79,12 +79,12 @@ pandas==2.2.3
     # via
     #   geopandas
     #   osmnx
-pathspec==0.12.1
+pathspec==1.0.1
     # via
     #   black
     #   hatchling
     #   mypy
-pillow==12.0.0
+pillow==12.2.0
     # via
     #   brdr (pyproject.toml)
     #   matplotlib
@@ -114,7 +114,7 @@ pyproject-hooks==1.0.0
     # via
     #   build
     #   pip-tools
-pytest==8.3.4
+pytest==8.4.2
     # via
     #   brdr (pyproject.toml)
     #   pytest-cov
@@ -124,13 +124,13 @@ python-dateutil==2.9.0.post0
     # via
     #   matplotlib
     #   pandas
-pytokens==0.3.0
+pytokens==0.4.0
     # via black
 pytz==2024.1
     # via pandas
 pyyaml==6.0.1
     # via responses
-requests==2.32.4
+requests==2.33.1
     # via
     #   brdr (pyproject.toml)
     #   osmnx
@@ -153,16 +153,16 @@ trove-classifiers==2024.5.22
     # via hatchling
 types-requests==2.32.4.20250913
     # via brdr (pyproject.toml)
-typing-extensions==4.11.0
+typing-extensions==4.14.1
     # via mypy
 tzdata==2024.1
     # via pandas
-urllib3==2.2.1
+urllib3==2.6.3
     # via
     #   requests
     #   responses
     #   types-requests
-wheel==0.43.0
+wheel==0.46.3
     # via pip-tools
 
 # The following packages are considered to be unsafe in a requirements file:
