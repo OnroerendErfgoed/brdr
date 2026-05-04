@@ -229,6 +229,8 @@ class ProcessorID(str, Enum):
     ANCHOR = "2024:anchor2024a"
     ALIGNER = "2024:aligner2024a"
     TOPOLOGY = "2024:topology2024a"
+    DIRECTED_NETWORK = "2026:directed_network2026a"
+    DIRECTED_ANCHOR = "2026:directed_anchor2026a"
 
 
 class SnapStrategy(str, Enum):

@@ -16,6 +16,7 @@ from brdr.loader import DictLoader
 from brdr.processor import BaseProcessor
 from brdr.processor import NetworkGeometryProcessor
 from brdr.processor import AnchorGeometryProcessor
+from brdr.processor import DirectedAnchorGeometryProcessor
 
 
 class _DummyProcessor(BaseProcessor):
@@ -288,6 +289,12 @@ class TestProcessor(unittest.TestCase):
         assert graph.is_directed()
         assert graph.has_edge((0.0, 0.0), (10.0, 0.0))
         assert not graph.has_edge((10.0, 0.0), (0.0, 0.0))
+
+    def test_directed_anchor_processor_forces_directed_without_mutating_input_config(self):
+        base_config = ProcessorConfig(network_use_directed_graph=False)
+        processor = DirectedAnchorGeometryProcessor(config=base_config)
+        assert not base_config.network_use_directed_graph
+        assert processor.config.network_use_directed_graph
 
     def test_anchorprocessor_routes_on_full_reference_after_local_anchor_match(self):
         thematic_dict = {"theme_id": from_wkt("LINESTRING (0 0.2, 10 0.2)")}

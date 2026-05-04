@@ -1951,7 +1951,7 @@ class DirectedNetworkGeometryProcessor(NetworkGeometryProcessor):
     in its local config copy.
     """
 
-    processor_id = ProcessorID.NETWORK
+    processor_id = ProcessorID.DIRECTED_NETWORK
 
     def __init__(self, config: ProcessorConfig, feedback: Any = None):
         directed_config = replace(config, network_use_directed_graph=True)
@@ -2365,6 +2365,22 @@ class AnchorGeometryProcessor(BaseProcessor):
         if len(route_coords) < 2:
             return line
         return LineString(route_coords)
+
+
+class DirectedAnchorGeometryProcessor(AnchorGeometryProcessor):
+    """
+    Thin wrapper around AnchorGeometryProcessor with directed-graph mode enabled.
+
+    This subclass keeps all anchor-routing and processing logic identical to
+    `AnchorGeometryProcessor`, but forces `network_use_directed_graph=True`
+    in its local config copy.
+    """
+
+    processor_id = ProcessorID.DIRECTED_ANCHOR
+
+    def __init__(self, config: ProcessorConfig, feedback: Any = None):
+        directed_config = replace(config, network_use_directed_graph=True)
+        super().__init__(config=directed_config, feedback=feedback)
 
 
 class AlignerGeometryProcessor(BaseProcessor):

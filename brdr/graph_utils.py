@@ -1018,9 +1018,9 @@ def _candidate_rank_for_snap_strategy(
         # Lower tuple is better.
         return (0 if is_end else 1 if is_angle else 2, 0 if is_real else 1, dist)
     if snap_strategy == SnapStrategy.ONLY_VERTICES:
-        return (0 if is_real else 1, dist)
+        return (0, 0 if is_real else 1, dist)
     if snap_strategy == SnapStrategy.PREFER_VERTICES:
-        return (0 if is_real else 1, dist)
+        return (0, 0 if is_real else 1, dist)
     return (0, 0 if is_real else 1, dist)
 
 

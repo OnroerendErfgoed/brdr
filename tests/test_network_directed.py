@@ -81,6 +81,18 @@ class TestDirectedNetwork(unittest.TestCase):
         )
         self.assertIsNotNone(result)
 
+    def test_directed_mode_prefer_vertices_does_not_crash(self):
+        thematic = LineString([(0.0, 0.0), (10.0, 0.0)])
+        reference = LineString([(0.0, 0.0), (10.0, 0.0)])
+        graph = self._build_graph(thematic, reference, directed=True, oneway_value="yes")
+        result = find_best_path_in_network(
+            thematic,
+            graph,
+            snap_strategy=SnapStrategy.PREFER_VERTICES,
+            tolerance=1.0,
+        )
+        self.assertIsNotNone(result)
+
     def test_directed_mode_reverse_value_allows_reverse(self):
         thematic = LineString([(10.0, 0.0), (0.0, 0.0)])
         reference = LineString([(0.0, 0.0), (10.0, 0.0)])
