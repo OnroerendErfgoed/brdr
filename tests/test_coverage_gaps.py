@@ -9,14 +9,13 @@ from brdr.constants import EVALUATION_FIELD_NAME
 from brdr.constants import VERSION_DATE
 from brdr.enums import Evaluation
 from brdr.enums import OpenDomainStrategy
+from brdr.metadata import reverse_metadata_observations_to_brdr_observation
 from brdr.evaluator import AlignerEvaluator
-from brdr.evaluator import _reverse_metadata_observations_to_brdr_observation
 from brdr.loader import DictLoader
 from brdr.loader import GeoDataFrameLoader
 from brdr.loader import OGCFeatureAPIReferenceLoader
 from brdr.loader import WFSReferenceLoader
 from brdr.metadata import get_metadata_observations_from_process_result
-from brdr.metadata import reverse_metadata_observations_to_brdr_observation
 from brdr.processor import SnapGeometryProcessor
 
 
@@ -56,7 +55,7 @@ def test_evaluate_marks_non_selected_thematic_ids_as_not_evaluated():
 
 
 def test_reverse_metadata_observation_wrapper_returns_empty_for_invalid_payload():
-    assert _reverse_metadata_observations_to_brdr_observation({}) == {}
+    assert reverse_metadata_observations_to_brdr_observation({}) == {}
 
 
 def test_snap_processor_od_polygon_reference_changes_result_by_strategy():

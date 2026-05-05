@@ -2,8 +2,8 @@ import logging
 import os
 import threading
 import time
-import uuid
 import json
+import warnings
 from collections import defaultdict
 from concurrent.futures import as_completed
 from concurrent.futures import ThreadPoolExecutor
@@ -29,8 +29,6 @@ from brdr.configs import ProcessorConfig
 from brdr.constants import (
     AREA_CHANGE,
     METADATA_FIELD_NAME,
-    MAX_REFERENCE_BUFFER,
-    OBSERVATION_FIELD_NAME,
 )
 from brdr.constants import AREA_PERCENTAGE_CHANGE
 from brdr.constants import DATE_FORMAT
@@ -47,6 +45,8 @@ from brdr.constants import REMARK_FIELD_NAME
 from brdr.constants import SYMMETRICAL_AREA_CHANGE
 from brdr.constants import SYMMETRICAL_AREA_PERCENTAGE_CHANGE
 from brdr.constants import VERSION_DATE
+from brdr.descriptor import AlignerDescriptor
+from brdr.descriptor import BaseDescriptor
 from brdr.enums import AlignerResultType
 from brdr.enums import DiffMetric
 from brdr.enums import Evaluation
@@ -79,7 +79,6 @@ from brdr.utils import get_geodataframe_from_process_results
 from brdr.utils import get_geojsons_from_process_results
 from brdr.utils import get_geometry_difference_metrics_from_processresult
 from brdr.utils import get_geometry_difference_metrics_from_processresults
-from brdr.utils import urn_from_geom
 from brdr.utils import write_featurecollection_to_geojson
 
 ###################
@@ -755,6 +754,12 @@ def _get_metadata_observations_from_process_result(
     processResult: ProcessResult,
     reference_lookup: Dict[any, any],
 ) -> List[Dict]:
+    warnings.warn(
+        "_get_metadata_observations_from_process_result is deprecated and will be removed in a future release. "
+        "Use brdr.metadata.get_metadata_observations_from_process_result instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return _get_metadata_observations_core(processResult, reference_lookup)
 
 
@@ -794,92 +799,13 @@ def _reverse_metadata_observations_to_brdr_observation(metadata: Dict) -> Dict:
     checking for the presence of a 'ref_id' that differs from the primary
     result interest ID.
     """
+    warnings.warn(
+        "_reverse_metadata_observations_to_brdr_observation is deprecated and will be removed in a future release. "
+        "Use brdr.metadata.reverse_metadata_observations_to_brdr_observation or descriptor.get_base_observation instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return _reverse_metadata_observations_core(metadata)
-
-
-def aligner_metadata_decorator(f):
-    def inner_func(thematic_id, geometry, relevant_distance, aligner, *args, **kwargs):
-        process_result: ProcessResult = f(
-            thematic_id, geometry, relevant_distance, aligner, *args, **kwargs
-        )
-        if aligner.add_observations:
-            process_result["observations"] = aligner.compare_to_reference(
-                process_result.get("result")
-            )
-            # add observation properties to the properties
-            observation_props = aligner.get_observation_properties(process_result)
-            props = process_result["properties"]
-            props[OBSERVATION_FIELD_NAME] = process_result[
-                "observations"
-            ]  # adding the raw brdr_observation?!
-            props.update(observation_props)
-            process_result["properties"] = props
-
-        if aligner.log_metadata:
-            # generate uuid for actuation
-            actuation_id = uuid.uuid4()
-            processor_id = aligner.processor.processor_id.value
-            processor_name = type(aligner.processor).__name__
-            reference_data = aligner.reference_data
-            reference_intersections_ids = reference_data.items.take(
-                reference_data.tree.query(buffer_pos(geometry, MAX_REFERENCE_BUFFER))
-            ).tolist()  # TODO possible to optimize?
-            reference_geometries = []
-            for ref_id in reference_intersections_ids:
-                feature = reference_data.features[ref_id]
-                feat_dict = {
-                    # "id": feature.data_id,
-                    "id": feature.brdr_id,
-                    "type": f"geo:{feature.geometry.geom_type}",
-                    "version_date": reference_data.source.get(VERSION_DATE, ""),
-                    "derived_from": {
-                        "id": feature.data_id,
-                        "type": "geo:Feature",
-                        "source": reference_data.source.get("source_url", ""),
-                    },
-                }
-                reference_geometries.append(feat_dict)
-
-            thematic_feature = aligner.thematic_data.features[thematic_id]
-            feature_of_interest_id = thematic_feature.brdr_id
-            result_urn = urn_from_geom(process_result["result"])
-            actuation_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S%z")
-            process_result["metadata"] = {}
-            process_result["metadata"]["actuation"] = {
-                "id": actuation_id.urn,
-                "type": "sosa:Actuation",
-                "reference_geometries": reference_geometries,
-                "changes": "geo:hasGeometry",
-                "sosa:hasFeatureOfInterest": {"id": feature_of_interest_id},
-                "result": result_urn,
-                "result_time": actuation_time,  # TODO _CHECK
-                "procedure": {
-                    "id": processor_id,
-                    "implementedBy": processor_name,
-                    "type": "sosa:Procedure",
-                    "ssn:hasInput": [
-                        {
-                            "id": "brdr:relevant_distance",
-                            "type": "ssn:Input",
-                            "input_value": {
-                                "type": "xsd:integer",
-                                "value": relevant_distance,
-                            },
-                        },
-                    ],
-                },
-            }
-            if process_result["observations"]:
-                ref_lookup = reference_data.reference_lookup
-                process_result["metadata"]["observations"] = (
-                    _get_metadata_observations_from_process_result(
-                        process_result, ref_lookup
-                    )
-                )
-
-        return process_result
-
-    return inner_func
 
 
 class Aligner:
@@ -904,6 +830,8 @@ class Aligner:
         The predictor strategy used to assign prediction scores on process results.
     evaluator : BaseEvaluator or AlignerEvaluator
         The evaluator strategy used to evaluate predicted candidates.
+    descriptor : BaseDescriptor or AlignerDescriptor
+        Strategy used to enrich process results with observations and metadata.
     correction_distance : float
         Distance used in buffer operations to remove slivers (technical correction).
     mitre_limit : int
@@ -949,6 +877,7 @@ class Aligner:
         processor: Optional[BaseProcessor] = None,
         predictor: Optional[BasePredictor] = None,
         evaluator: Optional[BaseEvaluator] = None,
+        descriptor: Optional[BaseDescriptor] = None,
         crs: str = DEFAULT_CRS,
         config: Optional[AlignerConfig] = None,
         feedback: Any = None,
@@ -964,6 +893,8 @@ class Aligner:
             The prediction strategy instance. If None, AlignerPredictor is used.
         evaluator : BaseEvaluator, optional
             The evaluation strategy instance. If None, AlignerEvaluator is used.
+        descriptor : BaseDescriptor, optional
+            The descriptor strategy instance. If None, AlignerDescriptor is used.
         crs : str, optional
             Coordinate Reference System (CRS) of the data.
             Expected to be a projected CRS with units in meters.
@@ -993,6 +924,7 @@ class Aligner:
         )
         self.predictor = predictor if predictor else AlignerPredictor(feedback)
         self.evaluator = evaluator if evaluator else AlignerEvaluator(feedback)
+        self.descriptor = descriptor if descriptor else AlignerDescriptor()
         self.correction_distance = config.correction_distance
         self.mitre_limit = config.mitre_limit
         self.max_workers = config.max_workers
@@ -1153,7 +1085,6 @@ class Aligner:
         process_results: dict[InputId, dict[float, ProcessResult | None]] = {}
         futures = {}
 
-        @aligner_metadata_decorator
         def process_geom_for_rd(
             thematic_id,
             geometry,
@@ -1178,7 +1109,13 @@ class Aligner:
                 perf_collector.add(
                     "aligner.process.single_rd_total", time.perf_counter() - t0
                 )
-            return result
+            return aligner.descriptor.describe(
+                aligner=aligner,
+                thematic_id=thematic_id,
+                geometry=geometry,
+                relevant_distance=relevant_distance,
+                process_result=result,
+            )
 
         def run_process(executor: ThreadPoolExecutor = None):
             for thematic_id in thematic_ids:

@@ -45,7 +45,7 @@ if __name__ == "__main__":
     aligner.load_thematic_data(loader)
     # Load reference data: The actual GRB-parcels
     aligner.load_reference_data(
-        GRBActualLoader(grb_type=GRBType.Wegsegment, partition=1000, aligner=aligner)
+        GRBActualLoader(grb_type=GRBType.WBN, partition=1000, aligner=aligner)
     )
     # PROCESS a series of relevant distances
     relevant_distances = np.arange(0, 710, 10, dtype=int) / 100

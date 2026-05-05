@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from brdr.aligner import Aligner
 from brdr.be.grb.enums import GRBType
 from brdr.be.grb.loader import GRBActualLoader
@@ -12,10 +14,13 @@ if __name__ == "__main__":
     geometries are interesting to look at (based on detection of breakpoints and
     relevant distances of 'no-change')
     """
+    base_dir = Path(__file__).resolve().parent
     # Initiate an Aligner
     aligner = Aligner()
     # Load thematic data & reference data
-    loader = GeoJsonFileLoader("input/predictor_one.geojson", "theme_id")
+    loader = GeoJsonFileLoader(
+        str(base_dir / "input" / "predictor_one.geojson"), "theme_id"
+    )
 
     aligner.load_thematic_data(loader)
     # Load reference data

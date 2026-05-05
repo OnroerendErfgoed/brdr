@@ -1,5 +1,6 @@
 import json
 from datetime import date
+from pathlib import Path
 
 import numpy as np
 
@@ -20,10 +21,13 @@ if __name__ == "__main__":
     """
     EXAMPLE of the 'evaluate()-function of 'brdr': This function evaluates thematic objects with a former brdr_observation and compares them with an actual observation; and adds evaluation-properties to the result
     """
+    base_dir = Path(__file__).resolve().parent
     # initiate a base Aligner, to align thematic objects on an older version of the parcels (year 2022)
     base_aligner = Aligner()
     # Load thematic data
-    loader = GeoJsonFileLoader("input/themelayer.geojson", "theme_identifier")
+    loader = GeoJsonFileLoader(
+        str(base_dir / "input" / "themelayer.geojson"), "theme_identifier"
+    )
     base_aligner.load_thematic_data(loader)
     base_year = "2022"
     name_observation = "brdr_metadata"

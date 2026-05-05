@@ -345,7 +345,9 @@ class TestProcessor(unittest.TestCase):
         assert (10.0, 0.0) in anchor_coords
 
     def test_anchorprocessor_anchor_points_include_periodic_points_on_long_line(self):
-        processor = AnchorGeometryProcessor(config=ProcessorConfig())
+        processor = AnchorGeometryProcessor(
+            config=ProcessorConfig(max_anchor_distance=10.0)
+        )
         line = LineString([(0, 0), (20, 0)])
 
         anchors = processor._anchor_points(line, relevant_distance=2.0)

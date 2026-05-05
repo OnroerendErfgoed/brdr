@@ -1,3 +1,7 @@
+import matplotlib
+
+matplotlib.use("Agg")
+
 from brdr.aligner import Aligner
 from brdr.configs import ProcessorConfig
 from brdr.enums import AlignerResultType, SnapStrategy

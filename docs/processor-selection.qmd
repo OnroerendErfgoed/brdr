@@ -25,3 +25,9 @@ Use this guide to choose the right processor for your use case.
 
 - [Parameter Guide](parameter-cookbook.qmd)
 - [Q&A](qa.qmd)
+
+## Note on Descriptor
+
+Besides processor selection, `Aligner` also has a descriptor strategy.
+The default `AlignerDescriptor` builds the `observations` and `metadata` output fields for each `ProcessResult`.
+This is independent from processor selection and can be replaced separately.
