@@ -1,4 +1,3 @@
-import json
 from abc import ABC
 from abc import abstractmethod
 from dataclasses import dataclass
@@ -28,9 +27,6 @@ from brdr.enums import Evaluation
 from brdr.enums import FullReferenceStrategy
 from brdr.enums import ProcessRemark
 from brdr.logger import Logger
-from brdr.metadata import (
-    reverse_metadata_observations_to_brdr_observation as _reverse_metadata_observations_core,
-)
 from brdr.typings import InputId
 from brdr.utils import deep_merge
 from brdr.utils import is_brdr_observation
@@ -38,10 +34,6 @@ from brdr.utils import is_brdr_observation
 if TYPE_CHECKING:
     from brdr.aligner import Aligner
     from brdr.aligner import AlignerResult
-
-
-def _reverse_metadata_observations_to_brdr_observation(metadata: dict) -> dict:
-    return _reverse_metadata_observations_core(metadata)
 
 
 @dataclass
@@ -169,8 +161,6 @@ class AlignerEvaluator(BaseEvaluator):
     ) -> "AlignerResult":
         from brdr.aligner import AlignerResult
 
-        self._observation_cache: dict[bytes, dict | None] = {}
-        self._base_observation_cache: dict[InputId, dict | None] = {}
         thematic_ids, calculate_zeros = self._resolve_thematic_ids(
             aligner=aligner, thematic_ids=thematic_ids
         )
@@ -199,20 +189,16 @@ class AlignerEvaluator(BaseEvaluator):
             multi_to_best_prediction=multi_to_best_prediction,
         )
 
-        try:
-            for theme_id, feat in aligner.thematic_data.features.items():
-                self._evaluate_theme(
-                    aligner=aligner,
-                    runtime=runtime,
-                    thematic_ids=thematic_ids,
-                    theme_id=theme_id,
-                    original_geometry=feat.geometry,
-                )
+        for theme_id, feat in aligner.thematic_data.features.items():
+            self._evaluate_theme(
+                aligner=aligner,
+                runtime=runtime,
+                thematic_ids=thematic_ids,
+                theme_id=theme_id,
+                original_geometry=feat.geometry,
+            )
 
-            return AlignerResult(runtime.process_results_evaluated)
-        finally:
-            self._observation_cache = {}
-            self._base_observation_cache = {}
+        return AlignerResult(runtime.process_results_evaluated)
 
     def _get_observation_cached(
         self,
@@ -220,27 +206,9 @@ class AlignerEvaluator(BaseEvaluator):
         aligner: "Aligner",
         process_result: dict,
     ) -> dict | None:
-        if process_result is None:
-            return None
-        observation = process_result.get("observations")
-        if is_brdr_observation(observation):
-            return observation
-        geom_process_result = process_result.get("result")
-        if geom_process_result is None or geom_process_result.is_empty:
-            process_result["observations"] = None
-            return None
-        try:
-            cache_key = geom_process_result.wkb
-        except Exception:
-            cache_key = None
-        if cache_key is not None and cache_key in self._observation_cache:
-            process_result["observations"] = self._observation_cache[cache_key]
-            return process_result["observations"]
-        observation = aligner.compare_to_reference(geom_process_result)
-        process_result["observations"] = observation
-        if cache_key is not None:
-            self._observation_cache[cache_key] = observation
-        return observation
+        return aligner.descriptor.get_actual_observation(
+            aligner=aligner, process_result=process_result
+        )
 
     def _resolve_thematic_ids(
         self,
@@ -821,22 +789,14 @@ class AlignerEvaluator(BaseEvaluator):
         id_theme: Any,
         base_metadata_field: str,
     ) -> dict:
-        if id_theme in self._base_observation_cache:
-            return self._base_observation_cache[id_theme]
-        try:
-            base_metadata = aligner.thematic_data.features.get(id_theme).properties[
-                base_metadata_field
-            ]
-            if isinstance(base_metadata, str):
-                base_metadata = json.loads(base_metadata)
-
-            base_brdr_observation = _reverse_metadata_observations_to_brdr_observation(
-                base_metadata
-            )
-        except Exception:
-            base_brdr_observation = None
-        self._base_observation_cache[id_theme] = base_brdr_observation
-        return base_brdr_observation
+        feature = aligner.thematic_data.features.get(id_theme)
+        if feature is None:
+            return None
+        return aligner.descriptor.get_base_observation(
+            feature_properties=feature.properties or {},
+            metadata_field=base_metadata_field,
+            cache_key=id_theme,
+        )
 
 
 class ConservativeAlignerEvaluator(AlignerEvaluator):

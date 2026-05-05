@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import numpy as np
 
 from brdr.aligner import Aligner
@@ -10,8 +12,10 @@ from brdr.processor import TopologyProcessor
 
 processor = TopologyProcessor(config=ProcessorConfig(), feedback=None)
 aligner = Aligner(crs="EPSG:31370", processor=processor)
+base_dir = Path(__file__).resolve().parent
 loader = GeoJsonFileLoader(
-    path_to_file="input/topo_parcels.geojson", id_property="CAPAKEY"
+    path_to_file=str(base_dir / "input" / "topo_parcels.geojson"),
+    id_property="CAPAKEY",
 )
 aligner.load_thematic_data(loader)
 aligner.load_reference_data(

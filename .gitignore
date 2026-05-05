@@ -193,3 +193,5 @@ tests/g_out.gpkg
 /.jupyter
 /.tmp/
 /.tmp_py/
+/output
+run_examples.ps1

@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from brdr.aligner import Aligner
 from brdr.be.grb.enums import GRBType
 from brdr.be.grb.loader import GRBActualLoader
@@ -25,8 +27,12 @@ geom = geom_from_wkt(wkt)
 thematic_dict = {"theme_id_1": geom}
 loader = DictLoader(thematic_dict)
 aligner.load_thematic_data(loader)
+base_dir = Path(__file__).resolve().parent
 if not grb_loader:
-    loader = GeoJsonFileLoader("../tests/testdata/reference_leuven.geojson", "capakey")
+    loader = GeoJsonFileLoader(
+        str(base_dir.parent / "tests" / "testdata" / "reference_leuven.geojson"),
+        "capakey",
+    )
 else:
     loader = GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner)
 aligner.load_reference_data(loader)

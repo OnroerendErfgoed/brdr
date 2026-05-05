@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import numpy as np
 
 from brdr.aligner import Aligner
@@ -13,11 +15,15 @@ if __name__ == "__main__":
     # parcel
     """
     # Initiate brdr
+    base_dir = Path(__file__).resolve().parent
+    parcel_vs_building_path = (
+        base_dir.parent / "tests" / "testdata" / "test_parcel_vs_building.geojson"
+    )
     aligner_x = Aligner()
     # Load thematic data & reference data (parcels)
     aligner_x.load_thematic_data(
         GeoJsonFileLoader(
-            "../tests/testdata/test_parcel_vs_building.geojson", "theme_id"
+            str(parcel_vs_building_path), "theme_id"
         )
     )
     aligner_x.load_reference_data(
@@ -28,7 +34,7 @@ if __name__ == "__main__":
     # Load thematic data & reference data (buildings)
     aligner_y.load_thematic_data(
         GeoJsonFileLoader(
-            "../tests/testdata/test_parcel_vs_building.geojson", "theme_id"
+            str(parcel_vs_building_path), "theme_id"
         )
     )
     aligner_y.load_reference_data(

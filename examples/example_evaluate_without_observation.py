@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from brdr.aligner import Aligner
 from brdr.be.grb.enums import GRBType
 from brdr.be.grb.loader import GRBActualLoader
@@ -16,8 +18,11 @@ if __name__ == "__main__":
     """
 
     # Start an aligner to align thematic objects on the actual parcels
+    base_dir = Path(__file__).resolve().parent
     actual_aligner = Aligner()
-    loader = GeoJsonFileLoader("input/themelayer.geojson", "theme_identifier")
+    loader = GeoJsonFileLoader(
+        str(base_dir / "input" / "themelayer.geojson"), "theme_identifier"
+    )
     actual_aligner.load_thematic_data(loader)
     # Load reference data; the actual parcels
     actual_aligner.load_reference_data(

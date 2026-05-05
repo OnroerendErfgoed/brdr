@@ -19,6 +19,41 @@ This page shows the recommended onboarding path for new `brdr` users.
    - `evaluate(...)` for scored/classified predictions
 5. Export with `get_results_as_geojson(...)` or `save_results(...)`.
 
+## Strategy components
+
+`Aligner` uses four interchangeable strategy components:
+
+1. `processor`: geometric alignment
+2. `predictor`: selection of interesting distances
+3. `evaluator`: evaluation/classification of predictions
+4. `descriptor`: construction of observations and metadata on `ProcessResult`
+
+By default, `Aligner` uses the default implementation for each component.
+
+### Custom descriptor (short example)
+
+```python
+from brdr.aligner import Aligner
+from brdr.descriptor import BaseDescriptor
+
+
+class NoopDescriptor(BaseDescriptor):
+    def describe(self, *, aligner, thematic_id, geometry, relevant_distance, process_result):
+        # Pass ProcessResult through unchanged
+        return process_result
+
+    def get_base_observation(self, *, feature_properties, metadata_field, cache_key=None):
+        # Evaluator contract: return BRDR observation dict or None
+        return None
+
+    def get_actual_observation(self, *, aligner, process_result, cache_key=None):
+        # Evaluator contract: return BRDR observation dict or None
+        return None
+
+
+aligner = Aligner(descriptor=NoopDescriptor())
+```
+
 ## Minimal code shape
 
 ```python
