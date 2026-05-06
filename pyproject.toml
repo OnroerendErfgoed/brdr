@@ -87,3 +87,10 @@ features = [
 
 [[tool.hatch.envs.hatch-test.matrix]]
 python = ['3.11', '3.12', '3.13', '3.14']
+
+[tool.pytest.ini_options]
+markers = [
+    "native: native/GEOS-heavy tests",
+    "network: tests that rely on external network services",
+    "slow: slower end-to-end or integration tests",
+]

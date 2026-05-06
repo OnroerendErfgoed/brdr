@@ -1099,6 +1099,24 @@ def build_reverse_index_wkb(d: dict):
     return {g.wkb: k for k, g in d.items()}
 
 
+def config_fingerprint(config_obj) -> tuple:
+    """
+    Create a stable, hashable fingerprint for a config-like object.
+
+    This is used for cache keys where config changes should invalidate cached
+    process results.
+    """
+
+    def _freeze(value):
+        if isinstance(value, dict):
+            return tuple(sorted((k, _freeze(v)) for k, v in value.items()))
+        if isinstance(value, (list, tuple, set)):
+            return tuple(_freeze(v) for v in value)
+        return value
+
+    return tuple(sorted((key, _freeze(val)) for key, val in vars(config_obj).items()))
+
+
 def is_brdr_observation(brdr_observation):
     """
     Check whether a value matches the expected BRDR observation structure.

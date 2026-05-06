@@ -209,7 +209,12 @@ class AlignerDescriptor(BaseDescriptor):
                     if is_brdr_observation(decoded)
                     else None
                 )
-        except Exception:
+        except (
+            ValueError,
+            TypeError,
+            AttributeError,
+            json.JSONDecodeError,
+        ):
             base_observation = None
 
         if cache_key is not None:
@@ -234,7 +239,7 @@ class AlignerDescriptor(BaseDescriptor):
         if cache_key is None:
             try:
                 cache_key = geom_process_result.wkb
-            except Exception:
+            except (AttributeError, TypeError, ValueError):
                 cache_key = None
 
         if cache_key is not None and cache_key in self._actual_observation_cache:

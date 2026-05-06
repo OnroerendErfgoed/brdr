@@ -54,6 +54,20 @@ This page provides practical guidance for the most important `brdr` parameters.
   geometry part, so reference boundaries just outside the scope can still affect
   the aligned result inside the scope.
 
+## Directed network parameters
+
+- `network_use_directed_graph`: enable directed routing based on one-way metadata.
+- `network_oneway_field`: attribute name read from reference feature properties.
+- `network_oneway_forward_values`: values interpreted as forward direction.
+- `network_oneway_reverse_values`: values interpreted as reverse direction.
+- `network_allow_connector_edges_when_directed`: allow graph connector edges in directed mode.
+- `network_directed_connector_penalty_factor`: penalize connector usage in directed mode.
+
+Practical rule:
+
+- Use directed mode only when reference attributes are reliable enough to encode direction.
+- If no directed path exists, processors do not fabricate reverse travel to bypass one-way constraints.
+
 ## Tuning workflow
 
 1. Fix a representative sample dataset.

@@ -54,6 +54,17 @@ result = aligner.process(
 
 By default, `Aligner` uses the default implementation for each component.
 
+### Descriptor/evaluator contract
+
+If you provide a custom descriptor, keep this internal contract in mind:
+
+1. `get_base_observation(...)` should return a BRDR observation dict (or `None`).
+2. `get_actual_observation(...)` should return a BRDR observation dict (or `None`).
+3. `evaluate(...)` uses these observations for comparison/scoring.
+
+If either side returns `None`, evaluation falls back to conservative
+`TO_CHECK_*` classifications.
+
 ### Custom descriptor (short example)
 
 ```python
@@ -77,6 +88,11 @@ class NoopDescriptor(BaseDescriptor):
 
 aligner = Aligner(descriptor=NoopDescriptor())
 ```
+
+## Topology note
+
+`TopologyProcessor` relies on explicit thematic IDs passed by `Aligner`.
+This avoids ambiguity when multiple thematic features share identical geometry.
 
 ## Minimal code shape
 

@@ -10,6 +10,7 @@ A Python library for aligning thematic geometries (OGC Simple Features) to refer
 - [Getting started](getting-started.qmd)
 - [Processor selection](processor-selection.qmd)
 - [Parameter cookbook](parameter-cookbook.qmd)
+- [Testing and CI](qa.qmd)
 - [Export guide](export-guide.qmd)
 - [Examples](examples.qmd)
 - [API reference](reference/index.qmd)
