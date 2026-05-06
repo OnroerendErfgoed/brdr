@@ -1147,7 +1147,7 @@ def find_best_circle_path(graph, geom_to_process, max_total_combis=1000):
         if isinstance(geom, Polygon):
             if not original_poly.is_empty and original_poly.area > 0:
                 overlap_ratio = (
-                    poly.intersection(original_poly).area / original_poly.area
+                    geom.intersection(original_poly).area / original_poly.area
                 )
                 if overlap_ratio <= overlap_ratio_threshold:
                     # Fallback: keep original ring if the single polygonized candidate
