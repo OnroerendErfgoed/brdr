@@ -516,3 +516,57 @@ class TestAligner(unittest.TestCase):
         assert fcs["result_diff"]["features"][0]["properties"][AREA_ATTRIBUTE] == 0
         assert fcs["result_diff_min"]["features"][0]["properties"][AREA_ATTRIBUTE] == 0
         assert fcs["result_diff_plus"]["features"][0]["properties"][AREA_ATTRIBUTE] == 0
+
+    def test_process_with_processing_area_none_is_backward_compatible(self):
+        aligner = Aligner()
+        thematic = {"t1": from_wkt("LINESTRING (0 0, 10 0)")}
+        reference = {"r1": from_wkt("LINESTRING (0 1, 10 1)")}
+        aligner.load_thematic_data(DictLoader(thematic))
+        aligner.load_reference_data(DictLoader(reference))
+
+        out_default = aligner.process([1]).results["t1"][1]["result"]
+        out_none = aligner.process([1], processing_area=None).results["t1"][1]["result"]
+        assert safe_equals(out_default, out_none)
+
+    def test_process_with_processing_area_partial_only_changes_inside_scope(self):
+        aligner = Aligner()
+        thematic_geom = from_wkt("LINESTRING (0 0, 10 0)")
+        thematic = {"t1": thematic_geom}
+        reference = {"r1": from_wkt("LINESTRING (0 1, 10 1)")}
+        aligner.load_thematic_data(DictLoader(thematic))
+        aligner.load_reference_data(DictLoader(reference))
+        scope = from_wkt("POLYGON ((0 -1, 0 2, 5 2, 5 -1, 0 -1))")
+
+        result = aligner.process([1], processing_area=scope).results["t1"][1]["result"]
+        inside = result.intersection(scope)
+        outside = result.difference(scope)
+        expected_outside = thematic_geom.difference(scope)
+
+        assert inside.length > 0
+        assert safe_equals(outside, expected_outside)
+
+    def test_process_with_processing_area_no_overlap_returns_unchanged(self):
+        aligner = Aligner()
+        thematic_geom = from_wkt("LINESTRING (0 0, 10 0)")
+        thematic = {"t1": thematic_geom}
+        reference = {"r1": from_wkt("LINESTRING (0 1, 10 1)")}
+        aligner.load_thematic_data(DictLoader(thematic))
+        aligner.load_reference_data(DictLoader(reference))
+        scope = from_wkt("POLYGON ((20 20, 20 21, 21 21, 21 20, 20 20))")
+
+        pr = aligner.process([1], processing_area=scope).results["t1"][1]
+        assert safe_equals(pr["result"], thematic_geom)
+        assert ProcessRemark.RESULT_UNCHANGED in pr["properties"].get(
+            REMARK_FIELD_NAME, []
+        )
+
+    def test_predict_accepts_processing_area(self):
+        aligner = Aligner()
+        thematic = {"t1": from_wkt("LINESTRING (0 0, 10 0)")}
+        reference = {"r1": from_wkt("LINESTRING (0 1, 10 1)")}
+        aligner.load_thematic_data(DictLoader(thematic))
+        aligner.load_reference_data(DictLoader(reference))
+        scope = from_wkt("POLYGON ((0 -1, 0 2, 5 2, 5 -1, 0 -1))")
+
+        result = aligner.predict(relevant_distances=[0, 1], processing_area=scope)
+        assert "t1" in result.results

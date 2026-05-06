@@ -1010,6 +1010,7 @@ class Aligner:
         *,
         thematic_ids: List[InputId] = None,
         max_workers: int = None,
+        processing_area: BaseGeometry = None,
     ) -> AlignerResult:
         """
         Executes the alignment process across multiple relevant distances.
@@ -1029,6 +1030,10 @@ class Aligner:
         max_workers : int, optional
             The number of threads for parallel execution. If -1, execution is
             serial. If None, the Aligner's default `max_workers` is used.
+        processing_area : BaseGeometry, optional
+            Optional scope geometry. When provided, only the part of each thematic
+            geometry intersecting this area is processed/aligned. The remainder is
+            kept unchanged and merged back into the final result.
 
         Returns
         -------
@@ -1082,6 +1087,12 @@ class Aligner:
 
         self.logger.feedback_debug("Process series" + str(relevant_distances))
 
+        processing_area_valid = None
+        if processing_area is not None:
+            processing_area_valid = make_valid(processing_area)
+            if processing_area_valid is None or processing_area_valid.is_empty:
+                processing_area_valid = None
+
         process_results: dict[InputId, dict[float, ProcessResult | None]] = {}
         futures = {}
 
@@ -1093,18 +1104,56 @@ class Aligner:
             reference_candidates=None,
             reference_elements_candidates=None,
         ):
+            scoped_in = geometry
+            scoped_out = GeometryCollection()
+            if processing_area_valid is not None:
+                scoped_in = make_valid(safe_intersection(geometry, processing_area_valid))
+                scoped_out = make_valid(safe_difference(geometry, processing_area_valid))
+                if scoped_in is None or scoped_in.is_empty:
+                    process_result = ProcessResult()
+                    process_result["result"] = geometry
+                    process_result["properties"] = {
+                        REMARK_FIELD_NAME: [ProcessRemark.RESULT_UNCHANGED]
+                    }
+                    return aligner.descriptor.describe(
+                        aligner=aligner,
+                        thematic_id=thematic_id,
+                        geometry=geometry,
+                        relevant_distance=relevant_distance,
+                        process_result=process_result,
+                    )
+
             t0 = time.perf_counter()
             result = aligner.processor.process(
                 correction_distance=aligner.correction_distance,
                 reference_data=aligner.reference_data,
                 mitre_limit=aligner.mitre_limit,
-                input_geometry=geometry,
+                input_geometry=scoped_in,
                 relevant_distance=relevant_distance,
                 thematic_data=aligner.thematic_data,
                 reference_candidates=reference_candidates,
                 reference_elements_candidates=reference_elements_candidates,
                 perf_collector=perf_collector,
             )
+            if processing_area_valid is not None:
+                result_in = result.get("result")
+                if result_in is None:
+                    result_in = GeometryCollection()
+                merged_result = make_valid(safe_unary_union([result_in, scoped_out]))
+                if merged_result is None:
+                    merged_result = GeometryCollection()
+                result["result"] = merged_result
+                result_diff_plus = safe_difference(
+                    merged_result, buffer_pos(geometry, aligner.correction_distance)
+                )
+                result_diff_min = safe_difference(
+                    geometry, buffer_pos(merged_result, aligner.correction_distance)
+                )
+                result["result_diff_plus"] = result_diff_plus
+                result["result_diff_min"] = result_diff_min
+                result["result_diff"] = safe_unary_union(
+                    [result_diff_plus, result_diff_min]
+                )
             if perf_collector is not None:
                 perf_collector.add(
                     "aligner.process.single_rd_total", time.perf_counter() - t0
@@ -1136,17 +1185,25 @@ class Aligner:
                         factor = 1.01
                         outer_buffer = 0
                     max_rd = max(relevant_distances)
-                    search_geom = buffer_pos(
-                        geom, max_rd * factor + outer_buffer, self.mitre_limit
-                    )
-                    reference_candidates = self.reference_data.items.take(
-                        self.reference_data.tree.query(search_geom)
-                    ).tolist()
-                    # Preselect linear/point reference elements once per thematic
-                    # geometry and reuse across all relevant distances.
-                    reference_elements_candidates = safe_unary_union(
-                        safe_intersection(self.reference_data.elements, search_geom)
-                    )
+                    preselect_geom = geom
+                    if processing_area_valid is not None:
+                        preselect_geom = make_valid(
+                            safe_intersection(geom, processing_area_valid)
+                        )
+                    if preselect_geom is not None and not preselect_geom.is_empty:
+                        search_geom = buffer_pos(
+                            preselect_geom,
+                            max_rd * factor + outer_buffer,
+                            self.mitre_limit,
+                        )
+                        reference_candidates = self.reference_data.items.take(
+                            self.reference_data.tree.query(search_geom)
+                        ).tolist()
+                        # Preselect linear/point reference elements once per thematic
+                        # geometry and reuse across all relevant distances.
+                        reference_elements_candidates = safe_unary_union(
+                            safe_intersection(self.reference_data.elements, search_geom)
+                        )
                     if perf_collector is not None:
                         perf_collector.add(
                             "aligner.process.reference_preselection",
@@ -1212,6 +1269,7 @@ class Aligner:
         *,
         thematic_ids: Optional[List[InputId]] = None,
         diff_metric: Optional[DiffMetric] = None,
+        processing_area: BaseGeometry = None,
     ) -> AlignerResult:
         """
         Predicts the 'most interesting' relevant distances for changes in thematic
@@ -1233,6 +1291,9 @@ class Aligner:
         diff_metric : DiffMetric, optional
             The metric used to determine differences (e.g., area change).
             If None, the Aligner's default `diff_metric` is used.
+        processing_area : BaseGeometry, optional
+            Optional scope geometry. When provided, only the intersecting part of
+            each thematic geometry is processed during prediction.
 
         Returns
         -------
@@ -1279,6 +1340,7 @@ class Aligner:
             relevant_distances=relevant_distances,
             thematic_ids=thematic_ids,
             diff_metric=diff_metric,
+            processing_area=processing_area,
         )
 
     def evaluate(
@@ -1290,6 +1352,7 @@ class Aligner:
         full_reference_strategy: FullReferenceStrategy = FullReferenceStrategy.NO_FULL_REFERENCE,
         max_predictions: int = -1,
         multi_to_best_prediction: bool = True,
+        processing_area: BaseGeometry = None,
     ) -> AlignerResult:
         """
         Evaluates input geometries against predictions using observation matching
@@ -1320,6 +1383,9 @@ class Aligner:
             If True and `max_predictions=1`, returns the candidate with the
             highest score. If False, returns the original geometry when
             multiple candidates exist. Defaults to True.
+        processing_area : BaseGeometry, optional
+            Optional scope geometry. When provided, evaluation uses predictions
+            computed with scoped processing.
 
         Returns
         -------
@@ -1371,6 +1437,7 @@ class Aligner:
             full_reference_strategy=full_reference_strategy,
             max_predictions=max_predictions,
             multi_to_best_prediction=multi_to_best_prediction,
+            processing_area=processing_area,
         )
 
     def _update_evaluation_with_original(

@@ -1,0 +1,53 @@
+---
+title: "Scoped Processing Area"
+description: "Align only a selected part of each geometry and keep the rest unchanged"
+author: "Karel Dieussaert"
+date: "2026-05-06"
+categories: [Process, Scope, Backward-compatible]
+format:
+  html:
+    code-fold: false
+jupyter: python3
+---
+# Scoped Processing Area
+This example demonstrates the `processing_area` argument on `aligner.process(...)`.
+
+## Use case
+
+Use this when:
+
+1. A thematic geometry spans multiple zones.
+2. You want to align only one zone for a targeted update.
+3. The rest of the geometry must remain unchanged.
+
+Typical scenarios:
+
+- partial QA corrections in a project area
+- incremental migration by spatial batches
+- constrained edits where only a designated footprint may change
+
+## Behavior summary
+
+- `processing_area=None`: default behavior (full geometry processing).
+- `processing_area=<geometry>`:
+  - inside scope: normal alignment
+  - outside scope: unchanged, then reattached to final output
+
+## Example code
+
+```{python}
+#| label: fig-processing-area
+#| fig-cap:
+#|   - "Scoped processing example output"
+{{< include ../../examples/example_processing_area.py >}}
+```
+
+## Expected output interpretation
+
+You should see:
+
+1. A valid result for full processing and scoped processing.
+2. `right side unchanged vs original: True`
+3. `left side changed vs original: True`
+
+This confirms that only the scoped part is actively aligned.

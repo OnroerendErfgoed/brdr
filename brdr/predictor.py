@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 from typing import Union
 
 import numpy as np
+from shapely.geometry.base import BaseGeometry
 
 from brdr.constants import PREDICTION_COUNT
 from brdr.constants import PREDICTION_SCORE
@@ -43,6 +44,7 @@ class BasePredictor(ABC):
         relevant_distances: Optional[Union[List[float], np.ndarray]] = None,
         thematic_ids: Optional[List[InputId]] = None,
         diff_metric: Optional[DiffMetric] = None,
+        processing_area: BaseGeometry = None,
     ) -> "AlignerResult":
         """Execute prediction strategy for the given aligner context."""
         pass
@@ -60,6 +62,7 @@ class AlignerPredictor(BasePredictor):
         relevant_distances: Optional[Union[List[float], np.ndarray]] = None,
         thematic_ids: Optional[List[InputId]] = None,
         diff_metric: Optional[DiffMetric] = None,
+        processing_area: BaseGeometry = None,
     ) -> "AlignerResult":
         from brdr.aligner import AlignerResult
 
@@ -100,6 +103,7 @@ class AlignerPredictor(BasePredictor):
         aligner_result = aligner.process(
             thematic_ids=thematic_ids,
             relevant_distances=rd_prediction,
+            processing_area=processing_area,
         )
         process_results = aligner_result.results
 
@@ -173,12 +177,14 @@ class ConservativeAlignerPredictor(AlignerPredictor):
         relevant_distances: Optional[Union[List[float], np.ndarray]] = None,
         thematic_ids: Optional[List[InputId]] = None,
         diff_metric: Optional[DiffMetric] = None,
+        processing_area: BaseGeometry = None,
     ) -> "AlignerResult":
         result = super().predict(
             aligner=aligner,
             relevant_distances=relevant_distances,
             thematic_ids=thematic_ids,
             diff_metric=diff_metric,
+            processing_area=processing_area,
         )
         process_results = result.results
 

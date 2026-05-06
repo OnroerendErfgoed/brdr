@@ -45,6 +45,7 @@ class _EvaluationRuntime:
     full_reference_strategy: FullReferenceStrategy
     max_predictions: int
     multi_to_best_prediction: bool
+    processing_area: BaseGeometry | None
 
 
 def _clone_process_results(process_results: dict) -> dict:
@@ -92,6 +93,7 @@ class BaseEvaluator(ABC):
         full_reference_strategy: FullReferenceStrategy = FullReferenceStrategy.NO_FULL_REFERENCE,
         max_predictions: int = -1,
         multi_to_best_prediction: bool = True,
+        processing_area: BaseGeometry = None,
     ) -> "AlignerResult":
         """Execute evaluation strategy for the given aligner context."""
         pass
@@ -158,6 +160,7 @@ class AlignerEvaluator(BaseEvaluator):
         full_reference_strategy: FullReferenceStrategy = FullReferenceStrategy.NO_FULL_REFERENCE,
         max_predictions: int = -1,
         multi_to_best_prediction: bool = True,
+        processing_area: BaseGeometry = None,
     ) -> "AlignerResult":
         from brdr.aligner import AlignerResult
 
@@ -176,6 +179,7 @@ class AlignerEvaluator(BaseEvaluator):
             thematic_ids=thematic_ids,
             relevant_distances=relevant_distances,
             calculate_zeros=calculate_zeros,
+            processing_area=processing_area,
         )
         runtime = _EvaluationRuntime(
             process_results_predictions=process_results_predictions,
@@ -187,6 +191,7 @@ class AlignerEvaluator(BaseEvaluator):
             full_reference_strategy=full_reference_strategy,
             max_predictions=max_predictions,
             multi_to_best_prediction=multi_to_best_prediction,
+            processing_area=processing_area,
         )
 
         for theme_id, feat in aligner.thematic_data.features.items():
@@ -258,11 +263,13 @@ class AlignerEvaluator(BaseEvaluator):
         thematic_ids: list[InputId],
         relevant_distances: list[float],
         calculate_zeros: bool,
+        processing_area: BaseGeometry | None,
     ) -> tuple[dict, dict]:
         aligner_result = aligner.predict(
             thematic_ids=thematic_ids,
             relevant_distances=relevant_distances,
             diff_metric=aligner.diff_metric,
+            processing_area=processing_area,
         )
         process_results = aligner_result.get_results(aligner=aligner)
         process_results_predictions = aligner_result.get_results(
@@ -271,7 +278,9 @@ class AlignerEvaluator(BaseEvaluator):
 
         if calculate_zeros:
             aligner_result_zero = aligner.process(
-                relevant_distances=[0], thematic_ids=thematic_ids
+                relevant_distances=[0],
+                thematic_ids=thematic_ids,
+                processing_area=processing_area,
             )
             process_results_zero = aligner_result_zero.get_results(aligner=aligner)
             process_results = deep_merge(process_results_zero, process_results)
@@ -831,6 +840,7 @@ class ConservativeAlignerEvaluator(AlignerEvaluator):
         full_reference_strategy: FullReferenceStrategy = FullReferenceStrategy.NO_FULL_REFERENCE,
         max_predictions: int = -1,
         multi_to_best_prediction: bool = True,
+        processing_area: BaseGeometry = None,
     ) -> "AlignerResult":
         from brdr.aligner import AlignerResult
 
@@ -842,6 +852,7 @@ class ConservativeAlignerEvaluator(AlignerEvaluator):
             full_reference_strategy=full_reference_strategy,
             max_predictions=max_predictions,
             multi_to_best_prediction=multi_to_best_prediction,
+            processing_area=processing_area,
         )
         evaluated = result.results
 

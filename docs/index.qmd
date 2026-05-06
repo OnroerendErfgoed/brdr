@@ -33,6 +33,9 @@ The minimal workflow is:
 4. Run `process(...)`, `predict(...)`, or `evaluate(...)`.
 5. Export or inspect `AlignerResult`.
 
+All three operations also support an optional `processing_area` to process only a
+selected spatial subset while leaving the rest of each geometry unchanged.
+
 ```{mermaid}
 flowchart LR
     A[Create Aligner] --> B[Load thematic data]

@@ -42,6 +42,18 @@ This page provides practical guidance for the most important `brdr` parameters.
   - exclude
   - snap to virtual/reference boundaries
 
+## `processing_area`
+
+- Location: argument on `Aligner.process(...)`, `Aligner.predict(...)`, and `Aligner.evaluate(...)`.
+- Meaning: limit active alignment to the intersecting portion of each thematic geometry.
+- Default: `None` (no scope limitation; existing behavior).
+- Behavior:
+  - inside scope: normal processing/prediction/evaluation
+  - outside scope: unchanged and reattached to output geometry
+- Practical note: reference candidate preselection is buffered around the scoped
+  geometry part, so reference boundaries just outside the scope can still affect
+  the aligned result inside the scope.
+
 ## Tuning workflow
 
 1. Fix a representative sample dataset.
@@ -54,6 +66,8 @@ This page provides practical guidance for the most important `brdr` parameters.
 ## Performance notes
 
 - `brdr` reuses reference candidates per thematic geometry across multiple relevant distances.
+- When `processing_area` is used, preselection runs around the scoped geometry part
+  (plus distance buffer), reducing unnecessary reference checks for out-of-scope regions.
 - `evaluate(...)` includes caching for repeated observation comparisons on identical predicted geometries.
 - These optimizations are transparent; no extra configuration is needed besides optional profiling.
 
