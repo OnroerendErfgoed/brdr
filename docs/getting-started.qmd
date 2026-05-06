@@ -19,6 +19,30 @@ This page shows the recommended onboarding path for new `brdr` users.
    - `evaluate(...)` for scored/classified predictions
 5. Export with `get_results_as_geojson(...)` or `save_results(...)`.
 
+## Scoped processing (`processing_area`)
+
+`process(...)`, `predict(...)`, and `evaluate(...)` accept an optional
+`processing_area` geometry.
+
+- Default: `None` (fully backward compatible).
+- When set: only the intersecting part of each thematic geometry is processed.
+- The non-intersecting part is kept unchanged and merged back into the final result.
+- Reference preselection still uses a buffered search area around the scoped part,
+  so nearby boundaries just outside the scope can still influence snapping/alignment.
+
+```python
+from shapely.geometry import box
+
+# Example scope in working CRS coordinates
+scope = box(100000, 200000, 101000, 201000)
+
+# Process only inside scope; outside stays untouched
+result = aligner.process(
+    relevant_distances=[0.5, 1.0],
+    processing_area=scope,
+)
+```
+
 ## Strategy components
 
 `Aligner` uses four interchangeable strategy components:
