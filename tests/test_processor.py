@@ -1,6 +1,7 @@
 ﻿import unittest
 from unittest.mock import patch
 
+import networkx as nx
 import numpy as np
 from shapely import GeometryCollection, Polygon
 from shapely import from_wkt
@@ -12,6 +13,7 @@ from brdr.configs import ProcessorConfig
 from brdr.enums import OpenDomainStrategy
 from brdr.geometry_utils import safe_difference
 from brdr.graph_utils import _build_reference_segment_index
+from brdr.graph_utils import find_best_circle_path
 from brdr.loader import DictLoader
 from brdr.processor import BaseProcessor, DirectedNetworkGeometryProcessor
 from brdr.processor import DieussaertGeometryProcessor
@@ -564,7 +566,20 @@ class TestProcessor(unittest.TestCase):
                 directed=False,
             )
 
-        assert max_seen["value"] == 20.0
+        assert max_seen["value"] == 50
+
+    def test_find_best_circle_path_single_polygon_low_overlap_returns_original_ring(self):
+        graph = nx.Graph()
+        # Candidate polygon around x=100 (far from original around x=0..10)
+        coords = [(100, 0), (100, 10), (110, 10), (110, 0), (100, 0)]
+        for i in range(len(coords) - 1):
+            a = coords[i]
+            b = coords[i + 1]
+            graph.add_edge(a, b, geometry=LineString([a, b]), length=1.0)
+
+        original_ring = LineString([(0, 0), (0, 10), (10, 10), (10, 0), (0, 0)])
+        out = find_best_circle_path(graph, original_ring)
+        assert out is original_ring
 
     def test_anchorprocessor_routes_on_full_reference_after_local_anchor_match(self):
         thematic_dict = {"theme_id": from_wkt("LINESTRING (0 0.2, 10 0.2)")}

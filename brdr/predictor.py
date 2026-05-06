@@ -134,6 +134,12 @@ class AlignerPredictor(BasePredictor):
                 process_results[theme_id][rd]["properties"][STABILITY] = dict_stability[
                     rd
                 ][STABILITY]
+                # Keep potential unchanged baseline prediction at rd=0,
+                # but skip unchanged results for rd>0 (e.g. guardrail fallbacks).
+                if rd > 0:
+                    result_diff = process_results[theme_id][rd].get("result_diff")
+                    if result_diff is None or result_diff.is_empty:
+                        continue
                 if dict_stability[rd][ZERO_STREAK] is not None:
                     result_geom = process_results[theme_id][rd].get("result")
                     if result_geom is None or result_geom.is_empty:

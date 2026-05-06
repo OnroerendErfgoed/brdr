@@ -1116,10 +1116,7 @@ def build_custom_network(
         )
     remove_pseudonodes(G, tag="pseudo_ref_vertex", target_degrees=[1])
     remove_pseudonodes(G, tag="pseudo_theme_vertex", target_degrees=[2])
-    max_unconnected_distance = 50
-    unconnected_distance = 10 * relevant_distance
-    if unconnected_distance > max_unconnected_distance:
-        unconnected_distance = max_unconnected_distance
+    unconnected_distance = 50
     if (not directed) or allow_connector_edges_when_directed:
         G = connect_unconnected_greedy(
             G, max_spatial_dist=unconnected_distance, detour_ratio=5
@@ -1139,7 +1136,8 @@ def find_best_circle_path(graph, geom_to_process, max_total_combis=1000):
     When multiple polygons are present, select polygons that overlap
     geom_to_process by more than 50% of their own area and union them.
     """
-
+    original_poly = Polygon(geom_to_process)
+    overlap_ratio_threshold = 0.5
     def _symdiff_score(poly):
         if not isinstance(poly, Polygon):
             return inf
@@ -1147,12 +1145,22 @@ def find_best_circle_path(graph, geom_to_process, max_total_combis=1000):
 
     def _best_exterior_from_geom(geom):
         if isinstance(geom, Polygon):
-            return geom.exterior
+            if not original_poly.is_empty and original_poly.area > 0:
+                overlap_ratio = (
+                    poly.intersection(original_poly).area / original_poly.area
+                )
+                if overlap_ratio <= overlap_ratio_threshold:
+                    # Fallback: keep original ring if the single polygonized candidate
+                    # does not cover more than 50% of the original geometry.
+                    return geom_to_process
+
+            return geom.exterior if hasattr(poly, "exterior") else None
         if isinstance(geom, (MultiPolygon, GeometryCollection)):
             polygons = [g for g in geom.geoms if isinstance(g, Polygon)]
             if not polygons:
                 return None
-            return min(polygons, key=_symdiff_score).exterior
+            polygon = min(polygons, key=_symdiff_score)
+            return _best_exterior_from_geom(polygon)
         return None
 
     edges = [data["geometry"] for u, v, data in graph.edges(data=True)]
@@ -1167,17 +1175,16 @@ def find_best_circle_path(graph, geom_to_process, max_total_combis=1000):
         return None
     if len(individual_polygons) == 1:
         poly = individual_polygons[0]
-        return poly.exterior if hasattr(poly, "exterior") else None
+        return _best_exterior_from_geom(poly)
 
     overlap_selected = []
     for poly in individual_polygons:
         if poly.area <= 0:
             continue
-        overlap_area = poly.intersection(geom_to_process).area
+        overlap_area = poly.intersection(original_poly).area
         overlap_ratio = overlap_area / poly.area
-        if overlap_ratio > 0.5:
+        if overlap_ratio > overlap_ratio_threshold:
             overlap_selected.append(poly)
-
     if overlap_selected:
         combined = safe_unary_union(overlap_selected)
         return _best_exterior_from_geom(combined)
@@ -1797,4 +1804,3 @@ __all__ = [
     "bridge_with_straight_line",
     "clean_pseudo_nodes_by_snap_strategy",
 ]
-
