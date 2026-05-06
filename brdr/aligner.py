@@ -1129,6 +1129,7 @@ class Aligner:
                 reference_data=aligner.reference_data,
                 mitre_limit=aligner.mitre_limit,
                 input_geometry=scoped_in,
+                thematic_id=thematic_id,
                 relevant_distance=relevant_distance,
                 thematic_data=aligner.thematic_data,
                 reference_candidates=reference_candidates,

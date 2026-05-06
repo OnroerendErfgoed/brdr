@@ -37,6 +37,7 @@ from brdr.geometry_utils import get_shape_index
 from brdr.geometry_utils import extract_points_lines_from_geometry
 from brdr.geometry_utils import safe_difference
 from brdr.geometry_utils import safe_intersection
+from brdr.geometry_utils import safe_intersects
 from brdr.geometry_utils import safe_symmetric_difference
 from brdr.geometry_utils import safe_unary_union
 from brdr.geometry_utils import safe_union
@@ -996,7 +997,11 @@ class DieussaertGeometryProcessor(BaseProcessor):
                 "processor.dieussaert.reference_query",
                 time.perf_counter() - t_query,
             )
-        prepared_input_outer = prep(input_geometry_outer)
+        prepared_input_outer = prep(
+            make_valid(input_geometry_outer)
+            if not input_geometry_outer.is_valid
+            else input_geometry_outer
+        )
         reference_union = reference_data.union
 
         buffer_distance = relevant_distance / 2
@@ -1021,8 +1026,13 @@ class DieussaertGeometryProcessor(BaseProcessor):
                     "Dieussaert algorithm can only be used when all reference geometries are polygons or multipolygons."
                 )
             # Cheap boolean pre-check before expensive intersection construction
-            if not prepared_input_outer.intersects(geom_reference):
-                continue
+            try:
+                if not prepared_input_outer.intersects(geom_reference):
+                    continue
+            except Exception:
+                # Fallback for topology/runtime issues: robust but slightly slower.
+                if not safe_intersects(input_geometry_outer, geom_reference):
+                    continue
             geom_intersection = safe_intersection(input_geometry_outer, geom_reference)
             if geom_intersection.is_empty or geom_intersection is None:
                 continue
@@ -1407,11 +1417,14 @@ class DieussaertGeometryProcessor(BaseProcessor):
 
 
         """
-        od_overlap = 111  # define a specific value for defining overlap of OD
-        buffer_distance_x2 = 2 * buffer_distance
-        if geom_reference.area == 0:
-            overlap = od_overlap  # Open Domain
+        def _empty_polygon() -> Polygon:
+            # Keep return type stable for downstream union/array logic.
+            return Polygon()
 
+        buffer_distance_x2 = 2 * buffer_distance
+        is_open_domain_reference = geom_reference.area == 0
+        if is_open_domain_reference:
+            overlap = float("inf")
         else:
             overlap = geom_intersection.area * 100 / geom_reference.area
 
@@ -1419,13 +1432,14 @@ class DieussaertGeometryProcessor(BaseProcessor):
             overlap < self.config.threshold_exclusion_percentage
             or geom_intersection.area < self.config.threshold_exclusion_area
         ):
-            return Polygon(), Polygon(), Polygon()
+            empty = _empty_polygon()
+            return empty, empty, empty
 
         if (
             overlap >= self.config.threshold_inclusion_percentage
-            and not overlap == od_overlap
+            and not is_open_domain_reference
         ):
-            return geom_reference, geom_reference, Polygon()
+            return geom_reference, geom_reference, _empty_polygon()
 
         geom_difference = safe_difference(geom_reference, geom_intersection)
         geom_relevant_intersection = buffer_neg(
@@ -1666,6 +1680,11 @@ class NetworkGeometryProcessor(BaseProcessor):
         reference_feature_records = None
         precomputed_ref_direction_index = None
         if self.config.network_use_directed_graph:
+            if reference_candidates is None:
+                # Build direction lookup from the full reference feature set used
+                # by this processor call to avoid local-buffer direction mismatch
+                # when routing reaches broader network parts.
+                reference_candidate_ids = list(reference_data.features.keys())
             reference_feature_records = []
             filtered_reference_ids = []
             for key_ref in reference_candidate_ids:
@@ -1674,8 +1693,6 @@ class NetworkGeometryProcessor(BaseProcessor):
                     continue
                 feat_geom = feat.geometry
                 if feat_geom is None or feat_geom.is_empty:
-                    continue
-                if not feat_geom.intersects(input_geometry_buffered):
                     continue
                 filtered_reference_ids.append(key_ref)
                 reference_feature_records.append(
@@ -2041,9 +2058,10 @@ class AnchorGeometryProcessor(BaseProcessor):
         precomputed_ref_direction_index = None
         if self.config.network_use_directed_graph:
             if reference_candidates is None:
-                reference_candidate_ids = reference_data.items.take(
-                    reference_data.tree.query(search_geom)
-                ).tolist()
+                # Build direction lookup from the full reference feature set used
+                # by this processor call to avoid mismatches when routing can use
+                # wider network parts than the local anchor search area.
+                reference_candidate_ids = list(reference_data.features.keys())
             else:
                 reference_candidate_ids = reference_candidates
             reference_feature_records = []
@@ -2054,8 +2072,6 @@ class AnchorGeometryProcessor(BaseProcessor):
                     continue
                 feat_geom = feat.geometry
                 if feat_geom is None or feat_geom.is_empty:
-                    continue
-                if not feat_geom.intersects(search_geom):
                     continue
                 filtered_reference_ids.append(key_ref)
                 reference_feature_records.append(
@@ -2243,7 +2259,7 @@ class AnchorGeometryProcessor(BaseProcessor):
             return False
         return Point(node).distance(point) <= float(relevant_distance)
 
-    def _anchor_points(self, line: LineString, relevant_distance: float) -> list[Point]:
+    def _anchor_points(self, line: LineString) -> list[Point]:
         if line.length == 0:
             return [Point(line.coords[0])]
         coords = list(line.coords)
@@ -2285,7 +2301,7 @@ class AnchorGeometryProcessor(BaseProcessor):
     ) -> LineString:
         if line is None or line.is_empty or line.length == 0:
             return line
-        anchors = self._anchor_points(line, relevant_distance)
+        anchors = self._anchor_points(line)
         selection_graph = (
             anchor_selection_graph if anchor_selection_graph is not None else graph
         )
@@ -2357,6 +2373,10 @@ class AnchorGeometryProcessor(BaseProcessor):
             try:
                 path_nodes = nx.shortest_path(graph, start_node, end_node, weight="length")
             except (nx.NetworkXNoPath, nx.NodeNotFound):
+                if self.config.network_use_directed_graph:
+                    # Do not introduce synthetic straight jumps between nodes when
+                    # directed constraints prevent a valid path.
+                    return line
                 if route_coords[-1] != end_target["coord"]:
                     route_coords.append(end_target["coord"])
                 continue
@@ -2571,6 +2591,7 @@ class TopologyProcessor(BaseProcessor):
         self.thematic_geometries_to_process = None
         self.id_to_arcs = None
         self.wkb_to_id = None
+        self.wkb_to_ids = None
         self._arc_result_cache = {}
 
     def process(
@@ -2635,22 +2656,39 @@ class TopologyProcessor(BaseProcessor):
         self.check_area_limit(input_geometry)
         self._build_topo_cache(thematic_data)
 
-        # Identify the feature ID via its WKB
-        id_thematic = self.wkb_to_id[input_geometry.wkb]
+        # Identify the feature ID. Prefer explicit thematic_id from caller to
+        # avoid ambiguity when multiple thematic features share identical WKB.
+        id_thematic = kwargs.get("thematic_id")
+        if id_thematic is None:
+            candidates = self.wkb_to_ids.get(input_geometry.wkb, [])
+            if len(candidates) == 1:
+                id_thematic = candidates[0]
+            elif len(candidates) > 1:
+                raise ValueError(
+                    "Ambiguous topology lookup: multiple thematic features share "
+                    "the same geometry WKB. Provide thematic_id explicitly."
+                )
+            else:
+                raise KeyError("Input geometry not found in thematic topology cache.")
 
         # Get all unique arcs that make up this feature
         arcs_to_process = flatten_iter(self.id_to_arcs[id_thematic])
         processor = NetworkGeometryProcessor(config=self.config, feedback=self.feedback)
         process_results = {}
         reference_signature = id(reference_data.features)
+        def _freeze(value):
+            if isinstance(value, dict):
+                return tuple(sorted((k, _freeze(v)) for k, v in value.items()))
+            if isinstance(value, (list, tuple, set)):
+                return tuple(_freeze(v) for v in value)
+            return value
+
         config_signature = (
-            self.config.snap_strategy.value,
-            self.config.partial_snap_strategy.value,
-            self.config.network_use_directed_graph,
-            self.config.network_allow_connector_edges_when_directed,
-            self.config.network_directed_connector_penalty_factor,
-            self.config.angle_threshold_degrees,
-            self.config.buffer_multiplication_factor,
+            tuple(
+                sorted(
+                    (key, _freeze(val)) for key, val in vars(self.config).items()
+                )
+            ),
         )
 
         # Align each arc individually (shared arcs are processed once per batch)
@@ -2714,6 +2752,10 @@ class TopologyProcessor(BaseProcessor):
             self.wkb_to_id = build_reverse_index_wkb(
                 {key: feat.geometry for key, feat in thematic_data.features.items()}
             )
+            wkb_to_ids = {}
+            for key, feat in thematic_data.features.items():
+                wkb_to_ids.setdefault(feat.geometry.wkb, []).append(key)
+            self.wkb_to_ids = wkb_to_ids
             self.id_to_arcs = _topojson_id_to_arcs(self.topo_thematic)
             self.thematic_data = thematic_data
             self._arc_result_cache = {}

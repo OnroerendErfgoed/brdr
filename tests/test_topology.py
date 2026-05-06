@@ -1,14 +1,21 @@
 import unittest
+from unittest.mock import patch
 
 import pytest
+from shapely.geometry import LineString
 from shapely.geometry import Polygon
 
 from brdr.aligner import Aligner
 from brdr.be.grb.enums import GRBType
 from brdr.be.grb.loader import GRBActualLoader
 from brdr.configs import ProcessorConfig
+from brdr.enums import SnapStrategy
+from brdr.loader import DictLoader
 from brdr.loader import GeoJsonLoader
+from brdr.processor import NetworkGeometryProcessor
 from brdr.processor import TopologyProcessor
+from brdr.topo_utils import _dissolve_topo
+from brdr.topo_utils import _generate_topo
 
 
 class TestTopology(unittest.TestCase):
@@ -146,3 +153,111 @@ class TestTopology(unittest.TestCase):
         self.assertEqual(len(aligner_result.results), 2)
         dict_predictions_evaluated = aligner.evaluate()
         print(dict_predictions_evaluated)
+
+    def test_topology_processor_duplicate_wkb_is_disambiguated_via_thematic_id(self):
+        processor = TopologyProcessor(config=ProcessorConfig(), feedback=None)
+        aligner = Aligner(crs="EPSG:31370", processor=processor)
+        poly = Polygon([(0, 0), (0, 10), (10, 10), (10, 0)])
+        thematic = {"a": poly, "b": poly}
+        reference = {"r1": poly}
+        aligner.load_thematic_data(DictLoader(thematic))
+        aligner.load_reference_data(DictLoader(reference))
+
+        result = aligner.process([1.0])
+        assert len(result.results) == 2
+        assert "a" in result.results
+        assert "b" in result.results
+
+    def test_topology_processor_duplicate_wkb_without_thematic_id_raises(self):
+        processor = TopologyProcessor(config=ProcessorConfig(), feedback=None)
+        aligner = Aligner(crs="EPSG:31370")
+        poly = Polygon([(0, 0), (0, 10), (10, 10), (10, 0)])
+        thematic = {"a": poly, "b": poly}
+        reference = {"r1": poly}
+        aligner.load_thematic_data(DictLoader(thematic))
+        aligner.load_reference_data(DictLoader(reference))
+
+        with self.assertRaises(ValueError):
+            processor.process(
+                input_geometry=poly,
+                reference_data=aligner.reference_data,
+                mitre_limit=2,
+                correction_distance=0.01,
+                relevant_distance=1.0,
+                thematic_data=aligner.thematic_data,
+            )
+
+    def test_dissolve_topo_does_not_swallow_unexpected_runtime_error(self):
+        aligner = Aligner(crs="EPSG:31370")
+        poly = Polygon([(0, 0), (0, 10), (10, 10), (10, 0)])
+        aligner.load_thematic_data(DictLoader({"a": poly}))
+        thematic_geometries_to_process, topo = _generate_topo(aligner.thematic_data)
+        arc_id = next(iter(thematic_geometries_to_process.keys()))
+        process_results = {
+            arc_id: {1.0: {"result": LineString([(0, 0), (10, 0)])}}
+        }
+
+        with patch(
+            "brdr.topo_utils.longest_linestring_from_multilinestring",
+            side_effect=RuntimeError("boom"),
+        ):
+            with self.assertRaises(RuntimeError):
+                _dissolve_topo(
+                    "a",
+                    process_results,
+                    poly,
+                    thematic_geometries_to_process,
+                    topo,
+                    1.0,
+                )
+
+    def test_topology_arc_cache_invalidates_on_config_change(self):
+        processor = TopologyProcessor(config=ProcessorConfig(), feedback=None)
+        aligner = Aligner(crs="EPSG:31370")
+        poly = Polygon([(0, 0), (0, 10), (10, 10), (10, 0)])
+        aligner.load_thematic_data(DictLoader({"a": poly}))
+        aligner.load_reference_data(DictLoader({"r1": poly}))
+
+        with patch.object(
+            NetworkGeometryProcessor,
+            "process",
+            autospec=True,
+            wraps=NetworkGeometryProcessor.process,
+        ) as mocked:
+            # First run fills arc cache.
+            processor.process(
+                input_geometry=poly,
+                thematic_id="a",
+                reference_data=aligner.reference_data,
+                mitre_limit=aligner.mitre_limit,
+                correction_distance=aligner.correction_distance,
+                relevant_distance=1.0,
+                thematic_data=aligner.thematic_data,
+            )
+            calls_after_first = mocked.call_count
+            assert calls_after_first > 0
+
+            # Second identical run reuses cache.
+            processor.process(
+                input_geometry=poly,
+                thematic_id="a",
+                reference_data=aligner.reference_data,
+                mitre_limit=aligner.mitre_limit,
+                correction_distance=aligner.correction_distance,
+                relevant_distance=1.0,
+                thematic_data=aligner.thematic_data,
+            )
+            assert mocked.call_count == calls_after_first
+
+            # Mutating behavior-driving config should invalidate cache key.
+            processor.config.snap_strategy = SnapStrategy.NO_PREFERENCE
+            processor.process(
+                input_geometry=poly,
+                thematic_id="a",
+                reference_data=aligner.reference_data,
+                mitre_limit=aligner.mitre_limit,
+                correction_distance=aligner.correction_distance,
+                relevant_distance=1.0,
+                thematic_data=aligner.thematic_data,
+            )
+            assert mocked.call_count > calls_after_first

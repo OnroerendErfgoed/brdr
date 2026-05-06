@@ -1120,7 +1120,6 @@ def build_custom_network(
     unconnected_distance = 10 * relevant_distance
     if unconnected_distance > max_unconnected_distance:
         unconnected_distance = max_unconnected_distance
-    unconnected_distance = 50
     if (not directed) or allow_connector_edges_when_directed:
         G = connect_unconnected_greedy(
             G, max_spatial_dist=unconnected_distance, detour_ratio=5
@@ -1401,7 +1400,7 @@ def find_best_path_in_network(
 
     path_found = nx.has_path(graph, start_node, end_node)
     logging.debug("Path detected? - " + str(path_found))
-    if not path_found:
+    if not path_found and not _is_directed_graph(graph):
         graph = connect_network_components(
             graph,
             50,

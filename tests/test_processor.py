@@ -2,7 +2,7 @@
 from unittest.mock import patch
 
 import numpy as np
-from shapely import GeometryCollection
+from shapely import GeometryCollection, Polygon
 from shapely import from_wkt
 from shapely.geometry import LineString
 from shapely.geometry import Point
@@ -13,7 +13,8 @@ from brdr.enums import OpenDomainStrategy
 from brdr.geometry_utils import safe_difference
 from brdr.graph_utils import _build_reference_segment_index
 from brdr.loader import DictLoader
-from brdr.processor import BaseProcessor
+from brdr.processor import BaseProcessor, DirectedNetworkGeometryProcessor
+from brdr.processor import DieussaertGeometryProcessor
 from brdr.processor import NetworkGeometryProcessor
 from brdr.processor import AnchorGeometryProcessor
 from brdr.processor import DirectedAnchorGeometryProcessor
@@ -215,6 +216,129 @@ class TestProcessor(unittest.TestCase):
         assert result.geom_type in {"LineString", "MultiLineString"}
         assert result.distance(reference_dict["ref_id"]) < 1e-8
 
+    def test_dieussaert_calculate_geom_exclusion_returns_empty_polygons(self):
+        processor = DieussaertGeometryProcessor(
+            config=ProcessorConfig(threshold_exclusion_percentage=5.0)
+        )
+        geom_intersection = from_wkt("POLYGON ((0 0, 0 1, 1 1, 1 0, 0 0))")
+        geom_reference = from_wkt("POLYGON ((0 0, 0 10, 10 10, 10 0, 0 0))")
+        input_inner = from_wkt("POLYGON EMPTY")
+
+        geom, rel_i, rel_d = processor._calculate_geom_by_intersection_and_reference(
+            geom_intersection=geom_intersection,
+            geom_reference=geom_reference,
+            input_geometry_inner=input_inner,
+            is_open_domain=False,
+            buffer_distance=0.5,
+            mitre_limit=5.0,
+        )
+
+        assert geom.geom_type == "Polygon" and geom.is_empty
+        assert rel_i.geom_type == "Polygon" and rel_i.is_empty
+        assert rel_d.geom_type == "Polygon" and rel_d.is_empty
+
+    def test_dieussaert_calculate_geom_full_inclusion_returns_reference(self):
+        processor = DieussaertGeometryProcessor(config=ProcessorConfig())
+        geom_reference = from_wkt("POLYGON ((0 0, 0 4, 4 4, 4 0, 0 0))")
+        input_inner = from_wkt("POLYGON EMPTY")
+
+        geom, rel_i, rel_d = processor._calculate_geom_by_intersection_and_reference(
+            geom_intersection=geom_reference,
+            geom_reference=geom_reference,
+            input_geometry_inner=input_inner,
+            is_open_domain=False,
+            buffer_distance=0.5,
+            mitre_limit=5.0,
+        )
+
+        assert geom.equals(geom_reference)
+        assert rel_i.equals(geom_reference)
+        assert rel_d.geom_type == "Polygon" and rel_d.is_empty
+
+    def test_dieussaert_threshold_overlap_minus_one_returns_intersection(self):
+        processor = DieussaertGeometryProcessor(
+            config=ProcessorConfig(threshold_overlap_percentage=-1)
+        )
+        geom_reference = from_wkt("POLYGON ((0 0, 0 10, 10 10, 10 0, 0 0))")
+        geom_intersection = from_wkt("POLYGON ((2 2, 2 8, 8 8, 8 2, 2 2))")
+        input_inner = from_wkt("POLYGON EMPTY")
+
+        with patch("brdr.processor.buffer_neg", return_value=Polygon()):
+            geom, _, _ = processor._calculate_geom_by_intersection_and_reference(
+                geom_intersection=geom_intersection,
+                geom_reference=geom_reference,
+                input_geometry_inner=input_inner,
+                is_open_domain=False,
+                buffer_distance=0.5,
+                mitre_limit=5.0,
+            )
+
+        assert geom.equals(geom_intersection)
+
+    def test_dieussaert_open_domain_branch_uses_snap_geometry(self):
+        processor = DieussaertGeometryProcessor(config=ProcessorConfig())
+        geom_intersection = from_wkt("POLYGON ((2 2, 2 8, 8 8, 8 2, 2 2))")
+        input_inner = from_wkt("POLYGON EMPTY")
+
+        with patch("brdr.processor.buffer_neg", return_value=Polygon()):
+            with patch(
+                "brdr.processor.snap_geometry_to_reference",
+                side_effect=lambda g, *_args, **_kwargs: g,
+            ) as mocked_snap:
+                geom, _, _ = processor._calculate_geom_by_intersection_and_reference(
+                    geom_intersection=geom_intersection,
+                    geom_reference=GeometryCollection(),  # area == 0 => OD reference
+                    input_geometry_inner=input_inner,
+                    is_open_domain=True,
+                    buffer_distance=0.5,
+                    mitre_limit=5.0,
+                )
+
+        assert mocked_snap.called
+        assert geom.equals(geom_intersection)
+
+    def test_dieussaert_partial_snapping_flag_controls_snap_call(self):
+        geom_reference = from_wkt("POLYGON ((0 0, 0 10, 10 10, 10 0, 0 0))")
+        geom_intersection = from_wkt("POLYGON ((4 4, 4 6, 6 6, 6 4, 4 4))")
+        input_inner = from_wkt("POLYGON EMPTY")
+
+        processor_no_snap = DieussaertGeometryProcessor(
+            config=ProcessorConfig(partial_snapping=False)
+        )
+        with patch(
+            "brdr.processor.snap_geometry_to_reference",
+            side_effect=lambda g, *_args, **_kwargs: g,
+        ) as mocked_snap_false:
+            processor_no_snap._calculate_geom_by_intersection_and_reference(
+                geom_intersection=geom_intersection,
+                geom_reference=geom_reference,
+                input_geometry_inner=input_inner,
+                is_open_domain=False,
+                buffer_distance=0.5,
+                mitre_limit=5.0,
+            )
+        calls_without = mocked_snap_false.call_count
+
+        processor_with_snap = DieussaertGeometryProcessor(
+            config=ProcessorConfig(partial_snapping=True)
+        )
+        with patch(
+            "brdr.processor.snap_geometry_to_reference",
+            side_effect=lambda g, *_args, **_kwargs: g,
+        ) as mocked_snap_true:
+            processor_with_snap._calculate_geom_by_intersection_and_reference(
+                geom_intersection=geom_intersection,
+                geom_reference=geom_reference,
+                input_geometry_inner=input_inner,
+                is_open_domain=False,
+                buffer_distance=0.5,
+                mitre_limit=5.0,
+            )
+        calls_with = mocked_snap_true.call_count
+
+        assert calls_with >= calls_without
+        assert calls_with > 0
+
     def test_anchorprocessor_uses_pathfinder_per_anchor_segment(self):
         processor = AnchorGeometryProcessor(
             config=ProcessorConfig(max_anchor_distance=5.0)
@@ -296,6 +420,152 @@ class TestProcessor(unittest.TestCase):
         assert not base_config.network_use_directed_graph
         assert processor.config.network_use_directed_graph
 
+    def test_directed_anchor_no_path_returns_original_line_instead_of_direct_jump(self):
+        processor = DirectedAnchorGeometryProcessor(config=ProcessorConfig())
+        # One-way reference edge: only (0,0) -> (10,0)
+        ref_line = LineString([(0, 0), (10, 0)])
+        direction_index = _build_reference_segment_index(
+            reference_feature_records=[
+                {
+                    "id": "ref1",
+                    "geometry": ref_line,
+                    "properties": {"oneway": "yes"},
+                }
+            ],
+            oneway_field=processor.config.network_oneway_field,
+            oneway_forward_values=processor.config.network_oneway_forward_values,
+            oneway_reverse_values=processor.config.network_oneway_reverse_values,
+        )
+        graph = processor._build_reference_graph(
+            [ref_line], precomputed_ref_direction_index=direction_index
+        )
+        input_line = LineString([(10, 0), (0, 0)])
+
+        result = processor._align_linestring_anchor_routing(
+            input_line,
+            graph,
+            relevant_distance=1.0,
+            anchor_selection_graph=graph,
+        )
+
+        assert result is not None
+        assert result.equals(input_line)
+
+    def test_directed_anchor_builds_direction_index_from_all_reference_candidates(self):
+        thematic_dict = {"theme_id": from_wkt("LINESTRING (0 0, 10 0)")}
+        reference_dict = {
+            "near": from_wkt("LINESTRING (0 0, 10 0)"),
+            "far": from_wkt("LINESTRING (100 100, 110 100)"),
+        }
+        processor = DirectedAnchorGeometryProcessor(config=ProcessorConfig())
+        aligner = Aligner(processor=processor)
+        aligner.load_thematic_data(DictLoader(thematic_dict))
+        aligner.load_reference_data(DictLoader(reference_dict))
+
+        seen_ids = []
+        original_builder = __import__(
+            "brdr.processor", fromlist=["_build_reference_segment_index"]
+        )._build_reference_segment_index
+
+        def _capture_index(*, reference_feature_records, **kwargs):
+            seen_ids.append({rec["id"] for rec in reference_feature_records})
+            return original_builder(
+                reference_feature_records=reference_feature_records, **kwargs
+            )
+
+        with patch("brdr.processor._build_reference_segment_index", side_effect=_capture_index):
+            aligner.processor.process(
+                input_geometry=thematic_dict["theme_id"],
+                reference_data=aligner.reference_data,
+                mitre_limit=aligner.mitre_limit,
+                correction_distance=aligner.correction_distance,
+                relevant_distance=1.0,
+                reference_candidates=["near", "far"],
+            )
+
+        assert seen_ids
+        assert {"near", "far"} in seen_ids
+
+    def test_directed_network_no_path_returns_original_line_without_component_fallback(self):
+        processor = DirectedNetworkGeometryProcessor(config=ProcessorConfig())
+        thematic = LineString([(10, 0), (0, 0)])
+        reference_dict = {
+            "ref1": from_wkt("LINESTRING (0 0, 10 0)"),
+        }
+        aligner = Aligner(processor=processor)
+        aligner.load_thematic_data(DictLoader({"theme_id": thematic}))
+        aligner.load_reference_data(DictLoader(reference_dict))
+
+        result = aligner.process([1.0]).results["theme_id"][1.0]["result"]
+        assert result is not None
+        # With strict directed routing and no reverse path, behavior should no longer
+        # create a synthetic reverse connector route through fallback component linking.
+        assert result.equals(thematic)
+
+    def test_directed_network_builds_direction_index_from_all_reference_candidates(self):
+        processor = DirectedNetworkGeometryProcessor(config=ProcessorConfig())
+        thematic_dict = {"theme_id": from_wkt("LINESTRING (0 0, 10 0)")}
+        reference_dict = {
+            "near": from_wkt("LINESTRING (0 0, 10 0)"),
+            "far": from_wkt("LINESTRING (100 100, 110 100)"),
+        }
+        aligner = Aligner(processor=processor)
+        aligner.load_thematic_data(DictLoader(thematic_dict))
+        aligner.load_reference_data(DictLoader(reference_dict))
+
+        seen_ids = []
+        original_builder = __import__(
+            "brdr.processor", fromlist=["_build_reference_segment_index"]
+        )._build_reference_segment_index
+
+        def _capture_index(*, reference_feature_records, **kwargs):
+            seen_ids.append({rec["id"] for rec in reference_feature_records})
+            return original_builder(
+                reference_feature_records=reference_feature_records, **kwargs
+            )
+
+        with patch("brdr.processor._build_reference_segment_index", side_effect=_capture_index):
+            aligner.processor.process(
+                input_geometry=thematic_dict["theme_id"],
+                reference_data=aligner.reference_data,
+                mitre_limit=aligner.mitre_limit,
+                correction_distance=aligner.correction_distance,
+                relevant_distance=1.0,
+                reference_candidates=["near", "far"],
+            )
+
+        assert seen_ids
+        assert {"near", "far"} in seen_ids
+
+    def test_build_custom_network_unconnected_distance_scales_with_relevant_distance(self):
+        from brdr.graph_utils import build_custom_network
+
+        input_geometry = LineString([(0, 0), (10, 0)])
+        theme_multiline = LineString([(0, 0), (10, 0)])
+        reference = LineString([(0, 0), (10, 0)])
+        reference_intersection = LineString([(0, 0), (10, 0)])
+
+        max_seen = {"value": None}
+
+        def _capture_connect_unconnected_greedy(G, max_spatial_dist=50, detour_ratio=3.0):
+            max_seen["value"] = max_spatial_dist
+            return G
+
+        with patch(
+            "brdr.graph_utils.connect_unconnected_greedy",
+            side_effect=_capture_connect_unconnected_greedy,
+        ):
+            build_custom_network(
+                input_geometry=input_geometry,
+                theme_multiline=theme_multiline,
+                reference=reference,
+                reference_intersection=reference_intersection,
+                relevant_distance=2.0,
+                directed=False,
+            )
+
+        assert max_seen["value"] == 20.0
+
     def test_anchorprocessor_routes_on_full_reference_after_local_anchor_match(self):
         thematic_dict = {"theme_id": from_wkt("LINESTRING (0 0.2, 10 0.2)")}
         reference_dict = {
@@ -316,7 +586,9 @@ class TestProcessor(unittest.TestCase):
         assert not overlap_with_top.is_empty
 
     def test_anchorprocessor_keeps_unmatched_anchor_point_in_route(self):
-        processor = AnchorGeometryProcessor(config=ProcessorConfig())
+        processor = AnchorGeometryProcessor(
+            config=ProcessorConfig(angle_threshold_degrees=180.0)
+        )
         reference_lines = [LineString([(0, 0), (10, 0)])]
         graph = processor._build_reference_graph(reference_lines)
         # Mid anchor at (5, 2) has no candidate within relevant_distance=1 and must stay.
@@ -337,7 +609,7 @@ class TestProcessor(unittest.TestCase):
         processor = AnchorGeometryProcessor(config=ProcessorConfig())
         line = LineString([(0, 0), (5, 5), (10, 0)])
 
-        anchors = processor._anchor_points(line, relevant_distance=2.0)
+        anchors = processor._anchor_points(line)
         anchor_coords = {(round(p.x, 6), round(p.y, 6)) for p in anchors}
 
         assert (0.0, 0.0) in anchor_coords
@@ -350,7 +622,7 @@ class TestProcessor(unittest.TestCase):
         )
         line = LineString([(0, 0), (20, 0)])
 
-        anchors = processor._anchor_points(line, relevant_distance=2.0)
+        anchors = processor._anchor_points(line)
         anchor_coords = {(round(p.x, 6), round(p.y, 6)) for p in anchors}
         # start + periodic at 10 + end
         assert (0.0, 0.0) in anchor_coords
@@ -363,9 +635,8 @@ class TestProcessor(unittest.TestCase):
         )
         line = LineString([(0, 0), (20, 0)])
 
-        anchors = processor._anchor_points(line, relevant_distance=2.0)
+        anchors = processor._anchor_points(line)
         anchor_coords = {(round(p.x, 6), round(p.y, 6)) for p in anchors}
         assert (6.0, 0.0) in anchor_coords
         assert (12.0, 0.0) in anchor_coords
         assert (18.0, 0.0) in anchor_coords
-
