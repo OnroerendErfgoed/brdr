@@ -56,6 +56,7 @@ from brdr.logger import Logger
 from brdr.topo_utils import _dissolve_topo, _generate_topo, _topojson_id_to_arcs
 from brdr.typings import ProcessResult, InputId
 from brdr.utils import (
+    config_fingerprint,
     get_relevant_polygons_from_geom,
     build_reverse_index_wkb,
     flatten_iter,
@@ -2676,20 +2677,7 @@ class TopologyProcessor(BaseProcessor):
         processor = NetworkGeometryProcessor(config=self.config, feedback=self.feedback)
         process_results = {}
         reference_signature = id(reference_data.features)
-        def _freeze(value):
-            if isinstance(value, dict):
-                return tuple(sorted((k, _freeze(v)) for k, v in value.items()))
-            if isinstance(value, (list, tuple, set)):
-                return tuple(_freeze(v) for v in value)
-            return value
-
-        config_signature = (
-            tuple(
-                sorted(
-                    (key, _freeze(val)) for key, val in vars(self.config).items()
-                )
-            ),
-        )
+        config_signature = (config_fingerprint(self.config),)
 
         # Align each arc individually (shared arcs are processed once per batch)
         for key in arcs_to_process:

@@ -553,7 +553,7 @@ class AlignerEvaluator(BaseEvaluator):
         try:
             process_result = process_results_evaluated[theme_id][relevant_distance]
             props = dict(process_result["properties"])
-        except Exception:
+        except (KeyError, TypeError, AttributeError):
             process_result = {"result": original_geometry}
             props = {}
         if theme_id not in process_results_evaluated:

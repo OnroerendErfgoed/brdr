@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import ctypes
 from copy import copy
 
 import pytest
@@ -12,11 +13,64 @@ from tests.testdata.responses import inventaris_responses
 here = os.path.dirname(os.path.abspath(__file__))
 
 
+def pytest_configure(config):
+    config.addinivalue_line("markers", "native: native/GEOS-heavy tests")
+    config.addinivalue_line("markers", "network: tests that rely on external network services")
+    config.addinivalue_line("markers", "slow: slower end-to-end or integration tests")
+
+
+def pytest_collection_modifyitems(items):
+    for item in items:
+        nodeid = item.nodeid.lower()
+        if any(
+            key in nodeid
+            for key in (
+                "test_examples.py",
+                "test_topology.py",
+                "test_integration.py",
+            )
+        ):
+            item.add_marker(pytest.mark.slow)
+        if any(
+            key in nodeid
+            for key in (
+                "test_topology.py",
+                "test_processor.py",
+                "test_network_directed.py",
+            )
+        ):
+            item.add_marker(pytest.mark.native)
+        if any(
+            key in nodeid
+            for key in (
+                "test_examples.py",
+                "test_osm.py",
+                "test_be.py",
+                "test_grb.py",
+                "test_loader.py",
+            )
+        ):
+            item.add_marker(pytest.mark.network)
+
+
 @pytest.fixture(autouse=True, scope="session")
 def requests_mock():
     """Block all requests calls."""
     with responses.RequestsMock() as rsps:
         yield rsps
+
+
+@pytest.fixture(autouse=True, scope="session")
+def disable_windows_crash_dialog():
+    if os.name != "nt":
+        return
+    sem_failcriticalerrors = 0x0001
+    sem_nogpfaulterrorbox = 0x0002
+    sem_noopenfileerrorbox = 0x8000
+    ctypes.windll.kernel32.SetErrorMode(
+        sem_failcriticalerrors | sem_nogpfaulterrorbox | sem_noopenfileerrorbox
+    )
+    os.environ.setdefault("PYTHONFAULTHANDLER", "1")
 
 
 @pytest.fixture(scope="session")

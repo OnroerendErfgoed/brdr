@@ -1312,7 +1312,13 @@ def find_best_path_in_network(
                     path_len = float(
                         nx.shortest_path_length(graph, source=s, target=e, weight="length")
                     )
-                except Exception:
+                except (
+                    nx.NetworkXNoPath,
+                    nx.NodeNotFound,
+                    nx.NetworkXError,
+                    ValueError,
+                    TypeError,
+                ):
                     continue
                 s_rank = _candidate_rank_for_snap_strategy(
                     start_point,
@@ -1433,8 +1439,8 @@ def find_best_path_in_network(
                 best_line = line
                 if dist == 0.0:
                     return best_line
-        except Exception:
-            pass
+        except (ValueError, TypeError):
+            continue
     return best_line
 
 

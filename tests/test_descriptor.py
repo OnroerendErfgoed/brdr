@@ -44,3 +44,34 @@ def test_geometry_descriptor_get_base_observation_from_brdr_payload():
     assert obs is not None
     assert obs["measure_type"] == "area"
     assert obs["area"] == 1.0
+
+
+def test_geometry_descriptor_get_base_observation_invalid_json_returns_none():
+    descriptor = AlignerDescriptor()
+    obs = descriptor.get_base_observation(
+        feature_properties={"meta": "{invalid-json"},
+        metadata_field="meta",
+        cache_key="badjson",
+    )
+    assert obs is None
+
+
+def test_geometry_descriptor_get_actual_observation_handles_unreadable_wkb():
+    class _BadGeom:
+        is_empty = False
+
+        @property
+        def wkb(self):
+            raise TypeError("no wkb")
+
+    class _DummyAligner:
+        def compare_to_reference(self, _):
+            return None
+
+    descriptor = AlignerDescriptor()
+    process_result = {"result": _BadGeom(), "properties": {}}
+    obs = descriptor.get_actual_observation(
+        aligner=_DummyAligner(), process_result=process_result
+    )
+    assert obs is None
+    assert process_result["observations"] is None
