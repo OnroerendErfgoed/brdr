@@ -1,16 +1,21 @@
 import unittest
+from unittest.mock import patch
 
 import numpy as np
 import pytest
 from shapely import from_wkt
-from shapely.geometry import Polygon
+from shapely.geometry import GeometryCollection, Polygon
 
 from brdr.aligner import Aligner
 from brdr.be.grb.enums import GRBType
 from brdr.be.grb.loader import GRBActualLoader
 from brdr.constants import PREDICTION_COUNT
+from brdr.constants import PREDICTION_SCORE
+from brdr.constants import STABILITY
+from brdr.constants import ZERO_STREAK
 from brdr.enums import AlignerResultType
 from brdr.loader import DictLoader
+from brdr.predictor import AlignerPredictor
 
 
 class TestAligner(unittest.TestCase):
@@ -185,3 +190,57 @@ class TestAligner(unittest.TestCase):
             prediction_result.results["theme_id"][0.0]["properties"][PREDICTION_COUNT]
             >= 1
         )
+
+    def test_predictor_keeps_rd0_but_skips_unchanged_rd_gt_zero(self):
+        class _Feature:
+            def __init__(self, geometry):
+                self.geometry = geometry
+
+        class _ProcessResultWrap:
+            def __init__(self, results):
+                self.results = results
+
+        class _DummyAligner:
+            def __init__(self):
+                geom = from_wkt("POLYGON ((0 0, 0 1, 1 1, 1 0, 0 0))")
+                self.thematic_data = type("T", (), {"features": {"id1": _Feature(geom)}})()
+                self.reference_data = type("R", (), {"union": geom})()
+                self.diff_metric = None
+
+            def process(self, thematic_ids=None, relevant_distances=None, processing_area=None):
+                out = {"id1": {}}
+                for rd in relevant_distances:
+                    out["id1"][rd] = {
+                        "result": from_wkt("POLYGON ((0 0, 0 1, 1 1, 1 0, 0 0))"),
+                        "result_diff": GeometryCollection(),
+                        "properties": {},
+                    }
+                return _ProcessResultWrap(out)
+
+        predictor = AlignerPredictor()
+        aligner = _DummyAligner()
+
+        def _fake_determine_stability(rd_prediction, diff_values):
+            return {
+                rd: {STABILITY: True, ZERO_STREAK: (0, 0, 0, 77.0)}
+                for rd in rd_prediction
+            }
+
+        with patch("brdr.predictor.coverage_ratio", return_value=1.0):
+            with patch("brdr.predictor.determine_stability", side_effect=_fake_determine_stability):
+                with patch(
+                    "brdr.predictor.get_geometry_difference_metrics_from_processresults",
+                    side_effect=lambda process_result, *_args, **_kwargs: {
+                        rd: 0.0 for rd in process_result.keys()
+                    },
+                ):
+                    result = predictor.predict(
+                        aligner=aligner,
+                        relevant_distances=[0.0, 1.0],
+                        thematic_ids=["id1"],
+                    )
+
+        rd0_props = result.results["id1"][0.0]["properties"]
+        rd1_props = result.results["id1"][1.0]["properties"]
+        assert PREDICTION_SCORE in rd0_props
+        assert PREDICTION_SCORE not in rd1_props

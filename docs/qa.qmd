@@ -71,3 +71,31 @@ Marker meaning:
   - `descriptor.get_base_observation(...)` reads base context from feature properties/metadata.
   - `descriptor.get_actual_observation(...)` derives observation for process results.
   - `evaluator` compares both and assigns evaluation classes.
+
+## When does `brdr` return an empty geometry vs the original geometry?
+
+- Short answer:
+  - `original geometry` is returned for safe fallbacks and unchanged outcomes.
+  - `empty geometry` is only returned in specific valid/explicit situations.
+- Long answer:
+  - Typical `original geometry` cases:
+    - no effective change after processing
+    - circular-shape guard behavior
+    - invalid intermediate processor output (strict fallback to original)
+  - Typical `empty geometry` cases:
+    - the input is already empty
+    - explicit clipping/exclusion behavior removes all geometry content
+    - a processor legitimately computes an empty end result for the chosen strategy
+
+`ProcessRemark` guidance:
+
+- `RESULT_UNCHANGED`:
+  - processing completed, but final result equals original geometry (within tolerance).
+- `INPUT_CIRCLE`:
+  - circle-like geometry guard triggered; original geometry is kept.
+- `INVALID_PRERESULT_ORIGINAL_RETURNED`:
+  - processor intermediate output was unusable (e.g. invalid/empty/type mismatch path);
+    `brdr` returned original geometry as a strict safe fallback.
+- `RESULT_EMPTY_RETURNED` / `CHANGED_GEOMETRYTYPE_EMPTY_RETURNED`:
+  - legacy/diagnostic remarks indicating an empty/type-mismatch outcome path.
+    In current strict-fallback behavior, these should be much less common.

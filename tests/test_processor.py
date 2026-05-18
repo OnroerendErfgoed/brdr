@@ -1,6 +1,7 @@
 ﻿import unittest
 from unittest.mock import patch
 
+import networkx as nx
 import numpy as np
 from shapely import GeometryCollection, Polygon
 from shapely import from_wkt
@@ -9,15 +10,19 @@ from shapely.geometry import Point
 
 from brdr.aligner import Aligner
 from brdr.configs import ProcessorConfig
+from brdr.constants import REMARK_FIELD_NAME
 from brdr.enums import OpenDomainStrategy
+from brdr.enums import ProcessRemark
 from brdr.geometry_utils import safe_difference
 from brdr.graph_utils import _build_reference_segment_index
+from brdr.graph_utils import find_best_circle_path
 from brdr.loader import DictLoader
 from brdr.processor import BaseProcessor, DirectedNetworkGeometryProcessor
 from brdr.processor import DieussaertGeometryProcessor
 from brdr.processor import NetworkGeometryProcessor
 from brdr.processor import AnchorGeometryProcessor
 from brdr.processor import DirectedAnchorGeometryProcessor
+from brdr.processor import AlignerGeometryProcessor
 
 
 class _DummyProcessor(BaseProcessor):
@@ -46,6 +51,88 @@ class TestProcessor(unittest.TestCase):
 
         prediction_result = aligner.predict(series)
         assert len(prediction_result.results) == len(thematic_dict)
+
+    def test_process_with_processing_area_helper_no_overlap_returns_unchanged(self):
+        processor = _DummyProcessor(ProcessorConfig())
+        input_geometry = LineString([(0, 0), (10, 0)])
+        processing_area = from_wkt("POLYGON ((20 20, 20 21, 21 21, 21 20, 20 20))")
+
+        result = processor._process_with_processing_area(
+            input_geometry=input_geometry,
+            processing_area=processing_area,
+            reference_union=GeometryCollection(),
+            relevant_distance=1.0,
+            mitre_limit=10.0,
+            correction_distance=0.01,
+            scoped_processor=lambda g: {"result": g, "properties": {REMARK_FIELD_NAME: []}},
+        )
+
+        assert result["result"].equals(input_geometry)
+        assert ProcessRemark.RESULT_UNCHANGED in result["properties"][REMARK_FIELD_NAME]
+
+    def test_process_with_processing_area_helper_runs_postprocess_after_merge(self):
+        processor = _DummyProcessor(ProcessorConfig())
+        input_geometry = from_wkt("POLYGON ((0 0, 0 4, 10 4, 10 0, 0 0))")
+        processing_area = from_wkt("POLYGON ((0 0, 0 4, 5 4, 5 0, 0 0))")
+
+        scoped_result = from_wkt("POLYGON ((0 0, 0 4, 4.8 4, 4.8 0, 0 0))")
+        with patch.object(
+            processor,
+            "_postprocess_preresult",
+            wraps=processor._postprocess_preresult,
+        ) as postprocess_spy:
+            result = processor._process_with_processing_area(
+                input_geometry=input_geometry,
+                processing_area=processing_area,
+                reference_union=GeometryCollection(),
+                relevant_distance=1.0,
+                mitre_limit=10.0,
+                correction_distance=0.01,
+                scoped_processor=lambda _g: {
+                    "result": scoped_result,
+                    "properties": {REMARK_FIELD_NAME: []},
+                },
+            )
+
+        assert postprocess_spy.call_count == 1
+        assert result["result"] is not None
+        assert not result["result"].is_empty
+
+    def test_aligner_processor_with_processing_area_forces_network_for_polygons(self):
+        thematic = {"t1": from_wkt("POLYGON ((0 0, 0 6, 6 6, 6 0, 0 0))")}
+        reference = {"r1": from_wkt("POLYGON ((0 1, 0 7, 7 7, 7 1, 0 1))")}
+        scope = from_wkt("POLYGON ((0 0, 0 6, 3 6, 3 0, 0 0))")
+        aligner = Aligner(processor=AlignerGeometryProcessor(config=ProcessorConfig()))
+        aligner.load_thematic_data(DictLoader(thematic))
+        aligner.load_reference_data(DictLoader(reference))
+
+        with patch.object(
+            DieussaertGeometryProcessor,
+            "process",
+            autospec=True,
+            wraps=DieussaertGeometryProcessor.process,
+        ) as dieussaert_process_spy:
+            result = aligner.process([1], processing_area=scope).results["t1"][1]["result"]
+
+        assert result is not None
+        assert not result.is_empty
+        assert dieussaert_process_spy.call_count == 0
+
+    def test_aligner_processor_polygon_processing_area_uses_boundary_scope_utility(self):
+        thematic = {"t1": from_wkt("POLYGON ((0 0, 0 6, 6 6, 6 0, 0 0))")}
+        reference = {"r1": from_wkt("POLYGON ((0 1, 0 7, 7 7, 7 1, 0 1))")}
+        scope = from_wkt("POLYGON ((0 0, 0 6, 3 6, 3 0, 0 0))")
+        aligner = Aligner(processor=AlignerGeometryProcessor(config=ProcessorConfig()))
+        aligner.load_thematic_data(DictLoader(thematic))
+        aligner.load_reference_data(DictLoader(reference))
+
+        fake_rebuilt = from_wkt("POLYGON ((0 0, 0 6, 6 6, 6 0.2, 0 0))")
+        with patch("brdr.processor.align_polygon_boundary_in_processing_area", return_value=fake_rebuilt) as util_spy:
+            result = aligner.process([1], processing_area=scope).results["t1"][1]["result"]
+
+        assert util_spy.call_count == 1
+        assert result is not None
+        assert not result.is_empty
 
     def test_postprocess_linear_od_exclude_ignores_non_polygon_reference(self):
         thematic = LineString([(0, 0), (4, 0)])
@@ -160,6 +247,42 @@ class TestProcessor(unittest.TestCase):
         )
 
         assert out_exclude["result"].is_empty
+
+    def test_postprocess_invalid_preresult_none_returns_original(self):
+        thematic = from_wkt("POLYGON ((0 0, 0 2, 2 2, 2 0, 0 0))")
+        processor = _DummyProcessor(ProcessorConfig())
+        out = processor._postprocess_preresult(
+            geom_preresult=None,
+            geom_thematic=thematic,
+            relevant_intersection=GeometryCollection(),
+            relevant_diff=GeometryCollection(),
+            relevant_distance=1.0,
+            reference_union=GeometryCollection(),
+            mitre_limit=10,
+            correction_distance=0.01,
+        )
+        assert out["result"].equals(thematic)
+        assert ProcessRemark.INVALID_PRERESULT_ORIGINAL_RETURNED in out["properties"].get(
+            REMARK_FIELD_NAME, []
+        )
+
+    def test_postprocess_invalid_preresult_type_mismatch_returns_original(self):
+        thematic = from_wkt("POLYGON ((0 0, 0 2, 2 2, 2 0, 0 0))")
+        processor = _DummyProcessor(ProcessorConfig())
+        out = processor._postprocess_preresult(
+            geom_preresult=LineString([(0, 0), (1, 0)]),
+            geom_thematic=thematic,
+            relevant_intersection=GeometryCollection(),
+            relevant_diff=GeometryCollection(),
+            relevant_distance=1.0,
+            reference_union=GeometryCollection(),
+            mitre_limit=10,
+            correction_distance=0.01,
+        )
+        assert out["result"].equals(thematic)
+        assert ProcessRemark.INVALID_PRERESULT_ORIGINAL_RETURNED in out["properties"].get(
+            REMARK_FIELD_NAME, []
+        )
 
     def test_network_od_exclude_vs_as_is_with_polygon_reference(self):
         thematic_dict = {"theme_id": from_wkt("LINESTRING (0 0, 10 0)")}
@@ -564,7 +687,20 @@ class TestProcessor(unittest.TestCase):
                 directed=False,
             )
 
-        assert max_seen["value"] == 20.0
+        assert max_seen["value"] == 50
+
+    def test_find_best_circle_path_single_polygon_low_overlap_returns_original_ring(self):
+        graph = nx.Graph()
+        # Candidate polygon around x=100 (far from original around x=0..10)
+        coords = [(100, 0), (100, 10), (110, 10), (110, 0), (100, 0)]
+        for i in range(len(coords) - 1):
+            a = coords[i]
+            b = coords[i + 1]
+            graph.add_edge(a, b, geometry=LineString([a, b]), length=1.0)
+
+        original_ring = LineString([(0, 0), (0, 10), (10, 10), (10, 0), (0, 0)])
+        out = find_best_circle_path(graph, original_ring)
+        assert out is original_ring
 
     def test_anchorprocessor_routes_on_full_reference_after_local_anchor_match(self):
         thematic_dict = {"theme_id": from_wkt("LINESTRING (0 0.2, 10 0.2)")}

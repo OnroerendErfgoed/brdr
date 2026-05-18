@@ -1,0 +1,74 @@
+from shapely import from_wkt
+
+from brdr.aligner import Aligner
+from brdr.be.grb.enums import GRBType
+from brdr.be.grb.loader import GRBActualLoader
+from brdr.configs import AlignerConfig, ProcessorConfig
+from brdr.constants import REMARK_FIELD_NAME
+from brdr.loader import DictLoader
+from brdr.processor import NetworkGeometryProcessor
+
+
+if __name__ == "__main__":
+    # Input polygon from issue case
+    polygon_wkt = (
+        "POLYGON ((173059.31170800820109434 171272.14827762849745341, "
+        "173057.21826837002299726 171280.74744415286113508, "
+        "173057.14863518998026848 171281.03327300003729761, "
+        "173067.43548318991088308 171283.63436100000399165, "
+        "173069.67049120008596219 171284.19948100007604808, "
+        "173071.05097119999118149 171279.19135298999026418, "
+        "173070.42377120009041391 171279.02226498996606097, "
+        "173071.18370720007806085 171275.86220098999910988, "
+        "173067.18370719999074936 171274.69228098992607556, "
+        "173067.33973920001881197 171274.10220098998979665, "
+        "173064.79074719990603626 171273.48127299008774571, "
+        "173065.64194718989892863 171269.9832889900135342, "
+        "173060.16303518999484368 171268.6503609899955336, "
+        "173059.31170800820109434 171272.14827762849745341))"
+    )
+
+    polygon_wkt ="POLYGON ((173051.82306240423349664 171248.38924099737778306, 173059.37249233943293802 171249.7250888065318577, 173059.49640366208041087 171249.41116228041937575, 173059.59546695405151695 171249.16018767646164633, 173059.65272116431151517 171249.01513543300097808, 173059.86197918999823742 171248.4849849700985942, 173061.76475666955229826 171243.97581033135065809, 173063.29516360387788154 171240.34907404246041551, 173051.06421917659463361 171238.66994496955885552, 173044.34415763989090919 171238.32236109705991112, 173035.38723123911768198 171237.85915688565000892, 173034.93621917761629447 171237.83583296000142582, 173034.32331781112588942 171237.85248173048603348, 173032.98882742421119474 171237.88873164841788821, 173032.40224806303740479 171240.38169393368298188, 173032.09758600598433986 171241.67650767526356503, 173031.6793255033553578 171241.68265856517245993, 173028.07079614893882535 171241.73572517331922427, 173025.97936811138060875 171241.76648146798834205, 173026.05897116998676211 171248.53676096998970024, 173033.80399517982732505 171248.49240896999253891, 173042.73404317983658984 171248.44127296982333064, 173044.35234131649485789 171248.43199300378910266, 173047.17180318018654361 171248.41586496983654797, 173051.82306240423349664 171248.38924099737778306))"
+    thematic_geom = from_wkt(polygon_wkt)
+
+    processor_config = ProcessorConfig(
+        od_strategy=ProcessorConfig().od_strategy,
+        network_use_directed_graph=False,
+    )
+    processor = NetworkGeometryProcessor(config=processor_config)
+
+    aligner = Aligner(
+        crs="EPSG:31370",
+        processor=processor,
+        config=AlignerConfig(profile_performance=True),
+        feedback=None,
+    )
+
+    aligner.load_thematic_data(DictLoader({"debug_poly": thematic_geom}))
+    aligner.load_reference_data(
+        GRBActualLoader(
+            grb_type=GRBType.ADP,
+            partition=1000,
+            aligner=aligner,
+        )
+    )
+
+    rd = 5.2
+    result = aligner.process(relevant_distances=[rd]).results["debug_poly"][rd]
+
+    out_geom = result["result"]
+    diff = result["result_diff"]
+    remarks = result.get("properties", {}).get(REMARK_FIELD_NAME, [])
+
+    print("\n=== DEBUG SUMMARY ===")
+    print(f"relevant_distance = {rd}")
+    print(f"input area        = {thematic_geom.area:.3f}")
+    print(f"result area       = {out_geom.area:.3f}")
+    print(f"diff area         = {diff.area:.3f}")
+    print(f"remarks           = {remarks}")
+    print(f"input centroid    = {thematic_geom.centroid.wkt}")
+    print(f"result centroid   = {out_geom.centroid.wkt}")
+    print("\nInput WKT:")
+    print(thematic_geom.wkt)
+    print("\nResult WKT:")
+    print(out_geom.wkt)

@@ -133,6 +133,8 @@ class ProcessRemark(str, Enum):
         Result became empty and empty geometry was returned.
     CHANGED_GEOMETRYTYPE_EMPTY_RETURNED : str
         Geometry type changed unexpectedly; empty geometry returned.
+    INVALID_PRERESULT_ORIGINAL_RETURNED : str
+        Invalid processor pre-result detected; original geometry returned.
     CHANGED_AMOUNT_GEOMETRIES : str
         Number of sub-geometries changed.
     NO_PREDICTION_ORIGINAL_RETURNED : str
@@ -148,6 +150,9 @@ class ProcessRemark(str, Enum):
     RESULT_EMPTY_RETURNED = "resulting geometry empty: empty geometry returned"
     CHANGED_GEOMETRYTYPE_EMPTY_RETURNED = (
         "resulting geometry has different geometrytype: empty geometry returned"
+    )
+    INVALID_PRERESULT_ORIGINAL_RETURNED = (
+        "invalid processing pre-result: original geometry returned"
     )
     CHANGED_AMOUNT_GEOMETRIES = (
         "resulting (multi) geometry has different amount of geometries"
