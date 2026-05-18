@@ -1104,57 +1104,20 @@ class Aligner:
             reference_candidates=None,
             reference_elements_candidates=None,
         ):
-            scoped_in = geometry
-            scoped_out = GeometryCollection()
-            if processing_area_valid is not None:
-                scoped_in = make_valid(safe_intersection(geometry, processing_area_valid))
-                scoped_out = make_valid(safe_difference(geometry, processing_area_valid))
-                if scoped_in is None or scoped_in.is_empty:
-                    process_result = ProcessResult()
-                    process_result["result"] = geometry
-                    process_result["properties"] = {
-                        REMARK_FIELD_NAME: [ProcessRemark.RESULT_UNCHANGED]
-                    }
-                    return aligner.descriptor.describe(
-                        aligner=aligner,
-                        thematic_id=thematic_id,
-                        geometry=geometry,
-                        relevant_distance=relevant_distance,
-                        process_result=process_result,
-                    )
-
             t0 = time.perf_counter()
             result = aligner.processor.process(
                 correction_distance=aligner.correction_distance,
                 reference_data=aligner.reference_data,
                 mitre_limit=aligner.mitre_limit,
-                input_geometry=scoped_in,
+                input_geometry=geometry,
                 thematic_id=thematic_id,
                 relevant_distance=relevant_distance,
                 thematic_data=aligner.thematic_data,
                 reference_candidates=reference_candidates,
                 reference_elements_candidates=reference_elements_candidates,
+                processing_area=processing_area_valid,
                 perf_collector=perf_collector,
             )
-            if processing_area_valid is not None:
-                result_in = result.get("result")
-                if result_in is None:
-                    result_in = GeometryCollection()
-                merged_result = make_valid(safe_unary_union([result_in, scoped_out]))
-                if merged_result is None:
-                    merged_result = GeometryCollection()
-                result["result"] = merged_result
-                result_diff_plus = safe_difference(
-                    merged_result, buffer_pos(geometry, aligner.correction_distance)
-                )
-                result_diff_min = safe_difference(
-                    geometry, buffer_pos(merged_result, aligner.correction_distance)
-                )
-                result["result_diff_plus"] = result_diff_plus
-                result["result_diff_min"] = result_diff_min
-                result["result_diff"] = safe_unary_union(
-                    [result_diff_plus, result_diff_min]
-                )
             if perf_collector is not None:
                 perf_collector.add(
                     "aligner.process.single_rd_total", time.perf_counter() - t0
