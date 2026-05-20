@@ -63,7 +63,6 @@ class ProcessorConfig:
         If True, synthetic connector edges remain enabled in directed mode.
     network_directed_connector_penalty_factor : float, default 10.0
         Multiplier applied to connector edge lengths in directed mode.
-
     partial_snapping : bool, default False
         Whether to allow snapping of individual segments rather than the
         entire geometry.

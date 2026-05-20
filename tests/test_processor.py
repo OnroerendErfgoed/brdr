@@ -118,7 +118,7 @@ class TestProcessor(unittest.TestCase):
         assert not result.is_empty
         assert dieussaert_process_spy.call_count == 0
 
-    def test_aligner_processor_polygon_processing_area_uses_boundary_scope_utility(self):
+    def test_aligner_processor_polygon_processing_area_uses_generic_scoped_flow(self):
         thematic = {"t1": from_wkt("POLYGON ((0 0, 0 6, 6 6, 6 0, 0 0))")}
         reference = {"r1": from_wkt("POLYGON ((0 1, 0 7, 7 7, 7 1, 0 1))")}
         scope = from_wkt("POLYGON ((0 0, 0 6, 3 6, 3 0, 0 0))")
@@ -126,11 +126,20 @@ class TestProcessor(unittest.TestCase):
         aligner.load_thematic_data(DictLoader(thematic))
         aligner.load_reference_data(DictLoader(reference))
 
-        fake_rebuilt = from_wkt("POLYGON ((0 0, 0 6, 6 6, 6 0.2, 0 0))")
-        with patch("brdr.processor.align_polygon_boundary_in_processing_area", return_value=fake_rebuilt) as util_spy:
-            result = aligner.process([1], processing_area=scope).results["t1"][1]["result"]
+        result = aligner.process([1], processing_area=scope).results["t1"][1]["result"]
+        assert result is not None
+        assert not result.is_empty
 
-        assert util_spy.call_count == 1
+    def test_aligner_processor_non_polygon_processing_area_uses_generic_scoped_flow(self):
+        thematic = {"t1": from_wkt("POLYGON ((0 0, 0 6, 6 6, 6 0, 0 0))")}
+        reference = {"r1": from_wkt("POLYGON ((0 1, 0 7, 7 7, 7 1, 0 1))")}
+        # Non-polygon scope: generic scoped flow should handle this.
+        scope = from_wkt("LINESTRING (0 0, 6 6)")
+        aligner = Aligner(processor=AlignerGeometryProcessor(config=ProcessorConfig()))
+        aligner.load_thematic_data(DictLoader(thematic))
+        aligner.load_reference_data(DictLoader(reference))
+
+        result = aligner.process([1], processing_area=scope).results["t1"][1]["result"]
         assert result is not None
         assert not result.is_empty
 
@@ -248,7 +257,7 @@ class TestProcessor(unittest.TestCase):
 
         assert out_exclude["result"].is_empty
 
-    def test_postprocess_invalid_preresult_none_returns_original(self):
+    def test_postprocess_invalid_preresult_none_returns_empty(self):
         thematic = from_wkt("POLYGON ((0 0, 0 2, 2 2, 2 0, 0 0))")
         processor = _DummyProcessor(ProcessorConfig())
         out = processor._postprocess_preresult(
@@ -261,12 +270,12 @@ class TestProcessor(unittest.TestCase):
             mitre_limit=10,
             correction_distance=0.01,
         )
-        assert out["result"].equals(thematic)
-        assert ProcessRemark.INVALID_PRERESULT_ORIGINAL_RETURNED in out["properties"].get(
+        assert out["result"].is_empty
+        assert ProcessRemark.INVALID_EMPTY_RETURNED in out["properties"].get(
             REMARK_FIELD_NAME, []
         )
 
-    def test_postprocess_invalid_preresult_type_mismatch_returns_original(self):
+    def test_postprocess_invalid_preresult_type_mismatch_returns_empty(self):
         thematic = from_wkt("POLYGON ((0 0, 0 2, 2 2, 2 0, 0 0))")
         processor = _DummyProcessor(ProcessorConfig())
         out = processor._postprocess_preresult(
@@ -279,8 +288,8 @@ class TestProcessor(unittest.TestCase):
             mitre_limit=10,
             correction_distance=0.01,
         )
-        assert out["result"].equals(thematic)
-        assert ProcessRemark.INVALID_PRERESULT_ORIGINAL_RETURNED in out["properties"].get(
+        assert out["result"].is_empty
+        assert ProcessRemark.INVALID_EMPTY_RETURNED in out["properties"].get(
             REMARK_FIELD_NAME, []
         )
 

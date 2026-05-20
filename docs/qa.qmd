@@ -75,15 +75,16 @@ Marker meaning:
 ## When does `brdr` return an empty geometry vs the original geometry?
 
 - Short answer:
-  - `original geometry` is returned for safe fallbacks and unchanged outcomes.
-  - `empty geometry` is only returned in specific valid/explicit situations.
+  - `original geometry` is returned for unchanged outcomes and specific evaluator choices.
+  - `empty geometry` is returned for invalid processor pre-results and explicit geometry-removal outcomes.
 - Long answer:
   - Typical `original geometry` cases:
     - no effective change after processing
     - circular-shape guard behavior
-    - invalid intermediate processor output (strict fallback to original)
+    - evaluator keeps original (`TO_CHECK_ORIGINAL` / no accepted prediction path)
   - Typical `empty geometry` cases:
     - the input is already empty
+    - invalid intermediate processor output (`None`, empty, or type mismatch pre-result)
     - explicit clipping/exclusion behavior removes all geometry content
     - a processor legitimately computes an empty end result for the chosen strategy
 
@@ -93,9 +94,6 @@ Marker meaning:
   - processing completed, but final result equals original geometry (within tolerance).
 - `INPUT_CIRCLE`:
   - circle-like geometry guard triggered; original geometry is kept.
-- `INVALID_PRERESULT_ORIGINAL_RETURNED`:
+- `INVALID_EMPTY_RETURNED`:
   - processor intermediate output was unusable (e.g. invalid/empty/type mismatch path);
-    `brdr` returned original geometry as a strict safe fallback.
-- `RESULT_EMPTY_RETURNED` / `CHANGED_GEOMETRYTYPE_EMPTY_RETURNED`:
-  - legacy/diagnostic remarks indicating an empty/type-mismatch outcome path.
-    In current strict-fallback behavior, these should be much less common.
+    `brdr` returned empty geometry.
