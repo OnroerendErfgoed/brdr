@@ -360,7 +360,9 @@ class BeAdministrativeBoundaryLoader(GeoJsonLoader):
             raise ValueError(
                 f"BeAdministrativeBoundaryLoader only supports alignment in CRS '{BE_SUPPORTED_CRS}' while CRS '{self.aligner.crs}' is used"
             )
-        self.collection = collection.value if isinstance(collection, VRBGType) else collection
+        self.collection = (
+            collection.value if isinstance(collection, VRBGType) else collection
+        )
         self.id_property = id_property
         self.partition = partition
         self.limit = limit

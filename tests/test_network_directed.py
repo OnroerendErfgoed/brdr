@@ -60,7 +60,9 @@ class TestDirectedNetwork(unittest.TestCase):
     def test_directed_mode_blocks_reverse_on_forward_oneway(self):
         thematic = LineString([(10.0, 0.0), (0.0, 0.0)])
         reference = LineString([(0.0, 0.0), (10.0, 0.0)])
-        graph = self._build_graph(thematic, reference, directed=True, oneway_value="yes")
+        graph = self._build_graph(
+            thematic, reference, directed=True, oneway_value="yes"
+        )
         result = find_best_path_in_network(
             thematic,
             graph,
@@ -72,7 +74,9 @@ class TestDirectedNetwork(unittest.TestCase):
     def test_directed_mode_allows_forward_on_forward_oneway(self):
         thematic = LineString([(0.0, 0.0), (10.0, 0.0)])
         reference = LineString([(0.0, 0.0), (10.0, 0.0)])
-        graph = self._build_graph(thematic, reference, directed=True, oneway_value="yes")
+        graph = self._build_graph(
+            thematic, reference, directed=True, oneway_value="yes"
+        )
         result = find_best_path_in_network(
             thematic,
             graph,
@@ -84,7 +88,9 @@ class TestDirectedNetwork(unittest.TestCase):
     def test_directed_mode_prefer_vertices_does_not_crash(self):
         thematic = LineString([(0.0, 0.0), (10.0, 0.0)])
         reference = LineString([(0.0, 0.0), (10.0, 0.0)])
-        graph = self._build_graph(thematic, reference, directed=True, oneway_value="yes")
+        graph = self._build_graph(
+            thematic, reference, directed=True, oneway_value="yes"
+        )
         result = find_best_path_in_network(
             thematic,
             graph,
@@ -156,7 +162,9 @@ class TestDirectedNetwork(unittest.TestCase):
         )
         thematic = LineString([(10.0, 0.0), (0.0, 0.0)])
         reference = LineString([(0.0, 0.0), (10.0, 0.0)])
-        records = [{"id": "ref1", "geometry": reference, "properties": {"oneway": "yes"}}]
+        records = [
+            {"id": "ref1", "geometry": reference, "properties": {"oneway": "yes"}}
+        ]
         result = processor._get_processed_network_path(
             input_geometry=thematic,
             reference=reference,

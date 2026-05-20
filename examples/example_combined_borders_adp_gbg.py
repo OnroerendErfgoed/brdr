@@ -25,7 +25,9 @@ if __name__ == "__main__":
 
     # Load thematic data & reference data
     loader = GeoJsonFileLoader(
-        path_to_file=str(base_dir.parent / "tests" / "testdata" / "test_parcel_vs_building.geojson"),
+        path_to_file=str(
+            base_dir.parent / "tests" / "testdata" / "test_parcel_vs_building.geojson"
+        ),
         id_property="theme_id",
     )
     aligner.load_thematic_data(loader)

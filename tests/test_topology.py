@@ -198,9 +198,7 @@ class TestTopology(unittest.TestCase):
         aligner.load_thematic_data(DictLoader({"a": poly}))
         thematic_geometries_to_process, topo = _generate_topo(aligner.thematic_data)
         arc_id = next(iter(thematic_geometries_to_process.keys()))
-        process_results = {
-            arc_id: {1.0: {"result": LineString([(0, 0), (10, 0)])}}
-        }
+        process_results = {arc_id: {1.0: {"result": LineString([(0, 0), (10, 0)])}}}
 
         with patch(
             "brdr.topo_utils.longest_linestring_from_multilinestring",
@@ -283,7 +281,9 @@ class TestTopology(unittest.TestCase):
             REMARK_FIELD_NAME, []
         )
 
-    def test_topology_processor_with_processing_area_partial_only_changes_inside_scope(self):
+    def test_topology_processor_with_processing_area_partial_only_changes_inside_scope(
+        self,
+    ):
         processor = TopologyProcessor(config=ProcessorConfig(), feedback=None)
         aligner = Aligner(crs="EPSG:31370", processor=processor)
         thematic_geom = from_wkt("POLYGON ((0 0, 0 6, 6 6, 6 0, 0 0))")
@@ -300,7 +300,9 @@ class TestTopology(unittest.TestCase):
         assert not result.is_empty
         assert safe_equals(outside, expected_outside)
 
-    def test_topology_processor_line_processing_area_partial_outside_contains_original_outside(self):
+    def test_topology_processor_line_processing_area_partial_outside_contains_original_outside(
+        self,
+    ):
         processor = TopologyProcessor(config=ProcessorConfig(), feedback=None)
         aligner = Aligner(crs="EPSG:31370", processor=processor)
         thematic_geom = from_wkt("LINESTRING (0 0, 10 0)")

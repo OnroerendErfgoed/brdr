@@ -23,7 +23,9 @@ def _discover_vrbg_collection(preferred: VRBGType = VRBGType.REFGEM) -> str:
     if not collections:
         raise ValueError("No VRBG collections found")
 
-    preferred_value = preferred.value if isinstance(preferred, VRBGType) else str(preferred)
+    preferred_value = (
+        preferred.value if isinstance(preferred, VRBGType) else str(preferred)
+    )
     if preferred_value in collections:
         return preferred_value
     return collections[0]

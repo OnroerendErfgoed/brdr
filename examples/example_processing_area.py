@@ -34,7 +34,9 @@ if __name__ == "__main__":
     processing_area = box(0, -5, 10, 15)
 
     rd = 1.5
-    full_result = aligner.process(relevant_distances=[rd]).results["theme_1"][rd]["result"]
+    full_result = aligner.process(relevant_distances=[rd]).results["theme_1"][rd][
+        "result"
+    ]
     scoped_result = aligner.process(
         relevant_distances=[rd],
         processing_area=processing_area,
@@ -63,5 +65,7 @@ if __name__ == "__main__":
     )
     print(
         "  left side changed vs original:",
-        not scoped_left.equals_exact(thematic_geom_original.intersection(left_half), tolerance=1e-9),
+        not scoped_left.equals_exact(
+            thematic_geom_original.intersection(left_half), tolerance=1e-9
+        ),
     )

@@ -10,9 +10,7 @@ def test_geometry_descriptor_get_actual_observation_for_line():
     aligner.load_thematic_data(
         DictLoader({"theme_1": from_wkt("LINESTRING (0 0,2 0)")})
     )
-    aligner.load_reference_data(
-        DictLoader({"ref_1": from_wkt("LINESTRING (1 0,3 0)")})
-    )
+    aligner.load_reference_data(DictLoader({"ref_1": from_wkt("LINESTRING (1 0,3 0)")}))
     descriptor = AlignerDescriptor()
     process_result = {"result": from_wkt("LINESTRING (0 0,2 0)"), "properties": {}}
 

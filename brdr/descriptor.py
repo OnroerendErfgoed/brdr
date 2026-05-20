@@ -50,7 +50,11 @@ class BaseDescriptor(ABC):
 
     @abstractmethod
     def get_actual_observation(
-        self, *, aligner: "Aligner", process_result: ProcessResult, cache_key: Any = None
+        self,
+        *,
+        aligner: "Aligner",
+        process_result: ProcessResult,
+        cache_key: Any = None,
     ) -> Observation | None:
         """Resolve actual BRDR observation for a process result."""
         pass
@@ -222,7 +226,11 @@ class AlignerDescriptor(BaseDescriptor):
         return base_observation
 
     def get_actual_observation(
-        self, *, aligner: "Aligner", process_result: ProcessResult, cache_key: Any = None
+        self,
+        *,
+        aligner: "Aligner",
+        process_result: ProcessResult,
+        cache_key: Any = None,
     ) -> Observation | None:
         if process_result is None:
             return None
