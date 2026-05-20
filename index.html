@@ -293,11 +293,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="docker-proof-of-concept" class="level3">
 <h3 class="anchored" data-anchor-id="docker-proof-of-concept">Docker proof of concept</h3>
 <ul>
-<li><a href="https://github.com/dieuska/brdr-webservice">brdr-webservice (Docker POC) on GitHub</a> The repository includes a Docker-based proof of concept for a GRB-specific web service:</li>
+<li><a href="https://github.com/dieuska/brdr-webservice">brdr-webservice (Docker POC) on GitHub</a> The repository includes a Docker-based proof of concept for a demo mapviewer in combination with a BRDR-webservice.</li>
 </ul>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode bat code-with-copy"><code class="sourceCode dosbat"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>docker build <span class="at">-f</span> Dockerfile . <span class="at">-t</span> grb_webservice</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>docker run -<span class="at">-rm</span> <span class="at">-p</span> 80:80 -<span class="at">-name</span> grb_webservice grb_webservice</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Then open: <code>http://localhost:80/docs#/default/actualiser_actualiser_post</code></p>
 </section>
 </section>
 <section id="qgis-integration" class="level2">
