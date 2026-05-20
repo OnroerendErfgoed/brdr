@@ -83,15 +83,8 @@ pytest --cov=brdr tests --cov-report term-missing
 ### Docker proof of concept
 
 - [brdr-webservice (Docker POC) on GitHub](https://github.com/dieuska/brdr-webservice)
-The repository includes a Docker-based proof of concept for a GRB-specific web service:
+The repository includes a Docker-based proof of concept for a demo mapviewer in combination with a BRDR-webservice.
 
-```bat
-docker build -f Dockerfile . -t grb_webservice
-docker run --rm -p 80:80 --name grb_webservice grb_webservice
-```
-
-Then open:
-`http://localhost:80/docs#/default/actualiser_actualiser_post`
 
 ## QGIS integration
 
