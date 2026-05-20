@@ -1,9 +1,12 @@
+import time
 from abc import ABC
 from abc import abstractmethod
-import time
+from dataclasses import replace
 from typing import List, Any
 
+import networkx as nx
 from shapely import GeometryCollection, MultiPoint
+from shapely import MultiLineString
 from shapely import MultiPolygon
 from shapely import Point
 from shapely import Polygon
@@ -23,30 +26,37 @@ from brdr.enums import ProcessorID
 from brdr.enums import SnapStrategy
 from brdr.feature_data import AlignerFeatureCollection
 from brdr.geometry_utils import (
+    _angle_between_vectors_degrees,
     buffer_neg,
 )
 from brdr.geometry_utils import buffer_neg_pos
 from brdr.geometry_utils import buffer_pos
+from brdr.geometry_utils import extract_points_lines_from_geometry
 from brdr.geometry_utils import fill_and_remove_gaps
 from brdr.geometry_utils import geometric_equality
 from brdr.geometry_utils import get_shape_index
-from brdr.geometry_utils import extract_points_lines_from_geometry
 from brdr.geometry_utils import safe_difference
 from brdr.geometry_utils import safe_intersection
+from brdr.geometry_utils import safe_intersects
 from brdr.geometry_utils import safe_symmetric_difference
 from brdr.geometry_utils import safe_unary_union
 from brdr.geometry_utils import safe_union
 from brdr.geometry_utils import snap_geometry_to_reference
 from brdr.geometry_utils import to_multi
 from brdr.graph_utils import (
+    _add_reference_edge,
+    _build_reference_segment_index,
+    _select_network_node_by_snap_strategy,
     build_custom_network,
     find_best_path_in_network,
     get_non_pseudo_coords,
+    nearest_node,
 )
 from brdr.logger import Logger
 from brdr.topo_utils import _dissolve_topo, _generate_topo, _topojson_id_to_arcs
 from brdr.typings import ProcessResult, InputId
 from brdr.utils import (
+    config_fingerprint,
     get_relevant_polygons_from_geom,
     build_reverse_index_wkb,
     flatten_iter,
@@ -108,6 +118,8 @@ class BaseProcessor(ABC):
         self.feedback = feedback
         self.logger = Logger(feedback)
         self.config = config
+        self._polygonal_reference_union_cache_key = None
+        self._polygonal_reference_union_cache_value = None
 
     @abstractmethod
     def process(
@@ -173,6 +185,89 @@ class BaseProcessor(ABC):
     def _has_polygonal_reference_coverage(reference_union: BaseGeometry) -> bool:
         polygonal_union = BaseProcessor._get_polygonal_reference_union(reference_union)
         return not polygonal_union.is_empty
+
+    def _get_polygonal_reference_union_cached(
+        self, reference_union: BaseGeometry
+    ) -> BaseGeometry:
+        cache_key = id(reference_union)
+        if self._polygonal_reference_union_cache_key == cache_key:
+            return self._polygonal_reference_union_cache_value
+        polygonal_union = self._get_polygonal_reference_union(reference_union)
+        self._polygonal_reference_union_cache_key = cache_key
+        self._polygonal_reference_union_cache_value = polygonal_union
+        return polygonal_union
+
+    def _process_with_processing_area(
+        self,
+        *,
+        input_geometry: BaseGeometry,
+        processing_area: BaseGeometry | None,
+        reference_union: BaseGeometry,
+        relevant_distance: float,
+        mitre_limit: float,
+        correction_distance: float,
+        scoped_processor,
+    ) -> ProcessResult:
+        processing_area_valid = make_valid(processing_area)
+        if processing_area_valid is None or processing_area_valid.is_empty:
+            return union_process_result(scoped_processor(input_geometry))
+
+        if not safe_intersects(input_geometry, processing_area_valid):
+            process_result = ProcessResult()
+            process_result["result"] = input_geometry
+            process_result["properties"] = {
+                REMARK_FIELD_NAME: [ProcessRemark.RESULT_UNCHANGED]
+            }
+            return union_process_result(process_result)
+
+        scoped_in = make_valid(safe_intersection(input_geometry, processing_area_valid))
+        scoped_out = make_valid(safe_difference(input_geometry, processing_area_valid))
+        if scoped_out is None:
+            scoped_out = GeometryCollection()
+        scoped_result_holder: dict[str, ProcessResult] = {}
+
+        if scoped_in is None or scoped_in.is_empty:
+            merged_result = input_geometry
+        else:
+            scoped_result = scoped_processor(scoped_in)
+            scoped_result_holder["result"] = scoped_result
+            aligned_in = (scoped_result or {}).get("result")
+            if aligned_in is None:
+                aligned_in = GeometryCollection()
+            merged_result = make_valid(safe_unary_union([aligned_in, scoped_out]))
+            if merged_result is None:
+                merged_result = GeometryCollection()
+
+        if merged_result is None or merged_result.is_empty:
+            process_result = ProcessResult()
+            process_result["result"] = (
+                merged_result if merged_result is not None else GeometryCollection()
+            )
+            process_result["properties"] = {
+                REMARK_FIELD_NAME: [ProcessRemark.INVALID_EMPTY_RETURNED]
+            }
+            return union_process_result(process_result)
+
+        postprocessed = self._postprocess_preresult(
+            merged_result,
+            input_geometry,
+            GeometryCollection(),
+            GeometryCollection(),
+            relevant_distance,
+            reference_union,
+            mitre_limit,
+            correction_distance,
+        )
+        scoped_result = scoped_result_holder.get("result")
+        scoped_remarks = ((scoped_result or {}).get("properties") or {}).get(
+            REMARK_FIELD_NAME, []
+        )
+        if scoped_remarks:
+            post_props = postprocessed.get("properties") or {}
+            existing = post_props.get(REMARK_FIELD_NAME, [])
+            post_props[REMARK_FIELD_NAME] = existing + scoped_remarks
+            postprocessed["properties"] = post_props
+        return union_process_result(postprocessed)
 
     def _postprocess_preresult(
         self,
@@ -242,14 +337,16 @@ class BaseProcessor(ABC):
         remarks = []
         geom_thematic = make_valid(geom_thematic)
         if geom_preresult is None or geom_preresult.is_empty:
+            # Strict fallback rule: invalid pre-results return empty geometry.
             geom_preresult = GeometryCollection()
-            remark = ProcessRemark.RESULT_EMPTY_RETURNED
+            remark = ProcessRemark.INVALID_EMPTY_RETURNED
             remarks.append(remark)
             self.logger.feedback_warning(remark)
 
         elif to_multi(geom_preresult).geom_type != to_multi(geom_thematic).geom_type:
+            # Strict fallback rule: type-mismatch pre-results return empty geometry.
             geom_preresult = GeometryCollection()
-            remark = ProcessRemark.CHANGED_GEOMETRYTYPE_EMPTY_RETURNED
+            remark = ProcessRemark.INVALID_EMPTY_RETURNED
             remarks.append(remark)
             self.logger.feedback_warning(remark)
 
@@ -262,7 +359,7 @@ class BaseProcessor(ABC):
         ]:
             geom_thematic_for_diff = geom_thematic
             geom_preresult_for_diff = geom_preresult
-            polygonal_reference_union = self._get_polygonal_reference_union(
+            polygonal_reference_union = self._get_polygonal_reference_union_cached(
                 reference_union
             )
             if (
@@ -303,7 +400,9 @@ class BaseProcessor(ABC):
         buffer_distance = relevant_distance / 2
         result = []
         geom_thematic_for_add_delete = geom_thematic
-        polygonal_reference_union = self._get_polygonal_reference_union(reference_union)
+        polygonal_reference_union = self._get_polygonal_reference_union_cached(
+            reference_union
+        )
 
         if (
             self.config.od_strategy == OpenDomainStrategy.EXCLUDE
@@ -417,8 +516,9 @@ class BaseProcessor(ABC):
         geom_thematic_result = make_valid(remove_repeated_points(geom_thematic_result))
 
         if geom_thematic_result.is_empty or geom_thematic_result is None:
+            # Strict fallback rule: cleanup collapse returns empty geometry.
             geom_thematic_result = GeometryCollection()
-            remark = ProcessRemark.RESULT_EMPTY_RETURNED
+            remark = ProcessRemark.INVALID_EMPTY_RETURNED
             remarks.append(remark)
             self.logger.feedback_warning(remark)
 
@@ -664,11 +764,37 @@ class SnapGeometryProcessor(BaseProcessor):
         """
         perf_collector = kwargs.get("perf_collector")
         t_total = time.perf_counter()
+        reference_candidates = kwargs.get("reference_candidates")
+        processing_area = kwargs.get("processing_area")
+        if processing_area is not None and not kwargs.get(
+            "_processing_area_applied", False
+        ):
+            scoped_kwargs = dict(kwargs)
+            scoped_kwargs["processing_area"] = None
+            scoped_kwargs["_processing_area_applied"] = True
+            scoped_kwargs.pop("_force_network_for_polygons", None)
+            return self._process_with_processing_area(
+                input_geometry=input_geometry,
+                processing_area=processing_area,
+                reference_union=reference_data.union,
+                relevant_distance=relevant_distance,
+                mitre_limit=mitre_limit,
+                correction_distance=correction_distance,
+                scoped_processor=lambda scoped_geom: self.process(
+                    correction_distance=correction_distance,
+                    reference_data=reference_data,
+                    input_geometry=scoped_geom,
+                    mitre_limit=mitre_limit,
+                    relevant_distance=relevant_distance,
+                    reference_candidates=reference_candidates,
+                    **scoped_kwargs,
+                ),
+            )
         self.check_area_limit(input_geometry)
         snapped = []
         virtual_reference = Polygon()
         snap_strategy = self.config.snap_strategy
-        polygonal_reference_union = self._get_polygonal_reference_union(
+        polygonal_reference_union = self._get_polygonal_reference_union_cached(
             reference_data.union
         )
         has_polygonal_od = not polygonal_reference_union.is_empty
@@ -840,6 +966,30 @@ class DieussaertGeometryProcessor(BaseProcessor):
             raise ValueError(
                 "Dieussaert algorithm can only be used when input geometry is polygon or multipolygon."
             )
+        processing_area = kwargs.get("processing_area")
+        if processing_area is not None and not kwargs.get(
+            "_processing_area_applied", False
+        ):
+            scoped_kwargs = dict(kwargs)
+            scoped_kwargs["processing_area"] = None
+            scoped_kwargs["_processing_area_applied"] = True
+            return self._process_with_processing_area(
+                input_geometry=input_geometry,
+                processing_area=processing_area,
+                reference_union=reference_data.union,
+                relevant_distance=relevant_distance,
+                mitre_limit=mitre_limit,
+                correction_distance=correction_distance,
+                scoped_processor=lambda scoped_geom: self.process(
+                    input_geometry=scoped_geom,
+                    reference_data=reference_data,
+                    relevant_distance=relevant_distance,
+                    mitre_limit=mitre_limit,
+                    correction_distance=correction_distance,
+                    reference_candidates=reference_candidates,
+                    **scoped_kwargs,
+                ),
+            )
         self.check_area_limit(input_geometry)
         perf_collector = kwargs.get("perf_collector")
         if (
@@ -975,7 +1125,11 @@ class DieussaertGeometryProcessor(BaseProcessor):
                 "processor.dieussaert.reference_query",
                 time.perf_counter() - t_query,
             )
-        prepared_input_outer = prep(input_geometry_outer)
+        prepared_input_outer = prep(
+            make_valid(input_geometry_outer)
+            if not input_geometry_outer.is_valid
+            else input_geometry_outer
+        )
         reference_union = reference_data.union
 
         buffer_distance = relevant_distance / 2
@@ -1000,8 +1154,13 @@ class DieussaertGeometryProcessor(BaseProcessor):
                     "Dieussaert algorithm can only be used when all reference geometries are polygons or multipolygons."
                 )
             # Cheap boolean pre-check before expensive intersection construction
-            if not prepared_input_outer.intersects(geom_reference):
-                continue
+            try:
+                if not prepared_input_outer.intersects(geom_reference):
+                    continue
+            except Exception:
+                # Fallback for topology/runtime issues: robust but slightly slower.
+                if not safe_intersects(input_geometry_outer, geom_reference):
+                    continue
             geom_intersection = safe_intersection(input_geometry_outer, geom_reference)
             if geom_intersection.is_empty or geom_intersection is None:
                 continue
@@ -1386,11 +1545,15 @@ class DieussaertGeometryProcessor(BaseProcessor):
 
 
         """
-        od_overlap = 111  # define a specific value for defining overlap of OD
-        buffer_distance_x2 = 2 * buffer_distance
-        if geom_reference.area == 0:
-            overlap = od_overlap  # Open Domain
 
+        def _empty_polygon() -> Polygon:
+            # Keep return type stable for downstream union/array logic.
+            return Polygon()
+
+        buffer_distance_x2 = 2 * buffer_distance
+        is_open_domain_reference = geom_reference.area == 0
+        if is_open_domain_reference:
+            overlap = float("inf")
         else:
             overlap = geom_intersection.area * 100 / geom_reference.area
 
@@ -1398,13 +1561,14 @@ class DieussaertGeometryProcessor(BaseProcessor):
             overlap < self.config.threshold_exclusion_percentage
             or geom_intersection.area < self.config.threshold_exclusion_area
         ):
-            return Polygon(), Polygon(), Polygon()
+            empty = _empty_polygon()
+            return empty, empty, empty
 
         if (
             overlap >= self.config.threshold_inclusion_percentage
-            and not overlap == od_overlap
+            and not is_open_domain_reference
         ):
-            return geom_reference, geom_reference, Polygon()
+            return geom_reference, geom_reference, _empty_polygon()
 
         geom_difference = safe_difference(geom_reference, geom_intersection)
         geom_relevant_intersection = buffer_neg(
@@ -1553,6 +1717,10 @@ class NetworkGeometryProcessor(BaseProcessor):
 
     processor_id = ProcessorID.NETWORK
 
+    def __init__(self, config: ProcessorConfig, feedback: Any = None):
+        super().__init__(config=config, feedback=feedback)
+        self._directed_ref_index_cache = {}
+
     def process(
         self,
         *,
@@ -1615,6 +1783,30 @@ class NetworkGeometryProcessor(BaseProcessor):
         """
         perf_collector = kwargs.get("perf_collector")
         t_total = time.perf_counter()
+        reference_candidates = kwargs.get("reference_candidates")
+        processing_area = kwargs.get("processing_area")
+        if processing_area is not None and not kwargs.get(
+            "_processing_area_applied", False
+        ):
+            scoped_kwargs = dict(kwargs)
+            scoped_kwargs["processing_area"] = None
+            scoped_kwargs["_processing_area_applied"] = True
+            return self._process_with_processing_area(
+                input_geometry=input_geometry,
+                processing_area=processing_area,
+                reference_union=reference_data.union,
+                relevant_distance=relevant_distance,
+                mitre_limit=mitre_limit,
+                correction_distance=correction_distance,
+                scoped_processor=lambda scoped_geom: self.process(
+                    input_geometry=scoped_geom,
+                    reference_data=reference_data,
+                    mitre_limit=mitre_limit,
+                    correction_distance=correction_distance,
+                    relevant_distance=relevant_distance,
+                    **scoped_kwargs,
+                ),
+            )
         self.check_area_limit(input_geometry)
         input_geometry = to_multi(input_geometry)
         reference_elements_candidates = kwargs.get("reference_elements_candidates")
@@ -1631,6 +1823,57 @@ class NetworkGeometryProcessor(BaseProcessor):
             if reference_elements_candidates is not None
             else reference_data.elements
         )
+        if reference_candidates is None:
+            reference_candidate_ids = reference_data.items.take(
+                reference_data.tree.query(input_geometry_buffered)
+            ).tolist()
+        else:
+            reference_candidate_ids = reference_candidates
+        reference_feature_records = None
+        precomputed_ref_direction_index = None
+        if self.config.network_use_directed_graph:
+            if reference_candidates is None:
+                # Build direction lookup from the full reference feature set used
+                # by this processor call to avoid local-buffer direction mismatch
+                # when routing reaches broader network parts.
+                reference_candidate_ids = list(reference_data.features.keys())
+            reference_feature_records = []
+            filtered_reference_ids = []
+            for key_ref in reference_candidate_ids:
+                feat = reference_data.features.get(key_ref)
+                if feat is None:
+                    continue
+                feat_geom = feat.geometry
+                if feat_geom is None or feat_geom.is_empty:
+                    continue
+                filtered_reference_ids.append(key_ref)
+                reference_feature_records.append(
+                    {
+                        "id": key_ref,
+                        "geometry": feat_geom,
+                        "properties": feat.properties or {},
+                    }
+                )
+            direction_cache_key = (
+                id(reference_data.features),
+                tuple(filtered_reference_ids),
+                self.config.network_oneway_field,
+                tuple(self.config.network_oneway_forward_values),
+                tuple(self.config.network_oneway_reverse_values),
+            )
+            precomputed_ref_direction_index = self._directed_ref_index_cache.get(
+                direction_cache_key
+            )
+            if precomputed_ref_direction_index is None:
+                precomputed_ref_direction_index = _build_reference_segment_index(
+                    reference_feature_records=reference_feature_records,
+                    oneway_field=self.config.network_oneway_field,
+                    oneway_forward_values=self.config.network_oneway_forward_values,
+                    oneway_reverse_values=self.config.network_oneway_reverse_values,
+                )
+                self._directed_ref_index_cache[direction_cache_key] = (
+                    precomputed_ref_direction_index
+                )
         t_query = time.perf_counter()
         reference = safe_unary_union(
             safe_intersection(base_reference_elements, input_geometry_buffered)
@@ -1641,7 +1884,9 @@ class NetworkGeometryProcessor(BaseProcessor):
                 time.perf_counter() - t_query,
             )
         reference_union = reference_data.union
-        polygonal_reference_union = self._get_polygonal_reference_union(reference_union)
+        polygonal_reference_union = self._get_polygonal_reference_union_cached(
+            reference_union
+        )
         has_polygonal_od = not polygonal_reference_union.is_empty
 
         geometry_to_process = input_geometry
@@ -1688,6 +1933,8 @@ class NetworkGeometryProcessor(BaseProcessor):
                 exterior_processed = self._process_by_network(
                     exterior,
                     reference,
+                    reference_feature_records,
+                    precomputed_ref_direction_index,
                     relevant_distance,
                     correction_distance=correction_distance,
                     close_output=True,
@@ -1700,6 +1947,8 @@ class NetworkGeometryProcessor(BaseProcessor):
                     i_processed = self._process_by_network(
                         i,
                         reference,
+                        reference_feature_records,
+                        precomputed_ref_direction_index,
                         relevant_distance,
                         correction_distance=correction_distance,
                         close_output=True,
@@ -1715,6 +1964,8 @@ class NetworkGeometryProcessor(BaseProcessor):
                 geom_processed = self._process_by_network(
                     geom,
                     reference,
+                    reference_feature_records,
+                    precomputed_ref_direction_index,
                     relevant_distance,
                     correction_distance=correction_distance,
                     close_output=False,
@@ -1761,8 +2012,10 @@ class NetworkGeometryProcessor(BaseProcessor):
         self,
         geom_to_process,
         reference,
-        relevant_distance,
-        correction_distance,
+        reference_feature_records=None,
+        precomputed_ref_direction_index=None,
+        relevant_distance=1,
+        correction_distance=0.01,
         close_output=False,
     ):
         geom_to_process_buffered = buffer_pos(geom_to_process, relevant_distance)
@@ -1803,6 +2056,8 @@ class NetworkGeometryProcessor(BaseProcessor):
             geom_processed = self._get_processed_network_path(
                 input_geometry=geom_to_process,
                 reference=reference,
+                reference_feature_records=reference_feature_records,
+                precomputed_ref_direction_index=precomputed_ref_direction_index,
                 reference_intersection=reference_intersection,
                 thematic_difference=thematic_difference,
                 relevant_distance=relevant_distance,
@@ -1825,19 +2080,29 @@ class NetworkGeometryProcessor(BaseProcessor):
         self,
         input_geometry,
         reference,
+        reference_feature_records,
         reference_intersection,
         thematic_difference,
         relevant_distance,
         correction_distance,
+        precomputed_ref_direction_index=None,
     ):
         graph = build_custom_network(
             input_geometry=input_geometry,
             theme_multiline=thematic_difference,
             reference=reference,
+            reference_feature_records=reference_feature_records,
+            precomputed_ref_direction_index=precomputed_ref_direction_index,
             reference_intersection=reference_intersection,
             relevant_distance=relevant_distance,
             gap_threshold=0.1,
             snap_dist=correction_distance,
+            directed=self.config.network_use_directed_graph,
+            oneway_field=self.config.network_oneway_field,
+            oneway_forward_values=self.config.network_oneway_forward_values,
+            oneway_reverse_values=self.config.network_oneway_reverse_values,
+            allow_connector_edges_when_directed=self.config.network_allow_connector_edges_when_directed,
+            directed_connector_penalty_factor=self.config.network_directed_connector_penalty_factor,
         )
         return find_best_path_in_network(
             input_geometry,
@@ -1846,6 +2111,477 @@ class NetworkGeometryProcessor(BaseProcessor):
             tolerance=relevant_distance,
             angle_threshold_degrees=self.config.angle_threshold_degrees,
         )
+
+
+class DirectedNetworkGeometryProcessor(NetworkGeometryProcessor):
+    """
+    Thin wrapper around NetworkGeometryProcessor with directed-graph mode enabled.
+
+    This subclass keeps all routing and processing logic identical to
+    `NetworkGeometryProcessor`, but forces `network_use_directed_graph=True`
+    in its local config copy.
+    """
+
+    processor_id = ProcessorID.DIRECTED_NETWORK
+
+    def __init__(self, config: ProcessorConfig, feedback: Any = None):
+        directed_config = replace(config, network_use_directed_graph=True)
+        super().__init__(config=directed_config, feedback=feedback)
+
+
+class AnchorGeometryProcessor(BaseProcessor):
+    """
+    Processor that aligns linear geometries using an anchor-guided routing flow.
+
+    Anchor routing keeps start and end points as mandatory anchors, adds thematic
+    sharp-angle vertices as anchors (threshold from
+    ``ProcessorConfig.angle_threshold_degrees``), and inserts periodic anchors
+    on long stretches (spacing from ``ProcessorConfig.max_anchor_distance``).
+
+    Routing behavior is two-phase:
+    1. Anchor matching is validated on a local reference subset (within
+       ``relevant_distance``).
+    2. If anchors are matched locally, segment routing can use the full
+       reference line network.
+
+    Anchors without a local match are preserved as original thematic points and
+    are kept in the reconstructed route.
+
+    When ``ProcessorConfig.network_use_directed_graph`` is enabled, the
+    processor builds a directed reference graph and applies one-way constraints
+    via the same oneway parameters used by ``NetworkGeometryProcessor``.
+
+    For polygon inputs this processor delegates to ``NetworkGeometryProcessor``.
+    """
+
+    processor_id = ProcessorID.ANCHOR
+
+    def __init__(self, config: ProcessorConfig, feedback: Any = None):
+        super().__init__(config=config, feedback=feedback)
+        self._directed_ref_index_cache = {}
+
+    def process(
+        self,
+        *,
+        input_geometry: BaseGeometry,
+        reference_data: AlignerFeatureCollection,
+        mitre_limit: float,
+        correction_distance: float,
+        relevant_distance: float,
+        **kwargs: Any,
+    ) -> ProcessResult:
+        processing_area = kwargs.get("processing_area")
+        if processing_area is not None and not kwargs.get(
+            "_processing_area_applied", False
+        ):
+            scoped_kwargs = dict(kwargs)
+            scoped_kwargs["processing_area"] = None
+            scoped_kwargs["_processing_area_applied"] = True
+            return self._process_with_processing_area(
+                input_geometry=input_geometry,
+                processing_area=processing_area,
+                reference_union=reference_data.union,
+                relevant_distance=relevant_distance,
+                mitre_limit=mitre_limit,
+                correction_distance=correction_distance,
+                scoped_processor=lambda scoped_geom: self.process(
+                    input_geometry=scoped_geom,
+                    reference_data=reference_data,
+                    mitre_limit=mitre_limit,
+                    correction_distance=correction_distance,
+                    relevant_distance=relevant_distance,
+                    **scoped_kwargs,
+                ),
+            )
+        self.check_area_limit(input_geometry)
+        reference_elements_candidates = kwargs.get("reference_elements_candidates")
+        reference_candidates = kwargs.get("reference_candidates")
+
+        if isinstance(input_geometry, (Polygon, MultiPolygon)):
+            # Keep polygon handling consistent by delegating to the network processor.
+            processor = NetworkGeometryProcessor(
+                config=self.config, feedback=self.feedback
+            )
+            return processor.process(
+                input_geometry=input_geometry,
+                reference_data=reference_data,
+                mitre_limit=mitre_limit,
+                correction_distance=correction_distance,
+                relevant_distance=relevant_distance,
+                **kwargs,
+            )
+
+        input_multi = to_multi(input_geometry)
+        search_geom = buffer_pos(
+            input_multi, relevant_distance * self.config.buffer_multiplication_factor
+        )
+        base_reference_elements = (
+            reference_elements_candidates
+            if reference_elements_candidates is not None
+            else reference_data.elements
+        )
+        reference_subset = safe_intersection(base_reference_elements, search_geom)
+        reference_parts = extract_points_lines_from_geometry(reference_subset)
+        reference_lines_local = [
+            part
+            for part in get_parts(reference_parts)
+            if isinstance(part, LineString) and part.length > 0
+        ]
+        reference_parts_full = extract_points_lines_from_geometry(
+            base_reference_elements
+        )
+        reference_lines_full = [
+            part
+            for part in get_parts(reference_parts_full)
+            if isinstance(part, LineString) and part.length > 0
+        ]
+        reference_feature_records = None
+        precomputed_ref_direction_index = None
+        if self.config.network_use_directed_graph:
+            if reference_candidates is None:
+                # Build direction lookup from the full reference feature set used
+                # by this processor call to avoid mismatches when routing can use
+                # wider network parts than the local anchor search area.
+                reference_candidate_ids = list(reference_data.features.keys())
+            else:
+                reference_candidate_ids = reference_candidates
+            reference_feature_records = []
+            filtered_reference_ids = []
+            for key_ref in reference_candidate_ids:
+                feat = reference_data.features.get(key_ref)
+                if feat is None:
+                    continue
+                feat_geom = feat.geometry
+                if feat_geom is None or feat_geom.is_empty:
+                    continue
+                filtered_reference_ids.append(key_ref)
+                reference_feature_records.append(
+                    {
+                        "id": key_ref,
+                        "geometry": feat_geom,
+                        "properties": feat.properties or {},
+                    }
+                )
+            direction_cache_key = (
+                id(reference_data.features),
+                tuple(filtered_reference_ids),
+                self.config.network_oneway_field,
+                tuple(self.config.network_oneway_forward_values),
+                tuple(self.config.network_oneway_reverse_values),
+            )
+            precomputed_ref_direction_index = self._directed_ref_index_cache.get(
+                direction_cache_key
+            )
+            if precomputed_ref_direction_index is None:
+                precomputed_ref_direction_index = _build_reference_segment_index(
+                    reference_feature_records=reference_feature_records,
+                    oneway_field=self.config.network_oneway_field,
+                    oneway_forward_values=self.config.network_oneway_forward_values,
+                    oneway_reverse_values=self.config.network_oneway_reverse_values,
+                )
+                self._directed_ref_index_cache[direction_cache_key] = (
+                    precomputed_ref_direction_index
+                )
+        if not reference_lines_local or not reference_lines_full:
+            return self._postprocess_preresult(
+                input_multi,
+                input_multi,
+                GeometryCollection(),
+                GeometryCollection(),
+                relevant_distance,
+                reference_data.union,
+                mitre_limit,
+                correction_distance,
+            )
+
+        anchor_selection_graph = self._build_reference_graph(
+            reference_lines_local,
+            precomputed_ref_direction_index=precomputed_ref_direction_index,
+        )
+        graph = self._build_reference_graph(
+            reference_lines_full,
+            precomputed_ref_direction_index=precomputed_ref_direction_index,
+        )
+        if (
+            anchor_selection_graph.number_of_edges() == 0
+            or graph.number_of_edges() == 0
+        ):
+            return self._postprocess_preresult(
+                input_multi,
+                input_multi,
+                GeometryCollection(),
+                GeometryCollection(),
+                relevant_distance,
+                reference_data.union,
+                mitre_limit,
+                correction_distance,
+            )
+
+        aligned_parts = []
+        for part in get_parts(input_multi):
+            if part is None or part.is_empty:
+                continue
+            if isinstance(part, Point):
+                if self._has_nearby_snap_candidate(
+                    part, anchor_selection_graph, relevant_distance
+                ):
+                    aligned_parts.append(self._snap_point_to_graph(part, graph))
+                else:
+                    aligned_parts.append(part)
+                continue
+            if isinstance(part, LineString):
+                aligned_parts.append(
+                    self._align_linestring_anchor_routing(
+                        part,
+                        graph,
+                        relevant_distance=relevant_distance,
+                        anchor_selection_graph=anchor_selection_graph,
+                    )
+                )
+                continue
+            if isinstance(part, MultiLineString):
+                for ls in part.geoms:
+                    aligned_parts.append(
+                        self._align_linestring_anchor_routing(
+                            ls,
+                            graph,
+                            relevant_distance=relevant_distance,
+                            anchor_selection_graph=anchor_selection_graph,
+                        )
+                    )
+
+        if not aligned_parts:
+            geom_processed = GeometryCollection()
+        elif len(aligned_parts) == 1:
+            geom_processed = aligned_parts[0]
+        else:
+            geom_processed = safe_unary_union(aligned_parts)
+
+        return self._postprocess_preresult(
+            geom_processed,
+            input_multi,
+            GeometryCollection(),
+            GeometryCollection(),
+            relevant_distance,
+            reference_data.union,
+            mitre_limit,
+            correction_distance,
+        )
+
+    def _build_reference_graph(
+        self,
+        lines: list[LineString],
+        precomputed_ref_direction_index=None,
+    ) -> nx.Graph:
+        graph = nx.DiGraph() if self.config.network_use_directed_graph else nx.Graph()
+        for line in lines:
+            coords = list(line.coords)
+            if len(coords) < 2:
+                continue
+            for i in range(len(coords) - 1):
+                a = tuple(coords[i])
+                b = tuple(coords[i + 1])
+                seg = LineString([a, b])
+                length = float(seg.length)
+                if length <= 0:
+                    continue
+                if graph.has_edge(a, b):
+                    existing = graph[a][b].get("length", float("inf"))
+                    if length >= existing:
+                        continue
+                if self.config.network_use_directed_graph:
+                    _add_reference_edge(
+                        graph,
+                        a,
+                        b,
+                        direction_index=precomputed_ref_direction_index,
+                        length=length,
+                        geometry=seg,
+                        tag="ref_lines",
+                    )
+                else:
+                    graph.add_edge(a, b, length=length, geometry=seg, tag="ref_lines")
+        return graph
+
+    def _snap_point_to_graph(self, point: Point, graph: nx.Graph) -> Point:
+        if graph.number_of_nodes() == 0:
+            return point
+        node = _select_network_node_by_snap_strategy(
+            point,
+            graph,
+            snap_strategy=self.config.snap_strategy,
+            tolerance=None,
+            angle_threshold_degrees=self.config.angle_threshold_degrees,
+            node_list=list(graph.nodes),
+            node_points_tree=None,
+        )
+        if node is None:
+            node = nearest_node(point, graph.nodes)
+        if node is None:
+            return point
+        return Point(node[0], node[1])
+
+    def _has_nearby_snap_candidate(
+        self, point: Point, graph: nx.Graph, relevant_distance: float
+    ) -> bool:
+        if graph.number_of_nodes() == 0:
+            return False
+        node = _select_network_node_by_snap_strategy(
+            point,
+            graph,
+            snap_strategy=self.config.snap_strategy,
+            tolerance=relevant_distance,
+            angle_threshold_degrees=self.config.angle_threshold_degrees,
+            node_list=list(graph.nodes),
+            node_points_tree=None,
+        )
+        if node is None:
+            return False
+        return Point(node).distance(point) <= float(relevant_distance)
+
+    def _anchor_points(self, line: LineString) -> list[Point]:
+        if line.length == 0:
+            return [Point(line.coords[0])]
+        coords = list(line.coords)
+        anchor_distances = {0.0, float(line.length)}
+
+        # Add thematic vertices with a sharp angle as mandatory anchors.
+        angle_threshold = float(self.config.angle_threshold_degrees)
+        for i in range(1, len(coords) - 1):
+            prev_pt = coords[i - 1]
+            cur_pt = coords[i]
+            next_pt = coords[i + 1]
+            u = (prev_pt[0] - cur_pt[0], prev_pt[1] - cur_pt[1])
+            v = (next_pt[0] - cur_pt[0], next_pt[1] - cur_pt[1])
+            norm_u = (u[0] * u[0] + u[1] * u[1]) ** 0.5
+            norm_v = (v[0] * v[0] + v[1] * v[1]) ** 0.5
+            if norm_u == 0 or norm_v == 0:
+                continue
+            angle = float(_angle_between_vectors_degrees(u, v))
+            if angle <= angle_threshold:
+                d = float(line.project(Point(cur_pt)))
+                anchor_distances.add(d)
+
+        # Add periodic anchors for long straight stretches.
+        step = max(float(self.config.max_anchor_distance), 1e-9)
+        d = step
+        while d < float(line.length):
+            anchor_distances.add(float(d))
+            d += step
+
+        ordered_distances = sorted(anchor_distances)
+        return [line.interpolate(d) for d in ordered_distances]
+
+    def _align_linestring_anchor_routing(
+        self,
+        line: LineString,
+        graph: nx.Graph,
+        relevant_distance: float,
+        anchor_selection_graph: nx.Graph | None = None,
+    ) -> LineString:
+        if line is None or line.is_empty or line.length == 0:
+            return line
+        anchors = self._anchor_points(line)
+        selection_graph = (
+            anchor_selection_graph if anchor_selection_graph is not None else graph
+        )
+        selection_nodes = list(selection_graph.nodes)
+        route_nodes = list(graph.nodes)
+        anchor_targets: list[dict[str, Any]] = []
+        for anchor in anchors:
+            if selection_graph.number_of_nodes() == 0 or graph.number_of_nodes() == 0:
+                return line
+            selection_node = _select_network_node_by_snap_strategy(
+                anchor,
+                selection_graph,
+                snap_strategy=self.config.snap_strategy,
+                tolerance=relevant_distance,
+                angle_threshold_degrees=self.config.angle_threshold_degrees,
+                node_list=selection_nodes,
+                node_points_tree=None,
+            )
+            if selection_node is None or Point(selection_node).distance(anchor) > float(
+                relevant_distance
+            ):
+                anchor_targets.append({"coord": (anchor.x, anchor.y), "node": None})
+                continue
+            selection_point = Point(selection_node[0], selection_node[1])
+            node = _select_network_node_by_snap_strategy(
+                selection_point,
+                graph,
+                snap_strategy=self.config.snap_strategy,
+                tolerance=None,
+                angle_threshold_degrees=self.config.angle_threshold_degrees,
+                node_list=route_nodes,
+                node_points_tree=None,
+            )
+            if node is None:
+                node = nearest_node(selection_point, graph.nodes)
+            if node is None:
+                anchor_targets.append({"coord": (anchor.x, anchor.y), "node": None})
+                continue
+            coord = (float(node[0]), float(node[1]))
+            if not anchor_targets or coord != anchor_targets[-1]["coord"]:
+                anchor_targets.append({"coord": coord, "node": node})
+        if len(anchor_targets) < 2:
+            return line
+
+        route_coords = [anchor_targets[0]["coord"]]
+        for i in range(len(anchor_targets) - 1):
+            start_target = anchor_targets[i]
+            end_target = anchor_targets[i + 1]
+            start_node = start_target.get("node")
+            end_node = end_target.get("node")
+            if start_node is None or end_node is None:
+                if route_coords[-1] != end_target["coord"]:
+                    route_coords.append(end_target["coord"])
+                continue
+
+            anchor_segment = LineString([start_node, end_node])
+            path_line = find_best_path_in_network(
+                anchor_segment,
+                graph,
+                snap_strategy=self.config.snap_strategy,
+                tolerance=relevant_distance,
+                angle_threshold_degrees=self.config.angle_threshold_degrees,
+            )
+            if path_line is not None and not path_line.is_empty:
+                path_nodes = list(path_line.coords)
+                route_coords.extend(path_nodes[1:])
+                continue
+            try:
+                path_nodes = nx.shortest_path(
+                    graph, start_node, end_node, weight="length"
+                )
+            except (nx.NetworkXNoPath, nx.NodeNotFound):
+                if self.config.network_use_directed_graph:
+                    # Do not introduce synthetic straight jumps between nodes when
+                    # directed constraints prevent a valid path.
+                    return line
+                if route_coords[-1] != end_target["coord"]:
+                    route_coords.append(end_target["coord"])
+                continue
+            route_coords.extend(path_nodes[1:])
+
+        if len(route_coords) < 2:
+            return line
+        return LineString(route_coords)
+
+
+class DirectedAnchorGeometryProcessor(AnchorGeometryProcessor):
+    """
+    Thin wrapper around AnchorGeometryProcessor with directed-graph mode enabled.
+
+    This subclass keeps all anchor-routing and processing logic identical to
+    `AnchorGeometryProcessor`, but forces `network_use_directed_graph=True`
+    in its local config copy.
+    """
+
+    processor_id = ProcessorID.DIRECTED_ANCHOR
+
+    def __init__(self, config: ProcessorConfig, feedback: Any = None):
+        directed_config = replace(config, network_use_directed_graph=True)
+        super().__init__(config=directed_config, feedback=feedback)
 
 
 class AlignerGeometryProcessor(BaseProcessor):
@@ -1932,6 +2668,30 @@ class AlignerGeometryProcessor(BaseProcessor):
         """
         perf_collector = kwargs.get("perf_collector")
         t_total = time.perf_counter()
+        processing_area = kwargs.get("processing_area")
+        if processing_area is not None and not kwargs.get(
+            "_processing_area_applied", False
+        ):
+            scoped_kwargs = dict(kwargs)
+            scoped_kwargs["processing_area"] = None
+            scoped_kwargs["_processing_area_applied"] = True
+            return self._process_with_processing_area(
+                input_geometry=input_geometry,
+                processing_area=processing_area,
+                reference_union=reference_data.union,
+                relevant_distance=relevant_distance,
+                mitre_limit=mitre_limit,
+                correction_distance=correction_distance,
+                scoped_processor=lambda scoped_geom: self.process(
+                    correction_distance=correction_distance,
+                    reference_data=reference_data,
+                    input_geometry=scoped_geom,
+                    mitre_limit=mitre_limit,
+                    relevant_distance=relevant_distance,
+                    _force_network_for_polygons=True,
+                    **scoped_kwargs,
+                ),
+            )
         if isinstance(input_geometry, GeometryCollection):
             raise ValueError(
                 "GeometryCollection as input is not supported. Please use the individual geometries from the GeometryCollection as input."
@@ -1950,6 +2710,27 @@ class AlignerGeometryProcessor(BaseProcessor):
                 process_result["result"] = input_geometry
                 process_result["properties"] = {REMARK_FIELD_NAME: remarks}
                 return union_process_result(process_result)
+
+            if kwargs.get("_force_network_for_polygons", False):
+                processor = NetworkGeometryProcessor(self.config, self.logger.feedback)
+                t_network = time.perf_counter()
+                result = processor.process(
+                    input_geometry=input_geometry,
+                    reference_data=reference_data,
+                    relevant_distance=relevant_distance,
+                    mitre_limit=mitre_limit,
+                    correction_distance=correction_distance,
+                    **kwargs,
+                )
+                if perf_collector is not None:
+                    perf_collector.add(
+                        "processor.dispatch.network",
+                        time.perf_counter() - t_network,
+                    )
+                    perf_collector.add(
+                        "processor.dispatch.total", time.perf_counter() - t_total
+                    )
+                return result
 
             try:
                 processor = DieussaertGeometryProcessor(
@@ -2036,6 +2817,8 @@ class TopologyProcessor(BaseProcessor):
         self.thematic_geometries_to_process = None
         self.id_to_arcs = None
         self.wkb_to_id = None
+        self.wkb_to_ids = None
+        self._arc_result_cache = {}
 
     def process(
         self,
@@ -2096,29 +2879,79 @@ class TopologyProcessor(BaseProcessor):
             Dissolve --> End[Final ProcessResult]
         ```
         """
+        processing_area = kwargs.get("processing_area")
+        if processing_area is not None and not kwargs.get(
+            "_processing_area_applied", False
+        ):
+            scoped_kwargs = dict(kwargs)
+            scoped_kwargs["processing_area"] = None
+            scoped_kwargs["_processing_area_applied"] = True
+            return self._process_with_processing_area(
+                input_geometry=input_geometry,
+                processing_area=processing_area,
+                reference_union=reference_data.union,
+                relevant_distance=relevant_distance,
+                mitre_limit=mitre_limit,
+                correction_distance=correction_distance,
+                scoped_processor=lambda scoped_geom: self.process(
+                    input_geometry=scoped_geom,
+                    reference_data=reference_data,
+                    mitre_limit=mitre_limit,
+                    correction_distance=correction_distance,
+                    relevant_distance=relevant_distance,
+                    thematic_data=thematic_data,
+                    **scoped_kwargs,
+                ),
+            )
         self.check_area_limit(input_geometry)
         self._build_topo_cache(thematic_data)
 
-        # Identify the feature ID via its WKB
-        id_thematic = self.wkb_to_id[input_geometry.wkb]
+        # Identify the feature ID. Prefer explicit thematic_id from caller to
+        # avoid ambiguity when multiple thematic features share identical WKB.
+        id_thematic = kwargs.get("thematic_id")
+        if id_thematic is None:
+            candidates = self.wkb_to_ids.get(input_geometry.wkb, [])
+            if len(candidates) == 1:
+                id_thematic = candidates[0]
+            elif len(candidates) > 1:
+                raise ValueError(
+                    "Ambiguous topology lookup: multiple thematic features share "
+                    "the same geometry WKB. Provide thematic_id explicitly."
+                )
+            else:
+                raise KeyError("Input geometry not found in thematic topology cache.")
 
         # Get all unique arcs that make up this feature
         arcs_to_process = flatten_iter(self.id_to_arcs[id_thematic])
         processor = NetworkGeometryProcessor(config=self.config, feedback=self.feedback)
         process_results = {}
+        reference_signature = id(reference_data.features)
+        config_signature = (config_fingerprint(self.config),)
 
         # Align each arc individually (shared arcs are processed once per batch)
         for key in arcs_to_process:
             key = abs(key)
             geometry = self.thematic_geometries_to_process[key]
             process_results[key] = {}
-            process_results[key][relevant_distance] = processor.process(
-                correction_distance=correction_distance,
-                mitre_limit=mitre_limit,
-                reference_data=reference_data,
-                input_geometry=geometry,
-                relevant_distance=relevant_distance,
+            cache_key = (
+                key,
+                float(relevant_distance),
+                float(correction_distance),
+                float(mitre_limit),
+                reference_signature,
+                config_signature,
             )
+            cached_result = self._arc_result_cache.get(cache_key)
+            if cached_result is None:
+                cached_result = processor.process(
+                    correction_distance=correction_distance,
+                    mitre_limit=mitre_limit,
+                    reference_data=reference_data,
+                    input_geometry=geometry,
+                    relevant_distance=relevant_distance,
+                )
+                self._arc_result_cache[cache_key] = cached_result
+            process_results[key][relevant_distance] = cached_result
 
         # Reconstruct the original polygon structure using the new arc geometries
         return _dissolve_topo(
@@ -2156,7 +2989,12 @@ class TopologyProcessor(BaseProcessor):
             self.wkb_to_id = build_reverse_index_wkb(
                 {key: feat.geometry for key, feat in thematic_data.features.items()}
             )
+            wkb_to_ids = {}
+            for key, feat in thematic_data.features.items():
+                wkb_to_ids.setdefault(feat.geometry.wkb, []).append(key)
+            self.wkb_to_ids = wkb_to_ids
             self.id_to_arcs = _topojson_id_to_arcs(self.topo_thematic)
             self.thematic_data = thematic_data
+            self._arc_result_cache = {}
 
         return

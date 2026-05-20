@@ -1,6 +1,7 @@
 # define a typeddict thematic_data with keys name: str and geom: geometry
 from typing import Dict, Any
 from typing import List
+from typing import Literal
 from typing import TypedDict
 from typing import Union
 
@@ -88,9 +89,12 @@ InputId = Union[str, int]
 
 
 class ObservationReference(TypedDict, total=False):
-    area: int
     full: bool
-    percentage: int
+    percentage: float
+    measure_type: Literal["area", "length", "count"]
+    area: float
+    length: float
+    count: float
 
 
 class Observation(TypedDict, total=False):
@@ -98,6 +102,9 @@ class Observation(TypedDict, total=False):
     brdr_version: str
     reference_source: str
     full: bool
-    area: int
+    area: float
+    length: float
+    count: float
+    measure_type: Literal["area", "length", "count"]
     reference_features: Dict[InputId, ObservationReference]
     reference_od: Dict

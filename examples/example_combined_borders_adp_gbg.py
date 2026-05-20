@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from brdr.aligner import Aligner
 from brdr.be.grb.enums import GRBType
 from brdr.be.grb.loader import GRBActualLoader
@@ -18,11 +20,14 @@ if __name__ == "__main__":
     # theme-data.
     """
     # Initiate brdr
+    base_dir = Path(__file__).resolve().parent
     aligner = Aligner()
 
     # Load thematic data & reference data
     loader = GeoJsonFileLoader(
-        path_to_file="../tests/testdata/test_parcel_vs_building.geojson",
+        path_to_file=str(
+            base_dir.parent / "tests" / "testdata" / "test_parcel_vs_building.geojson"
+        ),
         id_property="theme_id",
     )
     aligner.load_thematic_data(loader)
@@ -33,7 +38,7 @@ if __name__ == "__main__":
     reference_data_gbg = gbg_loader.load_data()
 
     adp_features = reference_data_adp.features
-    gbg_features = reference_data_adp.features
+    gbg_features = reference_data_gbg.features
     # Create new ref dictionary based on 2 reference sources
     dict_ref = {}
     for ref_id, feature in adp_features.items():

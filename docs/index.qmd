@@ -10,6 +10,8 @@ A Python library for aligning thematic geometries (OGC Simple Features) to refer
 - [Getting started](getting-started.qmd)
 - [Processor selection](processor-selection.qmd)
 - [Parameter cookbook](parameter-cookbook.qmd)
+- [Testing and CI](qa.qmd)
+- [Export guide](export-guide.qmd)
 - [Examples](examples.qmd)
 - [API reference](reference/index.qmd)
 
@@ -31,6 +33,9 @@ The minimal workflow is:
 3. Load reference data.
 4. Run `process(...)`, `predict(...)`, or `evaluate(...)`.
 5. Export or inspect `AlignerResult`.
+
+All three operations also support an optional `processing_area` to process only a
+selected spatial subset while leaving the rest of each geometry unchanged.
 
 ```{mermaid}
 flowchart LR

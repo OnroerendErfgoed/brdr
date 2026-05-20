@@ -322,6 +322,32 @@ def safe_intersection(geom_a: BaseGeometry, geom_b: BaseGeometry) -> BaseGeometr
     return geom
 
 
+def safe_intersects(geom_a: BaseGeometry, geom_b: BaseGeometry) -> bool:
+    """
+    Safely checks whether two geometries intersect.
+
+    Uses validity-aware checks and conservative fallbacks to avoid GEOS
+    topology errors on invalid geometries.
+    """
+    if geom_a is None or geom_b is None:
+        return False
+    if geom_a.is_empty or geom_b.is_empty:
+        return False
+    try:
+        if geom_a.is_valid and geom_b.is_valid:
+            return bool(geom_a.intersects(geom_b))
+        return bool(
+            (make_valid(geom_a) if not geom_a.is_valid else geom_a).intersects(
+                make_valid(geom_b) if not geom_b.is_valid else geom_b
+            )
+        )
+    except GEOSException:
+        try:
+            return bool(buffer(geom_a, 0.0000001).intersects(buffer(geom_b, 0.0000001)))
+        except Exception:
+            return False
+
+
 def safe_unary_union(geometries):
     if geometries is None:
         return GeometryCollection()
@@ -1467,7 +1493,7 @@ def to_multi(geometry, geomtype=None):
             or isinstance(geometry, MultiLineString)
             or isinstance(geometry, MultiPolygon)
         ):
-            return geometry  # Het is al een multi-variant
+            return geometry  # Already a multi-variant
         elif isinstance(geometry, GeometryCollection):
             multi_geoms = []
             for geom in geometry.geoms:

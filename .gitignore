@@ -191,3 +191,7 @@ _quarto_internal_scss_error.scss
 tests/g_out.gpkg
 /.venv-docs
 /.jupyter
+/.tmp/
+/.tmp_py/
+/output
+run_examples.ps1

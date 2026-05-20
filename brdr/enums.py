@@ -129,14 +129,10 @@ class ProcessRemark(str, Enum):
         Result equals original geometry within tolerance.
     INPUT_CIRCLE : str
         Circle-like input detected; original geometry returned.
-    RESULT_EMPTY_RETURNED : str
-        Result became empty and empty geometry was returned.
-    CHANGED_GEOMETRYTYPE_EMPTY_RETURNED : str
-        Geometry type changed unexpectedly; empty geometry returned.
+    INVALID_EMPTY_RETURNED : str
+        Invalid processor result detected; empty geometry returned.
     CHANGED_AMOUNT_GEOMETRIES : str
         Number of sub-geometries changed.
-    NO_PREDICTION_ORIGINAL_RETURNED : str
-        No prediction accepted; original geometry returned.
     MULTIPLE_PREDICTIONS_ORIGINAL_RETURNED : str
         Multiple predictions prevented single choice; original returned.
     NOT_EVALUATED_ORIGINAL_RETURNED : str
@@ -144,15 +140,11 @@ class ProcessRemark(str, Enum):
     """
 
     RESULT_UNCHANGED = "resulting geometry equal to original geometry"
-    INPUT_CIRCLE = "circle detected: original_geometry_returned"
-    RESULT_EMPTY_RETURNED = "resulting geometry empty: empty geometry returned"
-    CHANGED_GEOMETRYTYPE_EMPTY_RETURNED = (
-        "resulting geometry has different geometrytype: empty geometry returned"
-    )
+    INPUT_CIRCLE = "circle detected: original geometry returned"
+    INVALID_EMPTY_RETURNED = "invalid processing result: empty geometry returned"
     CHANGED_AMOUNT_GEOMETRIES = (
         "resulting (multi) geometry has different amount of geometries"
     )
-    NO_PREDICTION_ORIGINAL_RETURNED = "NO_PREDICTION_ORIGINAL_RETURNED"
     MULTIPLE_PREDICTIONS_ORIGINAL_RETURNED = "MULTIPLE_PREDICTIONS_ORIGINAL_RETURNED"
     NOT_EVALUATED_ORIGINAL_RETURNED = "NOT_EVALUATED_ORIGINAL_RETURNED"
 
@@ -215,6 +207,8 @@ class ProcessorID(str, Enum):
         Identifier for SnapGeometryProcessor.
     NETWORK : str
         Identifier for NetworkGeometryProcessor.
+    ANCHOR : str
+        Identifier for AnchorGeometryProcessor.
     ALIGNER : str
         Identifier for AlignerGeometryProcessor.
     TOPOLOGY : str
@@ -224,8 +218,11 @@ class ProcessorID(str, Enum):
     DIEUSSAERT = "2024:dieussaert2024a"
     SNAP = "2024:snap2024a"
     NETWORK = "2024:network2024a"
+    ANCHOR = "2024:anchor2024a"
     ALIGNER = "2024:aligner2024a"
     TOPOLOGY = "2024:topology2024a"
+    DIRECTED_NETWORK = "2026:directed_network2026a"
+    DIRECTED_ANCHOR = "2026:directed_anchor2026a"
 
 
 class SnapStrategy(str, Enum):

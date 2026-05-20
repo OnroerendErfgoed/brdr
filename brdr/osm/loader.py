@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Any
+from typing import Iterable
 
 import geopandas as gpd
 import osmnx as ox
@@ -29,6 +30,15 @@ class OSMLoader(DictLoader):
         of {'building': 'industrial'}).
     aligner : Aligner
         The aligner object providing the spatial context, target CRS, and logger.
+    included_attributes : Iterable[str] | None, optional
+        Optional whitelist of OSM attribute names to keep in feature properties.
+        - If None (default), all attributes returned by OSMNX are retained.
+        - If provided, only these attributes are kept (plus optional directional
+          attributes when `include_directional_attributes=True`).
+    include_directional_attributes : bool, default False
+        If True, ensure common direction-related OSM attributes are included in
+        feature properties (e.g. `oneway`, `junction`, lane/turn-direction fields),
+        even when an `included_attributes` whitelist is used.
 
     Attributes
     ----------
@@ -36,16 +46,31 @@ class OSMLoader(DictLoader):
         Reference to the parent aligner object.
     osm_tags : dict
         The tags used for filtering OSM data.
+    included_attributes : set[str] | None
+        Effective attribute whitelist (or None when all attributes are kept).
+    include_directional_attributes : bool
+        Flag indicating whether direction-related attributes are always included.
     data_dict_source : dict
         Metadata dictionary tracking the data source ("OSM") and version date.
     versiondate_info : dict
         Dictionary specifying the version date field name and format.
     """
 
-    def __init__(self, osm_tags: dict, aligner: Any):
+    def __init__(
+        self,
+        osm_tags: dict,
+        aligner: Any,
+        *,
+        included_attributes: Iterable[str] | None = None,
+        include_directional_attributes: bool = False,
+    ):
         super().__init__(data_dict={}, data_dict_properties={})
         self.aligner = aligner
         self.osm_tags = osm_tags
+        self.included_attributes = (
+            set(included_attributes) if included_attributes is not None else None
+        )
+        self.include_directional_attributes = include_directional_attributes
         self.data_dict_source["source"] = "OSM"
         # This is the overpass API used by default by osmnx. A more
         # abstract reference might be preferable.
@@ -61,6 +86,7 @@ class OSMLoader(DictLoader):
         2. Transforming the search area to WGS84 (EPSG:4326).
         3. Fetching features via `osmnx` based on the provided tags.
         4. Re-projecting the downloaded features back to the Aligner's CRS.
+        5. Optionally filtering/stabilizing attribute payload in `properties`.
 
         Returns
         -------
@@ -79,6 +105,13 @@ class OSMLoader(DictLoader):
         The search area is expanded using `OSM_MAX_REFERENCE_BUFFER` to ensure
         that reference features partially outside the thematic area are
         fully captured for alignment.
+
+        Attribute handling:
+        - Default behavior keeps all attributes returned by OSMNX.
+        - Use `included_attributes` to reduce payload and improve downstream
+          performance/memory usage.
+        - Use `include_directional_attributes=True` for directed-network use
+          cases where one-way and lane direction metadata is relevant.
 
 
         """
@@ -108,9 +141,42 @@ class OSMLoader(DictLoader):
         osm_data.to_crs(crs=self.aligner.crs, inplace=True)
 
         # 5. Populate the dictionary for the DictLoader
-        self.data_dict = {
-            row["osm_id"]: row["geometry"] for idx, row in osm_data.iterrows()
+        self.data_dict = {}
+        self.data_dict_properties = {}
+        directional_keys = {
+            "oneway",
+            "junction",
+            "oneway:bicycle",
+            "oneway:motor_vehicle",
+            "oneway:motorcar",
+            "oneway:bus",
+            "oneway:hgv",
         }
+        if self.include_directional_attributes:
+            directional_keys.update(
+                {
+                    "highway",
+                    "lanes",
+                    "lanes:forward",
+                    "lanes:backward",
+                    "turn:lanes",
+                    "turn:lanes:forward",
+                    "turn:lanes:backward",
+                }
+            )
+        for _, row in osm_data.iterrows():
+            osm_id = row["osm_id"]
+            self.data_dict[osm_id] = row["geometry"]
+            props = row.drop(labels=["geometry"]).to_dict()
+            if self.included_attributes is not None:
+                props = {
+                    k: v for k, v in props.items() if k in self.included_attributes
+                }
+            if self.include_directional_attributes:
+                for key in directional_keys:
+                    if key in row:
+                        props[key] = row[key]
+            self.data_dict_properties[osm_id] = props
 
         self.data_dict_source[VERSION_DATE] = datetime.now().strftime(DATE_FORMAT)
         self.aligner.logger.feedback_info(f"OSM downloaded: {self.osm_tags}")

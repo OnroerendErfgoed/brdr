@@ -17,7 +17,7 @@ ID_REFERENCE_FIELD_NAME = PREFIX_FIELDNAME + "ref_id"
 OBSERVATION_FIELD_NAME = PREFIX_FIELDNAME + "observations"
 BASE_METADATA_FIELD_NAME = (
     PREFIX_FIELDNAME + "metadata_base"
-)  # fieldname to write the base metadata of the input geometrie
+)  # field name to write the base metadata of the input geometry
 METADATA_FIELD_NAME = PREFIX_FIELDNAME + "metadata"
 EVALUATION_FIELD_NAME = PREFIX_FIELDNAME + "evaluation"
 STABILITY = PREFIX_FIELDNAME + "stability"

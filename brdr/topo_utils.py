@@ -1,5 +1,6 @@
 import copy
 import json
+import logging
 from typing import Any, Dict
 
 import topojson
@@ -98,8 +99,13 @@ def _dissolve_topo(
                 # Convert the coordinates of the resulting linestring into the TopoJSON arc format
                 new_arc = [list(coord) for coord in linestring.coords]
 
-            except Exception:
+            except (KeyError, TypeError, ValueError, AttributeError):
                 # If processing failed (e.g., TypeError or KeyError), use the original arc geometry
+                logging.warning(
+                    "Falling back to original arc %s while dissolving thematic_id=%s",
+                    arc_id,
+                    thematic_id,
+                )
                 linestring = thematic_geometries_to_process[arc_id]
                 # Convert the coordinates of the original linestring into the TopoJSON arc format
                 old_arc = [list(coord) for coord in linestring.coords]
@@ -173,8 +179,7 @@ def _generate_topo(thematic_data):
         thematic_geometries[key] = feat.geometry
     topo_thematic = topojson.Topology(thematic_geometries, prequantize=False)
 
-    # Print the resulting TopoJSON structure (for debugging/inspection)
-    print(topo_thematic.to_json())
+    logging.debug("Generated topology with %s arcs", len(topo_thematic.output["arcs"]))
 
     arc_id = 0
     arc_dict = {}
@@ -219,7 +224,7 @@ def _topojson_id_to_arcs(topojson):
 
     # TopoJSON features are contained under the "objects" key
     if "objects" not in topojson_data:
-        print("Error: TopoJSON data does not contain an 'objects' section.")
+        logging.error("TopoJSON data does not contain an 'objects' section.")
         return dict_id_arcs
 
     # Iterate over all named geometry collections in 'objects' (e.g., 'data')

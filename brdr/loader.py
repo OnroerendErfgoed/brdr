@@ -209,8 +209,17 @@ class GeoDataFrameLoader(Loader):
         self.data_dict_source["source_url"] = source_url
 
     def load_data(self) -> AlignerFeatureCollection:
-        """Parses the GeoDataFrame and loads into dict-structure."""
-        self._load_geodataframe()
+        """Parses the GeoDataFrame using the central conversion layer."""
+        collection = AlignerFeatureCollection.from_geodataframe(
+            self.input,
+            id_fieldname=self.id_property,
+            is_reference=self.is_reference,
+            source=self.data_dict_source,
+        )
+        self.data_dict = {k: f.geometry for k, f in collection.features.items()}
+        self.data_dict_properties = {
+            k: f.properties for k, f in collection.features.items()
+        }
         return super().load_data()
 
     def _load_geodataframe(self) -> None:

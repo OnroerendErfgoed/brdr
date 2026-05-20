@@ -4,7 +4,6 @@ from shapely import from_wkt
 from brdr.aligner import Aligner
 from brdr.loader import GeoDataFrameLoader
 
-
 if __name__ == "__main__":
     """Example: use GeoDataFrameLoader for thematic/reference and export results as GeoDataFrame."""
 

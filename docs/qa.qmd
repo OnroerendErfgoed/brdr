@@ -44,3 +44,56 @@ Recommendation: for polygon-to-polygon use cases, start with `DieussaertGeometry
 
 - Short answer: not by default.
 - Long answer: standard processing handles features independently. If topology preservation is required, use `TopologyProcessor` (experimental).
+
+## How should I run tests in daily development?
+
+- Short answer: use the fast lane first, then full suite when needed.
+- Recommended commands:
+  - Fast lane: `pytest -m "not native and not network and not slow"`
+  - Full suite: `pytest`
+
+Marker meaning:
+
+- `native`: GEOS/native-heavy tests (more crash-sensitive).
+- `network`: tests relying on network-facing behavior or mocks of external services.
+- `slow`: broader integration/end-to-end scenarios.
+
+## Why does directed routing return unchanged/original output sometimes?
+
+- Short answer: no valid directed path exists under one-way constraints.
+- Long answer: in directed mode, `brdr` prefers correctness over forced rerouting.
+  If one-way semantics block a route, processors do not invent artificial reverse paths.
+
+## How do `descriptor` and `evaluator` interact?
+
+- Short answer: evaluator depends on descriptor observations.
+- Long answer:
+  - `descriptor.get_base_observation(...)` reads base context from feature properties/metadata.
+  - `descriptor.get_actual_observation(...)` derives observation for process results.
+  - `evaluator` compares both and assigns evaluation classes.
+
+## When does `brdr` return an empty geometry vs the original geometry?
+
+- Short answer:
+  - `original geometry` is returned for unchanged outcomes and specific evaluator choices.
+  - `empty geometry` is returned for invalid processor pre-results and explicit geometry-removal outcomes.
+- Long answer:
+  - Typical `original geometry` cases:
+    - no effective change after processing
+    - circular-shape guard behavior
+    - evaluator keeps original (`TO_CHECK_ORIGINAL` / no accepted prediction path)
+  - Typical `empty geometry` cases:
+    - the input is already empty
+    - invalid intermediate processor output (`None`, empty, or type mismatch pre-result)
+    - explicit clipping/exclusion behavior removes all geometry content
+    - a processor legitimately computes an empty end result for the chosen strategy
+
+`ProcessRemark` guidance:
+
+- `RESULT_UNCHANGED`:
+  - processing completed, but final result equals original geometry (within tolerance).
+- `INPUT_CIRCLE`:
+  - circle-like geometry guard triggered; original geometry is kept.
+- `INVALID_EMPTY_RETURNED`:
+  - processor intermediate output was unusable (e.g. invalid/empty/type mismatch path);
+    `brdr` returned empty geometry.

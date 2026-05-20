@@ -19,6 +19,81 @@ This page shows the recommended onboarding path for new `brdr` users.
    - `evaluate(...)` for scored/classified predictions
 5. Export with `get_results_as_geojson(...)` or `save_results(...)`.
 
+## Scoped processing (`processing_area`)
+
+`process(...)`, `predict(...)`, and `evaluate(...)` accept an optional
+`processing_area` geometry.
+
+- Default: `None` (fully backward compatible).
+- When set: only the intersecting part of each thematic geometry is processed.
+- The non-intersecting part is kept unchanged and merged back into the final result.
+- Reference preselection still uses a buffered search area around the scoped part,
+  so nearby boundaries just outside the scope can still influence snapping/alignment.
+
+```python
+from shapely.geometry import box
+
+# Example scope in working CRS coordinates
+scope = box(100000, 200000, 101000, 201000)
+
+# Process only inside scope; outside stays untouched
+result = aligner.process(
+    relevant_distances=[0.5, 1.0],
+    processing_area=scope,
+)
+```
+
+## Strategy components
+
+`Aligner` uses four interchangeable strategy components:
+
+1. `processor`: geometric alignment
+2. `predictor`: selection of interesting distances
+3. `evaluator`: evaluation/classification of predictions
+4. `descriptor`: construction of observations and metadata on `ProcessResult`
+
+By default, `Aligner` uses the default implementation for each component.
+
+### Descriptor/evaluator contract
+
+If you provide a custom descriptor, keep this internal contract in mind:
+
+1. `get_base_observation(...)` should return a BRDR observation dict (or `None`).
+2. `get_actual_observation(...)` should return a BRDR observation dict (or `None`).
+3. `evaluate(...)` uses these observations for comparison/scoring.
+
+If either side returns `None`, evaluation falls back to conservative
+`TO_CHECK_*` classifications.
+
+### Custom descriptor (short example)
+
+```python
+from brdr.aligner import Aligner
+from brdr.descriptor import BaseDescriptor
+
+
+class NoopDescriptor(BaseDescriptor):
+    def describe(self, *, aligner, thematic_id, geometry, relevant_distance, process_result):
+        # Pass ProcessResult through unchanged
+        return process_result
+
+    def get_base_observation(self, *, feature_properties, metadata_field, cache_key=None):
+        # Evaluator contract: return BRDR observation dict or None
+        return None
+
+    def get_actual_observation(self, *, aligner, process_result, cache_key=None):
+        # Evaluator contract: return BRDR observation dict or None
+        return None
+
+
+aligner = Aligner(descriptor=NoopDescriptor())
+```
+
+## Topology note
+
+`TopologyProcessor` relies on explicit thematic IDs passed by `Aligner`.
+This avoids ambiguity when multiple thematic features share identical geometry.
+
 ## Minimal code shape
 
 ```python

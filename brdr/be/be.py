@@ -5,6 +5,7 @@ from typing import Optional
 import requests
 
 from brdr.be.constants import BE_SUPPORTED_CRS
+from brdr.be.enums import VRBGType
 from brdr.constants import (
     DATE_FORMAT,
     VERSION_DATE,
@@ -317,7 +318,7 @@ class BeAdministrativeBoundaryLoader(GeoJsonLoader):
     def __init__(
         self,
         aligner,
-        collection: str,
+        collection: str | VRBGType,
         id_property: str = "OIDN",
         partition: int = 1000,
         limit: int = DOWNLOAD_LIMIT,
@@ -332,8 +333,9 @@ class BeAdministrativeBoundaryLoader(GeoJsonLoader):
         ----------
         aligner : Aligner
             Aligner instance containing thematic data and CRS context.
-        collection : str
-            VRBG collection identifier from `/collections` (for example a boundary layer).
+        collection : str | VRBGType
+            VRBG collection identifier from `/collections` (for example a boundary layer),
+            or a `VRBGType` enum value.
         id_property : str, optional
             Feature property used as unique identifier. Defaults to `"OIDN"`.
         partition : int, optional
@@ -358,7 +360,9 @@ class BeAdministrativeBoundaryLoader(GeoJsonLoader):
             raise ValueError(
                 f"BeAdministrativeBoundaryLoader only supports alignment in CRS '{BE_SUPPORTED_CRS}' while CRS '{self.aligner.crs}' is used"
             )
-        self.collection = collection
+        self.collection = (
+            collection.value if isinstance(collection, VRBGType) else collection
+        )
         self.id_property = id_property
         self.partition = partition
         self.limit = limit

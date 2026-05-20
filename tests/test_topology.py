@@ -1,14 +1,26 @@
 import unittest
+from unittest.mock import patch
 
 import pytest
+from shapely.geometry import LineString
 from shapely.geometry import Polygon
+from shapely import from_wkt
 
 from brdr.aligner import Aligner
 from brdr.be.grb.enums import GRBType
 from brdr.be.grb.loader import GRBActualLoader
 from brdr.configs import ProcessorConfig
+from brdr.constants import REMARK_FIELD_NAME
+from brdr.enums import ProcessRemark
+from brdr.enums import SnapStrategy
+from brdr.geometry_utils import safe_difference
+from brdr.geometry_utils import safe_equals
+from brdr.loader import DictLoader
 from brdr.loader import GeoJsonLoader
+from brdr.processor import NetworkGeometryProcessor
 from brdr.processor import TopologyProcessor
+from brdr.topo_utils import _dissolve_topo
+from brdr.topo_utils import _generate_topo
 
 
 class TestTopology(unittest.TestCase):
@@ -146,3 +158,165 @@ class TestTopology(unittest.TestCase):
         self.assertEqual(len(aligner_result.results), 2)
         dict_predictions_evaluated = aligner.evaluate()
         print(dict_predictions_evaluated)
+
+    def test_topology_processor_duplicate_wkb_is_disambiguated_via_thematic_id(self):
+        processor = TopologyProcessor(config=ProcessorConfig(), feedback=None)
+        aligner = Aligner(crs="EPSG:31370", processor=processor)
+        poly = Polygon([(0, 0), (0, 10), (10, 10), (10, 0)])
+        thematic = {"a": poly, "b": poly}
+        reference = {"r1": poly}
+        aligner.load_thematic_data(DictLoader(thematic))
+        aligner.load_reference_data(DictLoader(reference))
+
+        result = aligner.process([1.0])
+        assert len(result.results) == 2
+        assert "a" in result.results
+        assert "b" in result.results
+
+    def test_topology_processor_duplicate_wkb_without_thematic_id_raises(self):
+        processor = TopologyProcessor(config=ProcessorConfig(), feedback=None)
+        aligner = Aligner(crs="EPSG:31370")
+        poly = Polygon([(0, 0), (0, 10), (10, 10), (10, 0)])
+        thematic = {"a": poly, "b": poly}
+        reference = {"r1": poly}
+        aligner.load_thematic_data(DictLoader(thematic))
+        aligner.load_reference_data(DictLoader(reference))
+
+        with self.assertRaises(ValueError):
+            processor.process(
+                input_geometry=poly,
+                reference_data=aligner.reference_data,
+                mitre_limit=2,
+                correction_distance=0.01,
+                relevant_distance=1.0,
+                thematic_data=aligner.thematic_data,
+            )
+
+    def test_dissolve_topo_does_not_swallow_unexpected_runtime_error(self):
+        aligner = Aligner(crs="EPSG:31370")
+        poly = Polygon([(0, 0), (0, 10), (10, 10), (10, 0)])
+        aligner.load_thematic_data(DictLoader({"a": poly}))
+        thematic_geometries_to_process, topo = _generate_topo(aligner.thematic_data)
+        arc_id = next(iter(thematic_geometries_to_process.keys()))
+        process_results = {arc_id: {1.0: {"result": LineString([(0, 0), (10, 0)])}}}
+
+        with patch(
+            "brdr.topo_utils.longest_linestring_from_multilinestring",
+            side_effect=RuntimeError("boom"),
+        ):
+            with self.assertRaises(RuntimeError):
+                _dissolve_topo(
+                    "a",
+                    process_results,
+                    poly,
+                    thematic_geometries_to_process,
+                    topo,
+                    1.0,
+                )
+
+    def test_topology_arc_cache_invalidates_on_config_change(self):
+        processor = TopologyProcessor(config=ProcessorConfig(), feedback=None)
+        aligner = Aligner(crs="EPSG:31370")
+        poly = Polygon([(0, 0), (0, 10), (10, 10), (10, 0)])
+        aligner.load_thematic_data(DictLoader({"a": poly}))
+        aligner.load_reference_data(DictLoader({"r1": poly}))
+
+        with patch.object(
+            NetworkGeometryProcessor,
+            "process",
+            autospec=True,
+            wraps=NetworkGeometryProcessor.process,
+        ) as mocked:
+            # First run fills arc cache.
+            processor.process(
+                input_geometry=poly,
+                thematic_id="a",
+                reference_data=aligner.reference_data,
+                mitre_limit=aligner.mitre_limit,
+                correction_distance=aligner.correction_distance,
+                relevant_distance=1.0,
+                thematic_data=aligner.thematic_data,
+            )
+            calls_after_first = mocked.call_count
+            assert calls_after_first > 0
+
+            # Second identical run reuses cache.
+            processor.process(
+                input_geometry=poly,
+                thematic_id="a",
+                reference_data=aligner.reference_data,
+                mitre_limit=aligner.mitre_limit,
+                correction_distance=aligner.correction_distance,
+                relevant_distance=1.0,
+                thematic_data=aligner.thematic_data,
+            )
+            assert mocked.call_count == calls_after_first
+
+            # Mutating behavior-driving config should invalidate cache key.
+            processor.config.snap_strategy = SnapStrategy.NO_PREFERENCE
+            processor.process(
+                input_geometry=poly,
+                thematic_id="a",
+                reference_data=aligner.reference_data,
+                mitre_limit=aligner.mitre_limit,
+                correction_distance=aligner.correction_distance,
+                relevant_distance=1.0,
+                thematic_data=aligner.thematic_data,
+            )
+            assert mocked.call_count > calls_after_first
+
+    def test_topology_processor_with_processing_area_no_overlap_returns_unchanged(self):
+        processor = TopologyProcessor(config=ProcessorConfig(), feedback=None)
+        aligner = Aligner(crs="EPSG:31370", processor=processor)
+        thematic_geom = from_wkt("LINESTRING (0 0, 10 0)")
+        thematic = {"t1": thematic_geom}
+        reference = {"r1": from_wkt("LINESTRING (0 1, 10 1)")}
+        scope = from_wkt("POLYGON ((20 20, 20 21, 21 21, 21 20, 20 20))")
+        aligner.load_thematic_data(DictLoader(thematic))
+        aligner.load_reference_data(DictLoader(reference))
+
+        pr = aligner.process([1], processing_area=scope).results["t1"][1]
+        assert safe_equals(pr["result"], thematic_geom)
+        assert ProcessRemark.RESULT_UNCHANGED in pr["properties"].get(
+            REMARK_FIELD_NAME, []
+        )
+
+    def test_topology_processor_with_processing_area_partial_only_changes_inside_scope(
+        self,
+    ):
+        processor = TopologyProcessor(config=ProcessorConfig(), feedback=None)
+        aligner = Aligner(crs="EPSG:31370", processor=processor)
+        thematic_geom = from_wkt("POLYGON ((0 0, 0 6, 6 6, 6 0, 0 0))")
+        thematic = {"t1": thematic_geom}
+        reference = {"r1": from_wkt("POLYGON ((0 1, 0 7, 7 7, 7 1, 0 1))")}
+        scope = from_wkt("POLYGON ((0 0, 0 6, 3 6, 3 0, 0 0))")
+        aligner.load_thematic_data(DictLoader(thematic))
+        aligner.load_reference_data(DictLoader(reference))
+
+        result = aligner.process([1], processing_area=scope).results["t1"][1]["result"]
+        outside = safe_difference(result, scope)
+        expected_outside = safe_difference(thematic_geom, scope)
+
+        assert not result.is_empty
+        assert safe_equals(outside, expected_outside)
+
+    def test_topology_processor_line_processing_area_partial_outside_contains_original_outside(
+        self,
+    ):
+        processor = TopologyProcessor(config=ProcessorConfig(), feedback=None)
+        aligner = Aligner(crs="EPSG:31370", processor=processor)
+        thematic_geom = from_wkt("LINESTRING (0 0, 10 0)")
+        thematic = {"t1": thematic_geom}
+        reference = {"r1": from_wkt("LINESTRING (0 1, 10 1)")}
+        scope = from_wkt("POLYGON ((0 -1, 0 2, 5 2, 5 -1, 0 -1))")
+        aligner.load_thematic_data(DictLoader(thematic))
+        aligner.load_reference_data(DictLoader(reference))
+
+        result = aligner.process([1], processing_area=scope).results["t1"][1]["result"]
+        outside = safe_difference(result, scope)
+        expected_outside = safe_difference(thematic_geom, scope)
+
+        assert not result.is_empty
+        # For topology + lines, scoped processing may add extra out-of-scope segments,
+        # but at minimum the original outside segment must be preserved.
+        assert safe_difference(expected_outside, outside).is_empty

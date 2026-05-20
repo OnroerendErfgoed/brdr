@@ -39,17 +39,17 @@ def _make_map(ax, processresult, thematic_dict, reference_dict):
         if ax is None:
             ax = plt.subplot(1, 1, 1)
 
-        # We maken GeoSeries van de data
+        # Build GeoSeries objects from the input data
         gs_thematic = gpd.GeoSeries(list(thematic_dict.values()))
         gs_reference = gpd.GeoSeries(list(reference_dict.values()))
         gs_results = gpd.GeoSeries(list(results.values()))
 
         # --- FOCUS LOGICA ---
-        # Bereken de exacte bounding box van de thematische data: [minx, miny, maxx, maxy]
+        # Compute the exact bounding box of the thematic data: [minx, miny, maxx, maxy]
         bounds = gs_thematic.total_bounds
         padding = 2.0  # Voeg 2 meter (of graden, afhankelijk van CRS) marge toe
 
-        # Stel de limieten in VÓÓR of NA het plotten, dit overschrijft de automatische schaal
+        # Set limits before or after plotting; this overrides automatic scaling
         ax.set_xlim(bounds[0] - padding, bounds[2] + padding)
         ax.set_ylim(bounds[1] - padding, bounds[3] + padding)
 
@@ -65,7 +65,7 @@ def _make_map(ax, processresult, thematic_dict, reference_dict):
             ax=ax, color=color, edgecolor="black", linewidth=2.0, zorder=1
         )
 
-        # 2. Plot Resulting Geometry (Lijnen hebben geen vulling, dus we focussen op edgecolor)
+        # 2. Plot resulting geometry (lines have no fill, so edge color is key)
         results_has_polygons = any(
             gs_results.geom_type.isin(["Polygon", "MultiPolygon"])
         )
@@ -92,14 +92,14 @@ def _make_map(ax, processresult, thematic_dict, reference_dict):
             zorder=3,
         )
 
-        # 4. Plot Differences (Generiek maken voor lijnen)
+        # 4. Plot differences (generic handling for lines)
         for diff_data, color in [
             (results_diff_pos, "green"),
             (results_diff_neg, "red"),
         ]:
             if diff_data:
                 gs_diff = gpd.GeoSeries(list(diff_data.values()))
-                # Gebruik hatch alleen als er Polygonen in de series zitten
+                # Use hatch only when polygons are present in the series
                 has_polygons = any(gs_diff.geom_type.isin(["Polygon", "MultiPolygon"]))
 
                 gs_diff.plot(
@@ -109,7 +109,7 @@ def _make_map(ax, processresult, thematic_dict, reference_dict):
                     hatch="+" if has_polygons else None,  # Alleen hatch bij polygonen
                     linewidth=(
                         2.0 if not has_polygons else 1.0
-                    ),  # Dikkere lijn voor LineStrings
+                    ),  # Thicker line for LineStrings
                     zorder=5,
                 )
 
@@ -576,12 +576,12 @@ def export_histogram(path, df, column_name, filename="histogram.png"):
         print("Warning: Column is empty. Skipping histogram.")
         return
 
-    # 1. Stijl en Canvas
+    # 1. Style and canvas
     plt.style.use("seaborn-v0_8-muted")
     fig, ax = plt.subplots(figsize=(12, 7))
 
     # 2. Discrete Bins instellen
-    # We centreren de bins door de grenzen op .5 te leggen (bijv. 0.5 tot 1.5 voor waarde 1)
+    # Center bins by offsetting boundaries by .5 (e.g. 0.5 to 1.5 for value 1)
     min_val = int(min(values))
     max_val = int(max(values))
     bins = np.arange(min_val, max_val + 2) - 0.5
@@ -597,18 +597,18 @@ def export_histogram(path, df, column_name, filename="histogram.png"):
         label=f"Objecten (N={n_total})",
     )
 
-    # 4. X-as configuratie voor discrete waarden
-    # Toon elk heel getal op de as
+    # 4. X-axis configuration for discrete values
+    # Show each integer value on the axis
     ax.set_xticks(range(min_val, max_val + 1))
 
-    # 5. Waarden en Percentages bovenop de balken toevoegen
+    # 5. Add values and percentages above bars
     for bar in bars:
         height = bar.get_height()
         if height > 0:
-            # Bereken het percentage t.o.v. het totaal
+            # Compute percentage relative to total
             percentage = (height / n_total) * 100
 
-            # Formatteer de tekst: "Aantal (0.0%)"
+            # Format text as: "Count (0.0%)"
             label_text = f"{int(height)}\n({percentage:.1f}%)"
 
             ax.annotate(
@@ -620,17 +620,17 @@ def export_histogram(path, df, column_name, filename="histogram.png"):
                 va="bottom",
                 fontsize=9,
                 fontweight="bold",
-                linespacing=1.2,  # Zorgt voor mooie witruimte tussen getal en %
+                linespacing=1.2,  # Improves spacing between count and percent
             )
 
-    # 6. Y-as limiet iets verhogen om ruimte te maken voor de tekst
+    # 6. Slightly increase Y-axis limit to make room for text
     ax.set_ylim(0, max(counts) * 1.15)
 
     # 6. Styling & Labels
     ax.yaxis.grid(True, linestyle="--", alpha=0.6)
     ax.set_axisbelow(True)
 
-    # Dynamische titel met totaal aantal objecten"
+    # Dynamic title with total number of objects
     lbl = f"Mogelijke 'false positives' ({column_name})"
     ax.set_title(
         "Frequentieverdeling: " + lbl + f"\n *Totaal aantal objecten: {n_total}*",
@@ -642,7 +642,7 @@ def export_histogram(path, df, column_name, filename="histogram.png"):
     ax.set_xlabel(lbl, fontsize=12, labelpad=10)
     ax.set_ylabel("Frequentie (Aantal features)", fontsize=12, labelpad=10)
 
-    # Verwijder randen voor een moderne look
+    # Remove spines for a cleaner look
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
 
@@ -669,7 +669,7 @@ def export_boxplot(path, df, column_name, filename="boxplot.png"):
         print("Warning: Column is empty. Skipping boxplot.")
         return
 
-    # 1. Statistieken en Outlier detectie (Tukey's method)
+    # 1. Statistics and outlier detection (Tukey's method)
     q1 = np.percentile(values, 25)
     q3 = np.percentile(values, 75)
     iqr = q3 - q1
@@ -711,7 +711,7 @@ def export_boxplot(path, df, column_name, filename="boxplot.png"):
         patch.set_facecolor("royalblue")
         patch.set_alpha(0.8)
 
-    # 3. Annotaties voor statistiek
+    # 3. Statistic annotations
     ax.text(
         median_val,
         1.12,
@@ -733,7 +733,7 @@ def export_boxplot(path, df, column_name, filename="boxplot.png"):
     min_v, max_v = int(min(values)), int(max(values))
     ax.set_xticks(range(min_v, max_v + 1))
 
-    # 5. Uitgebreide Titel met N en Outliers
+    # 5. Extended title with N and outliers
     lbl = f"Mogelijke 'false positives' ({column_name})"
     title_text = (
         f"Boxplot: " + lbl + "\n"

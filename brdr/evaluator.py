@@ -1,4 +1,3 @@
-import json
 from abc import ABC
 from abc import abstractmethod
 from dataclasses import dataclass
@@ -28,9 +27,6 @@ from brdr.enums import Evaluation
 from brdr.enums import FullReferenceStrategy
 from brdr.enums import ProcessRemark
 from brdr.logger import Logger
-from brdr.metadata import (
-    reverse_metadata_observations_to_brdr_observation as _reverse_metadata_observations_core,
-)
 from brdr.typings import InputId
 from brdr.utils import deep_merge
 from brdr.utils import is_brdr_observation
@@ -38,10 +34,6 @@ from brdr.utils import is_brdr_observation
 if TYPE_CHECKING:
     from brdr.aligner import Aligner
     from brdr.aligner import AlignerResult
-
-
-def _reverse_metadata_observations_to_brdr_observation(metadata: dict) -> dict:
-    return _reverse_metadata_observations_core(metadata)
 
 
 @dataclass
@@ -53,6 +45,7 @@ class _EvaluationRuntime:
     full_reference_strategy: FullReferenceStrategy
     max_predictions: int
     multi_to_best_prediction: bool
+    processing_area: BaseGeometry | None
 
 
 def _clone_process_results(process_results: dict) -> dict:
@@ -100,6 +93,7 @@ class BaseEvaluator(ABC):
         full_reference_strategy: FullReferenceStrategy = FullReferenceStrategy.NO_FULL_REFERENCE,
         max_predictions: int = -1,
         multi_to_best_prediction: bool = True,
+        processing_area: BaseGeometry = None,
     ) -> "AlignerResult":
         """Execute evaluation strategy for the given aligner context."""
         pass
@@ -166,11 +160,10 @@ class AlignerEvaluator(BaseEvaluator):
         full_reference_strategy: FullReferenceStrategy = FullReferenceStrategy.NO_FULL_REFERENCE,
         max_predictions: int = -1,
         multi_to_best_prediction: bool = True,
+        processing_area: BaseGeometry = None,
     ) -> "AlignerResult":
         from brdr.aligner import AlignerResult
 
-        self._observation_cache: dict[bytes, dict | None] = {}
-        self._base_observation_cache: dict[InputId, dict | None] = {}
         thematic_ids, calculate_zeros = self._resolve_thematic_ids(
             aligner=aligner, thematic_ids=thematic_ids
         )
@@ -186,6 +179,7 @@ class AlignerEvaluator(BaseEvaluator):
             thematic_ids=thematic_ids,
             relevant_distances=relevant_distances,
             calculate_zeros=calculate_zeros,
+            processing_area=processing_area,
         )
         runtime = _EvaluationRuntime(
             process_results_predictions=process_results_predictions,
@@ -197,22 +191,19 @@ class AlignerEvaluator(BaseEvaluator):
             full_reference_strategy=full_reference_strategy,
             max_predictions=max_predictions,
             multi_to_best_prediction=multi_to_best_prediction,
+            processing_area=processing_area,
         )
 
-        try:
-            for theme_id, feat in aligner.thematic_data.features.items():
-                self._evaluate_theme(
-                    aligner=aligner,
-                    runtime=runtime,
-                    thematic_ids=thematic_ids,
-                    theme_id=theme_id,
-                    original_geometry=feat.geometry,
-                )
+        for theme_id, feat in aligner.thematic_data.features.items():
+            self._evaluate_theme(
+                aligner=aligner,
+                runtime=runtime,
+                thematic_ids=thematic_ids,
+                theme_id=theme_id,
+                original_geometry=feat.geometry,
+            )
 
-            return AlignerResult(runtime.process_results_evaluated)
-        finally:
-            self._observation_cache = {}
-            self._base_observation_cache = {}
+        return AlignerResult(runtime.process_results_evaluated)
 
     def _get_observation_cached(
         self,
@@ -220,27 +211,9 @@ class AlignerEvaluator(BaseEvaluator):
         aligner: "Aligner",
         process_result: dict,
     ) -> dict | None:
-        if process_result is None:
-            return None
-        observation = process_result.get("observations")
-        if is_brdr_observation(observation):
-            return observation
-        geom_process_result = process_result.get("result")
-        if geom_process_result is None or geom_process_result.is_empty:
-            process_result["observations"] = None
-            return None
-        try:
-            cache_key = geom_process_result.wkb
-        except Exception:
-            cache_key = None
-        if cache_key is not None and cache_key in self._observation_cache:
-            process_result["observations"] = self._observation_cache[cache_key]
-            return process_result["observations"]
-        observation = aligner.compare_to_reference(geom_process_result)
-        process_result["observations"] = observation
-        if cache_key is not None:
-            self._observation_cache[cache_key] = observation
-        return observation
+        return aligner.descriptor.get_actual_observation(
+            aligner=aligner, process_result=process_result
+        )
 
     def _resolve_thematic_ids(
         self,
@@ -290,11 +263,13 @@ class AlignerEvaluator(BaseEvaluator):
         thematic_ids: list[InputId],
         relevant_distances: list[float],
         calculate_zeros: bool,
+        processing_area: BaseGeometry | None,
     ) -> tuple[dict, dict]:
         aligner_result = aligner.predict(
             thematic_ids=thematic_ids,
             relevant_distances=relevant_distances,
             diff_metric=aligner.diff_metric,
+            processing_area=processing_area,
         )
         process_results = aligner_result.get_results(aligner=aligner)
         process_results_predictions = aligner_result.get_results(
@@ -303,7 +278,9 @@ class AlignerEvaluator(BaseEvaluator):
 
         if calculate_zeros:
             aligner_result_zero = aligner.process(
-                relevant_distances=[0], thematic_ids=thematic_ids
+                relevant_distances=[0],
+                thematic_ids=thematic_ids,
+                processing_area=processing_area,
             )
             process_results_zero = aligner_result_zero.get_results(aligner=aligner)
             process_results = deep_merge(process_results_zero, process_results)
@@ -576,7 +553,7 @@ class AlignerEvaluator(BaseEvaluator):
         try:
             process_result = process_results_evaluated[theme_id][relevant_distance]
             props = dict(process_result["properties"])
-        except Exception:
+        except (KeyError, TypeError, AttributeError):
             process_result = {"result": original_geometry}
             props = {}
         if theme_id not in process_results_evaluated:
@@ -821,19 +798,105 @@ class AlignerEvaluator(BaseEvaluator):
         id_theme: Any,
         base_metadata_field: str,
     ) -> dict:
-        if id_theme in self._base_observation_cache:
-            return self._base_observation_cache[id_theme]
-        try:
-            base_metadata = aligner.thematic_data.features.get(id_theme).properties[
-                base_metadata_field
-            ]
-            if isinstance(base_metadata, str):
-                base_metadata = json.loads(base_metadata)
+        feature = aligner.thematic_data.features.get(id_theme)
+        if feature is None:
+            return None
+        return aligner.descriptor.get_base_observation(
+            feature_properties=feature.properties or {},
+            metadata_field=base_metadata_field,
+            cache_key=id_theme,
+        )
 
-            base_brdr_observation = _reverse_metadata_observations_to_brdr_observation(
-                base_metadata
-            )
-        except Exception:
-            base_brdr_observation = None
-        self._base_observation_cache[id_theme] = base_brdr_observation
-        return base_brdr_observation
+
+class ConservativeAlignerEvaluator(AlignerEvaluator):
+    """
+    Evaluator that prefers safer outcomes in ambiguous multi-prediction cases.
+
+    Strategy:
+    - run default evaluation logic;
+    - if multiple evaluated predictions are present and the score gap between
+      best and second-best is small, return the original geometry for manual check;
+    - otherwise optionally keep only the top prediction.
+    """
+
+    def __init__(
+        self,
+        feedback=None,
+        *,
+        ambiguity_delta: float = 5.0,
+        force_single_prediction: bool = True,
+    ):
+        super().__init__(feedback=feedback)
+        self.ambiguity_delta = float(ambiguity_delta)
+        self.force_single_prediction = bool(force_single_prediction)
+
+    def evaluate(
+        self,
+        *,
+        aligner: "Aligner",
+        relevant_distances: Optional[Iterable[float]] = None,
+        thematic_ids: Optional[List[InputId]] = None,
+        metadata_field: str = METADATA_FIELD_NAME,
+        full_reference_strategy: FullReferenceStrategy = FullReferenceStrategy.NO_FULL_REFERENCE,
+        max_predictions: int = -1,
+        multi_to_best_prediction: bool = True,
+        processing_area: BaseGeometry = None,
+    ) -> "AlignerResult":
+        from brdr.aligner import AlignerResult
+
+        result = super().evaluate(
+            aligner=aligner,
+            relevant_distances=relevant_distances,
+            thematic_ids=thematic_ids,
+            metadata_field=metadata_field,
+            full_reference_strategy=full_reference_strategy,
+            max_predictions=max_predictions,
+            multi_to_best_prediction=multi_to_best_prediction,
+            processing_area=processing_area,
+        )
+        evaluated = result.results
+
+        for theme_id, rd_results in evaluated.items():
+            scored: list[tuple[float, float]] = []
+            for rd, process_result in rd_results.items():
+                if not process_result:
+                    continue
+                props = process_result.get("properties", {})
+                if PREDICTION_SCORE not in props:
+                    continue
+                score = props.get(PREDICTION_SCORE)
+                if score is None or float(score) < 0:
+                    continue
+                scored.append((rd, float(score)))
+
+            if len(scored) <= 1:
+                continue
+            scored.sort(key=lambda item: item[1], reverse=True)
+            top_rd, top_score = scored[0]
+            second_score = scored[1][1]
+            score_gap = top_score - second_score
+
+            if score_gap < self.ambiguity_delta:
+                original_geometry = aligner.thematic_data.features.get(
+                    theme_id
+                ).geometry
+                evaluated = self.update_evaluation_with_original(
+                    aligner=aligner,
+                    metadata_field=metadata_field,
+                    original_geometry=original_geometry,
+                    process_results_evaluated=evaluated,
+                    theme_id=theme_id,
+                    evaluation=Evaluation.TO_CHECK_ORIGINAL,
+                )
+                if 0 in evaluated.get(theme_id, {}):
+                    evaluated[theme_id] = {0: evaluated[theme_id][0]}
+                continue
+
+            if self.force_single_prediction:
+                keep = rd_results.get(top_rd)
+                if keep is not None:
+                    keep_props = keep.get("properties", {})
+                    keep_props[PREDICTION_COUNT] = 1
+                    evaluated[theme_id] = {top_rd: keep}
+
+        return AlignerResult(evaluated)

@@ -9,6 +9,8 @@ from brdr.aligner import (
     _reverse_metadata_observations_to_brdr_observation,
 )
 from brdr.configs import AlignerConfig
+from brdr.descriptor import AlignerDescriptor
+from brdr.evaluator import AlignerEvaluator
 from brdr.loader import DictLoader
 
 
@@ -188,3 +190,55 @@ def test_compare_to_reference_adds_de9im_per_reference_feature():
     de9im = observation["reference_features"]["ref_id_1"]["de9im"]
     assert isinstance(de9im, str)
     assert len(de9im) == 9
+
+
+def test_descriptor_decodes_base_observation_from_metadata_dict():
+    descriptor = AlignerDescriptor()
+    metadata = {
+        "actuation": {
+            "result": "urn:result",
+            "reference_geometries": [{"id": "urn:ref", "derived_from": {"id": "r1"}}],
+        },
+        "observations": [
+            {
+                "observed_property": "brdr:area",
+                "result": {"value": 10.0, "type": "float"},
+                "has_feature_of_interest": "urn:result",
+            }
+        ],
+    }
+    obs = descriptor.get_base_observation(
+        feature_properties={"m": metadata}, metadata_field="m", cache_key="x"
+    )
+    assert obs is not None
+    assert obs["area"] == 10.0
+
+
+def test_evaluator_reads_base_observation_via_descriptor():
+    aligner = Aligner()
+    aligner.load_thematic_data(
+        DictLoader({"theme_1": from_wkt("POLYGON ((0 0,0 1,1 1,1 0,0 0))")})
+    )
+    aligner.load_reference_data(
+        DictLoader({"ref_1": from_wkt("POLYGON ((0 0,0 1,1 1,1 0,0 0))")})
+    )
+    metadata = {
+        "actuation": {
+            "result": "urn:result",
+            "reference_geometries": [{"id": "urn:ref", "derived_from": {"id": "r1"}}],
+        },
+        "observations": [
+            {
+                "observed_property": "brdr:area",
+                "result": {"value": 1.0, "type": "float"},
+                "has_feature_of_interest": "urn:result",
+            }
+        ],
+    }
+    aligner.thematic_data.features["theme_1"].properties["base_meta"] = metadata
+    evaluator = AlignerEvaluator()
+    obs = evaluator.get_brdr_observation_from_properties(
+        aligner=aligner, id_theme="theme_1", base_metadata_field="base_meta"
+    )
+    assert obs is not None
+    assert obs["area"] == 1.0

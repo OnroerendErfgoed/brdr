@@ -1,11 +1,13 @@
 import geopandas as gpd
 import pytest
+from shapely import from_wkt
 from shapely.geometry import shape
 
 from brdr.aligner import Aligner
 from brdr.be.grb.enums import GRBType
 from brdr.be.grb.loader import GRBActualLoader
 from brdr.be.oe.loader import OnroerendErfgoedLoader
+from brdr.loader import DictLoader
 from brdr.loader import (
     GeoJsonUrlLoader,
     GeoJsonLoader,
@@ -239,3 +241,75 @@ def test_load_reference_data_url(requests_mock, haspengouw_geojson):
     )
 
     assert aligner.reference_data.features is not None
+
+
+def test_feature_collection_geodataframe_roundtrip():
+    source_dict = {
+        "a": from_wkt("LINESTRING (0 0, 1 1)"),
+        "b": from_wkt("POINT (2 3)"),
+    }
+    source_props = {
+        "a": {"name": "alpha", "weight": 1},
+        "b": {"name": "beta", "weight": 2},
+    }
+
+    original = DictLoader(
+        data_dict=source_dict,
+        data_dict_properties=source_props,
+        is_reference=False,
+    ).load_data()
+
+    gdf = original.to_geodataframe()
+    reconstructed = type(original).from_geodataframe(
+        gdf,
+        id_fieldname=original.id_fieldname,
+        is_reference=False,
+    )
+
+    assert set(reconstructed.features.keys()) == set(original.features.keys())
+    for key in original.features.keys():
+        assert reconstructed.features[key].geometry.equals(
+            original.features[key].geometry
+        )
+        assert (
+            reconstructed.features[key].properties == original.features[key].properties
+        )
+
+
+def test_geodataframeloader_equivalent_to_dictloader():
+    data_dict = {
+        "id1": from_wkt("POINT (0 0)"),
+        "id2": from_wkt("LINESTRING (0 0, 2 0)"),
+    }
+    data_props = {
+        "id1": {"category": "p", "value": 10},
+        "id2": {"category": "l", "value": 20},
+    }
+
+    dict_loaded = DictLoader(
+        data_dict=data_dict,
+        data_dict_properties=data_props,
+        is_reference=True,
+    ).load_data()
+
+    gdf_rows = []
+    for key, geom in data_dict.items():
+        row = dict(data_props[key])
+        row["my_id"] = key
+        row["geometry"] = geom
+        gdf_rows.append(row)
+    gdf = gpd.GeoDataFrame(gdf_rows, geometry="geometry", crs="EPSG:31370")
+    gdf_loaded = GeoDataFrameLoader(
+        _input=gdf,
+        id_property="my_id",
+        is_reference=True,
+    ).load_data()
+
+    assert set(dict_loaded.features.keys()) == set(gdf_loaded.features.keys())
+    for key in dict_loaded.features.keys():
+        assert gdf_loaded.features[key].geometry.equals(
+            dict_loaded.features[key].geometry
+        )
+        assert (
+            gdf_loaded.features[key].properties == dict_loaded.features[key].properties
+        )

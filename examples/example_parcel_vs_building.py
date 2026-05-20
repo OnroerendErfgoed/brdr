@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import numpy as np
 
 from brdr.aligner import Aligner
@@ -13,27 +15,27 @@ if __name__ == "__main__":
     # parcel
     """
     # Initiate brdr
+    base_dir = Path(__file__).resolve().parent
+    parcel_vs_building_path = (
+        base_dir.parent / "tests" / "testdata" / "test_parcel_vs_building.geojson"
+    )
     aligner_x = Aligner()
     # Load thematic data & reference data (parcels)
     aligner_x.load_thematic_data(
-        GeoJsonFileLoader(
-            "../tests/testdata/test_parcel_vs_building.geojson", "theme_id"
-        )
+        GeoJsonFileLoader(str(parcel_vs_building_path), "theme_id")
     )
     aligner_x.load_reference_data(
         GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner_x)
-    )  # gebruik de actuele adp-percelen adp= administratieve percelen
+    )  # use current ADP parcels (ADP = administrative parcels)
 
     aligner_y = Aligner()
     # Load thematic data & reference data (buildings)
     aligner_y.load_thematic_data(
-        GeoJsonFileLoader(
-            "../tests/testdata/test_parcel_vs_building.geojson", "theme_id"
-        )
+        GeoJsonFileLoader(str(parcel_vs_building_path), "theme_id")
     )
     aligner_y.load_reference_data(
         GRBActualLoader(grb_type=GRBType.GBG, partition=1000, aligner=aligner_y)
-    )  # gebruik de actuele adp-percelen adp= administratieve percelen
+    )  # use current ADP parcels (ADP = administrative parcels)
 
     # Example how to use a series (for histogram)
     series = np.arange(0, 310, 10, dtype=int) / 100

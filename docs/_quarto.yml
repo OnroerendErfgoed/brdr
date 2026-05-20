@@ -18,6 +18,8 @@ website:
         href: processor-selection.qmd
       - text: Parameter Guide
         href: parameter-cookbook.qmd
+      - text: Export Guide
+        href: export-guide.qmd
       - text: Reference
         href: reference/index.qmd
       - text: Examples
@@ -83,20 +85,33 @@ quartodoc:
         - AlignerGeometryProcessor
         - DieussaertGeometryProcessor
         - NetworkGeometryProcessor
+        - DirectedNetworkGeometryProcessor
+        - AnchorGeometryProcessor
+        - DirectedAnchorGeometryProcessor
         - SnapGeometryProcessor
         - TopologyProcessor
+    - title: Descriptors
+      package: brdr.descriptor
+      desc: Strategy classes for metadata/observation description.
+      contents:
+        - BaseDescriptor
+        - BaseDescriptorCodec
+        - BrdrSosaObservationCodec
+        - AlignerDescriptor
     - title: Prediction
       package: brdr.predictor
       desc: Strategy classes for prediction customization.
       contents:
         - BasePredictor
         - AlignerPredictor
+        - ConservativeAlignerPredictor
     - title: Evaluation
       package: brdr.evaluator
       desc: Strategy classes for evaluation customization.
       contents:
         - BaseEvaluator
         - AlignerEvaluator
+        - ConservativeAlignerEvaluator
     - title: Enumerators
       package: brdr.enums
       desc: Enums used in the brdr package.

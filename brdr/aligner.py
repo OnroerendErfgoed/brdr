@@ -1,11 +1,12 @@
+import json
 import logging
 import os
 import threading
 import time
-import uuid
+import warnings
 from collections import defaultdict
-from concurrent.futures import as_completed
 from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import as_completed
 from datetime import datetime
 from typing import Any
 from typing import Dict
@@ -15,6 +16,7 @@ from typing import Optional
 from typing import TYPE_CHECKING
 from typing import Union
 
+import geopandas as gpd
 import numpy as np
 from shapely import make_valid, GeometryCollection
 from shapely import to_geojson
@@ -27,8 +29,6 @@ from brdr.configs import ProcessorConfig
 from brdr.constants import (
     AREA_CHANGE,
     METADATA_FIELD_NAME,
-    MAX_REFERENCE_BUFFER,
-    OBSERVATION_FIELD_NAME,
 )
 from brdr.constants import AREA_PERCENTAGE_CHANGE
 from brdr.constants import DATE_FORMAT
@@ -45,6 +45,8 @@ from brdr.constants import REMARK_FIELD_NAME
 from brdr.constants import SYMMETRICAL_AREA_CHANGE
 from brdr.constants import SYMMETRICAL_AREA_PERCENTAGE_CHANGE
 from brdr.constants import VERSION_DATE
+from brdr.descriptor import AlignerDescriptor
+from brdr.descriptor import BaseDescriptor
 from brdr.enums import AlignerResultType
 from brdr.enums import DiffMetric
 from brdr.enums import Evaluation
@@ -77,7 +79,6 @@ from brdr.utils import get_geodataframe_from_process_results
 from brdr.utils import get_geojsons_from_process_results
 from brdr.utils import get_geometry_difference_metrics_from_processresult
 from brdr.utils import get_geometry_difference_metrics_from_processresults
-from brdr.utils import urn_from_geom
 from brdr.utils import write_featurecollection_to_geojson
 
 ###################
@@ -167,6 +168,8 @@ class AlignerResult:
             Structure: `{theme_id: {distance: result_object}}`.
         """
         self.results = process_results
+        self._geojson_cache: Dict[tuple, Dict[str, Any]] = {}
+        self._geodataframe_cache: Dict[tuple, Any] = {}
 
     def get_results(
         self,
@@ -318,6 +321,15 @@ class AlignerResult:
         """
         if not self.results:
             raise ValueError("Empty results: No calculated results to export.")
+        cache_key = (
+            id(aligner),
+            result_type.value,
+            bool(add_metadata),
+            bool(add_original_attributes),
+        )
+        cached = self._geojson_cache.get(cache_key)
+        if cached is not None:
+            return cached
 
         results = self.get_results(aligner=aligner, result_type=result_type)
         prop_dictionary = defaultdict(dict)
@@ -344,12 +356,14 @@ class AlignerResult:
                         METADATA_FIELD_NAME
                     ] = metadata_result
 
-        return get_geojsons_from_process_results(
+        output = get_geojsons_from_process_results(
             results,
             crs=aligner.crs,
             id_field=aligner.thematic_data.id_fieldname,
             series_prop_dict=prop_dictionary,
         )
+        self._geojson_cache[cache_key] = output
+        return output
 
     def get_results_as_geodataframe(
         self,
@@ -367,6 +381,15 @@ class AlignerResult:
         """
         if not self.results:
             raise ValueError("Empty results: No calculated results to export.")
+        cache_key = (
+            id(aligner),
+            result_type.value,
+            bool(add_metadata),
+            bool(add_original_attributes),
+        )
+        cached = self._geodataframe_cache.get(cache_key)
+        if cached is not None:
+            return cached.copy()
 
         results = self.get_results(aligner=aligner, result_type=result_type)
         prop_dictionary = defaultdict(dict)
@@ -393,12 +416,306 @@ class AlignerResult:
                         METADATA_FIELD_NAME
                     ] = metadata_result
 
-        return get_geodataframe_from_process_results(
+        output = get_geodataframe_from_process_results(
             results,
             crs=aligner.crs,
             id_field=aligner.thematic_data.id_fieldname,
             series_prop_dict=prop_dictionary,
             preferred_geometry_column="result",
+        )
+        self._geodataframe_cache[cache_key] = output
+        return output.copy()
+
+    @staticmethod
+    def _apply_profile_to_result_gdf(
+        gdf: "gpd.GeoDataFrame", id_fieldname: str, profile: str
+    ) -> "gpd.GeoDataFrame":
+        profile = (profile or "full").lower()
+        if profile == "full":
+            return gdf
+        if profile == "minimal":
+            keep = [
+                c
+                for c in [id_fieldname, "relevant_distance", "result", "geometry"]
+                if c in gdf.columns
+            ]
+            return gdf[keep].copy()
+        if profile == "analysis":
+            # Analysis keeps all computed output columns.
+            return gdf
+        raise ValueError(
+            f"Unknown profile '{profile}'. Expected one of: minimal, full, analysis."
+        )
+
+    def to_gdf(
+        self,
+        aligner: "Aligner",
+        *,
+        result_type: AlignerResultType = AlignerResultType.PROCESSRESULTS,
+        profile: str = "full",
+        fields: list[str] | None = None,
+        include_geometry: bool = True,
+        add_metadata: bool = False,
+        add_original_attributes: bool = False,
+    ) -> "gpd.GeoDataFrame":
+        """
+        Export processed results as a GeoDataFrame.
+
+        Parameters
+        ----------
+        aligner : Aligner
+            Aligner instance used to resolve thematic id field and CRS.
+        result_type : AlignerResultType, optional
+            Result subset to export.
+        profile : str, optional
+            Output profile: ``minimal``, ``full`` or ``analysis``.
+        fields : list[str], optional
+            Optional whitelist of columns to keep.
+        include_geometry : bool, optional
+            Whether to keep the active geometry column.
+        add_metadata : bool, optional
+            Include BRDR metadata columns when available.
+        add_original_attributes : bool, optional
+            Include original thematic properties.
+        """
+        gdf = self.get_results_as_geodataframe(
+            aligner=aligner,
+            result_type=result_type,
+            add_metadata=add_metadata,
+            add_original_attributes=add_original_attributes,
+        )
+        gdf = self._apply_profile_to_result_gdf(
+            gdf, aligner.thematic_data.id_fieldname, profile
+        )
+        if fields is not None:
+            wanted = set(fields) | {
+                aligner.thematic_data.id_fieldname,
+                "relevant_distance",
+            }
+            if include_geometry:
+                if gdf.geometry.name in gdf.columns:
+                    wanted.add(gdf.geometry.name)
+                if "result" in gdf.columns:
+                    wanted.add("result")
+            keep = [c for c in gdf.columns if c in wanted]
+            gdf = gdf[keep].copy()
+        elif not include_geometry and gdf.geometry.name in gdf.columns:
+            gdf = gdf.drop(columns=[gdf.geometry.name])
+        return gdf
+
+    def to_geojson(
+        self,
+        aligner: "Aligner",
+        *,
+        result_type: AlignerResultType = AlignerResultType.PROCESSRESULTS,
+        profile: str = "full",
+        fields: list[str] | None = None,
+        include_geometry: bool = True,
+        include_metadata: bool = True,
+        add_original_attributes: bool = False,
+    ) -> dict[str, Any]:
+        """
+        Export processed results as GeoJSON (dictionary payload).
+        """
+        if profile == "full" and fields is None and include_geometry:
+            return self.get_results_as_geojson(
+                aligner=aligner,
+                result_type=result_type,
+                add_metadata=include_metadata,
+                add_original_attributes=add_original_attributes,
+            )
+        gdf = self.to_gdf(
+            aligner=aligner,
+            result_type=result_type,
+            profile=profile,
+            fields=fields,
+            include_geometry=include_geometry,
+            add_metadata=include_metadata,
+            add_original_attributes=add_original_attributes,
+        )
+        if include_geometry and gdf.geometry.name in gdf.columns:
+            return json.loads(gdf.to_json())
+        return {"type": "FeatureCollection", "features": gdf.to_dict(orient="records")}
+
+    def to_geojson_file(
+        self,
+        aligner: "Aligner",
+        path: str,
+        *,
+        result_type: AlignerResultType = AlignerResultType.PROCESSRESULTS,
+        profile: str = "full",
+        fields: list[str] | None = None,
+        include_geometry: bool = True,
+        include_metadata: bool = True,
+        add_original_attributes: bool = False,
+    ) -> dict:
+        """
+        Write processed results to a GeoJSON file.
+        """
+        payload = self.to_geojson(
+            aligner=aligner,
+            result_type=result_type,
+            profile=profile,
+            fields=fields,
+            include_geometry=include_geometry,
+            include_metadata=include_metadata,
+            add_original_attributes=add_original_attributes,
+        )
+        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+        with open(path, "w", encoding="utf-8") as fp:
+            json.dump(payload, fp, ensure_ascii=False)
+        return {"path": path, "format": "geojson"}
+
+    def to_parquet(
+        self,
+        aligner: "Aligner",
+        path: str,
+        *,
+        result_type: AlignerResultType = AlignerResultType.PROCESSRESULTS,
+        profile: str = "full",
+        fields: list[str] | None = None,
+        include_geometry: bool = True,
+        include_metadata: bool = True,
+        add_original_attributes: bool = False,
+    ) -> dict:
+        """
+        Write processed results to a Parquet file.
+        """
+        gdf = self.to_gdf(
+            aligner=aligner,
+            result_type=result_type,
+            profile=profile,
+            fields=fields,
+            include_geometry=include_geometry,
+            add_metadata=include_metadata,
+            add_original_attributes=add_original_attributes,
+        )
+        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+        gdf.to_parquet(path)
+        return {"path": path, "format": "parquet", "feature_count": len(gdf)}
+
+    def to_gpkg(
+        self,
+        aligner: "Aligner",
+        path: str,
+        *,
+        layer: str = "results",
+        result_type: AlignerResultType = AlignerResultType.PROCESSRESULTS,
+        profile: str = "full",
+        fields: list[str] | None = None,
+        include_geometry: bool = True,
+        include_metadata: bool = True,
+        add_original_attributes: bool = False,
+    ) -> dict:
+        """
+        Write processed results to a GeoPackage file.
+        """
+        gdf = self.to_gdf(
+            aligner=aligner,
+            result_type=result_type,
+            profile=profile,
+            fields=fields,
+            include_geometry=include_geometry,
+            add_metadata=include_metadata,
+            add_original_attributes=add_original_attributes,
+        )
+        geometry_col = getattr(getattr(gdf, "geometry", None), "name", None)
+        if geometry_col is None or geometry_col not in gdf.columns:
+            raise ValueError("GeoPackage export requires geometry.")
+        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+        gdf.to_file(path, layer=layer, driver="GPKG")
+        return {
+            "path": path,
+            "format": "gpkg",
+            "feature_count": len(gdf),
+            "layer": layer,
+        }
+
+    def export(
+        self,
+        aligner: "Aligner",
+        format: str,
+        path: str | None = None,
+        *,
+        layer: str | None = None,
+        result_type: AlignerResultType = AlignerResultType.PROCESSRESULTS,
+        profile: str = "full",
+        crs: str | int | None = None,
+        fields: list[str] | None = None,
+        include_geometry: bool = True,
+        include_metadata: bool = True,
+        add_original_attributes: bool = False,
+    ):
+        """
+        Unified export entry point for processed alignment results.
+
+        Supported formats: ``gdf``, ``geojson``, ``json``, ``parquet``, ``gpkg``.
+        """
+        fmt = (format or "").lower()
+        if fmt == "gdf":
+            gdf = self.to_gdf(
+                aligner=aligner,
+                result_type=result_type,
+                profile=profile,
+                fields=fields,
+                include_geometry=include_geometry,
+                add_metadata=include_metadata,
+                add_original_attributes=add_original_attributes,
+            )
+            if crs is not None and include_geometry and "geometry" in gdf.columns:
+                gdf = gdf.to_crs(crs)
+            return gdf
+        if fmt in {"geojson", "json"}:
+            if path:
+                return self.to_geojson_file(
+                    aligner=aligner,
+                    path=path,
+                    result_type=result_type,
+                    profile=profile,
+                    fields=fields,
+                    include_geometry=include_geometry,
+                    include_metadata=include_metadata,
+                    add_original_attributes=add_original_attributes,
+                )
+            payload = self.to_geojson(
+                aligner=aligner,
+                result_type=result_type,
+                profile=profile,
+                fields=fields,
+                include_geometry=include_geometry,
+                include_metadata=include_metadata,
+                add_original_attributes=add_original_attributes,
+            )
+            return payload
+        if fmt == "parquet":
+            if not path:
+                raise ValueError("Path is required for parquet export.")
+            return self.to_parquet(
+                aligner=aligner,
+                path=path,
+                result_type=result_type,
+                profile=profile,
+                fields=fields,
+                include_geometry=include_geometry,
+                include_metadata=include_metadata,
+                add_original_attributes=add_original_attributes,
+            )
+        if fmt == "gpkg":
+            if not path:
+                raise ValueError("Path is required for gpkg export.")
+            return self.to_gpkg(
+                aligner=aligner,
+                path=path,
+                layer=layer or "results",
+                result_type=result_type,
+                profile=profile,
+                fields=fields,
+                include_geometry=include_geometry,
+                include_metadata=include_metadata,
+                add_original_attributes=add_original_attributes,
+            )
+        raise ValueError(
+            f"Unknown export format '{format}'. Supported: gdf, geojson, json, parquet, gpkg."
         )
 
     def save_results(
@@ -447,6 +764,12 @@ def _get_metadata_observations_from_process_result(
     processResult: ProcessResult,
     reference_lookup: Dict[any, any],
 ) -> List[Dict]:
+    warnings.warn(
+        "_get_metadata_observations_from_process_result is deprecated and will be removed in a future release. "
+        "Use brdr.metadata.get_metadata_observations_from_process_result instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return _get_metadata_observations_core(processResult, reference_lookup)
 
 
@@ -486,92 +809,13 @@ def _reverse_metadata_observations_to_brdr_observation(metadata: Dict) -> Dict:
     checking for the presence of a 'ref_id' that differs from the primary
     result interest ID.
     """
+    warnings.warn(
+        "_reverse_metadata_observations_to_brdr_observation is deprecated and will be removed in a future release. "
+        "Use brdr.metadata.reverse_metadata_observations_to_brdr_observation or descriptor.get_base_observation instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return _reverse_metadata_observations_core(metadata)
-
-
-def aligner_metadata_decorator(f):
-    def inner_func(thematic_id, geometry, relevant_distance, aligner, *args, **kwargs):
-        process_result: ProcessResult = f(
-            thematic_id, geometry, relevant_distance, aligner, *args, **kwargs
-        )
-        if aligner.add_observations:
-            process_result["observations"] = aligner.compare_to_reference(
-                process_result.get("result")
-            )
-            # add observation properties to the properties
-            observation_props = aligner.get_observation_properties(process_result)
-            props = process_result["properties"]
-            props[OBSERVATION_FIELD_NAME] = process_result[
-                "observations"
-            ]  # adding the raw brdr_observation?!
-            props.update(observation_props)
-            process_result["properties"] = props
-
-        if aligner.log_metadata:
-            # generate uuid for actuation
-            actuation_id = uuid.uuid4()
-            processor_id = aligner.processor.processor_id.value
-            processor_name = type(aligner.processor).__name__
-            reference_data = aligner.reference_data
-            reference_intersections_ids = reference_data.items.take(
-                reference_data.tree.query(buffer_pos(geometry, MAX_REFERENCE_BUFFER))
-            ).tolist()  # TODO possible to optimize?
-            reference_geometries = []
-            for ref_id in reference_intersections_ids:
-                feature = reference_data.features[ref_id]
-                feat_dict = {
-                    # "id": feature.data_id,
-                    "id": feature.brdr_id,
-                    "type": f"geo:{feature.geometry.geom_type}",
-                    "version_date": reference_data.source.get(VERSION_DATE, ""),
-                    "derived_from": {
-                        "id": feature.data_id,
-                        "type": "geo:Feature",
-                        "source": reference_data.source.get("source_url", ""),
-                    },
-                }
-                reference_geometries.append(feat_dict)
-
-            thematic_feature = aligner.thematic_data.features[thematic_id]
-            feature_of_interest_id = thematic_feature.brdr_id
-            result_urn = urn_from_geom(process_result["result"])
-            actuation_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S%z")
-            process_result["metadata"] = {}
-            process_result["metadata"]["actuation"] = {
-                "id": actuation_id.urn,
-                "type": "sosa:Actuation",
-                "reference_geometries": reference_geometries,
-                "changes": "geo:hasGeometry",
-                "sosa:hasFeatureOfInterest": {"id": feature_of_interest_id},
-                "result": result_urn,
-                "result_time": actuation_time,  # TODO _CHECK
-                "procedure": {
-                    "id": processor_id,
-                    "implementedBy": processor_name,
-                    "type": "sosa:Procedure",
-                    "ssn:hasInput": [
-                        {
-                            "id": "brdr:relevant_distance",
-                            "type": "ssn:Input",
-                            "input_value": {
-                                "type": "xsd:integer",
-                                "value": relevant_distance,
-                            },
-                        },
-                    ],
-                },
-            }
-            if process_result["observations"]:
-                ref_lookup = reference_data.reference_lookup
-                process_result["metadata"]["observations"] = (
-                    _get_metadata_observations_from_process_result(
-                        process_result, ref_lookup
-                    )
-                )
-
-        return process_result
-
-    return inner_func
 
 
 class Aligner:
@@ -596,6 +840,8 @@ class Aligner:
         The predictor strategy used to assign prediction scores on process results.
     evaluator : BaseEvaluator or AlignerEvaluator
         The evaluator strategy used to evaluate predicted candidates.
+    descriptor : BaseDescriptor or AlignerDescriptor
+        Strategy used to enrich process results with observations and metadata.
     correction_distance : float
         Distance used in buffer operations to remove slivers (technical correction).
     mitre_limit : int
@@ -641,6 +887,7 @@ class Aligner:
         processor: Optional[BaseProcessor] = None,
         predictor: Optional[BasePredictor] = None,
         evaluator: Optional[BaseEvaluator] = None,
+        descriptor: Optional[BaseDescriptor] = None,
         crs: str = DEFAULT_CRS,
         config: Optional[AlignerConfig] = None,
         feedback: Any = None,
@@ -656,6 +903,8 @@ class Aligner:
             The prediction strategy instance. If None, AlignerPredictor is used.
         evaluator : BaseEvaluator, optional
             The evaluation strategy instance. If None, AlignerEvaluator is used.
+        descriptor : BaseDescriptor, optional
+            The descriptor strategy instance. If None, AlignerDescriptor is used.
         crs : str, optional
             Coordinate Reference System (CRS) of the data.
             Expected to be a projected CRS with units in meters.
@@ -685,6 +934,7 @@ class Aligner:
         )
         self.predictor = predictor if predictor else AlignerPredictor(feedback)
         self.evaluator = evaluator if evaluator else AlignerEvaluator(feedback)
+        self.descriptor = descriptor if descriptor else AlignerDescriptor()
         self.correction_distance = config.correction_distance
         self.mitre_limit = config.mitre_limit
         self.max_workers = config.max_workers
@@ -770,6 +1020,7 @@ class Aligner:
         *,
         thematic_ids: List[InputId] = None,
         max_workers: int = None,
+        processing_area: BaseGeometry = None,
     ) -> AlignerResult:
         """
         Executes the alignment process across multiple relevant distances.
@@ -789,6 +1040,10 @@ class Aligner:
         max_workers : int, optional
             The number of threads for parallel execution. If -1, execution is
             serial. If None, the Aligner's default `max_workers` is used.
+        processing_area : BaseGeometry, optional
+            Optional scope geometry. When provided, only the part of each thematic
+            geometry intersecting this area is processed/aligned. The remainder is
+            kept unchanged and merged back into the final result.
 
         Returns
         -------
@@ -842,10 +1097,15 @@ class Aligner:
 
         self.logger.feedback_debug("Process series" + str(relevant_distances))
 
+        processing_area_valid = None
+        if processing_area is not None:
+            processing_area_valid = make_valid(processing_area)
+            if processing_area_valid is None or processing_area_valid.is_empty:
+                processing_area_valid = None
+
         process_results: dict[InputId, dict[float, ProcessResult | None]] = {}
         futures = {}
 
-        @aligner_metadata_decorator
         def process_geom_for_rd(
             thematic_id,
             geometry,
@@ -860,17 +1120,25 @@ class Aligner:
                 reference_data=aligner.reference_data,
                 mitre_limit=aligner.mitre_limit,
                 input_geometry=geometry,
+                thematic_id=thematic_id,
                 relevant_distance=relevant_distance,
                 thematic_data=aligner.thematic_data,
                 reference_candidates=reference_candidates,
                 reference_elements_candidates=reference_elements_candidates,
+                processing_area=processing_area_valid,
                 perf_collector=perf_collector,
             )
             if perf_collector is not None:
                 perf_collector.add(
                     "aligner.process.single_rd_total", time.perf_counter() - t0
                 )
-            return result
+            return aligner.descriptor.describe(
+                aligner=aligner,
+                thematic_id=thematic_id,
+                geometry=geometry,
+                relevant_distance=relevant_distance,
+                process_result=result,
+            )
 
         def run_process(executor: ThreadPoolExecutor = None):
             for thematic_id in thematic_ids:
@@ -891,17 +1159,25 @@ class Aligner:
                         factor = 1.01
                         outer_buffer = 0
                     max_rd = max(relevant_distances)
-                    search_geom = buffer_pos(
-                        geom, max_rd * factor + outer_buffer, self.mitre_limit
-                    )
-                    reference_candidates = self.reference_data.items.take(
-                        self.reference_data.tree.query(search_geom)
-                    ).tolist()
-                    # Preselect linear/point reference elements once per thematic
-                    # geometry and reuse across all relevant distances.
-                    reference_elements_candidates = safe_unary_union(
-                        safe_intersection(self.reference_data.elements, search_geom)
-                    )
+                    preselect_geom = geom
+                    if processing_area_valid is not None:
+                        preselect_geom = make_valid(
+                            safe_intersection(geom, processing_area_valid)
+                        )
+                    if preselect_geom is not None and not preselect_geom.is_empty:
+                        search_geom = buffer_pos(
+                            preselect_geom,
+                            max_rd * factor + outer_buffer,
+                            self.mitre_limit,
+                        )
+                        reference_candidates = self.reference_data.items.take(
+                            self.reference_data.tree.query(search_geom)
+                        ).tolist()
+                        # Preselect linear/point reference elements once per thematic
+                        # geometry and reuse across all relevant distances.
+                        reference_elements_candidates = safe_unary_union(
+                            safe_intersection(self.reference_data.elements, search_geom)
+                        )
                     if perf_collector is not None:
                         perf_collector.add(
                             "aligner.process.reference_preselection",
@@ -967,6 +1243,7 @@ class Aligner:
         *,
         thematic_ids: Optional[List[InputId]] = None,
         diff_metric: Optional[DiffMetric] = None,
+        processing_area: BaseGeometry = None,
     ) -> AlignerResult:
         """
         Predicts the 'most interesting' relevant distances for changes in thematic
@@ -988,6 +1265,9 @@ class Aligner:
         diff_metric : DiffMetric, optional
             The metric used to determine differences (e.g., area change).
             If None, the Aligner's default `diff_metric` is used.
+        processing_area : BaseGeometry, optional
+            Optional scope geometry. When provided, only the intersecting part of
+            each thematic geometry is processed during prediction.
 
         Returns
         -------
@@ -1034,6 +1314,7 @@ class Aligner:
             relevant_distances=relevant_distances,
             thematic_ids=thematic_ids,
             diff_metric=diff_metric,
+            processing_area=processing_area,
         )
 
     def evaluate(
@@ -1045,6 +1326,7 @@ class Aligner:
         full_reference_strategy: FullReferenceStrategy = FullReferenceStrategy.NO_FULL_REFERENCE,
         max_predictions: int = -1,
         multi_to_best_prediction: bool = True,
+        processing_area: BaseGeometry = None,
     ) -> AlignerResult:
         """
         Evaluates input geometries against predictions using observation matching
@@ -1075,6 +1357,9 @@ class Aligner:
             If True and `max_predictions=1`, returns the candidate with the
             highest score. If False, returns the original geometry when
             multiple candidates exist. Defaults to True.
+        processing_area : BaseGeometry, optional
+            Optional scope geometry. When provided, evaluation uses predictions
+            computed with scoped processing.
 
         Returns
         -------
@@ -1126,6 +1411,7 @@ class Aligner:
             full_reference_strategy=full_reference_strategy,
             max_predictions=max_predictions,
             multi_to_best_prediction=multi_to_best_prediction,
+            processing_area=processing_area,
         )
 
     def _update_evaluation_with_original(
