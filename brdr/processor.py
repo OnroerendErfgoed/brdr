@@ -53,7 +53,6 @@ from brdr.graph_utils import (
     nearest_node,
 )
 from brdr.logger import Logger
-from brdr.processing_area_utils import align_polygon_boundary_in_processing_area
 from brdr.topo_utils import _dissolve_topo, _generate_topo, _topojson_id_to_arcs
 from brdr.typings import ProcessResult, InputId
 from brdr.utils import (
@@ -211,11 +210,9 @@ class BaseProcessor(ABC):
     ) -> ProcessResult:
         processing_area_valid = make_valid(processing_area)
         if processing_area_valid is None or processing_area_valid.is_empty:
-            return scoped_processor(input_geometry)
+            return union_process_result(scoped_processor(input_geometry))
 
-        scoped_in = make_valid(safe_intersection(input_geometry, processing_area_valid))
-        scoped_out = make_valid(safe_difference(input_geometry, processing_area_valid))
-        if scoped_in is None or scoped_in.is_empty:
+        if not safe_intersects(input_geometry, processing_area_valid):
             process_result = ProcessResult()
             process_result["result"] = input_geometry
             process_result["properties"] = {
@@ -223,16 +220,31 @@ class BaseProcessor(ABC):
             }
             return union_process_result(process_result)
 
-        scoped_result = scoped_processor(scoped_in)
-        scoped_result_geom = scoped_result.get("result")
-        if scoped_result_geom is None:
-            scoped_result_geom = GeometryCollection()
+        scoped_in = make_valid(safe_intersection(input_geometry, processing_area_valid))
+        scoped_out = make_valid(safe_difference(input_geometry, processing_area_valid))
         if scoped_out is None:
             scoped_out = GeometryCollection()
+        scoped_result_holder: dict[str, ProcessResult] = {}
 
-        merged_result = make_valid(safe_unary_union([scoped_result_geom, scoped_out]))
-        if merged_result is None:
-            merged_result = GeometryCollection()
+        if scoped_in is None or scoped_in.is_empty:
+            merged_result = input_geometry
+        else:
+            scoped_result = scoped_processor(scoped_in)
+            scoped_result_holder["result"] = scoped_result
+            aligned_in = (scoped_result or {}).get("result")
+            if aligned_in is None:
+                aligned_in = GeometryCollection()
+            merged_result = make_valid(safe_unary_union([aligned_in, scoped_out]))
+            if merged_result is None:
+                merged_result = GeometryCollection()
+
+        if merged_result is None or merged_result.is_empty:
+            process_result = ProcessResult()
+            process_result["result"] = merged_result if merged_result is not None else GeometryCollection()
+            process_result["properties"] = {
+                REMARK_FIELD_NAME: [ProcessRemark.INVALID_EMPTY_RETURNED]
+            }
+            return union_process_result(process_result)
 
         postprocessed = self._postprocess_preresult(
             merged_result,
@@ -244,7 +256,8 @@ class BaseProcessor(ABC):
             mitre_limit,
             correction_distance,
         )
-        scoped_remarks = (scoped_result.get("properties") or {}).get(REMARK_FIELD_NAME, [])
+        scoped_result = scoped_result_holder.get("result")
+        scoped_remarks = ((scoped_result or {}).get("properties") or {}).get(REMARK_FIELD_NAME, [])
         if scoped_remarks:
             post_props = postprocessed.get("properties") or {}
             existing = post_props.get(REMARK_FIELD_NAME, [])
@@ -320,16 +333,16 @@ class BaseProcessor(ABC):
         remarks = []
         geom_thematic = make_valid(geom_thematic)
         if geom_preresult is None or geom_preresult.is_empty:
-            # Strict fallback rule: invalid pre-results return original geometry.
-            geom_preresult = geom_thematic
-            remark = ProcessRemark.INVALID_PRERESULT_ORIGINAL_RETURNED
+            # Strict fallback rule: invalid pre-results return empty geometry.
+            geom_preresult = GeometryCollection()
+            remark = ProcessRemark.INVALID_EMPTY_RETURNED
             remarks.append(remark)
             self.logger.feedback_warning(remark)
 
         elif to_multi(geom_preresult).geom_type != to_multi(geom_thematic).geom_type:
-            # Strict fallback rule: type-mismatch pre-results return original geometry.
-            geom_preresult = geom_thematic
-            remark = ProcessRemark.INVALID_PRERESULT_ORIGINAL_RETURNED
+            # Strict fallback rule: type-mismatch pre-results return empty geometry.
+            geom_preresult = GeometryCollection()
+            remark = ProcessRemark.INVALID_EMPTY_RETURNED
             remarks.append(remark)
             self.logger.feedback_warning(remark)
 
@@ -497,9 +510,9 @@ class BaseProcessor(ABC):
         geom_thematic_result = make_valid(remove_repeated_points(geom_thematic_result))
 
         if geom_thematic_result.is_empty or geom_thematic_result is None:
-            # Strict fallback rule: never return empty on cleanup collapse.
-            geom_thematic_result = geom_thematic
-            remark = ProcessRemark.INVALID_PRERESULT_ORIGINAL_RETURNED
+            # Strict fallback rule: cleanup collapse returns empty geometry.
+            geom_thematic_result = GeometryCollection()
+            remark = ProcessRemark.INVALID_EMPTY_RETURNED
             remarks.append(remark)
             self.logger.feedback_warning(remark)
 
@@ -745,6 +758,7 @@ class SnapGeometryProcessor(BaseProcessor):
         """
         perf_collector = kwargs.get("perf_collector")
         t_total = time.perf_counter()
+        reference_candidates = kwargs.get("reference_candidates")
         processing_area = kwargs.get("processing_area")
         if processing_area is not None and not kwargs.get("_processing_area_applied", False):
             scoped_kwargs = dict(kwargs)
@@ -1758,6 +1772,7 @@ class NetworkGeometryProcessor(BaseProcessor):
         """
         perf_collector = kwargs.get("perf_collector")
         t_total = time.perf_counter()
+        reference_candidates = kwargs.get("reference_candidates")
         processing_area = kwargs.get("processing_area")
         if processing_area is not None and not kwargs.get("_processing_area_applied", False):
             scoped_kwargs = dict(kwargs)
@@ -1782,7 +1797,6 @@ class NetworkGeometryProcessor(BaseProcessor):
         self.check_area_limit(input_geometry)
         input_geometry = to_multi(input_geometry)
         reference_elements_candidates = kwargs.get("reference_elements_candidates")
-        reference_candidates = kwargs.get("reference_candidates")
 
         # Determine the search area for relevant network elements
         input_geometry_buffered = buffer_pos(
@@ -2635,42 +2649,6 @@ class AlignerGeometryProcessor(BaseProcessor):
         t_total = time.perf_counter()
         processing_area = kwargs.get("processing_area")
         if processing_area is not None and not kwargs.get("_processing_area_applied", False):
-            if isinstance(input_geometry, (Polygon, MultiPolygon)):
-                network_processor = NetworkGeometryProcessor(self.config, self.logger.feedback)
-                line_kwargs = dict(kwargs)
-                line_kwargs.pop("processing_area", None)
-                line_kwargs["_processing_area_applied"] = True
-
-                def _align_lines_in_scope(lines_in_scope):
-                    line_result = network_processor.process(
-                        input_geometry=lines_in_scope,
-                        reference_data=reference_data,
-                        relevant_distance=relevant_distance,
-                        mitre_limit=mitre_limit,
-                        correction_distance=correction_distance,
-                        processing_area=None,
-                        **line_kwargs,
-                    )
-                    return line_result.get("result")
-
-                rebuilt_geom = align_polygon_boundary_in_processing_area(
-                    geometry=input_geometry,
-                    processing_area=processing_area,
-                    relevant_distance=relevant_distance,
-                    correction_distance=correction_distance,
-                    align_lines_fn=_align_lines_in_scope,
-                )
-                if rebuilt_geom is not None and not rebuilt_geom.is_empty:
-                    return self._postprocess_preresult(
-                        rebuilt_geom,
-                        input_geometry,
-                        GeometryCollection(),
-                        GeometryCollection(),
-                        relevant_distance,
-                        reference_data.union,
-                        mitre_limit,
-                        correction_distance,
-                    )
             scoped_kwargs = dict(kwargs)
             scoped_kwargs["processing_area"] = None
             scoped_kwargs["_processing_area_applied"] = True
@@ -2878,6 +2856,28 @@ class TopologyProcessor(BaseProcessor):
             Dissolve --> End[Final ProcessResult]
         ```
         """
+        processing_area = kwargs.get("processing_area")
+        if processing_area is not None and not kwargs.get("_processing_area_applied", False):
+            scoped_kwargs = dict(kwargs)
+            scoped_kwargs["processing_area"] = None
+            scoped_kwargs["_processing_area_applied"] = True
+            return self._process_with_processing_area(
+                input_geometry=input_geometry,
+                processing_area=processing_area,
+                reference_union=reference_data.union,
+                relevant_distance=relevant_distance,
+                mitre_limit=mitre_limit,
+                correction_distance=correction_distance,
+                scoped_processor=lambda scoped_geom: self.process(
+                    input_geometry=scoped_geom,
+                    reference_data=reference_data,
+                    mitre_limit=mitre_limit,
+                    correction_distance=correction_distance,
+                    relevant_distance=relevant_distance,
+                    thematic_data=thematic_data,
+                    **scoped_kwargs,
+                ),
+            )
         self.check_area_limit(input_geometry)
         self._build_topo_cache(thematic_data)
 

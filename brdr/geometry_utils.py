@@ -1914,3 +1914,4 @@ def total_vertex_distance(geom1, geom2, bidirectional=True) -> float:
         len_vertices = len_vertices + len_vertices_2
 
     return total_distance / len_vertices
+
