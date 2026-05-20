@@ -240,7 +240,9 @@ class BaseProcessor(ABC):
 
         if merged_result is None or merged_result.is_empty:
             process_result = ProcessResult()
-            process_result["result"] = merged_result if merged_result is not None else GeometryCollection()
+            process_result["result"] = (
+                merged_result if merged_result is not None else GeometryCollection()
+            )
             process_result["properties"] = {
                 REMARK_FIELD_NAME: [ProcessRemark.INVALID_EMPTY_RETURNED]
             }
@@ -257,7 +259,9 @@ class BaseProcessor(ABC):
             correction_distance,
         )
         scoped_result = scoped_result_holder.get("result")
-        scoped_remarks = ((scoped_result or {}).get("properties") or {}).get(REMARK_FIELD_NAME, [])
+        scoped_remarks = ((scoped_result or {}).get("properties") or {}).get(
+            REMARK_FIELD_NAME, []
+        )
         if scoped_remarks:
             post_props = postprocessed.get("properties") or {}
             existing = post_props.get(REMARK_FIELD_NAME, [])
@@ -396,7 +400,9 @@ class BaseProcessor(ABC):
         buffer_distance = relevant_distance / 2
         result = []
         geom_thematic_for_add_delete = geom_thematic
-        polygonal_reference_union = self._get_polygonal_reference_union_cached(reference_union)
+        polygonal_reference_union = self._get_polygonal_reference_union_cached(
+            reference_union
+        )
 
         if (
             self.config.od_strategy == OpenDomainStrategy.EXCLUDE
@@ -760,7 +766,9 @@ class SnapGeometryProcessor(BaseProcessor):
         t_total = time.perf_counter()
         reference_candidates = kwargs.get("reference_candidates")
         processing_area = kwargs.get("processing_area")
-        if processing_area is not None and not kwargs.get("_processing_area_applied", False):
+        if processing_area is not None and not kwargs.get(
+            "_processing_area_applied", False
+        ):
             scoped_kwargs = dict(kwargs)
             scoped_kwargs["processing_area"] = None
             scoped_kwargs["_processing_area_applied"] = True
@@ -959,7 +967,9 @@ class DieussaertGeometryProcessor(BaseProcessor):
                 "Dieussaert algorithm can only be used when input geometry is polygon or multipolygon."
             )
         processing_area = kwargs.get("processing_area")
-        if processing_area is not None and not kwargs.get("_processing_area_applied", False):
+        if processing_area is not None and not kwargs.get(
+            "_processing_area_applied", False
+        ):
             scoped_kwargs = dict(kwargs)
             scoped_kwargs["processing_area"] = None
             scoped_kwargs["_processing_area_applied"] = True
@@ -1535,6 +1545,7 @@ class DieussaertGeometryProcessor(BaseProcessor):
 
 
         """
+
         def _empty_polygon() -> Polygon:
             # Keep return type stable for downstream union/array logic.
             return Polygon()
@@ -1774,7 +1785,9 @@ class NetworkGeometryProcessor(BaseProcessor):
         t_total = time.perf_counter()
         reference_candidates = kwargs.get("reference_candidates")
         processing_area = kwargs.get("processing_area")
-        if processing_area is not None and not kwargs.get("_processing_area_applied", False):
+        if processing_area is not None and not kwargs.get(
+            "_processing_area_applied", False
+        ):
             scoped_kwargs = dict(kwargs)
             scoped_kwargs["processing_area"] = None
             scoped_kwargs["_processing_area_applied"] = True
@@ -1871,7 +1884,9 @@ class NetworkGeometryProcessor(BaseProcessor):
                 time.perf_counter() - t_query,
             )
         reference_union = reference_data.union
-        polygonal_reference_union = self._get_polygonal_reference_union_cached(reference_union)
+        polygonal_reference_union = self._get_polygonal_reference_union_cached(
+            reference_union
+        )
         has_polygonal_od = not polygonal_reference_union.is_empty
 
         geometry_to_process = input_geometry
@@ -2156,7 +2171,9 @@ class AnchorGeometryProcessor(BaseProcessor):
         **kwargs: Any,
     ) -> ProcessResult:
         processing_area = kwargs.get("processing_area")
-        if processing_area is not None and not kwargs.get("_processing_area_applied", False):
+        if processing_area is not None and not kwargs.get(
+            "_processing_area_applied", False
+        ):
             scoped_kwargs = dict(kwargs)
             scoped_kwargs["processing_area"] = None
             scoped_kwargs["_processing_area_applied"] = True
@@ -2182,7 +2199,9 @@ class AnchorGeometryProcessor(BaseProcessor):
 
         if isinstance(input_geometry, (Polygon, MultiPolygon)):
             # Keep polygon handling consistent by delegating to the network processor.
-            processor = NetworkGeometryProcessor(config=self.config, feedback=self.feedback)
+            processor = NetworkGeometryProcessor(
+                config=self.config, feedback=self.feedback
+            )
             return processor.process(
                 input_geometry=input_geometry,
                 reference_data=reference_data,
@@ -2208,7 +2227,9 @@ class AnchorGeometryProcessor(BaseProcessor):
             for part in get_parts(reference_parts)
             if isinstance(part, LineString) and part.length > 0
         ]
-        reference_parts_full = extract_points_lines_from_geometry(base_reference_elements)
+        reference_parts_full = extract_points_lines_from_geometry(
+            base_reference_elements
+        )
         reference_lines_full = [
             part
             for part in get_parts(reference_parts_full)
@@ -2281,7 +2302,10 @@ class AnchorGeometryProcessor(BaseProcessor):
             reference_lines_full,
             precomputed_ref_direction_index=precomputed_ref_direction_index,
         )
-        if anchor_selection_graph.number_of_edges() == 0 or graph.number_of_edges() == 0:
+        if (
+            anchor_selection_graph.number_of_edges() == 0
+            or graph.number_of_edges() == 0
+        ):
             return self._postprocess_preresult(
                 input_multi,
                 input_multi,
@@ -2349,11 +2373,7 @@ class AnchorGeometryProcessor(BaseProcessor):
         lines: list[LineString],
         precomputed_ref_direction_index=None,
     ) -> nx.Graph:
-        graph = (
-            nx.DiGraph()
-            if self.config.network_use_directed_graph
-            else nx.Graph()
-        )
+        graph = nx.DiGraph() if self.config.network_use_directed_graph else nx.Graph()
         for line in lines:
             coords = list(line.coords)
             if len(coords) < 2:
@@ -2480,9 +2500,8 @@ class AnchorGeometryProcessor(BaseProcessor):
                 node_list=selection_nodes,
                 node_points_tree=None,
             )
-            if (
-                selection_node is None
-                or Point(selection_node).distance(anchor) > float(relevant_distance)
+            if selection_node is None or Point(selection_node).distance(anchor) > float(
+                relevant_distance
             ):
                 anchor_targets.append({"coord": (anchor.x, anchor.y), "node": None})
                 continue
@@ -2531,7 +2550,9 @@ class AnchorGeometryProcessor(BaseProcessor):
                 route_coords.extend(path_nodes[1:])
                 continue
             try:
-                path_nodes = nx.shortest_path(graph, start_node, end_node, weight="length")
+                path_nodes = nx.shortest_path(
+                    graph, start_node, end_node, weight="length"
+                )
             except (nx.NetworkXNoPath, nx.NodeNotFound):
                 if self.config.network_use_directed_graph:
                     # Do not introduce synthetic straight jumps between nodes when
@@ -2648,7 +2669,9 @@ class AlignerGeometryProcessor(BaseProcessor):
         perf_collector = kwargs.get("perf_collector")
         t_total = time.perf_counter()
         processing_area = kwargs.get("processing_area")
-        if processing_area is not None and not kwargs.get("_processing_area_applied", False):
+        if processing_area is not None and not kwargs.get(
+            "_processing_area_applied", False
+        ):
             scoped_kwargs = dict(kwargs)
             scoped_kwargs["processing_area"] = None
             scoped_kwargs["_processing_area_applied"] = True
@@ -2857,7 +2880,9 @@ class TopologyProcessor(BaseProcessor):
         ```
         """
         processing_area = kwargs.get("processing_area")
-        if processing_area is not None and not kwargs.get("_processing_area_applied", False):
+        if processing_area is not None and not kwargs.get(
+            "_processing_area_applied", False
+        ):
             scoped_kwargs = dict(kwargs)
             scoped_kwargs["processing_area"] = None
             scoped_kwargs["_processing_area_applied"] = True

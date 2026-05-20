@@ -11,4 +11,3 @@ class VRBGType(str, Enum):
     REFGEM = "Refgem"
     REFGEW = "Refgew"
     REFPRV = "Refprv"
-

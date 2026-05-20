@@ -1,10 +1,10 @@
+import json
+import uuid
 from abc import ABC
 from abc import abstractmethod
 from datetime import datetime
-import json
-import uuid
-from typing import TYPE_CHECKING
 from typing import Any
+from typing import TYPE_CHECKING
 
 from brdr.constants import MAX_REFERENCE_BUFFER
 from brdr.constants import OBSERVATION_FIELD_NAME
