@@ -8,7 +8,6 @@ from brdr.constants import REMARK_FIELD_NAME
 from brdr.loader import DictLoader
 from brdr.processor import NetworkGeometryProcessor
 
-
 if __name__ == "__main__":
     # Input polygon from issue case
     polygon_wkt = (

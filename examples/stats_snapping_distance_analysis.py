@@ -6,7 +6,6 @@ import pandas as pd
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-
 if __name__ == "__main__":
     """
     Analyze the latest stats_*.csv produced by stats_snapping_distance_creation.py.

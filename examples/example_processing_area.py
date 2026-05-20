@@ -4,7 +4,6 @@ from shapely.geometry import box
 from brdr.aligner import Aligner
 from brdr.loader import DictLoader
 
-
 if __name__ == "__main__":
     """
     Example: scope alignment to a selected area with `processing_area`.
