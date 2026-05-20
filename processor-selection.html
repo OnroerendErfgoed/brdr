@@ -42,7 +42,7 @@ ul.task-list li input[type="checkbox"] {
 <link href="site_libs/quarto-html/quarto-syntax-highlighting-23bbe8b5e4efc1e257f6d59dce478b08.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-d601f195343c5adbdba1989941cef7e8.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-5595c1b6afa943ad10baa1e491a07608.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -113,6 +113,10 @@ ul.task-list li input[type="checkbox"] {
 <span class="menu-text">Parameter Guide</span></a>
   </li>  
   <li class="nav-item">
+    <a class="nav-link" href="./export-guide.html"> 
+<span class="menu-text">Export Guide</span></a>
+  </li>  
+  <li class="nav-item">
     <a class="nav-link" href="./reference/index.html"> 
 <span class="menu-text">Reference</span></a>
   </li>  
@@ -144,7 +148,9 @@ ul.task-list li input[type="checkbox"] {
   <ul class="collapse">
   <li><a href="#summary-table" id="toc-summary-table" class="nav-link" data-scroll-target="#summary-table">Summary table</a></li>
   <li><a href="#practical-recommendation" id="toc-practical-recommendation" class="nav-link" data-scroll-target="#practical-recommendation">Practical recommendation</a></li>
+  <li><a href="#directed-routing-behavior" id="toc-directed-routing-behavior" class="nav-link" data-scroll-target="#directed-routing-behavior">Directed routing behavior</a></li>
   <li><a href="#related" id="toc-related" class="nav-link" data-scroll-target="#related">Related</a></li>
+  <li><a href="#note-on-descriptor" id="toc-note-on-descriptor" class="nav-link" data-scroll-target="#note-on-descriptor">Note on Descriptor</a></li>
   </ul></li>
   </ul>
 <div class="toc-actions"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/processor-selection.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
@@ -200,13 +206,34 @@ ul.task-list li input[type="checkbox"] {
 <td>Use when network-like behavior is required; supports OD strategy behavior for polygon-reference coverage</td>
 </tr>
 <tr class="even">
+<td><code>DirectedNetworkGeometryProcessor</code></td>
+<td>Network behavior with one-way constraints</td>
+<td>Slower</td>
+<td>Broadest support</td>
+<td>Forces directed routing (<code>network_use_directed_graph=True</code>); no synthetic component fallback in directed no-path cases</td>
+</tr>
+<tr class="odd">
+<td><code>AnchorGeometryProcessor</code></td>
+<td>Line workflows where route should follow thematic anchor points</td>
+<td>Slower</td>
+<td>Point/Line (+ polygon via delegation)</td>
+<td>Anchor-guided routing: start/end + angle anchors + periodic anchors; supports directed/one-way parameters; can route over full reference lines after local anchor match</td>
+</tr>
+<tr class="even">
+<td><code>DirectedAnchorGeometryProcessor</code></td>
+<td>Anchor-guided lines with one-way constraints</td>
+<td>Slower</td>
+<td>Point/Line (+ polygon via delegation)</td>
+<td>Thin wrapper over Anchor processor with directed mode forced</td>
+</tr>
+<tr class="odd">
 <td><code>TopologyProcessor</code></td>
 <td>Shared-boundary consistency between neighboring features</td>
 <td>Slower</td>
 <td>Topology-aware arc workflow</td>
 <td>Experimental and specialized</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>SnapGeometryProcessor</code></td>
 <td>Direct vertex/edge snapping behavior</td>
 <td>Case-dependent</td>
@@ -222,8 +249,28 @@ ul.task-list li input[type="checkbox"] {
 <li>Start with <code>AlignerGeometryProcessor</code> (default).</li>
 <li>If your scenario is polygon-to-polygon and speed matters, prefer <code>DieussaertGeometryProcessor</code>.</li>
 <li>Switch to <code>NetworkGeometryProcessor</code> when mixed geometry types or network behavior are required.</li>
+<li>Use <code>AnchorGeometryProcessor</code> when you need anchor-driven line routing (preserving thematic turning structure).</li>
+<li>Use <code>DirectedNetworkGeometryProcessor</code> or <code>DirectedAnchorGeometryProcessor</code> when one-way/directionality is a hard requirement.</li>
 <li>Use <code>TopologyProcessor</code> only when preserving shared topology across thematic features is a strict requirement.</li>
 </ol>
+</section>
+<section id="directed-routing-behavior" class="level2">
+<h2 class="anchored" data-anchor-id="directed-routing-behavior">Directed routing behavior</h2>
+<p>Directed processors follow one-way metadata from reference features using:</p>
+<ul>
+<li><code>network_oneway_field</code></li>
+<li><code>network_oneway_forward_values</code></li>
+<li><code>network_oneway_reverse_values</code></li>
+</ul>
+<p>Practical semantics:</p>
+<ul>
+<li>If no valid directed path exists, processors keep safe fallback behavior and do <strong>not</strong> invent artificial reverse paths to bypass direction constraints.</li>
+<li>Connector edge behavior in directed mode is controlled by:
+<ul>
+<li><code>network_allow_connector_edges_when_directed</code></li>
+<li><code>network_directed_connector_penalty_factor</code></li>
+</ul></li>
+</ul>
 </section>
 <section id="related" class="level2">
 <h2 class="anchored" data-anchor-id="related">Related</h2>
@@ -231,6 +278,10 @@ ul.task-list li input[type="checkbox"] {
 <li><a href="./parameter-cookbook.html">Parameter Guide</a></li>
 <li><a href="./qa.html">Q&amp;A</a></li>
 </ul>
+</section>
+<section id="note-on-descriptor" class="level2">
+<h2 class="anchored" data-anchor-id="note-on-descriptor">Note on Descriptor</h2>
+<p>Besides processor selection, <code>Aligner</code> also has a descriptor strategy. The default <code>AlignerDescriptor</code> builds the <code>observations</code> and <code>metadata</code> output fields for each <code>ProcessResult</code>. This is independent from processor selection and can be replaced separately.</p>
 
 
 </section>

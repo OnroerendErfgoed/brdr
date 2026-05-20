@@ -7,10 +7,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Karel Dieussaert">
-<meta name="dcterms.date" content="2026-03-31">
-<meta name="description" content="Apply all OpenDomainStrategy variants in NetworkGeometryProcessor with polygon reference coverage">
+<meta name="dcterms.date" content="2026-05-06">
+<meta name="description" content="Align only a selected part of each geometry and keep the rest unchanged">
 
-<title>OpenDomain in Network Processor – BRDR - Aligning borders</title>
+<title>Scoped Processing Area – BRDR - Aligning borders</title>
 <style>
 /* Default styles provided by pandoc.
 ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
@@ -182,29 +182,32 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#opendomain-in-networkgeometryprocessor" id="toc-opendomain-in-networkgeometryprocessor" class="nav-link active" data-scroll-target="#opendomain-in-networkgeometryprocessor">OpenDomain in NetworkGeometryProcessor</a>
+  <li><a href="#scoped-processing-area" id="toc-scoped-processing-area" class="nav-link active" data-scroll-target="#scoped-processing-area">Scoped Processing Area</a>
   <ul class="collapse">
-  <li><a href="#what-you-learn" id="toc-what-you-learn" class="nav-link" data-scroll-target="#what-you-learn">What you learn</a></li>
+  <li><a href="#use-case" id="toc-use-case" class="nav-link" data-scroll-target="#use-case">Use case</a></li>
+  <li><a href="#behavior-summary" id="toc-behavior-summary" class="nav-link" data-scroll-target="#behavior-summary">Behavior summary</a></li>
+  <li><a href="#example-code" id="toc-example-code" class="nav-link" data-scroll-target="#example-code">Example code</a></li>
+  <li><a href="#expected-output-interpretation" id="toc-expected-output-interpretation" class="nav-link" data-scroll-target="#expected-output-interpretation">Expected output interpretation</a></li>
   </ul></li>
   </ul>
-<div class="toc-actions"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/examples/example_opendomain_network_polygon_reference.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
+<div class="toc-actions"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/examples/example_processing_area.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">OpenDomain in Network Processor</h1>
+<h1 class="title">Scoped Processing Area</h1>
   <div class="quarto-categories">
-    <div class="quarto-category">OpenDomainStrategy</div>
-    <div class="quarto-category">NetworkGeometryProcessor</div>
     <div class="quarto-category">Process</div>
+    <div class="quarto-category">Scope</div>
+    <div class="quarto-category">Backward-compatible</div>
   </div>
   </div>
 
 <div>
   <div class="description">
-    Apply all OpenDomainStrategy variants in NetworkGeometryProcessor with polygon reference coverage
+    Align only a selected part of each geometry and keep the rest unchanged
   </div>
 </div>
 
@@ -221,7 +224,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">March 31, 2026</p>
+      <p class="date">May 6, 2026</p>
     </div>
   </div>
   
@@ -233,57 +236,139 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<section id="opendomain-in-networkgeometryprocessor" class="level1">
-<h1>OpenDomain in NetworkGeometryProcessor</h1>
-<p>This example shows how <code>OpenDomainStrategy</code> behaves in <a href="../reference/NetworkGeometryProcessor.html">NetworkGeometryProcessor</a> when the reference dataset contains polygon coverage.</p>
-<section id="what-you-learn" class="level2">
-<h2 class="anchored" data-anchor-id="what-you-learn">What you learn</h2>
+<section id="scoped-processing-area" class="level1">
+<h1>Scoped Processing Area</h1>
+<p>This example demonstrates the <code>processing_area</code> argument on <code>aligner.process(...)</code>.</p>
+<section id="use-case" class="level2">
+<h2 class="anchored" data-anchor-id="use-case">Use case</h2>
+<p>Use this when:</p>
 <ol type="1">
-<li>How to loop over all <code>OpenDomainStrategy</code> values.</li>
-<li>How to run the same input against each strategy.</li>
-<li>How to compare result type, emptiness and length.</li>
+<li>A thematic geometry spans multiple zones.</li>
+<li>You want to align only one zone for a targeted update.</li>
+<li>The rest of the geometry must remain unchanged.</li>
 </ol>
-<div id="1ad66f22" class="cell" data-execution_count="1">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> shapely <span class="im">import</span> from_wkt</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.aligner <span class="im">import</span> Aligner</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.configs <span class="im">import</span> ProcessorConfig</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.enums <span class="im">import</span> OpenDomainStrategy</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.loader <span class="im">import</span> DictLoader</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.processor <span class="im">import</span> NetworkGeometryProcessor</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="va">__name__</span> <span class="op">==</span> <span class="st">"__main__"</span>:</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""Example: compare OD strategies in NetworkGeometryProcessor with polygon references."""</span></span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    thematic <span class="op">=</span> {<span class="st">"line_1"</span>: from_wkt(<span class="st">"LINESTRING (0 0, 10 0)"</span>)}</span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    reference <span class="op">=</span> {<span class="st">"ref_poly_1"</span>: from_wkt(<span class="st">"POLYGON ((2 -1, 8 -1, 8 1, 2 1, 2 -1))"</span>)}</span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    relevant_distance <span class="op">=</span> <span class="fl">1.0</span></span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> strategy <span class="kw">in</span> OpenDomainStrategy:</span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>        processor <span class="op">=</span> NetworkGeometryProcessor(</span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>            config<span class="op">=</span>ProcessorConfig(od_strategy<span class="op">=</span>strategy)</span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>        )</span>
-<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>        aligner <span class="op">=</span> Aligner(processor<span class="op">=</span>processor)</span>
-<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>        aligner.load_thematic_data(DictLoader(thematic))</span>
-<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>        aligner.load_reference_data(DictLoader(reference))</span>
-<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>        result <span class="op">=</span> aligner.process([relevant_distance]).results[<span class="st">"line_1"</span>][</span>
-<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>            relevant_distance</span>
-<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>        ][<span class="st">"result"</span>]</span>
-<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(</span>
-<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>            <span class="ss">f"</span><span class="sc">{</span>strategy<span class="sc">.</span>value<span class="sc">}</span><span class="ss">: type=</span><span class="sc">{</span>result<span class="sc">.</span>geom_type<span class="sc">}</span><span class="ss">, empty=</span><span class="sc">{</span>result<span class="sc">.</span>is_empty<span class="sc">}</span><span class="ss">, length=</span><span class="sc">{</span><span class="bu">round</span>(result.length, <span class="dv">3</span>)<span class="sc">}</span><span class="ss">"</span></span>
-<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>        )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Typical scenarios:</p>
+<ul>
+<li>partial QA corrections in a project area</li>
+<li>incremental migration by spatial batches</li>
+<li>constrained edits where only a designated footprint may change</li>
+</ul>
+</section>
+<section id="behavior-summary" class="level2">
+<h2 class="anchored" data-anchor-id="behavior-summary">Behavior summary</h2>
+<ul>
+<li><code>processing_area=None</code>: default behavior (full geometry processing).</li>
+<li><code>processing_area=&lt;geometry&gt;</code>:
+<ul>
+<li>inside scope: normal alignment</li>
+<li>outside scope: unchanged, then reattached to final output</li>
+</ul></li>
+</ul>
+</section>
+<section id="example-code" class="level2">
+<h2 class="anchored" data-anchor-id="example-code">Example code</h2>
+<div id="fig-processing-area" class="cell quarto-float quarto-figure quarto-figure-center anchored" data-execution_count="1">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-processing-area-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> shapely <span class="im">import</span> affinity</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> shapely.geometry <span class="im">import</span> box</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.aligner <span class="im">import</span> Aligner</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.loader <span class="im">import</span> DictLoader</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="va">__name__</span> <span class="op">==</span> <span class="st">"__main__"</span>:</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co">    Example: scope alignment to a selected area with `processing_area`.</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co">    Use case:</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="co">    - A thematic geometry spans multiple zones.</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="co">    - Only one zone should be aligned now.</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co">    - The remainder must stay exactly as-is.</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="co">    """</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 1) Create synthetic thematic + reference data (no network dependency).</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Thematic geometry is intentionally shifted to the right by 1 meter.</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    thematic_geom_original <span class="op">=</span> affinity.translate(box(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">20</span>, <span class="dv">10</span>), xoff<span class="op">=</span><span class="fl">1.0</span>, yoff<span class="op">=</span><span class="fl">0.0</span>)</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    thematic <span class="op">=</span> {<span class="st">"theme_1"</span>: thematic_geom_original}</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Reference geometry is split in two parts to mimic separate boundaries.</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>    reference <span class="op">=</span> {</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>        <span class="st">"ref_left"</span>: box(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">10</span>, <span class="dv">10</span>),</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>        <span class="st">"ref_right"</span>: box(<span class="dv">10</span>, <span class="dv">0</span>, <span class="dv">20</span>, <span class="dv">10</span>),</span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>    aligner <span class="op">=</span> Aligner(crs<span class="op">=</span><span class="st">"EPSG:31370"</span>)</span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>    aligner.load_thematic_data(DictLoader(data_dict<span class="op">=</span>thematic))</span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>    aligner.load_reference_data(DictLoader(data_dict<span class="op">=</span>reference))</span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 2) Define a scope: only left half should be actively aligned.</span></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>    processing_area <span class="op">=</span> box(<span class="dv">0</span>, <span class="op">-</span><span class="dv">5</span>, <span class="dv">10</span>, <span class="dv">15</span>)</span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>    rd <span class="op">=</span> <span class="fl">1.5</span></span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a>    full_result <span class="op">=</span> aligner.process(relevant_distances<span class="op">=</span>[rd]).results[<span class="st">"theme_1"</span>][rd][</span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a>        <span class="st">"result"</span></span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a>    ]</span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a>    scoped_result <span class="op">=</span> aligner.process(</span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a>        relevant_distances<span class="op">=</span>[rd],</span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a>        processing_area<span class="op">=</span>processing_area,</span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a>    ).results[<span class="st">"theme_1"</span>][rd][<span class="st">"result"</span>]</span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 3) Check left vs right side behavior.</span></span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a>    left_half <span class="op">=</span> box(<span class="dv">0</span>, <span class="op">-</span><span class="dv">5</span>, <span class="dv">10</span>, <span class="dv">15</span>)</span>
+<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a>    right_half <span class="op">=</span> box(<span class="dv">10</span>, <span class="op">-</span><span class="dv">5</span>, <span class="dv">25</span>, <span class="dv">15</span>)</span>
+<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a>    scoped_left <span class="op">=</span> scoped_result.intersection(left_half)</span>
+<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a>    scoped_right <span class="op">=</span> scoped_result.intersection(right_half)</span>
+<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a>    original_right <span class="op">=</span> thematic_geom_original.intersection(right_half)</span>
+<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"=== Processing area example ==="</span>)</span>
+<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Relevant distance: </span><span class="sc">{</span>rd<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Processing area bounds: </span><span class="sc">{</span>processing_area<span class="sc">.</span>bounds<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb1-55"><a href="#cb1-55" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">""</span>)</span>
+<span id="cb1-56"><a href="#cb1-56" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"Full processing (no scope):"</span>)</span>
+<span id="cb1-57"><a href="#cb1-57" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"  result bounds: </span><span class="sc">{</span>full_result<span class="sc">.</span>bounds<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb1-58"><a href="#cb1-58" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">""</span>)</span>
+<span id="cb1-59"><a href="#cb1-59" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"Scoped processing:"</span>)</span>
+<span id="cb1-60"><a href="#cb1-60" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"  result bounds: </span><span class="sc">{</span>scoped_result<span class="sc">.</span>bounds<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb1-61"><a href="#cb1-61" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(</span>
+<span id="cb1-62"><a href="#cb1-62" aria-hidden="true" tabindex="-1"></a>        <span class="st">"  right side unchanged vs original:"</span>,</span>
+<span id="cb1-63"><a href="#cb1-63" aria-hidden="true" tabindex="-1"></a>        scoped_right.equals_exact(original_right, tolerance<span class="op">=</span><span class="fl">1e-9</span>),</span>
+<span id="cb1-64"><a href="#cb1-64" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb1-65"><a href="#cb1-65" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(</span>
+<span id="cb1-66"><a href="#cb1-66" aria-hidden="true" tabindex="-1"></a>        <span class="st">"  left side changed vs original:"</span>,</span>
+<span id="cb1-67"><a href="#cb1-67" aria-hidden="true" tabindex="-1"></a>        <span class="kw">not</span> scoped_left.equals_exact(</span>
+<span id="cb1-68"><a href="#cb1-68" aria-hidden="true" tabindex="-1"></a>            thematic_geom_original.intersection(left_half), tolerance<span class="op">=</span><span class="fl">1e-9</span></span>
+<span id="cb1-69"><a href="#cb1-69" aria-hidden="true" tabindex="-1"></a>        ),</span>
+<span id="cb1-70"><a href="#cb1-70" aria-hidden="true" tabindex="-1"></a>    )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>EXCLUDE: type=MultiLineString, empty=False, length=10.0
-AS_IS: type=MultiLineString, empty=False, length=14.0
-SNAP_INNER_SIDE: type=LineString, empty=False, length=12.0
-SNAP_ALL_SIDE: type=LineString, empty=False, length=12.0
-SNAP_PREFER_VERTICES: type=LineString, empty=False, length=12.0
-SNAP_PREFER_ENDS_AND_ANGLES: type=LineString, empty=False, length=12.0
-SNAP_NO_PREFERENCE: type=LineString, empty=False, length=12.0
-SNAP_ONLY_VERTICES: type=LineString, empty=False, length=12.0</code></pre>
+<pre><code>=== Processing area example ===
+Relevant distance: 1.5
+Processing area bounds: (0.0, -5.0, 10.0, 15.0)
+
+Full processing (no scope):
+  result bounds: (0.0, 0.0, 20.00000000000001, 10.0)
+
+Scoped processing:
+  result bounds: (0.0, 0.0, 21.00000000000001, 10.0)
+  right side unchanged vs original: True
+  left side changed vs original: True</code></pre>
 </div>
 </div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig quarto-uncaptioned" id="fig-processing-area-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;1
+</figcaption>
+</figure>
+</div>
+</section>
+<section id="expected-output-interpretation" class="level2">
+<h2 class="anchored" data-anchor-id="expected-output-interpretation">Expected output interpretation</h2>
+<p>You should see:</p>
+<ol type="1">
+<li>A valid result for full processing and scoped processing.</li>
+<li><code>right side unchanged vs original: True</code></li>
+<li><code>left side changed vs original: True</code></li>
+</ol>
+<p>This confirms that only the scoped part is actively aligned.</p>
 
 
 </section>
@@ -691,7 +776,7 @@ SNAP_ONLY_VERTICES: type=LineString, empty=False, length=12.0</code></pre>
   });
   </script>
 </div> <!-- /content -->
-<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/examples/example_opendomain_network_polygon_reference.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer><hr>
+<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/examples/example_processing_area.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer><hr>
 <p><a href="../examples.html">&lt;- Back to examples overview</a></p>
 
 

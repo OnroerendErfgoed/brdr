@@ -77,7 +77,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="site_libs/quarto-html/quarto-syntax-highlighting-23bbe8b5e4efc1e257f6d59dce478b08.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-d601f195343c5adbdba1989941cef7e8.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-5595c1b6afa943ad10baa1e491a07608.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -148,6 +148,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span class="menu-text">Parameter Guide</span></a>
   </li>  
   <li class="nav-item">
+    <a class="nav-link" href="./export-guide.html"> 
+<span class="menu-text">Export Guide</span></a>
+  </li>  
+  <li class="nav-item">
     <a class="nav-link" href="./reference/index.html"> 
 <span class="menu-text">Reference</span></a>
   </li>  
@@ -179,6 +183,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <ul class="collapse">
   <li><a href="#prerequisites" id="toc-prerequisites" class="nav-link" data-scroll-target="#prerequisites">Prerequisites</a></li>
   <li><a href="#step-by-step" id="toc-step-by-step" class="nav-link" data-scroll-target="#step-by-step">Step-by-step</a></li>
+  <li><a href="#scoped-processing-processing_area" id="toc-scoped-processing-processing_area" class="nav-link" data-scroll-target="#scoped-processing-processing_area">Scoped processing (<code>processing_area</code>)</a></li>
+  <li><a href="#strategy-components" id="toc-strategy-components" class="nav-link" data-scroll-target="#strategy-components">Strategy components</a>
+  <ul class="collapse">
+  <li><a href="#descriptorevaluator-contract" id="toc-descriptorevaluator-contract" class="nav-link" data-scroll-target="#descriptorevaluator-contract">Descriptor/evaluator contract</a></li>
+  <li><a href="#custom-descriptor-short-example" id="toc-custom-descriptor-short-example" class="nav-link" data-scroll-target="#custom-descriptor-short-example">Custom descriptor (short example)</a></li>
+  </ul></li>
+  <li><a href="#topology-note" id="toc-topology-note" class="nav-link" data-scroll-target="#topology-note">Topology note</a></li>
   <li><a href="#minimal-code-shape" id="toc-minimal-code-shape" class="nav-link" data-scroll-target="#minimal-code-shape">Minimal code shape</a></li>
   <li><a href="#next-pages" id="toc-next-pages" class="nav-link" data-scroll-target="#next-pages">Next pages</a></li>
   </ul></li>
@@ -217,16 +228,83 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li>Export with <code>get_results_as_geojson(...)</code> or <code>save_results(...)</code>.</li>
 </ol>
 </section>
+<section id="scoped-processing-processing_area" class="level2">
+<h2 class="anchored" data-anchor-id="scoped-processing-processing_area">Scoped processing (<code>processing_area</code>)</h2>
+<p><code>process(...)</code>, <code>predict(...)</code>, and <code>evaluate(...)</code> accept an optional <code>processing_area</code> geometry.</p>
+<ul>
+<li>Default: <code>None</code> (fully backward compatible).</li>
+<li>When set: only the intersecting part of each thematic geometry is processed.</li>
+<li>The non-intersecting part is kept unchanged and merged back into the final result.</li>
+<li>Reference preselection still uses a buffered search area around the scoped part, so nearby boundaries just outside the scope can still influence snapping/alignment.</li>
+</ul>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> shapely.geometry <span class="im">import</span> box</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Example scope in working CRS coordinates</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>scope <span class="op">=</span> box(<span class="dv">100000</span>, <span class="dv">200000</span>, <span class="dv">101000</span>, <span class="dv">201000</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Process only inside scope; outside stays untouched</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> aligner.process(</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    relevant_distances<span class="op">=</span>[<span class="fl">0.5</span>, <span class="fl">1.0</span>],</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    processing_area<span class="op">=</span>scope,</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="strategy-components" class="level2">
+<h2 class="anchored" data-anchor-id="strategy-components">Strategy components</h2>
+<p><code>Aligner</code> uses four interchangeable strategy components:</p>
+<ol type="1">
+<li><code>processor</code>: geometric alignment</li>
+<li><code>predictor</code>: selection of interesting distances</li>
+<li><code>evaluator</code>: evaluation/classification of predictions</li>
+<li><code>descriptor</code>: construction of observations and metadata on <code>ProcessResult</code></li>
+</ol>
+<p>By default, <code>Aligner</code> uses the default implementation for each component.</p>
+<section id="descriptorevaluator-contract" class="level3">
+<h3 class="anchored" data-anchor-id="descriptorevaluator-contract">Descriptor/evaluator contract</h3>
+<p>If you provide a custom descriptor, keep this internal contract in mind:</p>
+<ol type="1">
+<li><code>get_base_observation(...)</code> should return a BRDR observation dict (or <code>None</code>).</li>
+<li><code>get_actual_observation(...)</code> should return a BRDR observation dict (or <code>None</code>).</li>
+<li><code>evaluate(...)</code> uses these observations for comparison/scoring.</li>
+</ol>
+<p>If either side returns <code>None</code>, evaluation falls back to conservative <code>TO_CHECK_*</code> classifications.</p>
+</section>
+<section id="custom-descriptor-short-example" class="level3">
+<h3 class="anchored" data-anchor-id="custom-descriptor-short-example">Custom descriptor (short example)</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.aligner <span class="im">import</span> Aligner</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.descriptor <span class="im">import</span> BaseDescriptor</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> NoopDescriptor(BaseDescriptor):</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> describe(<span class="va">self</span>, <span class="op">*</span>, aligner, thematic_id, geometry, relevant_distance, process_result):</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Pass ProcessResult through unchanged</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> process_result</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> get_base_observation(<span class="va">self</span>, <span class="op">*</span>, feature_properties, metadata_field, cache_key<span class="op">=</span><span class="va">None</span>):</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Evaluator contract: return BRDR observation dict or None</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">None</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> get_actual_observation(<span class="va">self</span>, <span class="op">*</span>, aligner, process_result, cache_key<span class="op">=</span><span class="va">None</span>):</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Evaluator contract: return BRDR observation dict or None</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">None</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>aligner <span class="op">=</span> Aligner(descriptor<span class="op">=</span>NoopDescriptor())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+</section>
+<section id="topology-note" class="level2">
+<h2 class="anchored" data-anchor-id="topology-note">Topology note</h2>
+<p><code>TopologyProcessor</code> relies on explicit thematic IDs passed by <code>Aligner</code>. This avoids ambiguity when multiple thematic features share identical geometry.</p>
+</section>
 <section id="minimal-code-shape" class="level2">
 <h2 class="anchored" data-anchor-id="minimal-code-shape">Minimal code shape</h2>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.aligner <span class="im">import</span> Aligner</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>aligner <span class="op">=</span> Aligner(crs<span class="op">=</span><span class="st">"EPSG:31370"</span>)</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>aligner.load_thematic_data(...)</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>aligner.load_reference_data(...)</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>aligner_result <span class="op">=</span> aligner.process(relevant_distances<span class="op">=</span>[<span class="fl">0.5</span>, <span class="fl">1.0</span>, <span class="fl">1.5</span>])</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>results <span class="op">=</span> aligner_result.get_results(aligner<span class="op">=</span>aligner)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.aligner <span class="im">import</span> Aligner</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>aligner <span class="op">=</span> Aligner(crs<span class="op">=</span><span class="st">"EPSG:31370"</span>)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>aligner.load_thematic_data(...)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>aligner.load_reference_data(...)</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>aligner_result <span class="op">=</span> aligner.process(relevant_distances<span class="op">=</span>[<span class="fl">0.5</span>, <span class="fl">1.0</span>, <span class="fl">1.5</span>])</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>results <span class="op">=</span> aligner_result.get_results(aligner<span class="op">=</span>aligner)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="next-pages" class="level2">
 <h2 class="anchored" data-anchor-id="next-pages">Next pages</h2>

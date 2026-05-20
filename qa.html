@@ -42,7 +42,7 @@ ul.task-list li input[type="checkbox"] {
 <link href="site_libs/quarto-html/quarto-syntax-highlighting-23bbe8b5e4efc1e257f6d59dce478b08.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-d601f195343c5adbdba1989941cef7e8.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-5595c1b6afa943ad10baa1e491a07608.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -113,6 +113,10 @@ ul.task-list li input[type="checkbox"] {
 <span class="menu-text">Parameter Guide</span></a>
   </li>  
   <li class="nav-item">
+    <a class="nav-link" href="./export-guide.html"> 
+<span class="menu-text">Export Guide</span></a>
+  </li>  
+  <li class="nav-item">
     <a class="nav-link" href="./reference/index.html"> 
 <span class="menu-text">Reference</span></a>
   </li>  
@@ -148,6 +152,10 @@ ul.task-list li input[type="checkbox"] {
   <li><a href="#how-do-i-choose-the-best-processor" id="toc-how-do-i-choose-the-best-processor" class="nav-link" data-scroll-target="#how-do-i-choose-the-best-processor">How do I choose the best processor?</a></li>
   <li><a href="#does-brdr-support-3d-or-mz-coordinates" id="toc-does-brdr-support-3d-or-mz-coordinates" class="nav-link" data-scroll-target="#does-brdr-support-3d-or-mz-coordinates">Does <code>brdr</code> support 3D or M/Z coordinates?</a></li>
   <li><a href="#is-topology-preserved-between-thematic-input-features" id="toc-is-topology-preserved-between-thematic-input-features" class="nav-link" data-scroll-target="#is-topology-preserved-between-thematic-input-features">Is topology preserved between thematic input features?</a></li>
+  <li><a href="#how-should-i-run-tests-in-daily-development" id="toc-how-should-i-run-tests-in-daily-development" class="nav-link" data-scroll-target="#how-should-i-run-tests-in-daily-development">How should I run tests in daily development?</a></li>
+  <li><a href="#why-does-directed-routing-return-unchangedoriginal-output-sometimes" id="toc-why-does-directed-routing-return-unchangedoriginal-output-sometimes" class="nav-link" data-scroll-target="#why-does-directed-routing-return-unchangedoriginal-output-sometimes">Why does directed routing return unchanged/original output sometimes?</a></li>
+  <li><a href="#how-do-descriptor-and-evaluator-interact" id="toc-how-do-descriptor-and-evaluator-interact" class="nav-link" data-scroll-target="#how-do-descriptor-and-evaluator-interact">How do <code>descriptor</code> and <code>evaluator</code> interact?</a></li>
+  <li><a href="#when-does-brdr-return-an-empty-geometry-vs-the-original-geometry" id="toc-when-does-brdr-return-an-empty-geometry-vs-the-original-geometry" class="nav-link" data-scroll-target="#when-does-brdr-return-an-empty-geometry-vs-the-original-geometry">When does <code>brdr</code> return an empty geometry vs the original geometry?</a></li>
   </ul></li>
   </ul>
 <div class="toc-actions"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/qa.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
@@ -224,6 +232,83 @@ ul.task-list li input[type="checkbox"] {
 <ul>
 <li>Short answer: not by default.</li>
 <li>Long answer: standard processing handles features independently. If topology preservation is required, use <code>TopologyProcessor</code> (experimental).</li>
+</ul>
+</section>
+<section id="how-should-i-run-tests-in-daily-development" class="level2">
+<h2 class="anchored" data-anchor-id="how-should-i-run-tests-in-daily-development">How should I run tests in daily development?</h2>
+<ul>
+<li>Short answer: use the fast lane first, then full suite when needed.</li>
+<li>Recommended commands:
+<ul>
+<li>Fast lane: <code>pytest -m "not native and not network and not slow"</code></li>
+<li>Full suite: <code>pytest</code></li>
+</ul></li>
+</ul>
+<p>Marker meaning:</p>
+<ul>
+<li><code>native</code>: GEOS/native-heavy tests (more crash-sensitive).</li>
+<li><code>network</code>: tests relying on network-facing behavior or mocks of external services.</li>
+<li><code>slow</code>: broader integration/end-to-end scenarios.</li>
+</ul>
+</section>
+<section id="why-does-directed-routing-return-unchangedoriginal-output-sometimes" class="level2">
+<h2 class="anchored" data-anchor-id="why-does-directed-routing-return-unchangedoriginal-output-sometimes">Why does directed routing return unchanged/original output sometimes?</h2>
+<ul>
+<li>Short answer: no valid directed path exists under one-way constraints.</li>
+<li>Long answer: in directed mode, <code>brdr</code> prefers correctness over forced rerouting. If one-way semantics block a route, processors do not invent artificial reverse paths.</li>
+</ul>
+</section>
+<section id="how-do-descriptor-and-evaluator-interact" class="level2">
+<h2 class="anchored" data-anchor-id="how-do-descriptor-and-evaluator-interact">How do <code>descriptor</code> and <code>evaluator</code> interact?</h2>
+<ul>
+<li>Short answer: evaluator depends on descriptor observations.</li>
+<li>Long answer:
+<ul>
+<li><code>descriptor.get_base_observation(...)</code> reads base context from feature properties/metadata.</li>
+<li><code>descriptor.get_actual_observation(...)</code> derives observation for process results.</li>
+<li><code>evaluator</code> compares both and assigns evaluation classes.</li>
+</ul></li>
+</ul>
+</section>
+<section id="when-does-brdr-return-an-empty-geometry-vs-the-original-geometry" class="level2">
+<h2 class="anchored" data-anchor-id="when-does-brdr-return-an-empty-geometry-vs-the-original-geometry">When does <code>brdr</code> return an empty geometry vs the original geometry?</h2>
+<ul>
+<li>Short answer:
+<ul>
+<li><code>original geometry</code> is returned for unchanged outcomes and specific evaluator choices.</li>
+<li><code>empty geometry</code> is returned for invalid processor pre-results and explicit geometry-removal outcomes.</li>
+</ul></li>
+<li>Long answer:
+<ul>
+<li>Typical <code>original geometry</code> cases:
+<ul>
+<li>no effective change after processing</li>
+<li>circular-shape guard behavior</li>
+<li>evaluator keeps original (<code>TO_CHECK_ORIGINAL</code> / no accepted prediction path)</li>
+</ul></li>
+<li>Typical <code>empty geometry</code> cases:
+<ul>
+<li>the input is already empty</li>
+<li>invalid intermediate processor output (<code>None</code>, empty, or type mismatch pre-result)</li>
+<li>explicit clipping/exclusion behavior removes all geometry content</li>
+<li>a processor legitimately computes an empty end result for the chosen strategy</li>
+</ul></li>
+</ul></li>
+</ul>
+<p><code>ProcessRemark</code> guidance:</p>
+<ul>
+<li><code>RESULT_UNCHANGED</code>:
+<ul>
+<li>processing completed, but final result equals original geometry (within tolerance).</li>
+</ul></li>
+<li><code>INPUT_CIRCLE</code>:
+<ul>
+<li>circle-like geometry guard triggered; original geometry is kept.</li>
+</ul></li>
+<li><code>INVALID_EMPTY_RETURNED</code>:
+<ul>
+<li>processor intermediate output was unusable (e.g.&nbsp;invalid/empty/type mismatch path); <code>brdr</code> returned empty geometry.</li>
+</ul></li>
 </ul>
 
 

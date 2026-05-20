@@ -42,7 +42,7 @@ ul.task-list li input[type="checkbox"] {
 <link href="site_libs/quarto-html/quarto-syntax-highlighting-23bbe8b5e4efc1e257f6d59dce478b08.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-d601f195343c5adbdba1989941cef7e8.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-5595c1b6afa943ad10baa1e491a07608.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -113,6 +113,10 @@ ul.task-list li input[type="checkbox"] {
 <span class="menu-text">Parameter Guide</span></a>
   </li>  
   <li class="nav-item">
+    <a class="nav-link" href="./export-guide.html"> 
+<span class="menu-text">Export Guide</span></a>
+  </li>  
+  <li class="nav-item">
     <a class="nav-link" href="./reference/index.html"> 
 <span class="menu-text">Reference</span></a>
   </li>  
@@ -148,6 +152,8 @@ ul.task-list li input[type="checkbox"] {
   <li><a href="#mitre_limit" id="toc-mitre_limit" class="nav-link" data-scroll-target="#mitre_limit"><code>mitre_limit</code></a></li>
   <li><a href="#snap_strategy" id="toc-snap_strategy" class="nav-link" data-scroll-target="#snap_strategy"><code>snap_strategy</code></a></li>
   <li><a href="#od_strategy-open-domain" id="toc-od_strategy-open-domain" class="nav-link" data-scroll-target="#od_strategy-open-domain"><code>od_strategy</code> (Open Domain)</a></li>
+  <li><a href="#processing_area" id="toc-processing_area" class="nav-link" data-scroll-target="#processing_area"><code>processing_area</code></a></li>
+  <li><a href="#directed-network-parameters" id="toc-directed-network-parameters" class="nav-link" data-scroll-target="#directed-network-parameters">Directed network parameters</a></li>
   <li><a href="#tuning-workflow" id="toc-tuning-workflow" class="nav-link" data-scroll-target="#tuning-workflow">Tuning workflow</a></li>
   <li><a href="#performance-notes" id="toc-performance-notes" class="nav-link" data-scroll-target="#performance-notes">Performance notes</a></li>
   <li><a href="#related" id="toc-related" class="nav-link" data-scroll-target="#related">Related</a></li>
@@ -218,6 +224,36 @@ ul.task-list li input[type="checkbox"] {
 </ul></li>
 </ul>
 </section>
+<section id="processing_area" class="level2">
+<h2 class="anchored" data-anchor-id="processing_area"><code>processing_area</code></h2>
+<ul>
+<li>Location: argument on <code>Aligner.process(...)</code>, <code>Aligner.predict(...)</code>, and <code>Aligner.evaluate(...)</code>.</li>
+<li>Meaning: limit active alignment to the intersecting portion of each thematic geometry.</li>
+<li>Default: <code>None</code> (no scope limitation; existing behavior).</li>
+<li>Behavior:
+<ul>
+<li>inside scope: normal processing/prediction/evaluation</li>
+<li>outside scope: unchanged and reattached to output geometry</li>
+</ul></li>
+<li>Practical note: reference candidate preselection is buffered around the scoped geometry part, so reference boundaries just outside the scope can still affect the aligned result inside the scope.</li>
+</ul>
+</section>
+<section id="directed-network-parameters" class="level2">
+<h2 class="anchored" data-anchor-id="directed-network-parameters">Directed network parameters</h2>
+<ul>
+<li><code>network_use_directed_graph</code>: enable directed routing based on one-way metadata.</li>
+<li><code>network_oneway_field</code>: attribute name read from reference feature properties.</li>
+<li><code>network_oneway_forward_values</code>: values interpreted as forward direction.</li>
+<li><code>network_oneway_reverse_values</code>: values interpreted as reverse direction.</li>
+<li><code>network_allow_connector_edges_when_directed</code>: allow graph connector edges in directed mode.</li>
+<li><code>network_directed_connector_penalty_factor</code>: penalize connector usage in directed mode.</li>
+</ul>
+<p>Practical rule:</p>
+<ul>
+<li>Use directed mode only when reference attributes are reliable enough to encode direction.</li>
+<li>If no directed path exists, processors do not fabricate reverse travel to bypass one-way constraints.</li>
+</ul>
+</section>
 <section id="tuning-workflow" class="level2">
 <h2 class="anchored" data-anchor-id="tuning-workflow">Tuning workflow</h2>
 <ol type="1">
@@ -233,6 +269,7 @@ ul.task-list li input[type="checkbox"] {
 <h2 class="anchored" data-anchor-id="performance-notes">Performance notes</h2>
 <ul>
 <li><code>brdr</code> reuses reference candidates per thematic geometry across multiple relevant distances.</li>
+<li>When <code>processing_area</code> is used, preselection runs around the scoped geometry part (plus distance buffer), reducing unnecessary reference checks for out-of-scope regions.</li>
 <li><code>evaluate(...)</code> includes caching for repeated observation comparisons on identical predicted geometries.</li>
 <li>These optimizations are transparent; no extra configuration is needed besides optional profiling.</li>
 </ul>
