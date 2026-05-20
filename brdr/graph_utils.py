@@ -83,7 +83,9 @@ def _normalize_oneway_value(value):
     return str(value).strip().lower()
 
 
-def _classify_oneway(properties, oneway_field, oneway_forward_values, oneway_reverse_values):
+def _classify_oneway(
+    properties, oneway_field, oneway_forward_values, oneway_reverse_values
+):
     value = _normalize_oneway_value((properties or {}).get(oneway_field))
     if value in {v.lower() for v in oneway_forward_values}:
         return "forward"
@@ -188,9 +190,7 @@ def _strip_theme_edges_for_directed_routing(G):
         return G
     removable_tags = {"theme_lines", "connection_pseudo_theme_vertex_removed"}
     edges_to_remove = [
-        (u, v)
-        for u, v, d in G.edges(data=True)
-        if d.get("tag") in removable_tags
+        (u, v) for u, v, d in G.edges(data=True) if d.get("tag") in removable_tags
     ]
     if edges_to_remove:
         G.remove_edges_from(edges_to_remove)
@@ -307,13 +307,9 @@ def _add_pseudonode(G: Graph, p2, u, v, tag_point, tag_line):
     G.add_node(p_coord, tag=tag_point)
     if not _is_directed_graph(G):
         geom = LineString([u, p_coord])
-        _add_edge_auto(
-            G, u, p_coord, tag=tag_line, geometry=geom, length=geom.length
-        )
+        _add_edge_auto(G, u, p_coord, tag=tag_line, geometry=geom, length=geom.length)
         geom = LineString([p_coord, v])
-        _add_edge_auto(
-            G, p_coord, v, tag=tag_line, geometry=geom, length=geom.length
-        )
+        _add_edge_auto(G, p_coord, v, tag=tag_line, geometry=geom, length=geom.length)
         return
     if has_uv:
         geom = LineString([u, p_coord])
@@ -567,7 +563,9 @@ def connect_theme_and_reference(G, gap_dist=0.1, interconnect_dist=1.5):
     if not theme_edges:
         return G
     theme_sub = G.edge_subgraph(theme_edges)
-    degree_graph = theme_sub.to_undirected() if _is_directed_graph(theme_sub) else theme_sub
+    degree_graph = (
+        theme_sub.to_undirected() if _is_directed_graph(theme_sub) else theme_sub
+    )
     theme_endpoints = [n for n, deg in degree_graph.degree() if deg == 1]
     if not theme_endpoints:
         return G
@@ -1129,6 +1127,8 @@ def build_custom_network(
         G, directed_connector_penalty_factor if directed else 1.0
     )
     return G
+
+
 def find_best_circle_path(graph, geom_to_process, max_total_combis=1000):
     """
     Find the best closed ring from polygonized graph edges.
@@ -1138,6 +1138,7 @@ def find_best_circle_path(graph, geom_to_process, max_total_combis=1000):
     """
     original_poly = Polygon(geom_to_process)
     overlap_ratio_threshold = 0.5
+
     def _symdiff_score(poly):
         if not isinstance(poly, Polygon):
             return inf
@@ -1280,9 +1281,13 @@ def find_best_path_in_network(
         if _is_directed_graph(graph):
             # In directed mode we prefer candidates that can actually depart/arrive.
             if is_start:
-                candidates = [n for n in candidates if graph.out_degree(n) > 0] or candidates
+                candidates = [
+                    n for n in candidates if graph.out_degree(n) > 0
+                ] or candidates
             else:
-                candidates = [n for n in candidates if graph.in_degree(n) > 0] or candidates
+                candidates = [
+                    n for n in candidates if graph.in_degree(n) > 0
+                ] or candidates
         candidates = sorted(
             candidates,
             key=lambda n: _candidate_rank_for_snap_strategy(
@@ -1317,7 +1322,9 @@ def find_best_path_in_network(
                     continue
                 try:
                     path_len = float(
-                        nx.shortest_path_length(graph, source=s, target=e, weight="length")
+                        nx.shortest_path_length(
+                            graph, source=s, target=e, weight="length"
+                        )
                     )
                 except (
                     nx.NetworkXNoPath,
@@ -1343,7 +1350,9 @@ def find_best_path_in_network(
                 )
                 # Prioritize strategy ranking first, then local snap distance, then route length.
                 snap_penalty = s_rank[2] + e_rank[2]
-                strategy_penalty = (s_rank[0] + e_rank[0]) * 1000 + (s_rank[1] + e_rank[1]) * 100
+                strategy_penalty = (s_rank[0] + e_rank[0]) * 1000 + (
+                    s_rank[1] + e_rank[1]
+                ) * 100
                 score = strategy_penalty + snap_penalty + 0.01 * path_len
                 if score < best_score:
                     best_score = score

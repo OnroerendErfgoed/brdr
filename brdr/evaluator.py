@@ -877,7 +877,9 @@ class ConservativeAlignerEvaluator(AlignerEvaluator):
             score_gap = top_score - second_score
 
             if score_gap < self.ambiguity_delta:
-                original_geometry = aligner.thematic_data.features.get(theme_id).geometry
+                original_geometry = aligner.thematic_data.features.get(
+                    theme_id
+                ).geometry
                 evaluated = self.update_evaluation_with_original(
                     aligner=aligner,
                     metadata_field=metadata_field,

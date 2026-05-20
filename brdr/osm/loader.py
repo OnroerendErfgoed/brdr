@@ -169,7 +169,9 @@ class OSMLoader(DictLoader):
             self.data_dict[osm_id] = row["geometry"]
             props = row.drop(labels=["geometry"]).to_dict()
             if self.included_attributes is not None:
-                props = {k: v for k, v in props.items() if k in self.included_attributes}
+                props = {
+                    k: v for k, v in props.items() if k in self.included_attributes
+                }
             if self.include_directional_attributes:
                 for key in directional_keys:
                     if key in row:

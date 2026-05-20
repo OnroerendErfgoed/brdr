@@ -79,11 +79,15 @@ def _load_osm_reference(seed_line: LineString):
     print(f"Missing/empty oneway: {missing_oneway}")
 
     reference_dict = {key: feat.geometry for key, feat in features.items()}
-    reference_props = {key: dict(feat.properties or {}) for key, feat in features.items()}
+    reference_props = {
+        key: dict(feat.properties or {}) for key, feat in features.items()
+    }
     return reference_dict, reference_props
 
 
-def _run_alignment(reference_dict, reference_props, input_line: LineString, directed: bool):
+def _run_alignment(
+    reference_dict, reference_props, input_line: LineString, directed: bool
+):
     mode = "DIRECTED" if directed else "UNDIRECTED"
     _print_header(f"STEP 2 - Run Alignment ({mode})")
     _line_direction_info(input_line, f"Input line ({mode})")

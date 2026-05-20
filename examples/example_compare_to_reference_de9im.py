@@ -2,7 +2,6 @@ from brdr.aligner import Aligner
 from brdr.loader import DictLoader
 from shapely import from_wkt
 
-
 if __name__ == "__main__":
     """Example: inspect generic observation metrics and DE-9IM per reference feature."""
 

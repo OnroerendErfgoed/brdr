@@ -59,7 +59,6 @@ if __name__ == "__main__":
     # 173019.10, 171237.48 : 173040.45, 171248.84
     processing_area = box(173019.10, 171237.48, 173040.45, 171248.84)
 
-
     aligner = Aligner(crs="EPSG:31370")
     aligner.load_thematic_data(DictLoader(thematic))
     aligner.load_reference_data(
@@ -79,7 +78,10 @@ if __name__ == "__main__":
     inside_after = result.intersection(processing_area)
 
     print("=== Processing area ADP polygon example ===")
-    print("Relevant distances:", f"{relevant_distances[0]}..{relevant_distances[-1]} step 0.2")
+    print(
+        "Relevant distances:",
+        f"{relevant_distances[0]}..{relevant_distances[-1]} step 0.2",
+    )
     print("Processing area bounds:", processing_area.bounds)
     print("Input area:", round(thematic_geom.area, 3))
     print("Result area:", round(result.area, 3))
@@ -97,7 +99,9 @@ if __name__ == "__main__":
         rd_res = process_result.results["theme_1"][rd]
         rd_geom = rd_res["result"]
         rd_diff = rd_res.get("result_diff")
-        rd_diff_area = 0.0 if rd_diff is None or rd_diff.is_empty else float(rd_diff.area)
+        rd_diff_area = (
+            0.0 if rd_diff is None or rd_diff.is_empty else float(rd_diff.area)
+        )
         rd_remarks = rd_res.get("properties", {}).get(REMARK_FIELD_NAME, [])
         print(
             f"rd={rd:>4.1f} | area={rd_geom.area:>10.3f} | diff_area={rd_diff_area:>10.3f} | remarks={rd_remarks}"

@@ -203,11 +203,15 @@ class TestAligner(unittest.TestCase):
         class _DummyAligner:
             def __init__(self):
                 geom = from_wkt("POLYGON ((0 0, 0 1, 1 1, 1 0, 0 0))")
-                self.thematic_data = type("T", (), {"features": {"id1": _Feature(geom)}})()
+                self.thematic_data = type(
+                    "T", (), {"features": {"id1": _Feature(geom)}}
+                )()
                 self.reference_data = type("R", (), {"union": geom})()
                 self.diff_metric = None
 
-            def process(self, thematic_ids=None, relevant_distances=None, processing_area=None):
+            def process(
+                self, thematic_ids=None, relevant_distances=None, processing_area=None
+            ):
                 out = {"id1": {}}
                 for rd in relevant_distances:
                     out["id1"][rd] = {
@@ -227,7 +231,10 @@ class TestAligner(unittest.TestCase):
             }
 
         with patch("brdr.predictor.coverage_ratio", return_value=1.0):
-            with patch("brdr.predictor.determine_stability", side_effect=_fake_determine_stability):
+            with patch(
+                "brdr.predictor.determine_stability",
+                side_effect=_fake_determine_stability,
+            ):
                 with patch(
                     "brdr.predictor.get_geometry_difference_metrics_from_processresults",
                     side_effect=lambda process_result, *_args, **_kwargs: {

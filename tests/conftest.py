@@ -15,7 +15,9 @@ here = os.path.dirname(os.path.abspath(__file__))
 
 def pytest_configure(config):
     config.addinivalue_line("markers", "native: native/GEOS-heavy tests")
-    config.addinivalue_line("markers", "network: tests that rely on external network services")
+    config.addinivalue_line(
+        "markers", "network: tests that rely on external network services"
+    )
     config.addinivalue_line("markers", "slow: slower end-to-end or integration tests")
 
 

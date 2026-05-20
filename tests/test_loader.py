@@ -268,8 +268,12 @@ def test_feature_collection_geodataframe_roundtrip():
 
     assert set(reconstructed.features.keys()) == set(original.features.keys())
     for key in original.features.keys():
-        assert reconstructed.features[key].geometry.equals(original.features[key].geometry)
-        assert reconstructed.features[key].properties == original.features[key].properties
+        assert reconstructed.features[key].geometry.equals(
+            original.features[key].geometry
+        )
+        assert (
+            reconstructed.features[key].properties == original.features[key].properties
+        )
 
 
 def test_geodataframeloader_equivalent_to_dictloader():
@@ -303,5 +307,9 @@ def test_geodataframeloader_equivalent_to_dictloader():
 
     assert set(dict_loaded.features.keys()) == set(gdf_loaded.features.keys())
     for key in dict_loaded.features.keys():
-        assert gdf_loaded.features[key].geometry.equals(dict_loaded.features[key].geometry)
-        assert gdf_loaded.features[key].properties == dict_loaded.features[key].properties
+        assert gdf_loaded.features[key].geometry.equals(
+            dict_loaded.features[key].geometry
+        )
+        assert (
+            gdf_loaded.features[key].properties == dict_loaded.features[key].properties
+        )

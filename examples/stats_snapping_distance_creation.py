@@ -7,7 +7,6 @@ import numpy as np
 from brdr.aligner import Aligner
 from brdr.loader import GeoJsonFileLoader
 
-
 if __name__ == "__main__":
     """
     Create a CSV with snapping statistics over a range of relevant distances.

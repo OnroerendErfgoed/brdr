@@ -1,6 +1,6 @@
-from typing import Any, Dict
 import json
 import os
+from typing import Any, Dict
 
 import geopandas as gpd
 import numpy as np
@@ -372,7 +372,9 @@ class AlignerFeatureCollection:
             rows.append(row)
 
         if len(rows) == 0:
-            gdf = gpd.GeoDataFrame(columns=[self.id_fieldname, "geometry"], crs=self.crs)
+            gdf = gpd.GeoDataFrame(
+                columns=[self.id_fieldname, "geometry"], crs=self.crs
+            )
         else:
             gdf = gpd.GeoDataFrame(rows, geometry="geometry", crs=self.crs)
         self._gdf_cache = gdf
@@ -489,7 +491,12 @@ class AlignerFeatureCollection:
             raise ValueError("GeoPackage export requires geometry.")
         os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
         gdf.to_file(path, layer=layer, driver="GPKG")
-        return {"path": path, "format": "gpkg", "feature_count": len(gdf), "layer": layer}
+        return {
+            "path": path,
+            "format": "gpkg",
+            "feature_count": len(gdf),
+            "layer": layer,
+        }
 
     def export(
         self,

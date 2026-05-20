@@ -343,9 +343,7 @@ def safe_intersects(geom_a: BaseGeometry, geom_b: BaseGeometry) -> bool:
         )
     except GEOSException:
         try:
-            return bool(
-                buffer(geom_a, 0.0000001).intersects(buffer(geom_b, 0.0000001))
-            )
+            return bool(buffer(geom_a, 0.0000001).intersects(buffer(geom_b, 0.0000001)))
         except Exception:
             return False
 
@@ -1914,4 +1912,3 @@ def total_vertex_distance(geom1, geom2, bidirectional=True) -> float:
         len_vertices = len_vertices + len_vertices_2
 
     return total_distance / len_vertices
-

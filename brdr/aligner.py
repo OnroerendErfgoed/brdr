@@ -1,12 +1,12 @@
+import json
 import logging
 import os
 import threading
 import time
-import json
 import warnings
 from collections import defaultdict
-from concurrent.futures import as_completed
 from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import as_completed
 from datetime import datetime
 from typing import Any
 from typing import Dict
@@ -16,8 +16,8 @@ from typing import Optional
 from typing import TYPE_CHECKING
 from typing import Union
 
-import numpy as np
 import geopandas as gpd
+import numpy as np
 from shapely import make_valid, GeometryCollection
 from shapely import to_geojson
 from shapely.geometry.base import BaseGeometry
@@ -484,9 +484,14 @@ class AlignerResult:
             add_metadata=add_metadata,
             add_original_attributes=add_original_attributes,
         )
-        gdf = self._apply_profile_to_result_gdf(gdf, aligner.thematic_data.id_fieldname, profile)
+        gdf = self._apply_profile_to_result_gdf(
+            gdf, aligner.thematic_data.id_fieldname, profile
+        )
         if fields is not None:
-            wanted = set(fields) | {aligner.thematic_data.id_fieldname, "relevant_distance"}
+            wanted = set(fields) | {
+                aligner.thematic_data.id_fieldname,
+                "relevant_distance",
+            }
             if include_geometry:
                 if gdf.geometry.name in gdf.columns:
                     wanted.add(gdf.geometry.name)
@@ -619,7 +624,12 @@ class AlignerResult:
             raise ValueError("GeoPackage export requires geometry.")
         os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
         gdf.to_file(path, layer=layer, driver="GPKG")
-        return {"path": path, "format": "gpkg", "feature_count": len(gdf), "layer": layer}
+        return {
+            "path": path,
+            "format": "gpkg",
+            "feature_count": len(gdf),
+            "layer": layer,
+        }
 
     def export(
         self,

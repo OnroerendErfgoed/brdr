@@ -64,7 +64,10 @@ class TestProcessor(unittest.TestCase):
             relevant_distance=1.0,
             mitre_limit=10.0,
             correction_distance=0.01,
-            scoped_processor=lambda g: {"result": g, "properties": {REMARK_FIELD_NAME: []}},
+            scoped_processor=lambda g: {
+                "result": g,
+                "properties": {REMARK_FIELD_NAME: []},
+            },
         )
 
         assert result["result"].equals(input_geometry)
@@ -112,7 +115,9 @@ class TestProcessor(unittest.TestCase):
             autospec=True,
             wraps=DieussaertGeometryProcessor.process,
         ) as dieussaert_process_spy:
-            result = aligner.process([1], processing_area=scope).results["t1"][1]["result"]
+            result = aligner.process([1], processing_area=scope).results["t1"][1][
+                "result"
+            ]
 
         assert result is not None
         assert not result.is_empty
@@ -130,7 +135,9 @@ class TestProcessor(unittest.TestCase):
         assert result is not None
         assert not result.is_empty
 
-    def test_aligner_processor_non_polygon_processing_area_uses_generic_scoped_flow(self):
+    def test_aligner_processor_non_polygon_processing_area_uses_generic_scoped_flow(
+        self,
+    ):
         thematic = {"t1": from_wkt("POLYGON ((0 0, 0 6, 6 6, 6 0, 0 0))")}
         reference = {"r1": from_wkt("POLYGON ((0 1, 0 7, 7 7, 7 1, 0 1))")}
         # Non-polygon scope: generic scoped flow should handle this.
@@ -490,7 +497,9 @@ class TestProcessor(unittest.TestCase):
             assert kwargs["tolerance"] == relevant_distance
             return segment_geom
 
-        with patch("brdr.processor.find_best_path_in_network", side_effect=_echo_segment) as mocked:
+        with patch(
+            "brdr.processor.find_best_path_in_network", side_effect=_echo_segment
+        ) as mocked:
             result = processor._align_linestring_anchor_routing(
                 line, graph, relevant_distance=relevant_distance
             )
@@ -546,7 +555,9 @@ class TestProcessor(unittest.TestCase):
         assert graph.has_edge((0.0, 0.0), (10.0, 0.0))
         assert not graph.has_edge((10.0, 0.0), (0.0, 0.0))
 
-    def test_directed_anchor_processor_forces_directed_without_mutating_input_config(self):
+    def test_directed_anchor_processor_forces_directed_without_mutating_input_config(
+        self,
+    ):
         base_config = ProcessorConfig(network_use_directed_graph=False)
         processor = DirectedAnchorGeometryProcessor(config=base_config)
         assert not base_config.network_use_directed_graph
@@ -605,7 +616,9 @@ class TestProcessor(unittest.TestCase):
                 reference_feature_records=reference_feature_records, **kwargs
             )
 
-        with patch("brdr.processor._build_reference_segment_index", side_effect=_capture_index):
+        with patch(
+            "brdr.processor._build_reference_segment_index", side_effect=_capture_index
+        ):
             aligner.processor.process(
                 input_geometry=thematic_dict["theme_id"],
                 reference_data=aligner.reference_data,
@@ -618,7 +631,9 @@ class TestProcessor(unittest.TestCase):
         assert seen_ids
         assert {"near", "far"} in seen_ids
 
-    def test_directed_network_no_path_returns_original_line_without_component_fallback(self):
+    def test_directed_network_no_path_returns_original_line_without_component_fallback(
+        self,
+    ):
         processor = DirectedNetworkGeometryProcessor(config=ProcessorConfig())
         thematic = LineString([(10, 0), (0, 0)])
         reference_dict = {
@@ -634,7 +649,9 @@ class TestProcessor(unittest.TestCase):
         # create a synthetic reverse connector route through fallback component linking.
         assert result.equals(thematic)
 
-    def test_directed_network_builds_direction_index_from_all_reference_candidates(self):
+    def test_directed_network_builds_direction_index_from_all_reference_candidates(
+        self,
+    ):
         processor = DirectedNetworkGeometryProcessor(config=ProcessorConfig())
         thematic_dict = {"theme_id": from_wkt("LINESTRING (0 0, 10 0)")}
         reference_dict = {
@@ -656,7 +673,9 @@ class TestProcessor(unittest.TestCase):
                 reference_feature_records=reference_feature_records, **kwargs
             )
 
-        with patch("brdr.processor._build_reference_segment_index", side_effect=_capture_index):
+        with patch(
+            "brdr.processor._build_reference_segment_index", side_effect=_capture_index
+        ):
             aligner.processor.process(
                 input_geometry=thematic_dict["theme_id"],
                 reference_data=aligner.reference_data,
@@ -669,7 +688,9 @@ class TestProcessor(unittest.TestCase):
         assert seen_ids
         assert {"near", "far"} in seen_ids
 
-    def test_build_custom_network_unconnected_distance_scales_with_relevant_distance(self):
+    def test_build_custom_network_unconnected_distance_scales_with_relevant_distance(
+        self,
+    ):
         from brdr.graph_utils import build_custom_network
 
         input_geometry = LineString([(0, 0), (10, 0)])
@@ -679,7 +700,9 @@ class TestProcessor(unittest.TestCase):
 
         max_seen = {"value": None}
 
-        def _capture_connect_unconnected_greedy(G, max_spatial_dist=50, detour_ratio=3.0):
+        def _capture_connect_unconnected_greedy(
+            G, max_spatial_dist=50, detour_ratio=3.0
+        ):
             max_seen["value"] = max_spatial_dist
             return G
 
@@ -698,7 +721,9 @@ class TestProcessor(unittest.TestCase):
 
         assert max_seen["value"] == 50
 
-    def test_find_best_circle_path_single_polygon_low_overlap_returns_original_ring(self):
+    def test_find_best_circle_path_single_polygon_low_overlap_returns_original_ring(
+        self,
+    ):
         graph = nx.Graph()
         # Candidate polygon around x=100 (far from original around x=0..10)
         coords = [(100, 0), (100, 10), (110, 10), (110, 0), (100, 0)]

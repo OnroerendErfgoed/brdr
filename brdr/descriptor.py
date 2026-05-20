@@ -1,10 +1,10 @@
+import json
+import uuid
 from abc import ABC
 from abc import abstractmethod
 from datetime import datetime
-import json
-import uuid
-from typing import TYPE_CHECKING
 from typing import Any
+from typing import TYPE_CHECKING
 
 from brdr.constants import MAX_REFERENCE_BUFFER
 from brdr.constants import OBSERVATION_FIELD_NAME
@@ -50,7 +50,11 @@ class BaseDescriptor(ABC):
 
     @abstractmethod
     def get_actual_observation(
-        self, *, aligner: "Aligner", process_result: ProcessResult, cache_key: Any = None
+        self,
+        *,
+        aligner: "Aligner",
+        process_result: ProcessResult,
+        cache_key: Any = None,
     ) -> Observation | None:
         """Resolve actual BRDR observation for a process result."""
         pass
@@ -222,7 +226,11 @@ class AlignerDescriptor(BaseDescriptor):
         return base_observation
 
     def get_actual_observation(
-        self, *, aligner: "Aligner", process_result: ProcessResult, cache_key: Any = None
+        self,
+        *,
+        aligner: "Aligner",
+        process_result: ProcessResult,
+        cache_key: Any = None,
     ) -> Observation | None:
         if process_result is None:
             return None

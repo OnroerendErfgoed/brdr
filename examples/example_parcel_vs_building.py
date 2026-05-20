@@ -22,9 +22,7 @@ if __name__ == "__main__":
     aligner_x = Aligner()
     # Load thematic data & reference data (parcels)
     aligner_x.load_thematic_data(
-        GeoJsonFileLoader(
-            str(parcel_vs_building_path), "theme_id"
-        )
+        GeoJsonFileLoader(str(parcel_vs_building_path), "theme_id")
     )
     aligner_x.load_reference_data(
         GRBActualLoader(grb_type=GRBType.ADP, partition=1000, aligner=aligner_x)
@@ -33,9 +31,7 @@ if __name__ == "__main__":
     aligner_y = Aligner()
     # Load thematic data & reference data (buildings)
     aligner_y.load_thematic_data(
-        GeoJsonFileLoader(
-            str(parcel_vs_building_path), "theme_id"
-        )
+        GeoJsonFileLoader(str(parcel_vs_building_path), "theme_id")
     )
     aligner_y.load_reference_data(
         GRBActualLoader(grb_type=GRBType.GBG, partition=1000, aligner=aligner_y)
