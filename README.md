@@ -225,11 +225,11 @@ term - missing
 
 ### Docker
 
-As an example-usage (proof-of-concept), a Dockerfile is created to set up a GRB-specific webservice that 'predicts' one
-or multiple actual geometries for a input-geometry based on the reference source GRB.
-This webservice is based on 'brdr'.
+As an example-usage (proof-of-concept), a Dockerfile is created to set up a demo - mapviewer with  a BRDR webservice that 'predicts' one
+or multiple actual geometries for a input-geometry 
+This webservice uses 'brdr' to do the calculations/predictions.
 
-This POC can be found at [brdr-webservice (GRB-actualisator)](<https://github.com/dieuska/brdr-webservice>).
+This POC can be found at [brdr-webservice](<https://github.com/dieuska/brdr-webservice>).
 
 ## Motivation & citation
 
