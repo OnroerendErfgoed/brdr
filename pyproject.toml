@@ -26,7 +26,7 @@ classifiers = [
 ]
 dependencies = [
     "geojson~=3.2",
-    "requests~=2.32",
+    "requests~=2.34",
     "shapely~=2.1",
     "topojson~=1.10",
     "networkx~=3.6",
@@ -46,7 +46,7 @@ viz = [
 ]
 test = [
     "pytest-cov==6.0.0",
-    "pytest==8.4.2",
+    "pytest==9.0.3",
     "responses==0.25.6",
     "toml==0.10.2",
 ]
