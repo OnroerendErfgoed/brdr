@@ -131,6 +131,7 @@ class TestAligner(unittest.TestCase):
             >= 1
         )
 
+    @pytest.mark.usefixtures("callback_grb_response")
     def test_predictor_line(self):
         # Load thematic data & reference data
         thematic_dict = {

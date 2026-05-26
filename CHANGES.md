@@ -306,3 +306,7 @@
 # 0.17.2
 
 - Fix for version number
+
+# 0.17.3
+
+- Fixed mock-test
