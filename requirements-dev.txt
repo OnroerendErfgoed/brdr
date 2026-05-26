@@ -99,6 +99,7 @@ pathspec==1.0.1
 pillow==12.2.0
     # via
     #   brdr
+    #   brdr (pyproject.toml)
     #   matplotlib
 pip-tools==7.5.2
     # via brdr (pyproject.toml)
@@ -129,7 +130,7 @@ pyproject-hooks==1.0.0
     # via
     #   build
     #   pip-tools
-pytest==8.4.2
+pytest==9.0.3
     # via
     #   brdr
     #   pytest-cov
@@ -145,7 +146,7 @@ pytz==2024.1
     # via pandas
 pyyaml==6.0.1
     # via responses
-requests==2.33.1
+requests==2.34.2
     # via
     #   brdr
     #   brdr (pyproject.toml)
@@ -176,7 +177,7 @@ typing-extensions==4.14.1
     # via mypy
 tzdata==2024.1
     # via pandas
-urllib3==2.6.3
+urllib3>=2.7,<3
     # via
     #   requests
     #   responses
