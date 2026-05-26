@@ -14,6 +14,8 @@ import requests
 from geojson import Feature
 from geojson import FeatureCollection
 from pyproj import CRS
+from requests import Session
+from requests.adapters import HTTPAdapter
 from shapely import GeometryCollection
 from shapely import make_valid
 from shapely import node
@@ -21,6 +23,7 @@ from shapely import polygonize
 from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
 from shapely.geometry.polygon import Polygon
+from urllib3.util.retry import Retry
 
 from brdr.constants import AREA_ATTRIBUTE
 from brdr.constants import DEFAULT_CRS
@@ -48,9 +51,40 @@ from brdr.typings import ProcessResult
 
 log = logging.getLogger(__name__)
 
+DEFAULT_REQUEST_TIMEOUT = 60
+_HTTP_SESSION: Session | None = None
+
+
+def get_http_session() -> Session:
+    """
+    Return a shared HTTP session with connection pooling and retries.
+    """
+    global _HTTP_SESSION
+    if _HTTP_SESSION is None:
+        session = requests.Session()
+        retry = Retry(
+            total=3,
+            connect=3,
+            read=3,
+            status=3,
+            backoff_factor=0.5,
+            status_forcelist=(429, 500, 502, 503, 504),
+            allowed_methods=frozenset({"GET"}),
+            raise_on_status=False,
+        )
+        adapter = HTTPAdapter(
+            max_retries=retry,
+            pool_connections=32,
+            pool_maxsize=64,
+        )
+        session.mount("http://", adapter)
+        session.mount("https://", adapter)
+        _HTTP_SESSION = session
+    return _HTTP_SESSION
+
 
 def _parse_feature_collection_response(
-    response, base_url=None, params=None, request_timeout=60
+    response, base_url=None, params=None, request_timeout=DEFAULT_REQUEST_TIMEOUT
 ):
     """
     Parse an HTTP response into a GeoJSON FeatureCollection-like dictionary.
@@ -79,13 +113,19 @@ def _parse_feature_collection_response(
 
 
 def _request_with_outputformat_fallback(
-    base_url, params=None, headers=None, request_timeout=60
+    base_url,
+    params=None,
+    headers=None,
+    request_timeout=DEFAULT_REQUEST_TIMEOUT,
+    session: Session | None = None,
 ):
     """
     Request helper that retries once without `outputFormat` when unsupported.
     """
+    if session is None:
+        session = get_http_session()
     local_params = (params or {}).copy()
-    response = requests.get(
+    response = session.get(
         base_url, params=local_params, headers=headers, timeout=request_timeout
     )
     if response.ok:
@@ -97,7 +137,7 @@ def _request_with_outputformat_fallback(
             local_params.get("outputFormat"),
         )
         local_params.pop("outputFormat", None)
-        response_retry = requests.get(
+        response_retry = session.get(
             base_url, params=local_params, headers=headers, timeout=request_timeout
         )
         if response_retry.ok:
@@ -690,7 +730,8 @@ def fetch_all_ogc_features(
     headers=None,
     max_pages=math.inf,
     max_workers=None,
-    request_timeout=60,
+    request_timeout=DEFAULT_REQUEST_TIMEOUT,
+    session: Session | None = None,
 ):
     """
     Fetches all features from an OGC Feature API using parallel requests where possible.
@@ -726,7 +767,11 @@ def fetch_all_ogc_features(
 
     # 1. Initial request to determine total count and pagination type
     response, params = _request_with_outputformat_fallback(
-        base_url, params=params, headers=headers, request_timeout=request_timeout
+        base_url,
+        params=params,
+        headers=headers,
+        request_timeout=request_timeout,
+        session=session,
     )
     data = _parse_feature_collection_response(
         response,
@@ -776,6 +821,7 @@ def fetch_all_ogc_features(
                         local_params,
                         headers,
                         request_timeout,
+                        session,
                     )
                 ] = offset
 
@@ -813,7 +859,7 @@ def fetch_all_ogc_features(
             seen_next_urls.add(url)
             LOGGER.debug(f"Fetching page {page}: {url}")
             # For next_links, parameters are usually already in the URL
-            response = requests.get(url, headers=headers, timeout=request_timeout)
+            response = session.get(url, headers=headers, timeout=request_timeout)
             response.raise_for_status()
             data = _parse_feature_collection_response(
                 response,
@@ -855,7 +901,12 @@ def make_feature_collection(features):
 
 
 def get_collection(
-    url, params=None, max_pages=math.inf, max_workers=None, request_timeout=60
+    url,
+    params=None,
+    max_pages=math.inf,
+    max_workers=None,
+    request_timeout=DEFAULT_REQUEST_TIMEOUT,
+    session: Session | None = None,
 ):
     """
     Fetches a collection of features from a (paginated) API endpoint (OGC Feature API or WFS).
@@ -881,6 +932,7 @@ def get_collection(
         max_pages=max_pages,
         max_workers=max_workers,
         request_timeout=request_timeout,
+        session=session,
     )
     return make_feature_collection(features)
 
@@ -951,7 +1003,8 @@ def get_collection_by_partition(
     crs=DEFAULT_CRS,
     max_workers=None,
     max_pages=math.inf,
-    request_timeout=60,
+    request_timeout=DEFAULT_REQUEST_TIMEOUT,
+    session: Session | None = None,
 ):
     """
     Retrieves a collection of geographic data by partitioning the input geometry.
@@ -994,6 +1047,7 @@ def get_collection_by_partition(
             max_pages=max_pages,
             max_workers=max_workers,
             request_timeout=request_timeout,
+            session=session,
         )
 
     if partition < 1:
@@ -1006,6 +1060,7 @@ def get_collection_by_partition(
             max_pages=max_pages,
             max_workers=max_workers,
             request_timeout=request_timeout,
+            session=session,
         )
 
     # Prepare partitions
@@ -1030,6 +1085,7 @@ def get_collection_by_partition(
                 max_pages=max_pages,
                 max_workers=max_workers,
                 request_timeout=request_timeout,
+                session=session,
             )
             future_to_geom[future] = g
 
@@ -1227,3 +1283,7 @@ def get_relevant_polygons_from_geom(
 
 def urn_from_geom(geom: BaseGeometry):
     return uuid.UUID(hex=hashlib.sha256(geom.wkb).hexdigest()[::2]).urn
+    if session is None:
+        session = get_http_session()
+    if session is None:
+        session = get_http_session()

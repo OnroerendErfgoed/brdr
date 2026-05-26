@@ -3,6 +3,7 @@ from copy import deepcopy
 from datetime import date
 from datetime import datetime
 from typing import Dict, Any
+from requests import Session
 
 from shapely import intersects
 from shapely.geometry import shape
@@ -31,6 +32,7 @@ from brdr.geometry_utils import get_bbox
 from brdr.utils import geojson_to_dicts
 from brdr.utils import get_collection
 from brdr.utils import get_collection_by_partition
+from brdr.utils import DEFAULT_REQUEST_TIMEOUT
 
 log = logging.getLogger(__name__)
 
@@ -227,6 +229,8 @@ def get_collection_grb_actual(
     crs=DEFAULT_CRS,
     date_start=None,
     date_end=None,
+    request_timeout=DEFAULT_REQUEST_TIMEOUT,
+    session: Session | None = None,
 ):
     crs = to_crs(crs)
     url = GRB_FEATURE_URL + "/" + grb_type.name + "/items?"
@@ -255,7 +259,13 @@ def get_collection_grb_actual(
         params["filter-lang"] = "cql-text"
 
     collection = get_collection_by_partition(
-        url=url, params=params, geometry=geometry, partition=partition, crs=crs
+        url=url,
+        params=params,
+        geometry=geometry,
+        partition=partition,
+        crs=crs,
+        request_timeout=request_timeout,
+        session=session,
     )
     # TODO possibility to only return features that actually hit the unioned geometry, so the reference-data is not overloaded with features that are not relevant? Or maybe in a former/later step?
     return collection, name_reference_id
@@ -267,12 +277,20 @@ def get_collection_grb_fiscal_parcels(
     partition=1000,
     limit=DOWNLOAD_LIMIT,
     crs=DEFAULT_CRS,
+    request_timeout=DEFAULT_REQUEST_TIMEOUT,
+    session: Session | None = None,
 ):
     crs = to_crs(crs)
     url = GRB_FISCAL_PARCELS_URL + "/Adpf" + str(year) + "/items?"
     params = {"crs": from_crs(crs), "limit": limit}
     return get_collection_by_partition(
-        url=url, params=params, geometry=geometry, partition=partition, crs=crs
+        url=url,
+        params=params,
+        geometry=geometry,
+        partition=partition,
+        crs=crs,
+        request_timeout=request_timeout,
+        session=session,
     )
 
 
@@ -282,6 +300,8 @@ def get_collection_grb_parcels_by_date(
     partition=1000,
     limit=DOWNLOAD_LIMIT,
     crs=DEFAULT_CRS,
+    request_timeout=DEFAULT_REQUEST_TIMEOUT,
+    session: Session | None = None,
 ):
     crs = to_crs(crs)
     collection_year_after = get_collection_grb_fiscal_parcels(
@@ -290,6 +310,8 @@ def get_collection_grb_parcels_by_date(
         partition=partition,
         limit=limit,
         crs=crs,
+        request_timeout=request_timeout,
+        session=session,
     )
     # Filter on specific date: delete all features > specific_date
     # This is an experimental loader and results are not guaranteed; unclear if we have to use "year-1 & year" OR if we have to use "year & year + 1"
@@ -318,6 +340,8 @@ def get_collection_grb_parcels_by_date(
         partition=partition,
         limit=limit,
         crs=crs,
+        request_timeout=request_timeout,
+        session=session,
     )
     kept_features = []
     if "features" in collection_year_before and len(collection_year_before) > 0:

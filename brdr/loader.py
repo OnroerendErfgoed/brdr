@@ -14,7 +14,6 @@ from abc import ABC
 from datetime import datetime
 from typing import Any, Optional, Dict
 
-import requests
 from geopandas import GeoDataFrame
 from shapely import force_2d, make_valid
 from shapely.geometry.base import BaseGeometry
@@ -28,7 +27,12 @@ from brdr.constants import (
 from brdr.feature_data import AlignerFeature, AlignerFeatureCollection
 from brdr.geometry_utils import buffer_pos, from_crs, to_crs
 from brdr.typings import FeatureCollection, InputId
-from brdr.utils import geojson_to_dicts, get_collection_by_partition
+from brdr.utils import (
+    DEFAULT_REQUEST_TIMEOUT,
+    geojson_to_dicts,
+    get_collection_by_partition,
+    get_http_session,
+)
 
 
 class Loader(ABC):
@@ -309,7 +313,13 @@ class GeoJsonFileLoader(GeoJsonLoader):
 class GeoJsonUrlLoader(GeoJsonLoader):
     """Loads GeoJSON data from a remote URL via HTTP GET."""
 
-    def __init__(self, url: str, id_property: str, is_reference: bool = False):
+    def __init__(
+        self,
+        url: str,
+        id_property: str,
+        is_reference: bool = False,
+        request_timeout: int = DEFAULT_REQUEST_TIMEOUT,
+    ):
         """
         Parameters
         ----------
@@ -320,7 +330,7 @@ class GeoJsonUrlLoader(GeoJsonLoader):
         is_reference : bool, optional
             Whether this is a reference layer. Defaults to False.
         """
-        response = requests.get(url, timeout=60)
+        response = get_http_session().get(url, timeout=request_timeout)
         response.raise_for_status()
         _input = response.json()
         super().__init__(
@@ -348,6 +358,7 @@ class OGCFeatureAPIReferenceLoader(GeoJsonLoader):
         aligner: Any,
         partition: int = 1000,
         limit: int = DOWNLOAD_LIMIT,
+        request_timeout: int = DEFAULT_REQUEST_TIMEOUT,
         is_reference: bool = True,
     ):
         """
@@ -375,6 +386,8 @@ class OGCFeatureAPIReferenceLoader(GeoJsonLoader):
         self.id_property = id_property
         self.part = partition
         self.limit = limit
+        self.request_timeout = request_timeout
+        self._session = get_http_session()
         self.coll = collection
         self.data_dict_source["source"] = url
         self.data_dict_source["source_url"] = url + "/" + collection
@@ -414,7 +427,7 @@ class OGCFeatureAPIReferenceLoader(GeoJsonLoader):
             raise ValueError("Thematic data not loaded")
 
         collections_url = self.url.rstrip("/") + "/collections"
-        response = requests.get(collections_url, timeout=60)
+        response = self._session.get(collections_url, timeout=self.request_timeout)
         response.raise_for_status()
         data = response.json()
         collections = [c["id"] for c in data.get("collections", [])]
@@ -423,7 +436,7 @@ class OGCFeatureAPIReferenceLoader(GeoJsonLoader):
             raise ValueError(f"Collection {self.coll} not found in {self.url}")
 
         collection_url = f"{collections_url}/{self.coll}"
-        response = requests.get(collection_url, timeout=60)
+        response = self._session.get(collection_url, timeout=self.request_timeout)
         response.raise_for_status()
         data = response.json()
 
@@ -450,6 +463,8 @@ class OGCFeatureAPIReferenceLoader(GeoJsonLoader):
             geometry=geom_union,
             partition=self.part,
             crs=self.aligner.crs,
+            request_timeout=self.request_timeout,
+            session=self._session,
         )
         self.input = dict(collection)
         self.data_dict_source[VERSION_DATE] = datetime.now().strftime(DATE_FORMAT)
@@ -476,7 +491,7 @@ class WFSReferenceLoader(GeoJsonLoader):
         output_format: Optional[str] = "application/json",
         max_pages: int | float = math.inf,
         max_workers: Optional[int] = None,
-        request_timeout: int = 60,
+        request_timeout: int = DEFAULT_REQUEST_TIMEOUT,
         is_reference: bool = True,
     ):
         """
@@ -522,6 +537,7 @@ class WFSReferenceLoader(GeoJsonLoader):
         self.max_pages = max_pages
         self.max_workers = max_workers
         self.request_timeout = request_timeout
+        self._session = get_http_session()
 
     def load_data(self) -> AlignerFeatureCollection:
         """
@@ -542,7 +558,9 @@ class WFSReferenceLoader(GeoJsonLoader):
             raise ValueError("Thematic data not loaded")
         self.data_dict_source[VERSION_DATE] = datetime.now().strftime(DATE_FORMAT)
         params = {"service": "WFS", "version": "2.0.0", "request": "GetCapabilities"}
-        response = requests.get(self.url, params=params, timeout=self.request_timeout)
+        response = self._session.get(
+            self.url, params=params, timeout=self.request_timeout
+        )
         response.raise_for_status()
         root = ET.fromstring(response.content)
 
@@ -593,6 +611,7 @@ class WFSReferenceLoader(GeoJsonLoader):
             max_workers=self.max_workers,
             max_pages=self.max_pages,
             request_timeout=self.request_timeout,
+            session=self._session,
         )
 
         self.input = dict(collection)
