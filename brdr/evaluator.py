@@ -277,13 +277,19 @@ class AlignerEvaluator(BaseEvaluator):
         )
 
         if calculate_zeros:
-            aligner_result_zero = aligner.process(
-                relevant_distances=[0],
-                thematic_ids=thematic_ids,
-                processing_area=processing_area,
-            )
-            process_results_zero = aligner_result_zero.get_results(aligner=aligner)
-            process_results = deep_merge(process_results_zero, process_results)
+            # Avoid an unconditional extra process([0]) pass. Most predict flows
+            # already contain rd=0; only backfill ids where rd=0 is missing.
+            missing_zero_ids = [
+                tid for tid in thematic_ids if 0 not in process_results.get(tid, {})
+            ]
+            if missing_zero_ids:
+                aligner_result_zero = aligner.process(
+                    relevant_distances=[0],
+                    thematic_ids=missing_zero_ids,
+                    processing_area=processing_area,
+                )
+                process_results_zero = aligner_result_zero.get_results(aligner=aligner)
+                process_results = deep_merge(process_results_zero, process_results)
 
         return process_results, process_results_predictions
 
