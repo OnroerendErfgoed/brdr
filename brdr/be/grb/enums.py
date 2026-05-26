@@ -1,6 +1,7 @@
 from enum import Enum
 
 import requests
+from requests import RequestException
 
 
 class GRBTypeLoader:
@@ -10,7 +11,7 @@ class GRBTypeLoader:
             "https://geo.api.vlaanderen.be/GRB/ogc/features/collections"
             + "/?f=application%2Fjson"
         )
-        response = requests.get(_url)
+        response = requests.get(_url, timeout=30)
         response.raise_for_status()
         data = response.json()
         dict_values = {}
@@ -22,7 +23,7 @@ class GRBTypeLoader:
     def get_enum(cls):
         try:
             dict_values = cls._fetch_values()
-        except:
+        except (RequestException, ValueError, KeyError):
             dict_values = {
                 "ADP": "Administratieve percelen",
                 "GBG": "gebouwen",

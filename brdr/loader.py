@@ -320,7 +320,9 @@ class GeoJsonUrlLoader(GeoJsonLoader):
         is_reference : bool, optional
             Whether this is a reference layer. Defaults to False.
         """
-        _input = requests.get(url).json()
+        response = requests.get(url, timeout=60)
+        response.raise_for_status()
+        _input = response.json()
         super().__init__(
             _input=_input,
             source=url,
@@ -412,7 +414,8 @@ class OGCFeatureAPIReferenceLoader(GeoJsonLoader):
             raise ValueError("Thematic data not loaded")
 
         collections_url = self.url.rstrip("/") + "/collections"
-        response = requests.get(collections_url)
+        response = requests.get(collections_url, timeout=60)
+        response.raise_for_status()
         data = response.json()
         collections = [c["id"] for c in data.get("collections", [])]
 
@@ -420,14 +423,15 @@ class OGCFeatureAPIReferenceLoader(GeoJsonLoader):
             raise ValueError(f"Collection {self.coll} not found in {self.url}")
 
         collection_url = f"{collections_url}/{self.coll}"
-        response = requests.get(collection_url)
+        response = requests.get(collection_url, timeout=60)
+        response.raise_for_status()
         data = response.json()
 
         supported_crs = []
         for crs in data.get("crs", "0000"):
             try:
                 supported_crs.append(to_crs(crs))
-            except:
+            except (TypeError, ValueError):
                 pass
         if self.aligner.crs not in supported_crs:
             raise ValueError(f"Unsupported CRS. Supported: {supported_crs}")
@@ -539,6 +543,7 @@ class WFSReferenceLoader(GeoJsonLoader):
         self.data_dict_source[VERSION_DATE] = datetime.now().strftime(DATE_FORMAT)
         params = {"service": "WFS", "version": "2.0.0", "request": "GetCapabilities"}
         response = requests.get(self.url, params=params, timeout=self.request_timeout)
+        response.raise_for_status()
         root = ET.fromstring(response.content)
 
         typename_exists = False
@@ -553,7 +558,7 @@ class WFSReferenceLoader(GeoJsonLoader):
                 for ocrs in feature_type.findall("{*}OtherCRS"):
                     try:
                         supported_crs.append(to_crs(ocrs.text))
-                    except:
+                    except (TypeError, ValueError):
                         pass
                 break
 
