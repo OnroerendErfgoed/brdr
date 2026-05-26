@@ -297,3 +297,8 @@
     - [#327] New processor based on linear referencing? (research)
     - [#303] create Loader for administrative areas
     - [#348] refactoring of metadata-decorator to descriptor module
+
+# 0.17.1
+
+- Fixed mock-test
+- Updated dependencies
