@@ -335,6 +335,49 @@ class BaseProcessor(ABC):
         ```
         """
         remarks = []
+        # Local memoization for expensive repeated cleanup chains inside one call.
+        _smooth_cache: dict[tuple[int, float, float], BaseGeometry] = {}
+        _denoise_cache: dict[tuple[int, float, float], BaseGeometry] = {}
+
+        def _geom_cache_key(geom: BaseGeometry, dist: float) -> tuple[bytes, float, float]:
+            # Use geometry content (WKB) instead of object identity to avoid
+            # accidental cache hits when Python reuses object ids.
+            return (geom.wkb, float(dist), float(mitre_limit))
+
+        def _smooth_geom(geom: BaseGeometry, dist: float) -> BaseGeometry:
+            key = _geom_cache_key(geom, dist)
+            cached = _smooth_cache.get(key)
+            if cached is not None:
+                return cached
+            out = buffer_pos(
+                buffer_neg(
+                    buffer_pos(geom, dist, mitre_limit=mitre_limit),
+                    2 * dist,
+                    mitre_limit=mitre_limit,
+                ),
+                dist,
+                mitre_limit=mitre_limit,
+            )
+            _smooth_cache[key] = out
+            return out
+
+        def _denoise_geom(geom: BaseGeometry, dist: float) -> BaseGeometry:
+            key = _geom_cache_key(geom, dist)
+            cached = _denoise_cache.get(key)
+            if cached is not None:
+                return cached
+            out = buffer_pos(
+                buffer_neg(
+                    geom,
+                    dist,
+                    mitre_limit=mitre_limit,
+                ),
+                dist,
+                mitre_limit=mitre_limit,
+            )
+            _denoise_cache[key] = out
+            return out
+
         geom_thematic = make_valid(geom_thematic)
         if geom_preresult is None or geom_preresult.is_empty:
             # Strict fallback rule: invalid pre-results return empty geometry.
@@ -446,17 +489,7 @@ class BaseProcessor(ABC):
                     }
                 )
 
-        geom_thematic_dissolved = buffer_pos(
-            buffer_neg(
-                buffer_pos(
-                    geom_preresult, correction_distance, mitre_limit=mitre_limit
-                ),
-                2 * correction_distance,
-                mitre_limit=mitre_limit,
-            ),
-            correction_distance,
-            mitre_limit=mitre_limit,
-        )
+        geom_thematic_dissolved = _smooth_geom(geom_preresult, correction_distance)
 
         geom_diff_add = safe_difference(
             geom_thematic_for_add_delete, geom_thematic_dissolved
@@ -482,40 +515,20 @@ class BaseProcessor(ABC):
             ),
         )
 
-        geom_thematic_preresult = buffer_pos(
-            buffer_neg(
-                buffer_pos(
-                    geom_diff_removed_added,
-                    correction_distance,
-                    mitre_limit=mitre_limit,
-                ),
-                2 * correction_distance,
-                mitre_limit=mitre_limit,
-            ),
-            correction_distance,
-            mitre_limit=mitre_limit,
+        geom_thematic_preresult = _smooth_geom(
+            geom_diff_removed_added, correction_distance
         )
 
         geom_thematic_cleaned_holes = fill_and_remove_gaps(
             geom_thematic_preresult, buffer_distance
         )
 
-        geom_thematic_result = buffer_pos(
-            buffer_neg(
-                buffer_pos(
-                    geom_thematic_cleaned_holes,
-                    correction_distance,
-                    mitre_limit=mitre_limit,
-                ),
-                2 * correction_distance,
-                mitre_limit=mitre_limit,
-            ),
-            correction_distance,
-            mitre_limit=mitre_limit,
+        geom_thematic_result = _smooth_geom(
+            geom_thematic_cleaned_holes, correction_distance
         )
         geom_thematic_result = make_valid(remove_repeated_points(geom_thematic_result))
 
-        if geom_thematic_result.is_empty or geom_thematic_result is None:
+        if geom_thematic_result is None or geom_thematic_result.is_empty:
             # Strict fallback rule: cleanup collapse returns empty geometry.
             geom_thematic_result = GeometryCollection()
             remark = ProcessRemark.INVALID_EMPTY_RETURNED
@@ -523,34 +536,23 @@ class BaseProcessor(ABC):
             self.logger.feedback_warning(remark)
 
         result.append(geom_thematic_result)
-        geom_thematic_result = safe_unary_union(result)
+        # Fast path: in this scope we only append one geometry.
+        if len(result) == 1:
+            geom_thematic_result = result[0]
+        else:
+            geom_thematic_result = safe_unary_union(result)
 
-        geom_result_diff = buffer_pos(
-            buffer_neg(
-                safe_symmetric_difference(geom_thematic_result, geom_thematic),
-                correction_distance,
-                mitre_limit=mitre_limit,
-            ),
+        geom_result_diff = _denoise_geom(
+            safe_symmetric_difference(geom_thematic_result, geom_thematic),
             correction_distance,
-            mitre_limit=mitre_limit,
         )
-        geom_result_diff_plus = buffer_pos(
-            buffer_neg(
-                safe_difference(geom_thematic_result, geom_thematic),
-                correction_distance,
-                mitre_limit=mitre_limit,
-            ),
+        geom_result_diff_plus = _denoise_geom(
+            safe_difference(geom_thematic_result, geom_thematic),
             correction_distance,
-            mitre_limit=mitre_limit,
         )
-        geom_result_diff_min = buffer_pos(
-            buffer_neg(
-                safe_difference(geom_thematic, geom_thematic_result),
-                correction_distance,
-                mitre_limit=mitre_limit,
-            ),
+        geom_result_diff_min = _denoise_geom(
+            safe_difference(geom_thematic, geom_thematic_result),
             correction_distance,
-            mitre_limit=mitre_limit,
         )
 
         return union_process_result(
