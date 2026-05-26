@@ -36,7 +36,7 @@ ORIGINAL_WKT = "original_wkt"
 FP_ANALYSIS_CSV_NAME = "fp_analysis.csv"
 FP_HISTOGRAM_NAME = "fp_histogram.png"
 FP_BOXPLOT_NAME = "fp_boxplot.png"
-FP_ESIMATION_COLUMN_NAME = "fp_estimation"
+FP_ESTIMATION_COLUMN_NAME = "fp_estimation"
 
 
 def get_parcel_lists(aligner, geom):
@@ -142,6 +142,7 @@ def get_false_positive_grb_parcels_dataframe(
     for f in features:
         count += 1
         print(f"{datetime.now()}: Processing feature {count}/{metrics['total_count']}")
+        key = None
         try:
             key = f["properties"][id_name]
             geom = geojson_geometry_to_shapely(f["geometry"])
@@ -152,7 +153,7 @@ def get_false_positive_grb_parcels_dataframe(
             print(f"Feature - key: {str(key)}")
             dict_theme = {key: geom}
 
-            aligner_config = AlignerConfig
+            aligner_config = AlignerConfig()
             aligner = Aligner(crs=crs, processor=processor, config=aligner_config)
             loader = DictLoader(dict_theme)
             aligner.load_thematic_data(loader)
@@ -171,7 +172,6 @@ def get_false_positive_grb_parcels_dataframe(
                 gdf = gpd.read_postgis(sql, conn_str, geom_col=geometry_name)
                 dict_reference = dict(zip(gdf[ref_id_name], gdf[geometry_name]))
                 loader = DictLoader(data_dict=dict_reference)
-                aligner.load_reference_data(loader)
             aligner.load_reference_data(loader)
             dict_original_wkt[key] = geom.wkt
             # COVERAGE ANALYSIS
@@ -302,7 +302,7 @@ def get_false_positive_grb_parcels_dataframe(
             "buffer_vip": dict_buffer_vip,
             "buffer_2": dict_buffer_2,
             "buffer_5": dict_buffer_5,
-            FP_ESIMATION_COLUMN_NAME: dict_fp,
+            FP_ESTIMATION_COLUMN_NAME: dict_fp,
             "brdr_prediction_5m": dict_prediction,
             "brdr_rd": dict_prediction_rd,
             "brdr_state": dict_prediction_state,
@@ -518,7 +518,7 @@ def export_analysis_results(
     path,
     df=None,
     metrics=None,
-    column_name=FP_ESIMATION_COLUMN_NAME,
+    column_name=FP_ESTIMATION_COLUMN_NAME,
     tolerance=2,
     wkt_columns=[ORIGINAL_WKT, BRDR_WKT, FALSE_POSITIVE_WKT, DOUBT_WKT],
 ):
