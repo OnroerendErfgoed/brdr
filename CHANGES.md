@@ -302,3 +302,7 @@
 
 - Fixed mock-test
 - Updated dependencies
+
+# 0.17.2
+
+- Fix for version number
