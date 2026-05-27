@@ -35,6 +35,41 @@ jobs:
           PYTHONFAULTHANDLER: "1"
         run: pytest -m "not native and not network and not slow"
 
+  light-observability:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    continue-on-error: true
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install pip-tools
+          pip-sync requirements-dev.txt
+      - name: Type check core modules (non-blocking)
+        continue-on-error: true
+        run: |
+          mypy brdr/aligner.py brdr/processor.py brdr/loader.py brdr/utils.py
+      - name: Run benchmark baseline (non-blocking)
+        continue-on-error: true
+        run: |
+          python analysis/bench/benchmark_core.py --rounds 3 --warmup 1 --output-dir analysis/bench/ci_bench
+      - name: Upload benchmark artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results-py${{ matrix.python-version }}
+          path: |
+            analysis/bench/ci_bench/benchmark_results.json
+            analysis/bench/ci_bench/benchmark_results.csv
+
   full-suite:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
