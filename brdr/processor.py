@@ -4,7 +4,6 @@ from abc import abstractmethod
 from dataclasses import replace
 from typing import List, Any
 
-import networkx as nx
 from shapely import GeometryCollection, MultiPoint
 from shapely import MultiLineString
 from shapely import MultiPolygon
@@ -43,6 +42,7 @@ from brdr.geometry_utils import safe_unary_union
 from brdr.geometry_utils import safe_union
 from brdr.geometry_utils import snap_geometry_to_reference
 from brdr.geometry_utils import to_multi
+from brdr.graph_backend import Graph, NoPath, NodeNotFound, new_graph, shortest_path
 from brdr.graph_utils import (
     _add_reference_edge,
     _build_reference_segment_index,
@@ -2100,6 +2100,7 @@ class NetworkGeometryProcessor(BaseProcessor):
             gap_threshold=0.1,
             snap_dist=correction_distance,
             directed=self.config.network_use_directed_graph,
+            backend=self.config.network_graph_backend,
             oneway_field=self.config.network_oneway_field,
             oneway_forward_values=self.config.network_oneway_forward_values,
             oneway_reverse_values=self.config.network_oneway_reverse_values,
@@ -2374,8 +2375,11 @@ class AnchorGeometryProcessor(BaseProcessor):
         self,
         lines: list[LineString],
         precomputed_ref_direction_index=None,
-    ) -> nx.Graph:
-        graph = nx.DiGraph() if self.config.network_use_directed_graph else nx.Graph()
+    ) -> Graph:
+        graph = new_graph(
+            directed=self.config.network_use_directed_graph,
+            backend=self.config.network_graph_backend,
+        )
         for line in lines:
             coords = list(line.coords)
             if len(coords) < 2:
@@ -2405,7 +2409,7 @@ class AnchorGeometryProcessor(BaseProcessor):
                     graph.add_edge(a, b, length=length, geometry=seg, tag="ref_lines")
         return graph
 
-    def _snap_point_to_graph(self, point: Point, graph: nx.Graph) -> Point:
+    def _snap_point_to_graph(self, point: Point, graph: Graph) -> Point:
         if graph.number_of_nodes() == 0:
             return point
         node = _select_network_node_by_snap_strategy(
@@ -2424,7 +2428,7 @@ class AnchorGeometryProcessor(BaseProcessor):
         return Point(node[0], node[1])
 
     def _has_nearby_snap_candidate(
-        self, point: Point, graph: nx.Graph, relevant_distance: float
+        self, point: Point, graph: Graph, relevant_distance: float
     ) -> bool:
         if graph.number_of_nodes() == 0:
             return False
@@ -2477,9 +2481,9 @@ class AnchorGeometryProcessor(BaseProcessor):
     def _align_linestring_anchor_routing(
         self,
         line: LineString,
-        graph: nx.Graph,
+        graph: Graph,
         relevant_distance: float,
-        anchor_selection_graph: nx.Graph | None = None,
+        anchor_selection_graph: Graph | None = None,
     ) -> LineString:
         if line is None or line.is_empty or line.length == 0:
             return line
@@ -2552,10 +2556,10 @@ class AnchorGeometryProcessor(BaseProcessor):
                 route_coords.extend(path_nodes[1:])
                 continue
             try:
-                path_nodes = nx.shortest_path(
+                path_nodes = shortest_path(
                     graph, start_node, end_node, weight="length"
                 )
-            except (nx.NetworkXNoPath, nx.NodeNotFound):
+            except (NoPath, NodeNotFound):
                 if self.config.network_use_directed_graph:
                     # Do not introduce synthetic straight jumps between nodes when
                     # directed constraints prevent a valid path.

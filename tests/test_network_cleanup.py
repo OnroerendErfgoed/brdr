@@ -1,11 +1,11 @@
-import networkx as nx
 from shapely.geometry import LineString
 
+from brdr.graph_backend import Graph
 from brdr.graph_utils import bridge_with_straight_line
 
 
 def test_bridge_with_straight_line_endpoint_removal_no_new_edge():
-    G = nx.Graph()
+    G = Graph()
     G.add_node((0.0, 0.0), tag="ref_vertex")
     G.add_node((1.0, 0.0), tag="pseudo_ref_vertex")
     G.add_edge(

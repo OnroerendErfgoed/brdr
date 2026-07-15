@@ -1,7 +1,6 @@
 ﻿import unittest
 from unittest.mock import patch
 
-import networkx as nx
 import numpy as np
 from shapely import GeometryCollection, Polygon
 from shapely import from_wkt
@@ -14,6 +13,7 @@ from brdr.constants import REMARK_FIELD_NAME
 from brdr.enums import OpenDomainStrategy
 from brdr.enums import ProcessRemark
 from brdr.geometry_utils import safe_difference
+from brdr.graph_backend import Graph, backend_name, is_backend_available
 from brdr.graph_utils import _build_reference_segment_index
 from brdr.graph_utils import find_best_circle_path
 from brdr.loader import DictLoader
@@ -555,6 +555,17 @@ class TestProcessor(unittest.TestCase):
         assert graph.has_edge((0.0, 0.0), (10.0, 0.0))
         assert not graph.has_edge((10.0, 0.0), (0.0, 0.0))
 
+    def test_anchorprocessor_respects_configured_graph_backend(self):
+        if not is_backend_available("rustworkx"):
+            self.skipTest("rustworkx is not installed")
+
+        processor = AnchorGeometryProcessor(
+            config=ProcessorConfig(network_graph_backend="rustworkx")
+        )
+        graph = processor._build_reference_graph([LineString([(0, 0), (10, 0)])])
+
+        assert backend_name(graph) == "rustworkx"
+
     def test_directed_anchor_processor_forces_directed_without_mutating_input_config(
         self,
     ):
@@ -724,7 +735,7 @@ class TestProcessor(unittest.TestCase):
     def test_find_best_circle_path_single_polygon_low_overlap_returns_original_ring(
         self,
     ):
-        graph = nx.Graph()
+        graph = Graph()
         # Candidate polygon around x=100 (far from original around x=0..10)
         coords = [(100, 0), (100, 10), (110, 10), (110, 0), (100, 0)]
         for i in range(len(coords) - 1):

@@ -2,9 +2,7 @@
 from itertools import combinations, islice
 from math import inf
 
-import networkx as nx
 import numpy as np
-from networkx import Graph
 from shapely import STRtree, get_coordinates, polygonize, unary_union
 from shapely.errors import GeometryTypeError
 from shapely.geometry import (
@@ -20,6 +18,27 @@ from shapely.geometry import (
 from shapely.ops import nearest_points, split
 
 from brdr.enums import SnapStrategy
+from brdr.graph_backend import (
+    DEFAULT_BACKEND,
+    Graph,
+    GraphError,
+    NoPath,
+    NodeNotFound,
+    all_simple_paths,
+    astar_path,
+    backend_name,
+    connected_components,
+    has_path,
+    is_forest,
+    new_graph,
+    relabel_nodes,
+    selfloop_edges,
+    shortest_path,
+    shortest_path_length,
+    shortest_simple_paths,
+    single_source_dijkstra_path_length,
+    weakly_connected_components,
+)
 from brdr.geometry_utils import (
     _angle_between_vectors_degrees,
     safe_unary_union,
@@ -480,12 +499,20 @@ def _add_pseudonode(G: Graph, p2, u, v, tag_point, tag_line):
 
 
 def find_closest_in_subset(target_point, edge_list):
-    geoms = [data.get("geometry") for _, _, data in edge_list if data.get("geometry")]
-    if not geoms:
+    best_edge = None
+    best_distance = float("inf")
+    for edge in edge_list:
+        _, _, data = edge
+        geom = data.get("geometry") if data else None
+        if geom is None:
+            continue
+        distance = float(target_point.distance(geom))
+        if distance < best_distance:
+            best_distance = distance
+            best_edge = edge
+    if best_edge is None:
         return None
-    tree = STRtree(geoms)
-    nearest_idx = tree.nearest(target_point)
-    return edge_list[nearest_idx]
+    return best_edge
 
 
 def add_pseudonodes_to_ref_line(
@@ -498,8 +525,18 @@ def add_pseudonodes_to_ref_line(
     theme_points: MultiPoint,
 ):
     if not ref_multiline is None and not ref_multiline.is_empty:
+        node_point_cache = {}
+
+        def _node_point(node):
+            point = node_point_cache.get(node)
+            if point is None:
+                point = Point(node)
+                node_point_cache[node] = point
+            return point
+
         for point in theme_points.geoms:
-            if G.has_node(point.coords[0]):
+            point_coord = point.coords[0]
+            if G.has_node(point_coord):
                 continue
             nearest_idx = srtree_ref_lines.nearest(point)
             u, v = edge_mapping_ref_lines[nearest_idx]
@@ -510,11 +547,17 @@ def add_pseudonodes_to_ref_line(
                 p1, p2 = nearest_points(point, line)
             else:
                 edge_list = list(G.edges(u, data=True)) + list(G.edges(v, data=True))
-                u, v, edge_data = find_closest_in_subset(point, edge_list)
+                closest_edge = find_closest_in_subset(point, edge_list)
+                if closest_edge is None:
+                    continue
+                u, v, edge_data = closest_edge
                 line = edge_data["geometry"]
                 p1, p2 = nearest_points(point, line)
-            if p2.distance(Point(u)) > snap_dist and p2.distance(Point(v)) > snap_dist:
-                if p1.distance(p2) <= 1e-7:
+            dist_to_u = p2.distance(_node_point(u))
+            dist_to_v = p2.distance(_node_point(v))
+            projection_dist = p1.distance(p2)
+            if dist_to_u > snap_dist and dist_to_v > snap_dist:
+                if projection_dist <= 1e-7:
                     _add_pseudonode(
                         G,
                         p2,
@@ -523,7 +566,7 @@ def add_pseudonodes_to_ref_line(
                         tag_point="pseudo_ref_vertex_1",
                         tag_line="ref_lines",
                     )
-                elif p1.distance(p2) <= relevant_distance:
+                elif projection_dist <= relevant_distance:
                     _add_pseudonode(
                         G,
                         p2,
@@ -533,12 +576,12 @@ def add_pseudonodes_to_ref_line(
                         tag_line="ref_lines",
                     )
             elif (
-                p2.distance(Point(u)) <= snap_dist
+                dist_to_u <= snap_dist
                 and G.nodes[u]["tag"] == "pseudo_ref_vertex"
             ):
                 G.nodes[u]["tag"] = "pseudo_ref_vertex_3"
             elif (
-                p2.distance(Point(v)) <= snap_dist
+                dist_to_v <= snap_dist
                 and G.nodes[v]["tag"] == "pseudo_ref_vertex"
             ):
                 G.nodes[v]["tag"] = "pseudo_ref_vertex_3"
@@ -672,8 +715,8 @@ def connect_network_gaps(G, snap_dist=0.001, gap_dist=0.1, merge_nodes=False):
                 break
 
     if merge_nodes and nodes_to_relabel:
-        nx.relabel_nodes(G, nodes_to_relabel, copy=False)
-        loops = list(nx.selfloop_edges(G))
+        relabel_nodes(G, nodes_to_relabel, copy=False)
+        loops = list(selfloop_edges(G))
         G.remove_edges_from(loops)
         if loops:
             logging.debug(f"Cleaned: {len(loops)} self-loops removed after merging.")
@@ -701,7 +744,7 @@ def connect_theme_and_reference(G, gap_dist=0.1, interconnect_dist=1.5):
     }
     extra_ref_nodes = [u for u, d in G.nodes(data=True) if d.get("tag") == "ref_points"]
     ref_node_ids.update(extra_ref_nodes)
-    ref_sub_graph = nx.Graph()
+    ref_sub_graph = new_graph(backend=backend_name(G))
     if ref_node_ids:
         ref_sub_graph.add_nodes_from((n, G.nodes[n]) for n in ref_node_ids if n in G)
     else:
@@ -735,9 +778,9 @@ def connect_network_components(
     G, interconnect_dist=2.0, edge_tags=["theme_lines", "ref_lines"]
 ):
     if _is_directed_graph(G):
-        components = list(nx.weakly_connected_components(G))
+        components = list(weakly_connected_components(G))
     else:
-        components = list(nx.connected_components(G))
+        components = list(connected_components(G))
     if len(components) <= 1:
         return G
 
@@ -805,16 +848,30 @@ def connect_network_components(
 def connect_unconnected_greedy(G, max_spatial_dist=50, detour_ratio=3.0):
     degree_graph = G.to_undirected() if _is_directed_graph(G) else G
     dead_ends = [n for n, d in degree_graph.degree() if d == 1]
+    if not dead_ends:
+        return G
+
+    dead_end_set = set(dead_ends)
     target_edges = []
     for u, v, data in G.edges(data=True):
         if "geometry" in data:
-            if u in dead_ends or v in dead_ends:
+            if u in dead_end_set or v in dead_end_set:
                 target_edges.append((u, v, data["geometry"]))
+    if not target_edges:
+        return G
+
+    target_edge_geoms = [geom for _, _, geom in target_edges]
+    target_edge_tree = STRtree(target_edge_geoms)
+    dead_end_point_cache = {node_id: Point(node_id) for node_id in dead_ends}
 
     all_candidates = []
     for node_id in dead_ends:
-        node_point = Point(node_id)
-        for u, v, edge_geom in target_edges:
+        node_point = dead_end_point_cache[node_id]
+        candidate_indices = target_edge_tree.query(
+            node_point, predicate="dwithin", distance=max_spatial_dist
+        )
+        for idx in candidate_indices:
+            u, v, edge_geom = target_edges[int(idx)]
             if node_id == u or node_id == v:
                 continue
             p1, p2 = nearest_points(node_point, edge_geom)
@@ -830,16 +887,20 @@ def connect_unconnected_greedy(G, max_spatial_dist=50, detour_ratio=3.0):
                 )
 
     all_candidates.sort(key=lambda x: x["spatial_dist"])
+    network_distance_cache = {}
     for link in all_candidates:
         u, v = link["to_edge"]
         dead_end_node = link["from_node"]
         proj_p = link["projection_point"]
         spatial_dist = link["spatial_dist"]
         try:
-            current_network_dist = nx.shortest_path_length(
-                G, source=dead_end_node, target=u, weight="length"
-            )
-        except nx.NetworkXNoPath:
+            cache_key = (dead_end_node, u)
+            if cache_key not in network_distance_cache:
+                network_distance_cache[cache_key] = shortest_path_length(
+                    G, source=dead_end_node, target=u, weight="length"
+                )
+            current_network_dist = network_distance_cache[cache_key]
+        except NoPath:
             current_network_dist = float("inf")
 
         if current_network_dist / spatial_dist > detour_ratio:
@@ -969,25 +1030,40 @@ def _perform_reconstruction(G, old_edge_geoms, tolerance):
     new_segments = (
         noded_output.geoms if hasattr(noded_output, "geoms") else [noded_output]
     )
-    new_G = nx.DiGraph() if _is_directed_graph(G) else nx.Graph()
+    new_G = new_graph(directed=_is_directed_graph(G), backend=backend_name(G))
+    resolved_node_cache = {}
 
     for seg in new_segments:
         segment_node_ids = []
         for coord in [seg.coords[0], seg.coords[-1]]:
-            p = Point(coord)
-            idx = node_tree.nearest(p)
-            if idx is not None:
-                nearest_geom = old_node_geoms[idx]
-                if p.distance(nearest_geom) < tolerance:
-                    orig_id = old_node_ids[idx]
-                    if orig_id not in new_G:
-                        new_G.add_node(orig_id, **old_nodes_data[orig_id])
-                    segment_node_ids.append(orig_id)
-                    continue
-            new_id = coord
-            if new_id not in new_G:
-                new_G.add_node(new_id, geometry=p, tag="pseudo_intersection_vertex")
-            segment_node_ids.append(new_id)
+            resolved_id = resolved_node_cache.get(coord)
+            if resolved_id is None:
+                point = Point(coord)
+                idx = node_tree.nearest(point)
+                if idx is not None:
+                    nearest_geom = old_node_geoms[idx]
+                    if point.distance(nearest_geom) < tolerance:
+                        resolved_id = old_node_ids[idx]
+                        if resolved_id not in new_G:
+                            new_G.add_node(resolved_id, **old_nodes_data[resolved_id])
+                    else:
+                        resolved_id = coord
+                else:
+                    resolved_id = coord
+                if resolved_id == coord and resolved_id not in new_G:
+                    new_G.add_node(
+                        resolved_id,
+                        geometry=point,
+                        tag="pseudo_intersection_vertex",
+                    )
+                resolved_node_cache[coord] = resolved_id
+            elif resolved_id == coord and resolved_id not in new_G:
+                new_G.add_node(
+                    resolved_id,
+                    geometry=Point(coord),
+                    tag="pseudo_intersection_vertex",
+                )
+            segment_node_ids.append(resolved_id)
 
         midpoint = seg.interpolate(0.5, normalized=True)
         edge_idx = edge_tree.nearest(midpoint)
@@ -1162,8 +1238,9 @@ def build_custom_network(
     oneway_reverse_values=("-1", "reverse", "backward"),
     allow_connector_edges_when_directed=True,
     directed_connector_penalty_factor=10.0,
+    backend=DEFAULT_BACKEND,
 ):
-    G = nx.DiGraph() if directed else nx.Graph()
+    G = new_graph(directed=directed, backend=backend)
     ref_direction_index = None
     if directed:
         ref_direction_index = precomputed_ref_direction_index
@@ -1339,21 +1416,21 @@ def longest_linestring_from_multilinestring(multilinestring):
         pseudonode_tag="",
     )
 
-    if nx.is_forest(graph):
+    if is_forest(graph):
         best_path = []
         best_length = 0.0
-        for component_nodes in nx.connected_components(graph):
+        for component_nodes in connected_components(graph):
             if not component_nodes or len(component_nodes) == 1:
                 continue
             sub = graph.subgraph(component_nodes)
             start = next(iter(component_nodes))
-            dist_start = nx.single_source_dijkstra_path_length(
+            dist_start = single_source_dijkstra_path_length(
                 sub, start, weight="length"
             )
             far_a = max(dist_start, key=dist_start.get)
-            dist_a = nx.single_source_dijkstra_path_length(sub, far_a, weight="length")
+            dist_a = single_source_dijkstra_path_length(sub, far_a, weight="length")
             far_b = max(dist_a, key=dist_a.get)
-            path = nx.shortest_path(sub, source=far_a, target=far_b, weight="length")
+            path = shortest_path(sub, source=far_a, target=far_b, weight="length")
             length = float(dist_a.get(far_b, 0.0))
             if length > best_length:
                 best_length = length
@@ -1367,7 +1444,7 @@ def longest_linestring_from_multilinestring(multilinestring):
         for target in graph.nodes:
             if source != target:
                 try:
-                    path = nx.shortest_path(
+                    path = shortest_path(
                         graph, source=source, target=target, weight="weight"
                     )
                     length = sum(
@@ -1377,7 +1454,7 @@ def longest_linestring_from_multilinestring(multilinestring):
                     if length > max_length:
                         max_length = length
                         longest_path = path
-                except nx.NetworkXNoPath:
+                except NoPath:
                     continue
     return LineString(longest_path)
 
@@ -1390,184 +1467,25 @@ def find_best_path_in_network(
     tolerance=None,
     angle_threshold_degrees=150.0,
 ):
-    def _ordered_candidates(point, base_choice, is_start=True):
-        if node_list is None or len(node_list) == 0:
-            return []
-        candidates = _candidate_nodes_within_tolerance(
-            point,
-            node_list,
-            tolerance,
-            node_points_tree=node_points_tree,
-            node_set=set(node_list),
-        )
-        if not candidates:
-            candidates = [base_choice] if base_choice is not None else []
-        if _is_directed_graph(graph):
-            # In directed mode we prefer candidates that can actually depart/arrive.
-            if is_start:
-                candidates = [
-                    n for n in candidates if graph.out_degree(n) > 0
-                ] or candidates
-            else:
-                candidates = [
-                    n for n in candidates if graph.in_degree(n) > 0
-                ] or candidates
-        candidates = sorted(
-            candidates,
-            key=lambda n: _candidate_rank_for_snap_strategy(
-                point,
-                graph,
-                n,
-                snap_strategy=snap_strategy,
-                angle_threshold_degrees=angle_threshold_degrees,
-            ),
-        )
-        if base_choice is not None and base_choice in candidates:
-            candidates.remove(base_choice)
-            candidates.insert(0, base_choice)
-        # Keep bounded to avoid combinatorial blow-up on dense graphs.
-        return candidates[:20]
-
-    def _select_best_directed_pair(start_point, end_point, start_node, end_node):
-        if not _is_directed_graph(graph):
-            return start_node, end_node
-        start_candidates = _ordered_candidates(start_point, start_node, is_start=True)
-        end_candidates = _ordered_candidates(end_point, end_node, is_start=False)
-        if not start_candidates or not end_candidates:
-            return start_node, end_node
-
-        best_pair = None
-        best_score = float("inf")
-        for s in start_candidates:
-            for e in end_candidates:
-                if s == e:
-                    continue
-                if not nx.has_path(graph, s, e):
-                    continue
-                try:
-                    path_len = float(
-                        nx.shortest_path_length(
-                            graph, source=s, target=e, weight="length"
-                        )
-                    )
-                except (
-                    nx.NetworkXNoPath,
-                    nx.NodeNotFound,
-                    nx.NetworkXError,
-                    ValueError,
-                    TypeError,
-                ):
-                    continue
-                s_rank = _candidate_rank_for_snap_strategy(
-                    start_point,
-                    graph,
-                    s,
-                    snap_strategy=snap_strategy,
-                    angle_threshold_degrees=angle_threshold_degrees,
-                )
-                e_rank = _candidate_rank_for_snap_strategy(
-                    end_point,
-                    graph,
-                    e,
-                    snap_strategy=snap_strategy,
-                    angle_threshold_degrees=angle_threshold_degrees,
-                )
-                # Prioritize strategy ranking first, then local snap distance, then route length.
-                snap_penalty = s_rank[2] + e_rank[2]
-                strategy_penalty = (s_rank[0] + e_rank[0]) * 1000 + (
-                    s_rank[1] + e_rank[1]
-                ) * 100
-                score = strategy_penalty + snap_penalty + 0.01 * path_len
-                if score < best_score:
-                    best_score = score
-                    best_pair = (s, e)
-        if best_pair is not None:
-            return best_pair
-        return start_node, end_node
-
-    start_point = Point(geom_to_process.coords[0])
-    end_point = Point(geom_to_process.coords[-1])
-    if start_point == end_point:
-        circle_graph = graph.to_undirected() if _is_directed_graph(graph) else graph
-        return find_best_circle_path(circle_graph, geom_to_process)
-    node_list = list(graph.nodes)
-    node_points_tree = None
-    if tolerance is not None and tolerance > 0 and node_list:
-        node_points_tree = STRtree([Point(n) for n in node_list])
-
-    start_node = _select_network_node_by_snap_strategy(
-        start_point,
+    search_state = _prepare_network_path_search(
+        geom_to_process,
         graph,
-        snap_strategy=snap_strategy,
-        tolerance=tolerance,
-        angle_threshold_degrees=angle_threshold_degrees,
-        node_list=node_list,
-        node_points_tree=node_points_tree,
+        snap_strategy,
+        tolerance,
+        angle_threshold_degrees,
     )
-    end_node = _select_network_node_by_snap_strategy(
-        end_point,
-        graph,
-        snap_strategy=snap_strategy,
-        tolerance=tolerance,
-        angle_threshold_degrees=angle_threshold_degrees,
-        node_list=node_list,
-        node_points_tree=node_points_tree,
-    )
-
-    if start_node is None or end_node is None:
+    if search_state is None:
         return None
-    if start_node == end_node:
-        # We recalculate the start and end node based on the pseudonodes (NO_PREFERENCE)
-        start_node = _select_network_node_by_snap_strategy(
-            start_point,
-            graph,
-            snap_strategy=SnapStrategy.NO_PREFERENCE,
-            tolerance=tolerance,
-            angle_threshold_degrees=angle_threshold_degrees,
-            node_list=node_list,
-            node_points_tree=node_points_tree,
-        )
-        end_node = _select_network_node_by_snap_strategy(
-            end_point,
-            graph,
-            snap_strategy=SnapStrategy.NO_PREFERENCE,
-            tolerance=tolerance,
-            angle_threshold_degrees=angle_threshold_degrees,
-            node_list=node_list,
-            node_points_tree=node_points_tree,
-        )
-        if start_node == end_node:
-            return None
-
-    if _is_directed_graph(graph):
-        start_node, end_node = _select_best_directed_pair(
-            start_point, end_point, start_node, end_node
+    if search_state["is_closed"]:
+        return find_best_circle_path(
+            search_state["circle_graph"], geom_to_process
         )
 
-    path_found = nx.has_path(graph, start_node, end_node)
-    logging.debug("Path detected? - " + str(path_found))
-    if not path_found and not _is_directed_graph(graph):
-        graph = connect_network_components(
-            graph,
-            50,
-            edge_tags=[
-                "theme_lines",
-                "ref_lines",
-                "interconnect",
-                "interconnect_lines",
-                "gap_closure",
-            ],
-        )
+    graph = search_state["graph"]
+    start_node = search_state["start_node"]
+    end_node = search_state["end_node"]
 
-    # Optional pre-pruning to reduce the number of candidate simple paths.
-    # graph = prune_graph_for_input_geometry(
-    #     graph,
-    #     geom_to_process,
-    #     corridor_distance=tolerance if tolerance is not None else 5.0,
-    #     max_candidates_per_junction=3,
-    # )
-
-    all_paths_generator = nx.all_simple_paths(
+    all_paths_generator = all_simple_paths(
         graph, source=start_node, target=end_node, cutoff=cutoff
     )
 
@@ -1651,18 +1569,18 @@ def find_best_path_in_network_k(
             for e in end_candidates:
                 if s == e:
                     continue
-                if not nx.has_path(graph, s, e):
+                if not has_path(graph, s, e):
                     continue
                 try:
                     path_len = float(
-                        nx.shortest_path_length(
+                        shortest_path_length(
                             graph, source=s, target=e, weight="length"
                         )
                     )
                 except (
-                    nx.NetworkXNoPath,
-                    nx.NodeNotFound,
-                    nx.NetworkXError,
+                    NoPath,
+                    NodeNotFound,
+                    GraphError,
                     ValueError,
                     TypeError,
                 ):
@@ -1751,7 +1669,7 @@ def find_best_path_in_network_k(
             start_point, end_point, start_node, end_node
         )
 
-    path_found = nx.has_path(graph, start_node, end_node)
+    path_found = has_path(graph, start_node, end_node)
     logging.debug("Path detected? - " + str(path_found))
     if not path_found and not _is_directed_graph(graph):
         graph = connect_network_components(
@@ -1769,10 +1687,10 @@ def find_best_path_in_network_k(
     min_dist = inf
     best_line = None
     try:
-        path_iter = nx.shortest_simple_paths(
+        path_iter = shortest_simple_paths(
             graph, source=start_node, target=end_node, weight="length"
         )
-    except (nx.NetworkXNoPath, nx.NodeNotFound, nx.NetworkXError):
+    except (NoPath, NodeNotFound, GraphError):
         return None
 
     for path in islice(path_iter, k):
@@ -1813,6 +1731,22 @@ def _prepare_network_path_search(
     tolerance,
     angle_threshold_degrees,
 ):
+    rank_cache = {}
+
+    def _rank_candidate(point, node):
+        cache_key = (point.x, point.y, node)
+        ranked = rank_cache.get(cache_key)
+        if ranked is None:
+            ranked = _candidate_rank_for_snap_strategy(
+                point,
+                graph,
+                node,
+                snap_strategy=snap_strategy,
+                angle_threshold_degrees=angle_threshold_degrees,
+            )
+            rank_cache[cache_key] = ranked
+        return ranked
+
     def _ordered_candidates(point, base_choice, is_start=True):
         if node_list is None or len(node_list) == 0:
             return []
@@ -1821,7 +1755,7 @@ def _prepare_network_path_search(
             node_list,
             tolerance,
             node_points_tree=node_points_tree,
-            node_set=set(node_list),
+            node_set=node_set,
         )
         if not candidates:
             candidates = [base_choice] if base_choice is not None else []
@@ -1836,13 +1770,7 @@ def _prepare_network_path_search(
                 ] or candidates
         candidates = sorted(
             candidates,
-            key=lambda n: _candidate_rank_for_snap_strategy(
-                point,
-                graph,
-                n,
-                snap_strategy=snap_strategy,
-                angle_threshold_degrees=angle_threshold_degrees,
-            ),
+            key=lambda n: _rank_candidate(point, n),
         )
         if base_choice is not None and base_choice in candidates:
             candidates.remove(base_choice)
@@ -1863,36 +1791,22 @@ def _prepare_network_path_search(
             for e in end_candidates:
                 if s == e:
                     continue
-                if not nx.has_path(graph, s, e):
-                    continue
                 try:
                     path_len = float(
-                        nx.shortest_path_length(
+                        shortest_path_length(
                             graph, source=s, target=e, weight="length"
                         )
                     )
                 except (
-                    nx.NetworkXNoPath,
-                    nx.NodeNotFound,
-                    nx.NetworkXError,
+                    NoPath,
+                    NodeNotFound,
+                    GraphError,
                     ValueError,
                     TypeError,
                 ):
                     continue
-                s_rank = _candidate_rank_for_snap_strategy(
-                    start_point,
-                    graph,
-                    s,
-                    snap_strategy=snap_strategy,
-                    angle_threshold_degrees=angle_threshold_degrees,
-                )
-                e_rank = _candidate_rank_for_snap_strategy(
-                    end_point,
-                    graph,
-                    e,
-                    snap_strategy=snap_strategy,
-                    angle_threshold_degrees=angle_threshold_degrees,
-                )
+                s_rank = _rank_candidate(start_point, s)
+                e_rank = _rank_candidate(end_point, e)
                 snap_penalty = s_rank[2] + e_rank[2]
                 strategy_penalty = (s_rank[0] + e_rank[0]) * 1000 + (
                     s_rank[1] + e_rank[1]
@@ -1920,6 +1834,7 @@ def _prepare_network_path_search(
         }
 
     node_list = list(graph.nodes)
+    node_set = set(node_list)
     node_points_tree = None
     if tolerance is not None and tolerance > 0 and node_list:
         node_points_tree = STRtree([Point(n) for n in node_list])
@@ -1972,7 +1887,7 @@ def _prepare_network_path_search(
             start_point, end_point, start_node, end_node
         )
 
-    path_found = nx.has_path(graph, start_node, end_node)
+    path_found = has_path(graph, start_node, end_node)
     logging.debug("Path detected? - " + str(path_found))
     if not path_found and not _is_directed_graph(graph):
         graph = connect_network_components(
@@ -1986,7 +1901,7 @@ def _prepare_network_path_search(
                 "gap_closure",
             ],
         )
-        if not nx.has_path(graph, start_node, end_node):
+        if not has_path(graph, start_node, end_node):
             return None
 
     return {
@@ -2091,7 +2006,7 @@ def find_best_path_in_network_weighted(
 
     try:
         if use_astar:
-            path = nx.astar_path(
+            path = astar_path(
                 graph,
                 start_node,
                 end_node,
@@ -2099,13 +2014,13 @@ def find_best_path_in_network_weighted(
                 weight=_edge_cost,
             )
         else:
-            path = nx.shortest_path(
+            path = shortest_path(
                 graph,
                 source=start_node,
                 target=end_node,
                 weight=_edge_cost,
             )
-    except (nx.NetworkXNoPath, nx.NodeNotFound, nx.NetworkXError):
+    except (NoPath, NodeNotFound, GraphError):
         return None
 
     if len(path) < 2 or len(path) - 1 > cutoff:
@@ -2439,10 +2354,10 @@ def get_non_pseudo_coords(geom1, geom2):
 #             spatial_dist = u_geom.distance(Point(v_node))
 #             # 4. Check the topological 'detour'
 #             try:
-#                 graph_dist = nx.shortest_path_length(
+#                 graph_dist = shortest_path_length(
 #                     G, source=u_node, target=v_node, weight="length"
 #                 )
-#             except nx.NetworkXNoPath:
+#             except NoPath:
 #                 # If they are in different components, the detour is infinite
 #                 graph_dist = float("inf")
 #
@@ -2504,7 +2419,7 @@ def get_non_pseudo_coords(geom1, geom2):
 #                 try:
 #                     # Calculate the current detour (network distance)
 #                     # We use 'u' as a proxy for the network distance to that edge
-#                     network_dist = nx.shortest_path_length(
+#                     network_dist = shortest_path_length(
 #                         G, source=node_id, target=u, weight="length"
 #                     )
 #
@@ -2517,7 +2432,7 @@ def get_non_pseudo_coords(geom1, geom2):
 #                             "spatial_dist": spatial_dist,
 #                             "network_dist": network_dist,
 #                         }
-#                 except nx.NetworkXNoPath:
+#                 except NoPath:
 #                     # If no path exists at all, this connection is high priority
 #                     best_link = {
 #                         "from_node": node_id,

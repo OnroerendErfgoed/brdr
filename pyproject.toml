@@ -30,6 +30,7 @@ dependencies = [
     "shapely~=2.1",
     "topojson~=1.10",
     "networkx~=3.6",
+    "rustworkx~=0.18",
     "pyproj~=3.7",
     "osmnx~=2.0",
     "geopandas~=1.1, >=1.1.2",
@@ -52,6 +53,7 @@ test = [
     "toml==0.10.2",
 ]
 dev = [
+    "brdr[graph]",
     "brdr[viz]",
     "brdr[test]",
     "black~=26.3",

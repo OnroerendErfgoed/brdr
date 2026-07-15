@@ -1,9 +1,9 @@
 import unittest
 
-import networkx as nx
 from shapely.geometry import LineString, MultiLineString
 
 from brdr.enums import SnapStrategy
+from brdr.graph_backend import DiGraph, Graph
 from brdr.graph_utils import (
     bridge_with_straight_line,
     clean_pseudo_nodes_by_snap_strategy,
@@ -24,7 +24,7 @@ class TestCleanSnapStrategy(unittest.TestCase):
         self.assertEqual(end_coords, {(0.0, 0.0), (4.0, 0.0)})
 
     def test_bridge_preserves_polyline_shape_when_removing_node(self):
-        G = nx.Graph()
+        G = Graph()
         u = (0.0, 0.0)
         n = (1.0, 1.0)
         v = (2.0, 0.0)
@@ -55,7 +55,7 @@ class TestCleanSnapStrategy(unittest.TestCase):
         self.assertEqual(list(merged.coords), [u, n, v])
 
     def test_prefer_vertices_ends_and_angles_removes_regular_real_vertex_near_end(self):
-        G = nx.Graph()
+        G = Graph()
         a = (0.0, 0.0)  # end
         b = (2.0, 0.0)  # regular interior vertex
         c = (4.0, 0.0)  # end
@@ -89,7 +89,7 @@ class TestCleanSnapStrategy(unittest.TestCase):
         self.assertTrue(cleaned.has_edge(a, c))
 
     def test_pseudo_tag_interacts_with_snap_strategy_in_node_selection(self):
-        G = nx.Graph()
+        G = Graph()
         a = (0.0, 0.0)  # real end
         b = (2.0, 0.0)  # real interior
         c = (4.0, 0.0)  # real end
@@ -126,7 +126,7 @@ class TestCleanSnapStrategy(unittest.TestCase):
         self.assertEqual(list(result_ends_angles.coords), [a, b, c])
 
     def test_all_snap_strategies_node_selection_undirected(self):
-        G = nx.Graph()
+        G = Graph()
         a = (0.0, 0.0)  # real end node
         b = (2.0, 0.0)  # interior real node
         c = (4.0, 0.0)  # real end node
@@ -180,7 +180,7 @@ class TestCleanSnapStrategy(unittest.TestCase):
         self.assertEqual(list(result_prefer_ends_angles.coords), [a, b, c])
 
     def test_directed_pair_search_prefers_reachable_start_end_candidates(self):
-        G = nx.DiGraph()
+        G = DiGraph()
         # Reachable path
         s_good = (0.6, 0.0)
         m = (2.0, 0.0)
@@ -236,7 +236,7 @@ class TestCleanSnapStrategy(unittest.TestCase):
         self.assertEqual(list(result.coords), [s_good, m, e_good])
 
     def test_undirected_keeps_nearest_node_behavior(self):
-        G = nx.Graph()
+        G = Graph()
         s_good = (0.6, 0.0)
         m = (2.0, 0.0)
         e_good = (4.0, 0.0)
