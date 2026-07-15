@@ -96,6 +96,18 @@ You can install the latest release of `brdr` from
 pip install brdr
 ```
 
+`rustworkx` is the default path-search backend for network processors:
+
+```python
+from brdr.configs import ProcessorConfig
+
+config = ProcessorConfig()
+assert config.network_graph_backend == "rustworkx"
+```
+
+You can still override this explicitly, for example with
+`ProcessorConfig(network_graph_backend="networkx")`.
+
 ## Basic example
 
 ``` python

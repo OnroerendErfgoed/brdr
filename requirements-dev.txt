@@ -62,6 +62,7 @@ networkx==3.6.1
     #   brdr
     #   brdr (pyproject.toml)
     #   osmnx
+rustworkx==0.18.0
 numpy==1.26.4
     # via
     #   contourpy
