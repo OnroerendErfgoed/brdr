@@ -1,5 +1,5 @@
 ﻿import logging
-from itertools import combinations
+from itertools import combinations, islice
 from math import inf
 
 import networkx as nx
@@ -73,6 +73,130 @@ def _iter_line_geometries(geometry):
     elif isinstance(geometry, GeometryCollection):
         for geom in geometry.geoms:
             yield from _iter_line_geometries(geom)
+
+
+def prune_graph_for_input_geometry(
+    graph,
+    input_geometry,
+    corridor_distance,
+    max_candidates_per_junction=3,
+    angle_weight=0.25,
+):
+    """
+    Conservatively prune a network graph around an input geometry before path search.
+
+    The reduction happens in two phases:
+    1. Remove edges that are fully outside a corridor around ``input_geometry``.
+    2. At real branching nodes, keep only the locally best matching outgoing edges.
+
+    This is meant as a pre-processing helper to reduce the number of candidate
+    simple paths. It is intentionally conservative and keeps start/end corridor
+    context intact, but it can still remove globally optimal alternatives when
+    the local ranking is misleading.
+    """
+    if graph is None or input_geometry is None or input_geometry.is_empty:
+        return graph
+    try:
+        corridor_distance = float(corridor_distance)
+    except (TypeError, ValueError):
+        return graph
+    if corridor_distance <= 0:
+        return graph
+
+    pruned = graph.copy()
+    corridor = input_geometry.buffer(corridor_distance)
+    start_point = Point(input_geometry.coords[0])
+    end_point = Point(input_geometry.coords[-1])
+
+    edges_to_remove = []
+    for u, v, data in pruned.edges(data=True):
+        edge_geom = _edge_geometry_for_path_search(u, v, data)
+        if edge_geom.intersects(corridor):
+            continue
+        if Point(u).distance(corridor) <= corridor_distance:
+            continue
+        if Point(v).distance(corridor) <= corridor_distance:
+            continue
+        edges_to_remove.append((u, v))
+    if edges_to_remove:
+        pruned.remove_edges_from(edges_to_remove)
+
+    isolated_nodes = [n for n in pruned.nodes if pruned.degree(n) == 0]
+    if isolated_nodes:
+        pruned.remove_nodes_from(isolated_nodes)
+
+    geom_coords = list(input_geometry.coords)
+    geom_segments = []
+    for i in range(len(geom_coords) - 1):
+        seg = LineString([geom_coords[i], geom_coords[i + 1]])
+        if seg.length > 0:
+            geom_segments.append(seg)
+
+    def _local_direction_reference(edge_geom):
+        if not geom_segments:
+            return None
+        midpoint = edge_geom.interpolate(0.5, normalized=True)
+        nearest_seg = min(geom_segments, key=lambda seg: seg.distance(midpoint))
+        coords = list(nearest_seg.coords)
+        vec = np.array(
+            [coords[-1][0] - coords[0][0], coords[-1][1] - coords[0][1]], dtype=float
+        )
+        if np.linalg.norm(vec) == 0:
+            return None
+        return vec
+
+    for node in list(pruned.nodes):
+        if _is_directed_graph(pruned):
+            neighbors = list(pruned.successors(node))
+        else:
+            neighbors = list(pruned.neighbors(node))
+        if len(neighbors) <= max_candidates_per_junction:
+            continue
+
+        ranked = []
+        for nb in neighbors:
+            data = pruned.get_edge_data(node, nb) or {}
+            edge_geom = _edge_geometry_for_path_search(node, nb, data)
+            edge_dist = float(edge_geom.distance(input_geometry))
+            end_dist = min(Point(nb).distance(start_point), Point(nb).distance(end_point))
+
+            turn_penalty = 0.0
+            edge_coords = list(edge_geom.coords)
+            edge_vec = np.array(
+                [
+                    edge_coords[-1][0] - edge_coords[0][0],
+                    edge_coords[-1][1] - edge_coords[0][1],
+                ],
+                dtype=float,
+            )
+            ref_vec = _local_direction_reference(edge_geom)
+            if (
+                ref_vec is not None
+                and np.linalg.norm(edge_vec) > 0
+                and np.linalg.norm(ref_vec) > 0
+            ):
+                turn_penalty = (
+                    _angle_between_vectors_degrees(edge_vec, ref_vec) / 180.0
+                )
+
+            ranked.append(
+                (
+                    edge_dist + end_dist * 0.1 + float(angle_weight) * turn_penalty,
+                    nb,
+                )
+            )
+
+        ranked.sort(key=lambda item: item[0])
+        keep = {nb for _, nb in ranked[:max_candidates_per_junction]}
+        for nb in neighbors:
+            if nb in keep:
+                continue
+            _remove_edge_auto(pruned, node, nb)
+
+    isolated_nodes = [n for n in pruned.nodes if pruned.degree(n) == 0]
+    if isolated_nodes:
+        pruned.remove_nodes_from(isolated_nodes)
+    return pruned
 
 
 def _normalize_oneway_value(value):
@@ -1435,6 +1559,14 @@ def find_best_path_in_network(
             ],
         )
 
+    # Optional pre-pruning to reduce the number of candidate simple paths.
+    # graph = prune_graph_for_input_geometry(
+    #     graph,
+    #     geom_to_process,
+    #     corridor_distance=tolerance if tolerance is not None else 5.0,
+    #     max_candidates_per_junction=3,
+    # )
+
     all_paths_generator = nx.all_simple_paths(
         graph, source=start_node, target=end_node, cutoff=cutoff
     )
@@ -1457,6 +1589,649 @@ def find_best_path_in_network(
                     return best_line
         except (ValueError, TypeError):
             continue
+    return best_line
+
+
+def find_best_path_in_network_k(
+    geom_to_process,
+    graph,
+    cutoff=1000,
+    k=50,
+    snap_strategy=SnapStrategy.NO_PREFERENCE,
+    tolerance=None,
+    angle_threshold_degrees=150.0,
+):
+    def _ordered_candidates(point, base_choice, is_start=True):
+        if node_list is None or len(node_list) == 0:
+            return []
+        candidates = _candidate_nodes_within_tolerance(
+            point,
+            node_list,
+            tolerance,
+            node_points_tree=node_points_tree,
+            node_set=set(node_list),
+        )
+        if not candidates:
+            candidates = [base_choice] if base_choice is not None else []
+        if _is_directed_graph(graph):
+            if is_start:
+                candidates = [
+                    n for n in candidates if graph.out_degree(n) > 0
+                ] or candidates
+            else:
+                candidates = [
+                    n for n in candidates if graph.in_degree(n) > 0
+                ] or candidates
+        candidates = sorted(
+            candidates,
+            key=lambda n: _candidate_rank_for_snap_strategy(
+                point,
+                graph,
+                n,
+                snap_strategy=snap_strategy,
+                angle_threshold_degrees=angle_threshold_degrees,
+            ),
+        )
+        if base_choice is not None and base_choice in candidates:
+            candidates.remove(base_choice)
+            candidates.insert(0, base_choice)
+        return candidates[:20]
+
+    def _select_best_directed_pair(start_point, end_point, start_node, end_node):
+        if not _is_directed_graph(graph):
+            return start_node, end_node
+        start_candidates = _ordered_candidates(start_point, start_node, is_start=True)
+        end_candidates = _ordered_candidates(end_point, end_node, is_start=False)
+        if not start_candidates or not end_candidates:
+            return start_node, end_node
+
+        best_pair = None
+        best_score = float("inf")
+        for s in start_candidates:
+            for e in end_candidates:
+                if s == e:
+                    continue
+                if not nx.has_path(graph, s, e):
+                    continue
+                try:
+                    path_len = float(
+                        nx.shortest_path_length(
+                            graph, source=s, target=e, weight="length"
+                        )
+                    )
+                except (
+                    nx.NetworkXNoPath,
+                    nx.NodeNotFound,
+                    nx.NetworkXError,
+                    ValueError,
+                    TypeError,
+                ):
+                    continue
+                s_rank = _candidate_rank_for_snap_strategy(
+                    start_point,
+                    graph,
+                    s,
+                    snap_strategy=snap_strategy,
+                    angle_threshold_degrees=angle_threshold_degrees,
+                )
+                e_rank = _candidate_rank_for_snap_strategy(
+                    end_point,
+                    graph,
+                    e,
+                    snap_strategy=snap_strategy,
+                    angle_threshold_degrees=angle_threshold_degrees,
+                )
+                snap_penalty = s_rank[2] + e_rank[2]
+                strategy_penalty = (s_rank[0] + e_rank[0]) * 1000 + (
+                    s_rank[1] + e_rank[1]
+                ) * 100
+                score = strategy_penalty + snap_penalty + 0.01 * path_len
+                if score < best_score:
+                    best_score = score
+                    best_pair = (s, e)
+        if best_pair is not None:
+            return best_pair
+        return start_node, end_node
+
+    start_point = Point(geom_to_process.coords[0])
+    end_point = Point(geom_to_process.coords[-1])
+    if start_point == end_point:
+        circle_graph = graph.to_undirected() if _is_directed_graph(graph) else graph
+        return find_best_circle_path(circle_graph, geom_to_process)
+    node_list = list(graph.nodes)
+    node_points_tree = None
+    if tolerance is not None and tolerance > 0 and node_list:
+        node_points_tree = STRtree([Point(n) for n in node_list])
+
+    start_node = _select_network_node_by_snap_strategy(
+        start_point,
+        graph,
+        snap_strategy=snap_strategy,
+        tolerance=tolerance,
+        angle_threshold_degrees=angle_threshold_degrees,
+        node_list=node_list,
+        node_points_tree=node_points_tree,
+    )
+    end_node = _select_network_node_by_snap_strategy(
+        end_point,
+        graph,
+        snap_strategy=snap_strategy,
+        tolerance=tolerance,
+        angle_threshold_degrees=angle_threshold_degrees,
+        node_list=node_list,
+        node_points_tree=node_points_tree,
+    )
+
+    if start_node is None or end_node is None:
+        return None
+    if start_node == end_node:
+        start_node = _select_network_node_by_snap_strategy(
+            start_point,
+            graph,
+            snap_strategy=SnapStrategy.NO_PREFERENCE,
+            tolerance=tolerance,
+            angle_threshold_degrees=angle_threshold_degrees,
+            node_list=node_list,
+            node_points_tree=node_points_tree,
+        )
+        end_node = _select_network_node_by_snap_strategy(
+            end_point,
+            graph,
+            snap_strategy=SnapStrategy.NO_PREFERENCE,
+            tolerance=tolerance,
+            angle_threshold_degrees=angle_threshold_degrees,
+            node_list=node_list,
+            node_points_tree=node_points_tree,
+        )
+        if start_node == end_node:
+            return None
+
+    if _is_directed_graph(graph):
+        start_node, end_node = _select_best_directed_pair(
+            start_point, end_point, start_node, end_node
+        )
+
+    path_found = nx.has_path(graph, start_node, end_node)
+    logging.debug("Path detected? - " + str(path_found))
+    if not path_found and not _is_directed_graph(graph):
+        graph = connect_network_components(
+            graph,
+            50,
+            edge_tags=[
+                "theme_lines",
+                "ref_lines",
+                "interconnect",
+                "interconnect_lines",
+                "gap_closure",
+            ],
+        )
+
+    min_dist = inf
+    best_line = None
+    try:
+        path_iter = nx.shortest_simple_paths(
+            graph, source=start_node, target=end_node, weight="length"
+        )
+    except (nx.NetworkXNoPath, nx.NodeNotFound, nx.NetworkXError):
+        return None
+
+    for path in islice(path_iter, k):
+        if len(path) < 2:
+            continue
+        if len(path) - 1 > cutoff:
+            continue
+        try:
+            line = LineString(path)
+            dist = total_vertex_distance(line, geom_to_process)
+            if dist < min_dist:
+                min_dist = dist
+                best_line = line
+                if dist == 0.0:
+                    return best_line
+        except (ValueError, TypeError):
+            continue
+    return best_line
+
+
+def _edge_geometry_for_path_search(u, v, data):
+    geometry = data.get("geometry") if isinstance(data, dict) else None
+    if isinstance(geometry, LineString) and len(geometry.coords) >= 2:
+        return geometry
+    return LineString([u, v])
+
+
+def _neighbor_nodes_for_path_search(graph, node):
+    if _is_directed_graph(graph):
+        return list(graph.successors(node))
+    return list(graph.neighbors(node))
+
+
+def _prepare_network_path_search(
+    geom_to_process,
+    graph,
+    snap_strategy,
+    tolerance,
+    angle_threshold_degrees,
+):
+    def _ordered_candidates(point, base_choice, is_start=True):
+        if node_list is None or len(node_list) == 0:
+            return []
+        candidates = _candidate_nodes_within_tolerance(
+            point,
+            node_list,
+            tolerance,
+            node_points_tree=node_points_tree,
+            node_set=set(node_list),
+        )
+        if not candidates:
+            candidates = [base_choice] if base_choice is not None else []
+        if _is_directed_graph(graph):
+            if is_start:
+                candidates = [
+                    n for n in candidates if graph.out_degree(n) > 0
+                ] or candidates
+            else:
+                candidates = [
+                    n for n in candidates if graph.in_degree(n) > 0
+                ] or candidates
+        candidates = sorted(
+            candidates,
+            key=lambda n: _candidate_rank_for_snap_strategy(
+                point,
+                graph,
+                n,
+                snap_strategy=snap_strategy,
+                angle_threshold_degrees=angle_threshold_degrees,
+            ),
+        )
+        if base_choice is not None and base_choice in candidates:
+            candidates.remove(base_choice)
+            candidates.insert(0, base_choice)
+        return candidates[:20]
+
+    def _select_best_directed_pair(start_point, end_point, start_node, end_node):
+        if not _is_directed_graph(graph):
+            return start_node, end_node
+        start_candidates = _ordered_candidates(start_point, start_node, is_start=True)
+        end_candidates = _ordered_candidates(end_point, end_node, is_start=False)
+        if not start_candidates or not end_candidates:
+            return start_node, end_node
+
+        best_pair = None
+        best_score = float("inf")
+        for s in start_candidates:
+            for e in end_candidates:
+                if s == e:
+                    continue
+                if not nx.has_path(graph, s, e):
+                    continue
+                try:
+                    path_len = float(
+                        nx.shortest_path_length(
+                            graph, source=s, target=e, weight="length"
+                        )
+                    )
+                except (
+                    nx.NetworkXNoPath,
+                    nx.NodeNotFound,
+                    nx.NetworkXError,
+                    ValueError,
+                    TypeError,
+                ):
+                    continue
+                s_rank = _candidate_rank_for_snap_strategy(
+                    start_point,
+                    graph,
+                    s,
+                    snap_strategy=snap_strategy,
+                    angle_threshold_degrees=angle_threshold_degrees,
+                )
+                e_rank = _candidate_rank_for_snap_strategy(
+                    end_point,
+                    graph,
+                    e,
+                    snap_strategy=snap_strategy,
+                    angle_threshold_degrees=angle_threshold_degrees,
+                )
+                snap_penalty = s_rank[2] + e_rank[2]
+                strategy_penalty = (s_rank[0] + e_rank[0]) * 1000 + (
+                    s_rank[1] + e_rank[1]
+                ) * 100
+                score = strategy_penalty + snap_penalty + 0.01 * path_len
+                if score < best_score:
+                    best_score = score
+                    best_pair = (s, e)
+        if best_pair is not None:
+            return best_pair
+        return start_node, end_node
+
+    start_point = Point(geom_to_process.coords[0])
+    end_point = Point(geom_to_process.coords[-1])
+    if start_point == end_point:
+        circle_graph = graph.to_undirected() if _is_directed_graph(graph) else graph
+        return {
+            "graph": graph,
+            "start_point": start_point,
+            "end_point": end_point,
+            "start_node": None,
+            "end_node": None,
+            "circle_graph": circle_graph,
+            "is_closed": True,
+        }
+
+    node_list = list(graph.nodes)
+    node_points_tree = None
+    if tolerance is not None and tolerance > 0 and node_list:
+        node_points_tree = STRtree([Point(n) for n in node_list])
+
+    start_node = _select_network_node_by_snap_strategy(
+        start_point,
+        graph,
+        snap_strategy=snap_strategy,
+        tolerance=tolerance,
+        angle_threshold_degrees=angle_threshold_degrees,
+        node_list=node_list,
+        node_points_tree=node_points_tree,
+    )
+    end_node = _select_network_node_by_snap_strategy(
+        end_point,
+        graph,
+        snap_strategy=snap_strategy,
+        tolerance=tolerance,
+        angle_threshold_degrees=angle_threshold_degrees,
+        node_list=node_list,
+        node_points_tree=node_points_tree,
+    )
+
+    if start_node is None or end_node is None:
+        return None
+    if start_node == end_node:
+        start_node = _select_network_node_by_snap_strategy(
+            start_point,
+            graph,
+            snap_strategy=SnapStrategy.NO_PREFERENCE,
+            tolerance=tolerance,
+            angle_threshold_degrees=angle_threshold_degrees,
+            node_list=node_list,
+            node_points_tree=node_points_tree,
+        )
+        end_node = _select_network_node_by_snap_strategy(
+            end_point,
+            graph,
+            snap_strategy=SnapStrategy.NO_PREFERENCE,
+            tolerance=tolerance,
+            angle_threshold_degrees=angle_threshold_degrees,
+            node_list=node_list,
+            node_points_tree=node_points_tree,
+        )
+        if start_node == end_node:
+            return None
+
+    if _is_directed_graph(graph):
+        start_node, end_node = _select_best_directed_pair(
+            start_point, end_point, start_node, end_node
+        )
+
+    path_found = nx.has_path(graph, start_node, end_node)
+    logging.debug("Path detected? - " + str(path_found))
+    if not path_found and not _is_directed_graph(graph):
+        graph = connect_network_components(
+            graph,
+            50,
+            edge_tags=[
+                "theme_lines",
+                "ref_lines",
+                "interconnect",
+                "interconnect_lines",
+                "gap_closure",
+            ],
+        )
+        if not nx.has_path(graph, start_node, end_node):
+            return None
+
+    return {
+        "graph": graph,
+        "start_point": start_point,
+        "end_point": end_point,
+        "start_node": start_node,
+        "end_node": end_node,
+        "circle_graph": None,
+        "is_closed": False,
+    }
+
+
+def find_best_path_in_network_weighted(
+    geom_to_process,
+    graph,
+    cutoff=1000,
+    snap_strategy=SnapStrategy.NO_PREFERENCE,
+    tolerance=None,
+    angle_threshold_degrees=150.0,
+    length_weight=1.0,
+    distance_weight=5.0,
+    angle_weight=0.0,
+    use_astar=True,
+):
+    search_state = _prepare_network_path_search(
+        geom_to_process,
+        graph,
+        snap_strategy,
+        tolerance,
+        angle_threshold_degrees,
+    )
+    if search_state is None:
+        return None
+    if search_state["is_closed"]:
+        return find_best_circle_path(
+            search_state["circle_graph"], geom_to_process
+        )
+
+    graph = search_state["graph"]
+    start_node = search_state["start_node"]
+    end_node = search_state["end_node"]
+
+    geom_coords = list(geom_to_process.coords)
+    geom_segments = []
+    for i in range(len(geom_coords) - 1):
+        seg = LineString([geom_coords[i], geom_coords[i + 1]])
+        if seg.length > 0:
+            geom_segments.append(seg)
+    overall_vec = np.array(
+        [end_node[0] - start_node[0], end_node[1] - start_node[1]], dtype=float
+    )
+    edge_cost_cache = {}
+
+    def _nearest_segment_vector(edge_geom):
+        if not geom_segments:
+            return overall_vec
+        midpoint = edge_geom.interpolate(0.5, normalized=True)
+        nearest_seg = min(geom_segments, key=lambda seg: seg.distance(midpoint))
+        coords = list(nearest_seg.coords)
+        return np.array(
+            [coords[-1][0] - coords[0][0], coords[-1][1] - coords[0][1]], dtype=float
+        )
+
+    def _edge_cost(u, v, data):
+        cache_key = (u, v)
+        if cache_key in edge_cost_cache:
+            return edge_cost_cache[cache_key]
+
+        edge_geom = _edge_geometry_for_path_search(u, v, data)
+        base_length = data.get("length", edge_geom.length)
+        try:
+            base_length = float(base_length)
+        except (TypeError, ValueError):
+            base_length = float(edge_geom.length)
+        distance_penalty = float(edge_geom.distance(geom_to_process))
+
+        angle_penalty = 0.0
+        if angle_weight > 0.0:
+            edge_coords = list(edge_geom.coords)
+            edge_vec = np.array(
+                [
+                    edge_coords[-1][0] - edge_coords[0][0],
+                    edge_coords[-1][1] - edge_coords[0][1],
+                ],
+                dtype=float,
+            )
+            ref_vec = _nearest_segment_vector(edge_geom)
+            if np.linalg.norm(edge_vec) > 0 and np.linalg.norm(ref_vec) > 0:
+                angle_penalty = _angle_between_vectors_degrees(edge_vec, ref_vec) / 180.0
+
+        total_cost = (
+            float(length_weight) * base_length
+            + float(distance_weight) * distance_penalty
+            + float(angle_weight) * angle_penalty * max(base_length, 1.0)
+        )
+        edge_cost_cache[cache_key] = total_cost
+        return total_cost
+
+    def _heuristic(node_a, node_b):
+        return float(length_weight) * Point(node_a).distance(Point(node_b))
+
+    try:
+        if use_astar:
+            path = nx.astar_path(
+                graph,
+                start_node,
+                end_node,
+                heuristic=_heuristic,
+                weight=_edge_cost,
+            )
+        else:
+            path = nx.shortest_path(
+                graph,
+                source=start_node,
+                target=end_node,
+                weight=_edge_cost,
+            )
+    except (nx.NetworkXNoPath, nx.NodeNotFound, nx.NetworkXError):
+        return None
+
+    if len(path) < 2 or len(path) - 1 > cutoff:
+        return None
+    try:
+        return LineString(path)
+    except (ValueError, TypeError):
+        return None
+
+
+def find_best_path_in_network_branch_and_bound(
+    geom_to_process,
+    graph,
+    cutoff=1000,
+    snap_strategy=SnapStrategy.NO_PREFERENCE,
+    tolerance=None,
+    angle_threshold_degrees=150.0,
+    max_candidates_per_node=12,
+    partial_score_factor=1.15,
+    length_prune_factor=1.25,
+):
+    """
+        - heuristisch: buurselectie met top-N
+        - heuristisch: pruning op partiële matchscore
+        - heuristisch: pruning op geschatte lengte
+        - niet heuristisch: cutoff
+    """
+    search_state = _prepare_network_path_search(
+        geom_to_process,
+        graph,
+        snap_strategy,
+        tolerance,
+        angle_threshold_degrees,
+    )
+    if search_state is None:
+        return None
+    if search_state["is_closed"]:
+        return find_best_circle_path(
+            search_state["circle_graph"], geom_to_process
+        )
+
+    graph = search_state["graph"]
+    start_node = search_state["start_node"]
+    end_node = search_state["end_node"]
+    end_point = search_state["end_point"]
+
+    best_line = None
+    best_score = inf
+
+    def _partial_line_score(path):
+        if len(path) < 2:
+            return 0.0
+        try:
+            return total_vertex_distance(LineString(path), geom_to_process, bidirectional=False)
+        except (ValueError, TypeError):
+            return inf
+
+    def _candidate_order(path, visited):
+        current = path[-1]
+        prev = path[-2] if len(path) > 1 else None
+        candidates = []
+        for nb in _neighbor_nodes_for_path_search(graph, current):
+            if nb in visited:
+                continue
+            edge_data = graph.get_edge_data(current, nb) or {}
+            edge_geom = _edge_geometry_for_path_search(current, nb, edge_data)
+            edge_distance = float(edge_geom.distance(geom_to_process))
+            end_distance = Point(nb).distance(end_point)
+            turn_penalty = 0.0
+            if prev is not None:
+                vec_prev = np.array(
+                    [current[0] - prev[0], current[1] - prev[1]], dtype=float
+                )
+                vec_next = np.array(
+                    [nb[0] - current[0], nb[1] - current[1]], dtype=float
+                )
+                if np.linalg.norm(vec_prev) > 0 and np.linalg.norm(vec_next) > 0:
+                    turn_penalty = (
+                        _angle_between_vectors_degrees(vec_prev, vec_next) / 180.0
+                    )
+            candidates.append((edge_distance, end_distance, turn_penalty, nb))
+        candidates.sort(key=lambda item: (item[0], item[1], item[2]))
+        return [item[3] for item in candidates[:max_candidates_per_node]]
+
+    def _search(path, visited, length_so_far):
+        nonlocal best_line, best_score
+
+        current = path[-1]
+        edge_count = len(path) - 1
+        if edge_count > cutoff:
+            return
+
+        if current == end_node:
+            try:
+                line = LineString(path)
+                score = total_vertex_distance(line, geom_to_process)
+            except (ValueError, TypeError):
+                return
+            if score < best_score:
+                best_score = score
+                best_line = line
+            return
+
+        if best_line is not None:
+            optimistic_remaining = Point(current).distance(end_point)
+            if length_so_far + optimistic_remaining > best_line.length * length_prune_factor:
+                return
+            partial_score = _partial_line_score(path)
+            if partial_score > best_score * partial_score_factor:
+                return
+
+        for nb in _candidate_order(path, visited):
+            edge_data = graph.get_edge_data(current, nb) or {}
+            edge_geom = _edge_geometry_for_path_search(current, nb, edge_data)
+            edge_length = edge_data.get("length", edge_geom.length)
+            try:
+                edge_length = float(edge_length)
+            except (TypeError, ValueError):
+                edge_length = float(edge_geom.length)
+            visited.add(nb)
+            path.append(nb)
+            _search(path, visited, length_so_far + edge_length)
+            path.pop()
+            visited.remove(nb)
+
+    _search([start_node], {start_node}, 0.0)
     return best_line
 
 
