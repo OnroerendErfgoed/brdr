@@ -1,6 +1,6 @@
 [project]
 name = "brdr"
-version = "0.17.3"
+version = "0.17.4"
 description = "BRDR - a Python library to assist in realigning geometries (OGC Simple Features) to reference borders "
 readme = { file = "README.md", content-type = "text/markdown" }
 license = { file = "LICENSE" }
@@ -53,7 +53,6 @@ test = [
     "toml==0.10.2",
 ]
 dev = [
-    "brdr[graph]",
     "brdr[viz]",
     "brdr[test]",
     "black~=26.3",
