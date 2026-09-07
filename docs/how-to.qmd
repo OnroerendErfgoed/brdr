@@ -1,0 +1,174 @@
+# How-to Recipes
+
+Use this page when you know what you want to do, but not yet which `brdr`
+objects or examples to start from.
+
+## Before you start
+
+Check these four things first:
+
+1. Your thematic and reference layers use the same projected CRS.
+2. CRS units are meters, because `relevant_distance` is expressed in CRS units.
+3. Each thematic feature has a stable unique identifier.
+4. You test on a small, representative sample before processing a full dataset.
+
+## Choose your path
+
+| I want to... | Start with | Then read |
+|---|---|---|
+| Align one small geometry and understand the result | [`DictLoader`](examples/example_readme.qmd) | [Getting Started](getting-started.qmd) |
+| Align two existing GeoPandas layers | [`GeoDataFrameLoader`](examples/example_geodataframeloader_geopandas_workflow.qmd) | [Export Guide](export-guide.qmd) |
+| Align GeoJSON from an API or preprocessing step | [`GeoJsonLoader`](examples/example_geojsonloader.qmd) | [Examples](examples.qmd) |
+| Find useful alignment distances automatically | [`predict(...)`](examples/example_predict.qmd) | [Parameter Guide](parameter-cookbook.qmd) |
+| Classify candidate results for QA or batch processing | [`evaluate(...)`](examples/example_evaluate.qmd) | [Export Guide](export-guide.qmd) |
+| Process only a project area and keep the rest unchanged | [`processing_area`](examples/example_processing_area.qmd) | [Parameter Guide](parameter-cookbook.qmd) |
+| Align after a CRS migration | [Lambert72 to Lambert08](examples/example_lambert72_to_lambert08.qmd) | [Parameter Guide](parameter-cookbook.qmd) |
+| Work with line or network-like data | [Network processor example](examples/example_networkgeometryprocessor.qmd) | [Processor Guide](processor-selection.qmd) |
+| Export results for GIS, QA, or downstream automation | `to_gdf(...)`, `to_geojson(...)`, `to_gpkg(...)` | [Export Guide](export-guide.qmd) |
+
+## How to align two project layers
+
+This is the most common production shape: read two layers, align thematic
+geometries to reference boundaries, and export a result layer.
+
+```python
+import geopandas as gpd
+
+from brdr.aligner import Aligner
+from brdr.loader import GeoDataFrameLoader
+
+THEMATIC_ID = "theme_id"
+REFERENCE_ID = "ref_id"
+CRS = "EPSG:31370"
+
+thematic = gpd.read_file("data/thematic.gpkg").to_crs(CRS)
+reference = gpd.read_file("data/reference.gpkg").to_crs(CRS)
+
+aligner = Aligner(crs=CRS)
+aligner.load_thematic_data(
+    GeoDataFrameLoader(_input=thematic, id_property=THEMATIC_ID)
+)
+aligner.load_reference_data(
+    GeoDataFrameLoader(
+        _input=reference,
+        id_property=REFERENCE_ID,
+        is_reference=True,
+    )
+)
+
+aligner_result = aligner.process(relevant_distances=[0.25, 0.5, 1.0])
+
+aligned = aligner_result.to_gdf(
+    aligner=aligner,
+    profile="analysis",
+    add_original_attributes=True,
+)
+aligned.to_file("output/aligned.gpkg", layer="aligned", driver="GPKG")
+```
+
+Use this when you already know the relevant distances you want to inspect.
+If you do not know them yet, use `predict(...)` or `evaluate(...)`.
+
+## How to discover relevant distances
+
+Alignment quality often depends on the distance range. Start with a range that
+matches the expected positional deviation in your data.
+
+```python
+relevant_distances = [0.25, 0.5, 1, 2, 3, 5]
+
+predictions = aligner.predict(relevant_distances=relevant_distances)
+prediction_gdf = predictions.to_gdf(
+    aligner=aligner,
+    profile="analysis",
+    add_original_attributes=True,
+)
+```
+
+Use `predict(...)` when you want a compact list of stable candidate geometries.
+Use `evaluate(...)` when you also need QA classifications and scoring metadata.
+
+```python
+evaluated = aligner.evaluate(relevant_distances=relevant_distances)
+evaluated_gdf = evaluated.to_gdf(
+    aligner=aligner,
+    profile="analysis",
+    add_metadata=True,
+    add_original_attributes=True,
+)
+```
+
+## How to limit alignment to one area
+
+Use `processing_area` when only part of a geometry may change. The intersecting
+part is processed, while the outside part is merged back unchanged.
+
+```python
+from shapely.geometry import box
+
+project_area = box(100000, 200000, 101000, 201000)
+
+scoped_result = aligner.process(
+    relevant_distances=[0.5, 1.0],
+    processing_area=project_area,
+)
+```
+
+This is useful for project areas, incremental migration, and partial QA fixes.
+
+## How to choose a processor
+
+Start with the default `AlignerGeometryProcessor`. Change processor only when
+your data or workflow requires it.
+
+| Use case | Processor direction |
+|---|---|
+| Parcel-like polygon alignment | Default or `DieussaertGeometryProcessor` |
+| Mixed geometry types or network behavior | `NetworkGeometryProcessor` |
+| Lines that should follow thematic anchor points | `AnchorGeometryProcessor` |
+| One-way or direction-constrained routing | Directed network or directed anchor processor |
+| Shared-boundary consistency between thematic features | `TopologyProcessor` |
+| Explicit vertex/edge snapping workflows | `SnapGeometryProcessor` |
+
+See the [Processor Guide](processor-selection.qmd) before changing processor
+configuration in production.
+
+## How to inspect the result
+
+The default output contains one result per thematic feature and relevant
+distance. The most important geometry fields are:
+
+| Field | Meaning |
+|---|---|
+| `result` | The aligned geometry |
+| `result_diff` | Total changed area or geometry |
+| `result_diff_plus` | Parts added to the original thematic geometry |
+| `result_diff_min` | Parts removed from the original thematic geometry |
+
+For GIS inspection, export `profile="analysis"` to GeoPackage or GeoJSON.
+For compact automation output, use `profile="minimal"`.
+
+```python
+aligner_result.to_gpkg(
+    aligner=aligner,
+    path="output/alignment.gpkg",
+    layer="aligned",
+    profile="analysis",
+    add_original_attributes=True,
+)
+```
+
+## Common first-run problems
+
+| Symptom | Check |
+|---|---|
+| Nothing changes | `relevant_distance` may be too small, or reference features are not close enough |
+| Too much changes | `relevant_distance` may be too large for the intended business rule |
+| Results look shifted | Thematic and reference data may not be in the same CRS |
+| IDs are missing or duplicated | Check the loader `id_property` |
+| Network examples behave unexpectedly | Confirm whether you need a network processor, directed routing, or anchor behavior |
+
+When in doubt, run `process(...)` over a short distance series, export
+`profile="analysis"`, and inspect `result_diff_plus` and `result_diff_min` in
+your GIS tool.
+

@@ -197,6 +197,52 @@ class BaseProcessor(ABC):
         self._polygonal_reference_union_cache_value = polygonal_union
         return polygonal_union
 
+    @staticmethod
+    def _normalize_processing_area(
+        processing_area: BaseGeometry | None,
+    ) -> BaseGeometry | None:
+        if processing_area is None:
+            return None
+        processing_area_valid = make_valid(processing_area)
+        if processing_area_valid is None or processing_area_valid.is_empty:
+            return None
+        return processing_area_valid
+
+    @staticmethod
+    def _valid_geometry_or_empty(geometry: BaseGeometry | None) -> BaseGeometry:
+        if geometry is None:
+            return GeometryCollection()
+        geometry = make_valid(geometry)
+        if geometry is None:
+            return GeometryCollection()
+        return geometry
+
+    def _processing_work_area(
+        self,
+        processing_area: BaseGeometry,
+        relevant_distance: float,
+        correction_distance: float,
+        mitre_limit: float,
+    ) -> BaseGeometry:
+        try:
+            context_distance = (
+                max(0.0, float(relevant_distance))
+                * float(self.config.buffer_multiplication_factor)
+                + max(0.0, float(correction_distance))
+            )
+        except (TypeError, ValueError):
+            context_distance = 0.0
+        if context_distance <= 0:
+            return processing_area
+        work_area = self._valid_geometry_or_empty(
+            buffer_pos(
+                processing_area,
+                context_distance,
+                mitre_limit=mitre_limit,
+            )
+        )
+        return processing_area if work_area.is_empty else work_area
+
     def _process_with_processing_area(
         self,
         *,
@@ -208,8 +254,8 @@ class BaseProcessor(ABC):
         correction_distance: float,
         scoped_processor,
     ) -> ProcessResult:
-        processing_area_valid = make_valid(processing_area)
-        if processing_area_valid is None or processing_area_valid.is_empty:
+        processing_area_valid = self._normalize_processing_area(processing_area)
+        if processing_area_valid is None:
             return union_process_result(scoped_processor(input_geometry))
 
         if not safe_intersects(input_geometry, processing_area_valid):
@@ -220,10 +266,18 @@ class BaseProcessor(ABC):
             }
             return union_process_result(process_result)
 
-        scoped_in = make_valid(safe_intersection(input_geometry, processing_area_valid))
-        scoped_out = make_valid(safe_difference(input_geometry, processing_area_valid))
-        if scoped_out is None:
-            scoped_out = GeometryCollection()
+        work_area = self._processing_work_area(
+            processing_area_valid,
+            relevant_distance,
+            correction_distance,
+            mitre_limit,
+        )
+        scoped_in = self._valid_geometry_or_empty(
+            safe_intersection(input_geometry, work_area)
+        )
+        scoped_out = self._valid_geometry_or_empty(
+            safe_difference(input_geometry, processing_area_valid)
+        )
         scoped_result_holder: dict[str, ProcessResult] = {}
 
         if scoped_in is None or scoped_in.is_empty:
@@ -231,12 +285,15 @@ class BaseProcessor(ABC):
         else:
             scoped_result = scoped_processor(scoped_in)
             scoped_result_holder["result"] = scoped_result
-            aligned_in = (scoped_result or {}).get("result")
-            if aligned_in is None:
-                aligned_in = GeometryCollection()
-            merged_result = make_valid(safe_unary_union([aligned_in, scoped_out]))
-            if merged_result is None:
-                merged_result = GeometryCollection()
+            aligned_in = self._valid_geometry_or_empty(
+                (scoped_result or {}).get("result")
+            )
+            committed_in = self._valid_geometry_or_empty(
+                safe_intersection(aligned_in, processing_area_valid)
+            )
+            merged_result = self._valid_geometry_or_empty(
+                safe_unary_union([committed_in, scoped_out])
+            )
 
         if merged_result is None or merged_result.is_empty:
             process_result = ProcessResult()
@@ -248,26 +305,28 @@ class BaseProcessor(ABC):
             }
             return union_process_result(process_result)
 
-        postprocessed = self._postprocess_preresult(
-            merged_result,
-            input_geometry,
-            GeometryCollection(),
-            GeometryCollection(),
-            relevant_distance,
-            reference_union,
-            mitre_limit,
-            correction_distance,
-        )
         scoped_result = scoped_result_holder.get("result")
         scoped_remarks = ((scoped_result or {}).get("properties") or {}).get(
             REMARK_FIELD_NAME, []
         )
-        if scoped_remarks:
-            post_props = postprocessed.get("properties") or {}
-            existing = post_props.get(REMARK_FIELD_NAME, [])
-            post_props[REMARK_FIELD_NAME] = existing + scoped_remarks
-            postprocessed["properties"] = post_props
-        return union_process_result(postprocessed)
+        result_diff_plus = self._valid_geometry_or_empty(
+            safe_difference(merged_result, input_geometry)
+        )
+        result_diff_min = self._valid_geometry_or_empty(
+            safe_difference(input_geometry, merged_result)
+        )
+        result_diff = self._valid_geometry_or_empty(
+            safe_unary_union([result_diff_plus, result_diff_min])
+        )
+        process_result = ProcessResult()
+        process_result["result"] = merged_result
+        process_result["result_diff"] = result_diff
+        process_result["result_diff_plus"] = result_diff_plus
+        process_result["result_diff_min"] = result_diff_min
+        process_result["result_relevant_intersection"] = GeometryCollection()
+        process_result["result_relevant_diff"] = GeometryCollection()
+        process_result["properties"] = {REMARK_FIELD_NAME: list(scoped_remarks)}
+        return union_process_result(process_result)
 
     def _postprocess_preresult(
         self,
@@ -767,7 +826,7 @@ class SnapGeometryProcessor(BaseProcessor):
         perf_collector = kwargs.get("perf_collector")
         t_total = time.perf_counter()
         reference_candidates = kwargs.get("reference_candidates")
-        processing_area = kwargs.get("processing_area")
+        processing_area = self._normalize_processing_area(kwargs.get("processing_area"))
         if processing_area is not None and not kwargs.get(
             "_processing_area_applied", False
         ):
@@ -968,7 +1027,7 @@ class DieussaertGeometryProcessor(BaseProcessor):
             raise ValueError(
                 "Dieussaert algorithm can only be used when input geometry is polygon or multipolygon."
             )
-        processing_area = kwargs.get("processing_area")
+        processing_area = self._normalize_processing_area(kwargs.get("processing_area"))
         if processing_area is not None and not kwargs.get(
             "_processing_area_applied", False
         ):
@@ -1786,7 +1845,7 @@ class NetworkGeometryProcessor(BaseProcessor):
         perf_collector = kwargs.get("perf_collector")
         t_total = time.perf_counter()
         reference_candidates = kwargs.get("reference_candidates")
-        processing_area = kwargs.get("processing_area")
+        processing_area = self._normalize_processing_area(kwargs.get("processing_area"))
         if processing_area is not None and not kwargs.get(
             "_processing_area_applied", False
         ):
@@ -2173,7 +2232,7 @@ class AnchorGeometryProcessor(BaseProcessor):
         relevant_distance: float,
         **kwargs: Any,
     ) -> ProcessResult:
-        processing_area = kwargs.get("processing_area")
+        processing_area = self._normalize_processing_area(kwargs.get("processing_area"))
         if processing_area is not None and not kwargs.get(
             "_processing_area_applied", False
         ):
@@ -2674,7 +2733,7 @@ class AlignerGeometryProcessor(BaseProcessor):
         """
         perf_collector = kwargs.get("perf_collector")
         t_total = time.perf_counter()
-        processing_area = kwargs.get("processing_area")
+        processing_area = self._normalize_processing_area(kwargs.get("processing_area"))
         if processing_area is not None and not kwargs.get(
             "_processing_area_applied", False
         ):
@@ -2694,7 +2753,6 @@ class AlignerGeometryProcessor(BaseProcessor):
                     input_geometry=scoped_geom,
                     mitre_limit=mitre_limit,
                     relevant_distance=relevant_distance,
-                    _force_network_for_polygons=True,
                     **scoped_kwargs,
                 ),
             )
@@ -2885,7 +2943,7 @@ class TopologyProcessor(BaseProcessor):
             Dissolve --> End[Final ProcessResult]
         ```
         """
-        processing_area = kwargs.get("processing_area")
+        processing_area = self._normalize_processing_area(kwargs.get("processing_area"))
         if processing_area is not None and not kwargs.get(
             "_processing_area_applied", False
         ):

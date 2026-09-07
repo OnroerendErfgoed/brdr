@@ -13,6 +13,7 @@ a Python library to assist in realigning geometries (OGC Simple Features) to ref
 Quick links:
 - [Documentation & API Reference](https://onroerenderfgoed.github.io/brdr/)
 - [Installation](#installation)
+- [How-to recipes](https://onroerenderfgoed.github.io/brdr/how-to.html)
 - [Development](#development)
 - [Issues, questions, comments and contributions](#comments-and-contributions)
 

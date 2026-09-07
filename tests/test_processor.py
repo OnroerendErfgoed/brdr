@@ -73,10 +73,11 @@ class TestProcessor(unittest.TestCase):
         assert result["result"].equals(input_geometry)
         assert ProcessRemark.RESULT_UNCHANGED in result["properties"][REMARK_FIELD_NAME]
 
-    def test_process_with_processing_area_helper_runs_postprocess_after_merge(self):
+    def test_process_with_processing_area_helper_does_not_postprocess_after_merge(self):
         processor = _DummyProcessor(ProcessorConfig())
         input_geometry = from_wkt("POLYGON ((0 0, 0 4, 10 4, 10 0, 0 0))")
         processing_area = from_wkt("POLYGON ((0 0, 0 4, 5 4, 5 0, 0 0))")
+        expected_outside = safe_difference(input_geometry, processing_area)
 
         scoped_result = from_wkt("POLYGON ((0 0, 0 4, 4.8 4, 4.8 0, 0 0))")
         with patch.object(
@@ -97,11 +98,37 @@ class TestProcessor(unittest.TestCase):
                 },
             )
 
-        assert postprocess_spy.call_count == 1
+        assert postprocess_spy.call_count == 0
         assert result["result"] is not None
         assert not result["result"].is_empty
+        outside = safe_difference(result["result"], processing_area)
+        assert safe_difference(outside, expected_outside).is_empty
+        assert safe_difference(expected_outside, outside).is_empty
 
-    def test_aligner_processor_with_processing_area_forces_network_for_polygons(self):
+    def test_process_with_processing_area_helper_clips_aligned_result_to_scope(self):
+        processor = _DummyProcessor(ProcessorConfig())
+        input_geometry = LineString([(0, 0), (10, 0)])
+        processing_area = from_wkt("POLYGON ((0 -1, 0 2, 5 2, 5 -1, 0 -1))")
+        expected_outside = safe_difference(input_geometry, processing_area)
+
+        result = processor._process_with_processing_area(
+            input_geometry=input_geometry,
+            processing_area=processing_area,
+            reference_union=GeometryCollection(),
+            relevant_distance=1.0,
+            mitre_limit=10.0,
+            correction_distance=0.01,
+            scoped_processor=lambda _g: {
+                "result": LineString([(0, 1), (10, 1)]),
+                "properties": {REMARK_FIELD_NAME: []},
+            },
+        )
+
+        outside = safe_difference(result["result"], processing_area)
+        assert safe_difference(outside, expected_outside).is_empty
+        assert safe_difference(expected_outside, outside).is_empty
+
+    def test_aligner_processor_with_processing_area_keeps_polygon_processor_choice(self):
         thematic = {"t1": from_wkt("POLYGON ((0 0, 0 6, 6 6, 6 0, 0 0))")}
         reference = {"r1": from_wkt("POLYGON ((0 1, 0 7, 7 7, 7 1, 0 1))")}
         scope = from_wkt("POLYGON ((0 0, 0 6, 3 6, 3 0, 0 0))")
@@ -121,7 +148,31 @@ class TestProcessor(unittest.TestCase):
 
         assert result is not None
         assert not result.is_empty
-        assert dieussaert_process_spy.call_count == 0
+        assert dieussaert_process_spy.call_count > 0
+
+    def test_aligner_processor_empty_processing_area_matches_unscoped_processing(self):
+        thematic = {"t1": from_wkt("POLYGON ((0 0, 0 6, 6 6, 6 0, 0 0))")}
+        reference = {"r1": from_wkt("POLYGON ((0 1, 0 7, 7 7, 7 1, 0 1))")}
+        aligner = Aligner(processor=AlignerGeometryProcessor(config=ProcessorConfig()))
+        aligner.load_thematic_data(DictLoader(thematic))
+        aligner.load_reference_data(DictLoader(reference))
+
+        base_kwargs = {
+            "correction_distance": aligner.correction_distance,
+            "reference_data": aligner.reference_data,
+            "input_geometry": thematic["t1"],
+            "mitre_limit": aligner.mitre_limit,
+            "relevant_distance": 1.0,
+            "thematic_data": aligner.thematic_data,
+            "thematic_id": "t1",
+        }
+        unscoped = aligner.processor.process(**base_kwargs)
+        empty_kwargs = dict(base_kwargs)
+        empty_kwargs["processing_area"] = GeometryCollection()
+        empty_scoped = aligner.processor.process(**empty_kwargs)
+
+        assert safe_difference(unscoped["result"], empty_scoped["result"]).is_empty
+        assert safe_difference(empty_scoped["result"], unscoped["result"]).is_empty
 
     def test_aligner_processor_polygon_processing_area_uses_generic_scoped_flow(self):
         thematic = {"t1": from_wkt("POLYGON ((0 0, 0 6, 6 6, 6 0, 0 0))")}

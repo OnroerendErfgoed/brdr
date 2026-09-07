@@ -317,6 +317,4 @@ class TestTopology(unittest.TestCase):
         expected_outside = safe_difference(thematic_geom, scope)
 
         assert not result.is_empty
-        # For topology + lines, scoped processing may add extra out-of-scope segments,
-        # but at minimum the original outside segment must be preserved.
-        assert safe_difference(expected_outside, outside).is_empty
+        assert safe_equals(outside, expected_outside)
