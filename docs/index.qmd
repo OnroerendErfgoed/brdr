@@ -8,6 +8,7 @@ A Python library for aligning thematic geometries (OGC Simple Features) to refer
 ## Quick links
 
 - [Getting started](getting-started.qmd)
+- [How-to recipes](how-to.qmd)
 - [Processor selection](processor-selection.qmd)
 - [Parameter cookbook](parameter-cookbook.qmd)
 - [Testing and CI](qa.qmd)
@@ -44,6 +45,13 @@ flowchart LR
     C --> D[Run process / predict / evaluate]
     D --> E[Inspect or export AlignerResult]
 ```
+
+## Start from a use case
+
+If you already know your task, start with [How-to Recipes](how-to.qmd).
+It maps common questions such as "align two GeoPandas layers", "find useful
+distances", "process only one project area", and "export to GIS" to the right
+loader, processor, and example.
 
 ## Visual intuition
 

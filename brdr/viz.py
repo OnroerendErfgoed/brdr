@@ -511,17 +511,17 @@ def _processresult_to_dicts(process_results):
 
 def export_to_geopackage(G, output_filename="graph_output.gpkg", crs=DEFAULT_CRS):
     """
-    Export a NetworkX graph to a GeoPackage file with separate layers for nodes and edges.
+    Export a graph-like object to a GeoPackage file with separate layers for nodes and edges.
 
     This function assumes that the node identifiers are tuples representing
     coordinates (x, y).
-    All attributes attached to nodes and edges in the NetworkX graph are
+    All attributes attached to nodes and edges in the graph are
     preserved as columns in the resulting attribute tables.
 
     Parameters
     ----------
-    G : networkx.Graph
-        The NetworkX graph object to be exported. Nodes should be (x, y) tuples.
+    G : graph-like object
+        The graph object to be exported. Nodes should be (x, y) tuples.
     output_filename : str, optional
         The path and name of the output GeoPackage file, by default "graph_output.gpkg".
     crs : str, optional

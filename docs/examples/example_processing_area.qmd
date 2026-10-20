@@ -32,6 +32,7 @@ Typical scenarios:
 - `processing_area=<geometry>`:
   - inside scope: normal alignment
   - outside scope: unchanged, then reattached to final output
+  - aligned output is clipped back to the scope before merging
 
 ## Example code
 

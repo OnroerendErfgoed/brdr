@@ -19,6 +19,9 @@ This page shows the recommended onboarding path for new `brdr` users.
    - `evaluate(...)` for scored/classified predictions
 5. Export with `get_results_as_geojson(...)` or `save_results(...)`.
 
+If you are starting from a functional task instead of an API concept, use
+[How-to Recipes](how-to.qmd) to choose the right path.
+
 ## Scoped processing (`processing_area`)
 
 `process(...)`, `predict(...)`, and `evaluate(...)` accept an optional
@@ -26,9 +29,11 @@ This page shows the recommended onboarding path for new `brdr` users.
 
 - Default: `None` (fully backward compatible).
 - When set: only the intersecting part of each thematic geometry is processed.
+- The processed result is clipped back to the scope before merging.
 - The non-intersecting part is kept unchanged and merged back into the final result.
 - Reference preselection still uses a buffered search area around the scoped part,
-  so nearby boundaries just outside the scope can still influence snapping/alignment.
+  so nearby boundaries just outside the scope can still influence snapping/alignment
+  inside the scope without changing geometry outside it.
 
 ```python
 from shapely.geometry import box
@@ -109,6 +114,7 @@ results = aligner_result.get_results(aligner=aligner)
 
 ## Next pages
 
+- [How-to Recipes](how-to.qmd)
 - [Processor Guide](processor-selection.qmd)
 - [Parameter Guide](parameter-cookbook.qmd)
 - [Examples](examples.qmd)

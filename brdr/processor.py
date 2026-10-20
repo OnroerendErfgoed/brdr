@@ -4,7 +4,6 @@ from abc import abstractmethod
 from dataclasses import replace
 from typing import List, Any
 
-import networkx as nx
 from shapely import GeometryCollection, MultiPoint
 from shapely import MultiLineString
 from shapely import MultiPolygon
@@ -43,6 +42,7 @@ from brdr.geometry_utils import safe_unary_union
 from brdr.geometry_utils import safe_union
 from brdr.geometry_utils import snap_geometry_to_reference
 from brdr.geometry_utils import to_multi
+from brdr.graph_backend import Graph, NoPath, NodeNotFound, new_graph, shortest_path
 from brdr.graph_utils import (
     _add_reference_edge,
     _build_reference_segment_index,
@@ -197,6 +197,52 @@ class BaseProcessor(ABC):
         self._polygonal_reference_union_cache_value = polygonal_union
         return polygonal_union
 
+    @staticmethod
+    def _normalize_processing_area(
+        processing_area: BaseGeometry | None,
+    ) -> BaseGeometry | None:
+        if processing_area is None:
+            return None
+        processing_area_valid = make_valid(processing_area)
+        if processing_area_valid is None or processing_area_valid.is_empty:
+            return None
+        return processing_area_valid
+
+    @staticmethod
+    def _valid_geometry_or_empty(geometry: BaseGeometry | None) -> BaseGeometry:
+        if geometry is None:
+            return GeometryCollection()
+        geometry = make_valid(geometry)
+        if geometry is None:
+            return GeometryCollection()
+        return geometry
+
+    def _processing_work_area(
+        self,
+        processing_area: BaseGeometry,
+        relevant_distance: float,
+        correction_distance: float,
+        mitre_limit: float,
+    ) -> BaseGeometry:
+        try:
+            context_distance = (
+                max(0.0, float(relevant_distance))
+                * float(self.config.buffer_multiplication_factor)
+                + max(0.0, float(correction_distance))
+            )
+        except (TypeError, ValueError):
+            context_distance = 0.0
+        if context_distance <= 0:
+            return processing_area
+        work_area = self._valid_geometry_or_empty(
+            buffer_pos(
+                processing_area,
+                context_distance,
+                mitre_limit=mitre_limit,
+            )
+        )
+        return processing_area if work_area.is_empty else work_area
+
     def _process_with_processing_area(
         self,
         *,
@@ -208,8 +254,8 @@ class BaseProcessor(ABC):
         correction_distance: float,
         scoped_processor,
     ) -> ProcessResult:
-        processing_area_valid = make_valid(processing_area)
-        if processing_area_valid is None or processing_area_valid.is_empty:
+        processing_area_valid = self._normalize_processing_area(processing_area)
+        if processing_area_valid is None:
             return union_process_result(scoped_processor(input_geometry))
 
         if not safe_intersects(input_geometry, processing_area_valid):
@@ -220,10 +266,18 @@ class BaseProcessor(ABC):
             }
             return union_process_result(process_result)
 
-        scoped_in = make_valid(safe_intersection(input_geometry, processing_area_valid))
-        scoped_out = make_valid(safe_difference(input_geometry, processing_area_valid))
-        if scoped_out is None:
-            scoped_out = GeometryCollection()
+        work_area = self._processing_work_area(
+            processing_area_valid,
+            relevant_distance,
+            correction_distance,
+            mitre_limit,
+        )
+        scoped_in = self._valid_geometry_or_empty(
+            safe_intersection(input_geometry, work_area)
+        )
+        scoped_out = self._valid_geometry_or_empty(
+            safe_difference(input_geometry, processing_area_valid)
+        )
         scoped_result_holder: dict[str, ProcessResult] = {}
 
         if scoped_in is None or scoped_in.is_empty:
@@ -231,12 +285,15 @@ class BaseProcessor(ABC):
         else:
             scoped_result = scoped_processor(scoped_in)
             scoped_result_holder["result"] = scoped_result
-            aligned_in = (scoped_result or {}).get("result")
-            if aligned_in is None:
-                aligned_in = GeometryCollection()
-            merged_result = make_valid(safe_unary_union([aligned_in, scoped_out]))
-            if merged_result is None:
-                merged_result = GeometryCollection()
+            aligned_in = self._valid_geometry_or_empty(
+                (scoped_result or {}).get("result")
+            )
+            committed_in = self._valid_geometry_or_empty(
+                safe_intersection(aligned_in, processing_area_valid)
+            )
+            merged_result = self._valid_geometry_or_empty(
+                safe_unary_union([committed_in, scoped_out])
+            )
 
         if merged_result is None or merged_result.is_empty:
             process_result = ProcessResult()
@@ -248,26 +305,28 @@ class BaseProcessor(ABC):
             }
             return union_process_result(process_result)
 
-        postprocessed = self._postprocess_preresult(
-            merged_result,
-            input_geometry,
-            GeometryCollection(),
-            GeometryCollection(),
-            relevant_distance,
-            reference_union,
-            mitre_limit,
-            correction_distance,
-        )
         scoped_result = scoped_result_holder.get("result")
         scoped_remarks = ((scoped_result or {}).get("properties") or {}).get(
             REMARK_FIELD_NAME, []
         )
-        if scoped_remarks:
-            post_props = postprocessed.get("properties") or {}
-            existing = post_props.get(REMARK_FIELD_NAME, [])
-            post_props[REMARK_FIELD_NAME] = existing + scoped_remarks
-            postprocessed["properties"] = post_props
-        return union_process_result(postprocessed)
+        result_diff_plus = self._valid_geometry_or_empty(
+            safe_difference(merged_result, input_geometry)
+        )
+        result_diff_min = self._valid_geometry_or_empty(
+            safe_difference(input_geometry, merged_result)
+        )
+        result_diff = self._valid_geometry_or_empty(
+            safe_unary_union([result_diff_plus, result_diff_min])
+        )
+        process_result = ProcessResult()
+        process_result["result"] = merged_result
+        process_result["result_diff"] = result_diff
+        process_result["result_diff_plus"] = result_diff_plus
+        process_result["result_diff_min"] = result_diff_min
+        process_result["result_relevant_intersection"] = GeometryCollection()
+        process_result["result_relevant_diff"] = GeometryCollection()
+        process_result["properties"] = {REMARK_FIELD_NAME: list(scoped_remarks)}
+        return union_process_result(process_result)
 
     def _postprocess_preresult(
         self,
@@ -335,6 +394,49 @@ class BaseProcessor(ABC):
         ```
         """
         remarks = []
+        # Local memoization for expensive repeated cleanup chains inside one call.
+        _smooth_cache: dict[tuple[int, float, float], BaseGeometry] = {}
+        _denoise_cache: dict[tuple[int, float, float], BaseGeometry] = {}
+
+        def _geom_cache_key(geom: BaseGeometry, dist: float) -> tuple[bytes, float, float]:
+            # Use geometry content (WKB) instead of object identity to avoid
+            # accidental cache hits when Python reuses object ids.
+            return (geom.wkb, float(dist), float(mitre_limit))
+
+        def _smooth_geom(geom: BaseGeometry, dist: float) -> BaseGeometry:
+            key = _geom_cache_key(geom, dist)
+            cached = _smooth_cache.get(key)
+            if cached is not None:
+                return cached
+            out = buffer_pos(
+                buffer_neg(
+                    buffer_pos(geom, dist, mitre_limit=mitre_limit),
+                    2 * dist,
+                    mitre_limit=mitre_limit,
+                ),
+                dist,
+                mitre_limit=mitre_limit,
+            )
+            _smooth_cache[key] = out
+            return out
+
+        def _denoise_geom(geom: BaseGeometry, dist: float) -> BaseGeometry:
+            key = _geom_cache_key(geom, dist)
+            cached = _denoise_cache.get(key)
+            if cached is not None:
+                return cached
+            out = buffer_pos(
+                buffer_neg(
+                    geom,
+                    dist,
+                    mitre_limit=mitre_limit,
+                ),
+                dist,
+                mitre_limit=mitre_limit,
+            )
+            _denoise_cache[key] = out
+            return out
+
         geom_thematic = make_valid(geom_thematic)
         if geom_preresult is None or geom_preresult.is_empty:
             # Strict fallback rule: invalid pre-results return empty geometry.
@@ -446,17 +548,7 @@ class BaseProcessor(ABC):
                     }
                 )
 
-        geom_thematic_dissolved = buffer_pos(
-            buffer_neg(
-                buffer_pos(
-                    geom_preresult, correction_distance, mitre_limit=mitre_limit
-                ),
-                2 * correction_distance,
-                mitre_limit=mitre_limit,
-            ),
-            correction_distance,
-            mitre_limit=mitre_limit,
-        )
+        geom_thematic_dissolved = _smooth_geom(geom_preresult, correction_distance)
 
         geom_diff_add = safe_difference(
             geom_thematic_for_add_delete, geom_thematic_dissolved
@@ -482,40 +574,20 @@ class BaseProcessor(ABC):
             ),
         )
 
-        geom_thematic_preresult = buffer_pos(
-            buffer_neg(
-                buffer_pos(
-                    geom_diff_removed_added,
-                    correction_distance,
-                    mitre_limit=mitre_limit,
-                ),
-                2 * correction_distance,
-                mitre_limit=mitre_limit,
-            ),
-            correction_distance,
-            mitre_limit=mitre_limit,
+        geom_thematic_preresult = _smooth_geom(
+            geom_diff_removed_added, correction_distance
         )
 
         geom_thematic_cleaned_holes = fill_and_remove_gaps(
             geom_thematic_preresult, buffer_distance
         )
 
-        geom_thematic_result = buffer_pos(
-            buffer_neg(
-                buffer_pos(
-                    geom_thematic_cleaned_holes,
-                    correction_distance,
-                    mitre_limit=mitre_limit,
-                ),
-                2 * correction_distance,
-                mitre_limit=mitre_limit,
-            ),
-            correction_distance,
-            mitre_limit=mitre_limit,
+        geom_thematic_result = _smooth_geom(
+            geom_thematic_cleaned_holes, correction_distance
         )
         geom_thematic_result = make_valid(remove_repeated_points(geom_thematic_result))
 
-        if geom_thematic_result.is_empty or geom_thematic_result is None:
+        if geom_thematic_result is None or geom_thematic_result.is_empty:
             # Strict fallback rule: cleanup collapse returns empty geometry.
             geom_thematic_result = GeometryCollection()
             remark = ProcessRemark.INVALID_EMPTY_RETURNED
@@ -523,34 +595,23 @@ class BaseProcessor(ABC):
             self.logger.feedback_warning(remark)
 
         result.append(geom_thematic_result)
-        geom_thematic_result = safe_unary_union(result)
+        # Fast path: in this scope we only append one geometry.
+        if len(result) == 1:
+            geom_thematic_result = result[0]
+        else:
+            geom_thematic_result = safe_unary_union(result)
 
-        geom_result_diff = buffer_pos(
-            buffer_neg(
-                safe_symmetric_difference(geom_thematic_result, geom_thematic),
-                correction_distance,
-                mitre_limit=mitre_limit,
-            ),
+        geom_result_diff = _denoise_geom(
+            safe_symmetric_difference(geom_thematic_result, geom_thematic),
             correction_distance,
-            mitre_limit=mitre_limit,
         )
-        geom_result_diff_plus = buffer_pos(
-            buffer_neg(
-                safe_difference(geom_thematic_result, geom_thematic),
-                correction_distance,
-                mitre_limit=mitre_limit,
-            ),
+        geom_result_diff_plus = _denoise_geom(
+            safe_difference(geom_thematic_result, geom_thematic),
             correction_distance,
-            mitre_limit=mitre_limit,
         )
-        geom_result_diff_min = buffer_pos(
-            buffer_neg(
-                safe_difference(geom_thematic, geom_thematic_result),
-                correction_distance,
-                mitre_limit=mitre_limit,
-            ),
+        geom_result_diff_min = _denoise_geom(
+            safe_difference(geom_thematic, geom_thematic_result),
             correction_distance,
-            mitre_limit=mitre_limit,
         )
 
         return union_process_result(
@@ -765,7 +826,7 @@ class SnapGeometryProcessor(BaseProcessor):
         perf_collector = kwargs.get("perf_collector")
         t_total = time.perf_counter()
         reference_candidates = kwargs.get("reference_candidates")
-        processing_area = kwargs.get("processing_area")
+        processing_area = self._normalize_processing_area(kwargs.get("processing_area"))
         if processing_area is not None and not kwargs.get(
             "_processing_area_applied", False
         ):
@@ -966,7 +1027,7 @@ class DieussaertGeometryProcessor(BaseProcessor):
             raise ValueError(
                 "Dieussaert algorithm can only be used when input geometry is polygon or multipolygon."
             )
-        processing_area = kwargs.get("processing_area")
+        processing_area = self._normalize_processing_area(kwargs.get("processing_area"))
         if processing_area is not None and not kwargs.get(
             "_processing_area_applied", False
         ):
@@ -1784,7 +1845,7 @@ class NetworkGeometryProcessor(BaseProcessor):
         perf_collector = kwargs.get("perf_collector")
         t_total = time.perf_counter()
         reference_candidates = kwargs.get("reference_candidates")
-        processing_area = kwargs.get("processing_area")
+        processing_area = self._normalize_processing_area(kwargs.get("processing_area"))
         if processing_area is not None and not kwargs.get(
             "_processing_area_applied", False
         ):
@@ -2098,6 +2159,7 @@ class NetworkGeometryProcessor(BaseProcessor):
             gap_threshold=0.1,
             snap_dist=correction_distance,
             directed=self.config.network_use_directed_graph,
+            backend=self.config.network_graph_backend,
             oneway_field=self.config.network_oneway_field,
             oneway_forward_values=self.config.network_oneway_forward_values,
             oneway_reverse_values=self.config.network_oneway_reverse_values,
@@ -2170,7 +2232,7 @@ class AnchorGeometryProcessor(BaseProcessor):
         relevant_distance: float,
         **kwargs: Any,
     ) -> ProcessResult:
-        processing_area = kwargs.get("processing_area")
+        processing_area = self._normalize_processing_area(kwargs.get("processing_area"))
         if processing_area is not None and not kwargs.get(
             "_processing_area_applied", False
         ):
@@ -2372,8 +2434,11 @@ class AnchorGeometryProcessor(BaseProcessor):
         self,
         lines: list[LineString],
         precomputed_ref_direction_index=None,
-    ) -> nx.Graph:
-        graph = nx.DiGraph() if self.config.network_use_directed_graph else nx.Graph()
+    ) -> Graph:
+        graph = new_graph(
+            directed=self.config.network_use_directed_graph,
+            backend=self.config.network_graph_backend,
+        )
         for line in lines:
             coords = list(line.coords)
             if len(coords) < 2:
@@ -2403,7 +2468,7 @@ class AnchorGeometryProcessor(BaseProcessor):
                     graph.add_edge(a, b, length=length, geometry=seg, tag="ref_lines")
         return graph
 
-    def _snap_point_to_graph(self, point: Point, graph: nx.Graph) -> Point:
+    def _snap_point_to_graph(self, point: Point, graph: Graph) -> Point:
         if graph.number_of_nodes() == 0:
             return point
         node = _select_network_node_by_snap_strategy(
@@ -2422,7 +2487,7 @@ class AnchorGeometryProcessor(BaseProcessor):
         return Point(node[0], node[1])
 
     def _has_nearby_snap_candidate(
-        self, point: Point, graph: nx.Graph, relevant_distance: float
+        self, point: Point, graph: Graph, relevant_distance: float
     ) -> bool:
         if graph.number_of_nodes() == 0:
             return False
@@ -2475,9 +2540,9 @@ class AnchorGeometryProcessor(BaseProcessor):
     def _align_linestring_anchor_routing(
         self,
         line: LineString,
-        graph: nx.Graph,
+        graph: Graph,
         relevant_distance: float,
-        anchor_selection_graph: nx.Graph | None = None,
+        anchor_selection_graph: Graph | None = None,
     ) -> LineString:
         if line is None or line.is_empty or line.length == 0:
             return line
@@ -2550,10 +2615,10 @@ class AnchorGeometryProcessor(BaseProcessor):
                 route_coords.extend(path_nodes[1:])
                 continue
             try:
-                path_nodes = nx.shortest_path(
+                path_nodes = shortest_path(
                     graph, start_node, end_node, weight="length"
                 )
-            except (nx.NetworkXNoPath, nx.NodeNotFound):
+            except (NoPath, NodeNotFound):
                 if self.config.network_use_directed_graph:
                     # Do not introduce synthetic straight jumps between nodes when
                     # directed constraints prevent a valid path.
@@ -2668,7 +2733,7 @@ class AlignerGeometryProcessor(BaseProcessor):
         """
         perf_collector = kwargs.get("perf_collector")
         t_total = time.perf_counter()
-        processing_area = kwargs.get("processing_area")
+        processing_area = self._normalize_processing_area(kwargs.get("processing_area"))
         if processing_area is not None and not kwargs.get(
             "_processing_area_applied", False
         ):
@@ -2688,7 +2753,6 @@ class AlignerGeometryProcessor(BaseProcessor):
                     input_geometry=scoped_geom,
                     mitre_limit=mitre_limit,
                     relevant_distance=relevant_distance,
-                    _force_network_for_polygons=True,
                     **scoped_kwargs,
                 ),
             )
@@ -2879,7 +2943,7 @@ class TopologyProcessor(BaseProcessor):
             Dissolve --> End[Final ProcessResult]
         ```
         """
-        processing_area = kwargs.get("processing_area")
+        processing_area = self._normalize_processing_area(kwargs.get("processing_area"))
         if processing_area is not None and not kwargs.get(
             "_processing_area_applied", False
         ):

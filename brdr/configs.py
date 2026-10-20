@@ -53,6 +53,10 @@ class ProcessorConfig:
     network_use_directed_graph : bool, default False
         If True, the NetworkGeometryProcessor builds a directed graph and can
         enforce one-way constraints from reference feature attributes.
+    network_graph_backend : str, default "rustworkx"
+        Graph backend preference for network-style processing. The processor
+        defaults to the faster `rustworkx` adapter while still allowing
+        explicit selection of other supported backends.
     network_oneway_field : str, default "oneway"
         Attribute name used on reference features to indicate one-way behavior.
     network_oneway_forward_values : tuple[str, ...], default ("yes", "1", "true", "forward")
@@ -89,6 +93,7 @@ class ProcessorConfig:
     angle_threshold_degrees: float = 120.0
     max_anchor_distance: float = 100.0
     network_use_directed_graph: bool = False
+    network_graph_backend: str = "rustworkx"
     network_oneway_field: str = "oneway"
     network_oneway_forward_values: tuple[str, ...] = ("yes", "1", "true", "forward")
     network_oneway_reverse_values: tuple[str, ...] = ("-1", "reverse", "backward")

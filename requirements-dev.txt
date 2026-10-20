@@ -39,7 +39,7 @@ geopandas==1.1.2
     #   osmnx
 hatchling==1.28.0
     # via brdr (pyproject.toml)
-idna==3.7
+idna==3.15
     # via requests
 iniconfig==2.0.0
     # via pytest
@@ -62,6 +62,7 @@ networkx==3.6.1
     #   brdr
     #   brdr (pyproject.toml)
     #   osmnx
+rustworkx==0.18.0
 numpy==1.26.4
     # via
     #   contourpy

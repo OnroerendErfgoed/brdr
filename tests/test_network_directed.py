@@ -1,10 +1,10 @@
 import unittest
 
-import networkx as nx
 from shapely.geometry import LineString, MultiLineString
 
 from brdr.configs import ProcessorConfig
 from brdr.enums import SnapStrategy
+from brdr.graph_backend import DiGraph, backend_name, is_backend_available
 from brdr.graph_utils import build_custom_network, find_best_path_in_network
 from brdr.processor import DirectedNetworkGeometryProcessor
 
@@ -112,7 +112,7 @@ class TestDirectedNetwork(unittest.TestCase):
         self.assertIsNotNone(result)
 
     def test_closed_ring_in_directed_mode_uses_undirected_cycle_search(self):
-        graph = nx.DiGraph()
+        graph = DiGraph()
         cycle = [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)]
         for i in range(len(cycle)):
             u = cycle[i]
@@ -175,3 +175,30 @@ class TestDirectedNetwork(unittest.TestCase):
             correction_distance=0.001,
         )
         self.assertIsNone(result)
+
+    def test_optional_rustworkx_backend_can_drive_path_search(self):
+        if not is_backend_available("rustworkx"):
+            self.skipTest("rustworkx is not installed")
+
+        thematic = LineString([(0.0, 0.0), (10.0, 0.0)])
+        reference = LineString([(0.0, 0.0), (10.0, 0.0)])
+        graph = build_custom_network(
+            input_geometry=thematic,
+            theme_multiline=MultiLineString([thematic]),
+            reference=reference,
+            reference_intersection=reference,
+            relevant_distance=1.0,
+            snap_dist=0.001,
+            directed=False,
+            backend="rustworkx",
+        )
+
+        result = find_best_path_in_network(
+            thematic,
+            graph,
+            snap_strategy=SnapStrategy.NO_PREFERENCE,
+            tolerance=1.0,
+        )
+
+        self.assertEqual(backend_name(graph), "rustworkx")
+        self.assertIsNotNone(result)

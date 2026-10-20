@@ -22,6 +22,8 @@ from brdr.constants import (
 )
 from brdr.geometry_utils import buffer_pos, to_crs
 from brdr.loader import GeoJsonLoader
+from brdr.utils import DEFAULT_REQUEST_TIMEOUT
+from brdr.utils import get_http_session
 
 log = logging.getLogger(__name__)
 
@@ -83,12 +85,20 @@ class GRBActualLoader(GeoJsonLoader):
         Information about the versioning metadata format.
     """
 
-    def __init__(self, grb_type: GRBType, aligner: Any, partition: int = 1000):
+    def __init__(
+        self,
+        grb_type: GRBType,
+        aligner: Any,
+        partition: int = 1000,
+        request_timeout: int = DEFAULT_REQUEST_TIMEOUT,
+    ):
         super().__init__()
         self.aligner = aligner
         check_crs(self.aligner)
         self.grb_type = grb_type
         self.part = partition
+        self.request_timeout = request_timeout
+        self._session = get_http_session()
         self.data_dict_source["source"] = grb_type.value
         self.data_dict_source["source_url"] = GRB_FEATURE_URL + "/" + grb_type.name
         self.versiondate_info = {"name": GRB_VERSION_DATE, "format": DATE_FORMAT}
@@ -128,6 +138,8 @@ class GRBActualLoader(GeoJsonLoader):
             geometry=geom_union,
             partition=self.part,
             crs=self.aligner.crs,
+            request_timeout=self.request_timeout,
+            session=self._session,
         )
         self.id_property = id_property
         self.input = dict(collection)
@@ -163,12 +175,20 @@ class GRBFiscalParcelLoader(GeoJsonLoader):
         Number of features per request, by default 1000.
     """
 
-    def __init__(self, year: str, aligner: Any, partition: int = 1000):
+    def __init__(
+        self,
+        year: str,
+        aligner: Any,
+        partition: int = 1000,
+        request_timeout: int = DEFAULT_REQUEST_TIMEOUT,
+    ):
         super().__init__(_input=None, id_property=GRB_PARCEL_ID)
         self.aligner = aligner
         check_crs(self.aligner)
         self.year = year
         self.part = partition
+        self.request_timeout = request_timeout
+        self._session = get_http_session()
         self.data_dict_source["source"] = "Adpf"
         self.data_dict_source["source_url"] = (
             GRB_FISCAL_PARCELS_URL + "/Adpf" + str(year)
@@ -209,6 +229,8 @@ class GRBFiscalParcelLoader(GeoJsonLoader):
             geometry=geom_union,
             partition=self.part,
             crs=self.aligner.crs,
+            request_timeout=self.request_timeout,
+            session=self._session,
         )
         self.input = dict(collection)
         self.aligner.logger.feedback_info(f"Adpf downloaded for year: {self.year}")
@@ -242,7 +264,13 @@ class GRBSpecificDateParcelLoader(GeoJsonLoader):
         - If the date refers to the current or a future year.
     """
 
-    def __init__(self, date: str, aligner: Any, partition: int = 1000):
+    def __init__(
+        self,
+        date: str,
+        aligner: Any,
+        partition: int = 1000,
+        request_timeout: int = DEFAULT_REQUEST_TIMEOUT,
+    ):
         logging.warning(
             "Loader for GRB parcel-situation on specific date (experimental); "
             "Use it with care!!!"
@@ -264,6 +292,8 @@ class GRBSpecificDateParcelLoader(GeoJsonLoader):
         check_crs(self.aligner)
         self.date = date_obj
         self.part = partition
+        self.request_timeout = request_timeout
+        self._session = get_http_session()
         self.data_dict_source["source"] = "Adp"
         # This is a temporary source_url, that mimics the experimental implementation in
         # `get_collections_grb_parcels_by_date().
@@ -304,6 +334,8 @@ class GRBSpecificDateParcelLoader(GeoJsonLoader):
             geometry=geom_union,
             partition=self.part,
             crs=self.aligner.crs,
+            request_timeout=self.request_timeout,
+            session=self._session,
         )
         self.input = dict(collection)
         self.aligner.logger.feedback_info(

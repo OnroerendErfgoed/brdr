@@ -15,9 +15,10 @@ This page groups practical `brdr` examples from basic alignment to advanced work
 How to use these examples:
 
 1. Start with **Get Started** to understand the standard `Aligner` flow.
-2. Continue with **Loader** examples to connect your own data sources.
-3. Use **Prediction** and **Evaluation** once your processing pipeline is stable.
-4. Use processor-specific examples (for example `NetworkGeometryProcessor`) only when needed.
+2. Use [How-to Recipes](how-to.qmd) when you want to start from a functional use case.
+3. Continue with **Loader** examples to connect your own data sources.
+4. Use **Prediction** and **Evaluation** once your processing pipeline is stable.
+5. Use processor-specific examples (for example `NetworkGeometryProcessor`) only when needed.
 
 Most examples use real GRB reference data and therefore require network access during execution.
 
