@@ -13,6 +13,13 @@ import geopandas as gpd
 import requests
 from geojson import Feature
 from geojson import FeatureCollection
+from geojson import GeometryCollection as GeoJSONGeometryCollection
+from geojson import LineString as GeoJSONLineString
+from geojson import MultiLineString as GeoJSONMultiLineString
+from geojson import MultiPoint as GeoJSONMultiPoint
+from geojson import MultiPolygon as GeoJSONMultiPolygon
+from geojson import Point as GeoJSONPoint
+from geojson import Polygon as GeoJSONPolygon
 from pyproj import CRS
 from shapely import GeometryCollection
 from shapely import make_valid
@@ -40,13 +47,12 @@ from brdr.geometry_utils import from_crs
 from brdr.geometry_utils import get_bbox
 from brdr.geometry_utils import get_partitions
 from brdr.geometry_utils import get_shape_index
+from brdr.geometry_utils import normalize_geometry
 from brdr.geometry_utils import safe_intersection
 from brdr.geometry_utils import safe_unary_union
 from brdr.geometry_utils import to_crs
 from brdr.logger import LOGGER
 from brdr.typings import ProcessResult
-
-log = logging.getLogger(__name__)
 
 
 def _parse_feature_collection_response(
@@ -143,9 +149,23 @@ def get_geojsons_from_process_results(
                 if results_type not in features_list_dict:
                     features_list_dict[results_type] = []
 
-                feature = _feature_from_geom(
-                    value, theme_id, properties, geom_attributes
-                )
+                try:
+                    feature = _feature_from_geom(
+                        value, theme_id, properties, geom_attributes
+                    )
+                except ValueError as error:
+                    LOGGER.error(
+                        "Feature %r has an unrepairable geometry during GeoJSON result export (%s); exporting an empty geometry (%s).",
+                        theme_id,
+                        results_type,
+                        error,
+                    )
+                    feature = _feature_from_geom(
+                        _empty_geometry_like(value),
+                        theme_id,
+                        properties,
+                        geom_attributes,
+                    )
                 features_list_dict[results_type].append(feature)
 
     crs_geojson = {"type": "name", "properties": {"name": from_crs(crs)}}
@@ -165,6 +185,14 @@ def _flatten_dict(input_dict: dict, parent_key: str = "", sep: str = "__") -> di
         else:
             flat[new_key] = value
     return flat
+
+
+def _empty_geometry_like(geometry: BaseGeometry) -> BaseGeometry:
+    """Create a valid empty geometry with the same type where possible."""
+    try:
+        return type(geometry)()
+    except Exception:
+        return GeometryCollection()
 
 
 def get_geodataframe_from_process_results(
@@ -200,19 +228,34 @@ def get_geodataframe_from_process_results(
             if isinstance(extra_props, dict):
                 row.update(_flatten_dict(extra_props))
 
-            for key, value in process_result.items():
-                if isinstance(value, BaseGeometry):
-                    row[key] = value
-                elif isinstance(value, dict):
-                    row.update(_flatten_dict(value, parent_key=key))
-                elif isinstance(value, list):
-                    row[key] = json.dumps(
-                        value,
-                        ensure_ascii=False,
-                        default=geojson_serializor,
-                    )
-                else:
-                    row[key] = value
+            try:
+                for key, value in process_result.items():
+                    if isinstance(value, BaseGeometry):
+                        row[key] = normalize_geometry(
+                            value,
+                            feature_id=theme_id,
+                            context=f"GeoDataFrame export ({key})",
+                        )
+                    elif isinstance(value, dict):
+                        row.update(_flatten_dict(value, parent_key=key))
+                    elif isinstance(value, list):
+                        row[key] = json.dumps(
+                            value,
+                            ensure_ascii=False,
+                            default=geojson_serializor,
+                        )
+                    else:
+                        row[key] = value
+            except ValueError as error:
+                LOGGER.error(
+                    "Feature %r at distance %s has an unrepairable geometry during GeoDataFrame export; exporting empty geometry value(s) (%s).",
+                    theme_id,
+                    relevant_distance,
+                    error,
+                )
+                for key, value in process_result.items():
+                    if isinstance(value, BaseGeometry):
+                        row[key] = _empty_geometry_like(value)
 
             rows.append(row)
 
@@ -263,6 +306,11 @@ def _feature_from_geom(
     Returns:
         Feature: The GeoJSON feature.
     """
+    geom = normalize_geometry(
+        geom,
+        feature_id=feature_id,
+        context="GeoJSON export",
+    )
     properties = dict(properties or {})
     if geom_attributes:
         area = geom.area
@@ -270,7 +318,37 @@ def _feature_from_geom(
         properties[AREA_ATTRIBUTE] = area
         properties[PERIMETER_ATTRIBUTE] = perimeter
         properties[SHAPE_INDEX_ATTRIBUTE] = get_shape_index(area, perimeter)
-    return Feature(geometry=geom, id=feature_id, properties=properties)
+    return Feature(
+        geometry=_geojson_geometry_from_shapely(geom),
+        id=feature_id,
+        properties=properties,
+    )
+
+
+def _geojson_geometry_from_shapely(geom: BaseGeometry):
+    """Convert Shapely geometry without geojson's default six-decimal rounding."""
+    geometry_interface = geom.__geo_interface__
+    geometry_type = geometry_interface["type"]
+    if geometry_type == "GeometryCollection":
+        return GeoJSONGeometryCollection(
+            geometries=[_geojson_geometry_from_shapely(part) for part in geom.geoms]
+        )
+
+    geometry_class_by_type = {
+        "Point": GeoJSONPoint,
+        "MultiPoint": GeoJSONMultiPoint,
+        "LineString": GeoJSONLineString,
+        "MultiLineString": GeoJSONMultiLineString,
+        "Polygon": GeoJSONPolygon,
+        "MultiPolygon": GeoJSONMultiPolygon,
+    }
+    geometry_class = geometry_class_by_type.get(geometry_type)
+    if geometry_class is None:
+        raise TypeError(f"Unsupported GeoJSON geometry type: {geometry_type}")
+    return geometry_class(
+        coordinates=geometry_interface["coordinates"],
+        precision=17,
+    )
 
 
 def write_featurecollection_to_geopackage(
@@ -279,6 +357,37 @@ def write_featurecollection_to_geopackage(
     # 1. Change to GeoDataFrame
     crs_name = featurecollection.get("crs", {}).get("properties", {}).get("name")
     gdf = gpd.GeoDataFrame.from_features(featurecollection, crs=crs_name)
+
+    if "geometry" in gdf.columns:
+        id_field = next(
+            (field for field in ("id", "gid") if field in gdf.columns), None
+        )
+        valid_rows = []
+        for index, geometry in enumerate(gdf.geometry):
+            feature_id = gdf.iloc[index][id_field] if id_field else index
+            if geometry is None:
+                valid_rows.append(index)
+                continue
+            try:
+                gdf.iat[index, gdf.columns.get_loc(gdf.geometry.name)] = (
+                    normalize_geometry(
+                        geometry,
+                        feature_id=feature_id,
+                        context="GeoPackage export",
+                    )
+                )
+                valid_rows.append(index)
+            except ValueError as error:
+                LOGGER.error(
+                    "Feature %r has an unrepairable geometry during GeoPackage export; exporting an empty geometry (%s).",
+                    feature_id,
+                    error,
+                )
+                gdf.iat[index, gdf.columns.get_loc(gdf.geometry.name)] = (
+                    _empty_geometry_like(geometry)
+                )
+                valid_rows.append(index)
+        gdf = gdf.iloc[valid_rows].copy()
 
     # 2. Set CRS
     if gdf.crs is None:
@@ -319,6 +428,44 @@ def geojson_serializor(obj):
 
 def write_featurecollection_to_geojson(output_path, featurecollection):
     features = featurecollection.get("features", [])
+    valid_features = []
+
+    for index, feature in enumerate(features):
+        geometry = feature.get("geometry")
+        if geometry is None:
+            valid_features.append(feature)
+            continue
+        feature_id = feature.get("id")
+        if feature_id is None:
+            feature_id = feature.get("properties", {}).get("gid", index)
+        try:
+            shapely_geometry = shape(geometry)
+        except Exception as error:
+            LOGGER.error(
+                "Feature %r has an unreadable geometry during GeoJSON file export; exporting an empty GeometryCollection (%s).",
+                feature_id,
+                error,
+            )
+            feature["geometry"] = _geojson_geometry_from_shapely(GeometryCollection())
+            valid_features.append(feature)
+            continue
+        try:
+            normalized_geometry = normalize_geometry(
+                shapely_geometry,
+                feature_id=feature_id,
+                context="GeoJSON file export",
+            )
+        except ValueError as error:
+            LOGGER.error(
+                "Feature %r has an unrepairable geometry during GeoJSON file export; exporting an empty geometry (%s).",
+                feature_id,
+                error,
+            )
+            normalized_geometry = _empty_geometry_like(shapely_geometry)
+        feature["geometry"] = _geojson_geometry_from_shapely(normalized_geometry)
+        valid_features.append(feature)
+    featurecollection["features"] = valid_features
+    features = valid_features
 
     # Determine all columns who need a json.dumps (lists and dicts)
     keys_to_stringify = set()
@@ -938,7 +1085,7 @@ def geojson_to_dicts(collection, id_property=None):
             geom = shape(f["geometry"])
         except:
             geom = Polygon()
-        data_dict[key] = make_valid(geom)
+        data_dict[key] = geom
         data_dict_properties[key] = f["properties"]
     return data_dict, data_dict_properties
 

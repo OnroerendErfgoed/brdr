@@ -16,6 +16,7 @@ from shapely import STRtree
 from shapely import buffer
 from shapely import difference
 from shapely import equals
+from shapely import force_2d
 from shapely import from_wkt
 from shapely import get_exterior_ring
 from shapely import get_interior_ring
@@ -47,6 +48,7 @@ from shapely.ops import unary_union
 from shapely.prepared import prep
 
 from brdr.enums import SnapStrategy
+from brdr.logger import LOGGER
 
 ShapelyGeometry = Union[
     Point,
@@ -58,7 +60,142 @@ ShapelyGeometry = Union[
     GeometryCollection,
 ]
 
-log = logging.getLogger(__name__)
+
+def _geometry_family(geometry: BaseGeometry) -> str | None:
+    if isinstance(geometry, (Polygon, MultiPolygon)):
+        return "polygon"
+    if isinstance(geometry, (LineString, MultiLineString)):
+        return "line"
+    if isinstance(geometry, (Point, MultiPoint)):
+        return "point"
+    return None
+
+
+def _iter_geometry_parts(geometry: BaseGeometry):
+    if isinstance(
+        geometry,
+        (GeometryCollection, MultiPolygon, MultiLineString, MultiPoint),
+    ):
+        for part in geometry.geoms:
+            yield from _iter_geometry_parts(part)
+    else:
+        yield geometry
+
+
+def _filter_geometry_families(
+    geometry: BaseGeometry, families: set[str]
+) -> tuple[BaseGeometry | None, list[str]]:
+    family = _geometry_family(geometry)
+    if family in families:
+        return geometry, []
+    if isinstance(geometry, GeometryCollection):
+        kept_parts = []
+        discarded_types = []
+        for part in geometry.geoms:
+            kept_part, discarded = _filter_geometry_families(part, families)
+            if kept_part is not None:
+                kept_parts.append(kept_part)
+            discarded_types.extend(discarded)
+        return GeometryCollection(kept_parts), discarded_types
+    return None, [geometry.geom_type]
+
+
+def _restore_geometry_family(
+    geometry: BaseGeometry, source_geometry: BaseGeometry
+) -> tuple[BaseGeometry, list[str]]:
+    """Keep repaired components compatible with the source geometry family."""
+    source_family = _geometry_family(source_geometry)
+    output_parts = list(_iter_geometry_parts(geometry))
+
+    if isinstance(source_geometry, GeometryCollection):
+        families = {
+            family
+            for family in (
+                _geometry_family(part) for part in _iter_geometry_parts(source_geometry)
+            )
+            if family is not None
+        }
+        filtered_geometry, discarded_types = _filter_geometry_families(
+            geometry, families
+        )
+        if filtered_geometry is None:
+            filtered_geometry = GeometryCollection()
+        return filtered_geometry, sorted(set(discarded_types))
+
+    if source_family is None:
+        return geometry, []
+
+    kept_parts = [
+        part for part in output_parts if _geometry_family(part) == source_family
+    ]
+    discarded_types = sorted(
+        {
+            part.geom_type
+            for part in output_parts
+            if _geometry_family(part) != source_family
+        }
+    )
+    if source_family == "polygon":
+        if isinstance(source_geometry, MultiPolygon) or len(kept_parts) != 1:
+            return MultiPolygon(kept_parts), discarded_types
+        return kept_parts[0] if kept_parts else Polygon(), discarded_types
+    if source_family == "line":
+        if isinstance(source_geometry, MultiLineString) or len(kept_parts) != 1:
+            return MultiLineString(kept_parts), discarded_types
+        return kept_parts[0] if kept_parts else LineString(), discarded_types
+    if isinstance(source_geometry, MultiPoint) or len(kept_parts) != 1:
+        return MultiPoint(kept_parts), discarded_types
+    return kept_parts[0] if kept_parts else Point(), discarded_types
+
+
+def normalize_geometry(
+    geometry: BaseGeometry,
+    *,
+    source_geometry: BaseGeometry | None = None,
+    feature_id: str | int | None = None,
+    context: str = "geometry processing",
+) -> BaseGeometry:
+    """Return a valid 2D geometry, preserving the source geometry family."""
+    if geometry is None:
+        raise ValueError(f"Feature {feature_id!r} has no geometry during {context}.")
+
+    source_geometry = source_geometry if source_geometry is not None else geometry
+    try:
+        geometry_2d = force_2d(geometry)
+        input_was_invalid = not geometry_2d.is_valid
+        repaired = make_valid(geometry_2d) if input_was_invalid else geometry_2d
+        normalized, discarded_types = _restore_geometry_family(
+            repaired, source_geometry
+        )
+
+        if not normalized.is_valid:
+            repaired_again = make_valid(normalized)
+            normalized, newly_discarded = _restore_geometry_family(
+                repaired_again, source_geometry
+            )
+            discarded_types = sorted(set(discarded_types) | set(newly_discarded))
+    except GEOSException as error:
+        raise ValueError(
+            f"Feature {feature_id!r} could not be repaired during {context}."
+        ) from error
+
+    if not normalized.is_valid:
+        raise ValueError(
+            f"Feature {feature_id!r} remains invalid after geometry repair "
+            f"during {context} (type={normalized.geom_type})."
+        )
+
+    if input_was_invalid or discarded_types or repaired.geom_type != geometry.geom_type:
+        LOGGER.warning(
+            "Feature %r during %s: repaired %s to valid %s; "
+            "discarded nonmatching component types: %s",
+            feature_id,
+            context,
+            geometry.geom_type,
+            normalized.geom_type,
+            discarded_types or "none",
+        )
+    return normalized
 
 
 def buffer_neg_pos(geometry, buffer_value, mitre_limit=5):
