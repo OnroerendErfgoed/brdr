@@ -60,6 +60,7 @@ ShapelyGeometry = Union[
     GeometryCollection,
 ]
 
+
 def _geometry_family(geometry: BaseGeometry) -> str | None:
     if isinstance(geometry, (Polygon, MultiPolygon)):
         return "polygon"
@@ -110,8 +111,7 @@ def _restore_geometry_family(
         families = {
             family
             for family in (
-                _geometry_family(part)
-                for part in _iter_geometry_parts(source_geometry)
+                _geometry_family(part) for part in _iter_geometry_parts(source_geometry)
             )
             if family is not None
         }
@@ -185,11 +185,7 @@ def normalize_geometry(
             f"during {context} (type={normalized.geom_type})."
         )
 
-    if (
-        input_was_invalid
-        or discarded_types
-        or repaired.geom_type != geometry.geom_type
-    ):
+    if input_was_invalid or discarded_types or repaired.geom_type != geometry.geom_type:
         LOGGER.warning(
             "Feature %r during %s: repaired %s to valid %s; "
             "discarded nonmatching component types: %s",

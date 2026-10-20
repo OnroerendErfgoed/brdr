@@ -369,10 +369,12 @@ def write_featurecollection_to_geopackage(
                 valid_rows.append(index)
                 continue
             try:
-                gdf.iat[index, gdf.columns.get_loc(gdf.geometry.name)] = normalize_geometry(
-                    geometry,
-                    feature_id=feature_id,
-                    context="GeoPackage export",
+                gdf.iat[index, gdf.columns.get_loc(gdf.geometry.name)] = (
+                    normalize_geometry(
+                        geometry,
+                        feature_id=feature_id,
+                        context="GeoPackage export",
+                    )
                 )
                 valid_rows.append(index)
             except ValueError as error:
@@ -381,8 +383,8 @@ def write_featurecollection_to_geopackage(
                     feature_id,
                     error,
                 )
-                gdf.iat[index, gdf.columns.get_loc(gdf.geometry.name)] = _empty_geometry_like(
-                    geometry
+                gdf.iat[index, gdf.columns.get_loc(gdf.geometry.name)] = (
+                    _empty_geometry_like(geometry)
                 )
                 valid_rows.append(index)
         gdf = gdf.iloc[valid_rows].copy()
