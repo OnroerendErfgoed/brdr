@@ -11,10 +11,15 @@ from shapely import STRtree
 from shapely.geometry.base import BaseGeometry
 
 from brdr.constants import ID_REFERENCE_FIELD_NAME, ID_THEME_FIELD_NAME
-from brdr.geometry_utils import extract_points_lines_from_geometry, from_crs
+from brdr.geometry_utils import (
+    extract_points_lines_from_geometry,
+    from_crs,
+    normalize_geometry,
+)
 from brdr.geometry_utils import safe_unary_union
+from brdr.logger import LOGGER
 from brdr.typings import InputId
-from brdr.utils import _feature_from_geom
+from brdr.utils import _empty_geometry_like, _feature_from_geom
 
 
 class AlignerFeature:
@@ -324,9 +329,24 @@ class AlignerFeatureCollection:
         for key, feat in self.features.items():
             properties = feat.properties
             properties[self.id_fieldname] = key
-            features.append(
-                _feature_from_geom(feat.geometry, key, properties, geom_attributes)
-            )
+            try:
+                features.append(
+                    _feature_from_geom(feat.geometry, key, properties, geom_attributes)
+                )
+            except ValueError as error:
+                LOGGER.error(
+                    "Feature %r has an unrepairable geometry during GeoJSON export; exporting an empty geometry (%s).",
+                    key,
+                    error,
+                )
+                features.append(
+                    _feature_from_geom(
+                        _empty_geometry_like(feat.geometry),
+                        key,
+                        properties,
+                        geom_attributes,
+                    )
+                )
         crs_geojson = None
         if self.crs is not None:
             crs_geojson = {"type": "name", "properties": {"name": from_crs(self.crs)}}
@@ -367,7 +387,19 @@ class AlignerFeatureCollection:
             row = dict(feat.properties or {})
             row[self.id_fieldname] = key
             row["data_id"] = feat.data_id
-            row["geometry"] = feat.geometry
+            try:
+                row["geometry"] = normalize_geometry(
+                    feat.geometry,
+                    feature_id=key,
+                    context="GeoDataFrame export",
+                )
+            except ValueError as error:
+                LOGGER.error(
+                    "Feature %r has an unrepairable geometry during GeoDataFrame export; exporting an empty geometry (%s).",
+                    key,
+                    error,
+                )
+                row["geometry"] = _empty_geometry_like(feat.geometry)
             row["brdr_id"] = feat.brdr_id
             rows.append(row)
 
