@@ -15,7 +15,6 @@ from datetime import datetime
 from typing import Any, Optional, Dict
 
 from geopandas import GeoDataFrame
-from shapely import force_2d, make_valid
 from shapely.geometry.base import BaseGeometry
 
 from brdr.constants import (
@@ -25,7 +24,7 @@ from brdr.constants import (
     VERSION_DATE,
 )
 from brdr.feature_data import AlignerFeature, AlignerFeatureCollection
-from brdr.geometry_utils import buffer_pos, from_crs, to_crs
+from brdr.geometry_utils import buffer_pos, from_crs, normalize_geometry, to_crs
 from brdr.typings import FeatureCollection, InputId
 from brdr.utils import (
     DEFAULT_REQUEST_TIMEOUT,
@@ -97,13 +96,19 @@ class Loader(ABC):
 
 
 
-        1. **Geometry Fix**: Forces 2D and applies `make_valid`.
+        1. **Geometry Fix**: Forces 2D, applies `make_valid`, and keeps repaired
+           components compatible with the source geometry family.
         2. **Metadata Enrichment**: Parses version dates if `versiondate_info` is set.
         3. **Feature Creation**: Generates unique UUIDs and wraps features.
         """
-        self.data_dict = {
-            x: force_2d(make_valid(self.data_dict[x])) for x in self.data_dict
-        }
+        normalized_data = {}
+        for feature_id, source_geometry in self.data_dict.items():
+            normalized_data[feature_id] = normalize_geometry(
+                source_geometry,
+                feature_id=feature_id,
+                context="loading",
+            )
+        self.data_dict = normalized_data
         if self.versiondate_info is not None:
             for key in self.data_dict_properties.keys():
                 try:

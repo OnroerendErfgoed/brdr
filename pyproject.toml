@@ -44,7 +44,7 @@ Issues = "https://github.com/OnroerendErfgoed/brdr/issues"
 [project.optional-dependencies]
 viz = [
     "matplotlib~=3.10",
-    "pillow~=12.2",
+    "pillow~=13.0",
 ]
 test = [
     "pytest-cov==6.0.0",
