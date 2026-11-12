@@ -254,7 +254,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li>The final aligned Lambert08 geometry (<code>result</code>).</li>
 <li>The corrected deviations (<code>result_diff</code>), which show what was adjusted after transformation.</li>
 </ul>
-<div id="287f2586" class="cell" data-execution_count="1">
+<div id="cf9227e5" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyproj <span class="im">import</span> Transformer</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> shapely.ops <span class="im">import</span> transform</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -347,7 +347,7 @@ Next, we do a transformation of the data-object to Lambert08, possibly resulting
 We make a new aligner with CRS EPSG:3812 (Lambert08), so we can align the deviated object to the reference-data(Lambert08)</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>/tmp/ipykernel_3300/2308457662.py:16: DeprecationWarning: The 'shapely.ops.transform()' function is deprecated. Use 'shapely.transform()' or 'shapely.transform_coordseq()' instead. See https://shapely.readthedocs.io/en/latest/manual.html#shapely.ops.transform for more details.
+<pre><code>/tmp/ipykernel_3286/2308457662.py:16: DeprecationWarning: The 'shapely.ops.transform()' function is deprecated. Use 'shapely.transform()' or 'shapely.transform_coordseq()' instead. See https://shapely.readthedocs.io/en/latest/manual.html#shapely.ops.transform for more details.
   return transform(transformer.transform, geom)</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
