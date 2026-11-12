@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.10.19">
+<meta name="generator" content="quarto-1.11.9">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -76,14 +76,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <meta name="quarto:offset" content="../">
 <script src="../site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/scrollable-regions/scrollable-regions.js" type="module"></script>
 <script src="../site_libs/quarto-html/popper.min.js"></script>
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-6453f418aeef366c23116eb9cb0b6816.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-3218d7d29a29f08bc4fdf3802c3e3ca5.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-8864ca4cf71ad6a168109547df21b1a7.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-6eefc548810d3712badbd1796ad7f1a0.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -115,11 +116,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 </head>
 
-<body class="nav-fixed quarto-light">
+<body class="nav-fixed quarto-light"><a id="quarto-skip-link" class="visually-hidden-focusable" href="#quarto-document-content">Skip to main content</a>
 
 <div id="quarto-search-results"></div>
   <header id="quarto-header" class="headroom fixed-top">
-    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark" aria-label="Site">
       <div class="navbar-container container-fluid">
       <div class="navbar-brand-container mx-auto">
     <a href="../index.html" class="navbar-brand navbar-brand-logo">
@@ -130,8 +131,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <span class="navbar-title">BRDR - Aligning borders</span>
     </a>
   </div>
-            <div id="quarto-search" class="" title="Search"></div>
-          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
   <span class="navbar-toggler-icon"></span>
 </button>
           <div class="collapse navbar-collapse" id="navbarCollapse">
@@ -173,6 +173,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
           </div> <!-- /navcollapse -->
             <div class="quarto-navbar-tools">
 </div>
+            <div id="quarto-search" class="" title="Search"></div>
       </div> <!-- /container-fluid -->
     </nav>
 </header>
@@ -181,7 +182,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <!-- sidebar -->
 <!-- margin-sidebar -->
     <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
-        <nav id="TOC" role="doc-toc" class="toc-active">
+        <nav id="TOC" role="doc-toc" aria-labelledby="toc-title" class="toc-active">
     <h2 id="toc-title">On this page</h2>
    
   <ul>
@@ -194,7 +195,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="toc-actions"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/examples/example_lambert72_to_lambert08.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
 <!-- main -->
-<main class="content" id="quarto-document-content">
+<main class="content" id="quarto-document-content" tabindex="-1">
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
@@ -253,7 +254,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li>The final aligned Lambert08 geometry (<code>result</code>).</li>
 <li>The corrected deviations (<code>result_diff</code>), which show what was adjusted after transformation.</li>
 </ul>
-<div id="f905f21f" class="cell" data-execution_count="1">
+<div id="287f2586" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyproj <span class="im">import</span> Transformer</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> shapely.ops <span class="im">import</span> transform</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -346,12 +347,12 @@ Next, we do a transformation of the data-object to Lambert08, possibly resulting
 We make a new aligner with CRS EPSG:3812 (Lambert08), so we can align the deviated object to the reference-data(Lambert08)</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>/tmp/ipykernel_2977/2308457662.py:16: DeprecationWarning: The 'shapely.ops.transform()' function is deprecated. Use 'shapely.transform()' or 'shapely.transform_coordseq()' instead. See https://shapely.readthedocs.io/en/latest/manual.html#shapely.ops.transform for more details.
+<pre><code>/tmp/ipykernel_3300/2308457662.py:16: DeprecationWarning: The 'shapely.ops.transform()' function is deprecated. Use 'shapely.transform()' or 'shapely.transform_coordseq()' instead. See https://shapely.readthedocs.io/en/latest/manual.html#shapely.ops.transform for more details.
   return transform(transformer.transform, geom)</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
-<pre><code>Resulting aligned geometry (Lambert08): POLYGON ((625098.7473393852 680525.1911945271, 625098.2218593401 680526.3664113319, 625098.177706751 680526.4651569742, 625095.28323862 680525.04495726, 625090.5339789229 680522.7146866346, 625081.10584485 680518.0896043903, 625080.2064425997 680523.11042433, 625079.3794076596 680527.72722602, 625078.8939072996 680530.43740507, 625078.2542584303 680534.00841862, 625077.60525949 680537.6315263597, 625077.0639787512 680540.6529269469, 625077.0433572497 680540.76889077, 625073.7535124507 680540.30846709, 625073.5482787762 680540.2050840257, 625071.3089371707 680539.07682732, 625071.0651950274 680539.888627599, 625071.0534785206 680539.928177442, 625058.3830996397 680582.2375343892, 625042.18167683 680576.1780529297, 625028.0450691179 680604.8713687307, 625030.0914488839 680605.4420033552, 625038.9673750077 680607.918010264, 625039.7678556138 680608.1413104001, 625039.7995553301 680608.1501532793, 625072.7417162794 680617.3396189411, 625084.1533328403 680620.5229759387, 625117.0412757118 680629.6969620653, 625124.1793480635 680564.1786487388, 625108.1413849437 680555.876637919, 625109.2966578461 680545.2685593922, 625110.40259653 680545.42284679, 625110.6027167804 680542.2198393703, 625110.83143457 680538.5610331503, 625111.0601522904 680534.9029309197, 625111.1885855496 680532.84908433, 625111.2312894705 680532.1658395426, 625111.3483120464 680530.2942735956, 625098.7473393852 680525.1911945271))
-Corrected deviations (Lambert08): MULTIPOLYGON (((625111.3182642603 680530.2821049932, 625111.2086993367 680532.0343743499, 625111.1659951264 680532.7176140873, 625111.0375595295 680534.7714689089, 625110.808837501 680538.4295883679, 625110.5801153713 680542.0884120895, 625110.3799913554 680545.2914343103, 625109.310416747 680545.1422208368, 625109.2966578453 680545.2685593921, 625110.40259653 680545.42284679, 625110.6027167804 680542.2198393703, 625110.83143457 680538.5610331503, 625111.0601522904 680534.9029309197, 625111.1885855496 680532.84908433, 625111.2312894705 680532.1658395426, 625111.3483120464 680530.2942735956, 625111.3182642603 680530.2821049932)), ((625042.18167683 680576.1780529297, 625058.3830996397 680582.2375343892, 625071.0534785206 680539.928177442, 625071.0651950274 680539.888627599, 625071.3089371707 680539.07682732, 625073.5482782001 680540.2050837354, 625073.7535124507 680540.30846709, 625077.0433572497 680540.76889077, 625077.0639787512 680540.6529269469, 625077.60525949 680537.6315263597, 625078.2542584303 680534.00841862, 625078.8939072996 680530.43740507, 625079.3794076596 680527.72722602, 625080.2064425997 680523.11042433, 625081.10584485 680518.0896043903, 625090.5339787827 680522.7146865658, 625095.28323862 680525.04495726, 625098.177706751 680526.4651569742, 625098.22185934 680526.3664113322, 625095.2606841647 680524.9134760932, 625090.5114342512 680522.5832021107, 625081.0833221747 680517.9581145948, 625080.1839151406 680522.9789592265, 625079.3568756661 680527.5957837077, 625078.871372633 680530.3059761532, 625078.2317202648 680533.8770073362, 625077.5827177647 680537.5001329893, 625077.041434098 680540.521548292, 625077.0208124437 680540.6375129187, 625073.730973594 680540.1770926312, 625073.5257411728 680540.073709828, 625071.2864038679 680538.9454512311, 625071.0426610925 680539.7572556819, 625071.0309444739 680539.7968059701, 625058.3605326456 680582.1063814665, 625042.1591440777 680576.0468996338, 625027.9685043712 680604.8500185898, 625028.0450691181 680604.8713687302, 625042.18167683 680576.1780529297)))</code></pre>
+<pre><code>Resulting aligned geometry (Lambert08): POLYGON ((625058.3830996593 680582.2375343896, 625042.18167686 680576.17805293, 625028.0450691443 680604.871368738, 625030.0914364404 680605.4419998842, 625039.0370066683 680607.9374345451, 625039.7678556137 680608.1413104015, 625039.7855064332 680608.1462342324, 625039.7995553077 680608.1501532731, 625072.7417162794 680617.3396189411, 625084.1533328403 680620.5229759387, 625117.0412757118 680629.6969620653, 625124.1793480635 680564.1786487388, 625108.1413849437 680555.876637919, 625109.2966578464 680545.2685593893, 625110.4025965496 680545.42284679, 625110.6027168096 680542.21983937, 625110.8314346 680538.5610331503, 625111.0601523103 680534.90293092, 625111.1885855796 680532.8490843297, 625111.23128983 680532.16583411, 625111.3483120692 680530.2942736049, 625098.7473393852 680525.1911945271, 625098.2277884147 680526.3531511744, 625098.1777067562 680526.465156962, 625095.28323865 680525.04495726, 625090.5339789528 680522.7146866346, 625081.1058448796 680518.08960439, 625080.2064426197 680523.11042433, 625079.3794076897 680527.72722602, 625078.8939073196 680530.43740508, 625078.2542584604 680534.0084186196, 625077.60525951 680537.63152636, 625077.063978774 680540.6529269313, 625077.0433572696 680540.76889077, 625073.753512469 680540.30846709, 625073.54827796 680540.2050836104, 625071.3089372007 680539.0768273204, 625071.0651950028 680539.888627782, 625071.0534784797 680539.9281776451, 625058.3830996593 680582.2375343896))
+Corrected deviations (Lambert08): MULTIPOLYGON (((625111.3182642603 680530.2821049931, 625111.2086993367 680532.0343743499, 625111.1659951264 680532.7176140873, 625111.0375595295 680534.7714689103, 625110.808837501 680538.4295883679, 625110.5801153713 680542.0884120895, 625110.3799913554 680545.2914343103, 625109.310416747 680545.1422208368, 625109.2966578456 680545.2685593892, 625110.4025965496 680545.42284679, 625110.6027168096 680542.21983937, 625110.8314346 680538.5610331503, 625111.0601523103 680534.90293092, 625111.1885855796 680532.8490843297, 625111.23128983 680532.16583411, 625111.3483120692 680530.2942736049, 625111.3182642603 680530.2821049931)), ((625042.18167686 680576.17805293, 625058.3830996593 680582.2375343896, 625071.0534784689 680539.9281776812, 625071.0651949941 680539.8886278111, 625071.3089372007 680539.0768273204, 625073.54827796 680540.2050836104, 625073.753512469 680540.30846709, 625077.0433572696 680540.76889077, 625077.063978774 680540.6529269313, 625077.60525951 680537.63152636, 625078.2542584604 680534.0084186196, 625078.8939073196 680530.43740508, 625079.3794076897 680527.72722602, 625080.2064426197 680523.11042433, 625081.1058448796 680518.08960439, 625090.5339788126 680522.7146865658, 625095.28323865 680525.04495726, 625098.1777067562 680526.465156962, 625098.2218593399 680526.366411332, 625095.2606841647 680524.9134760932, 625090.5114342512 680522.5832021107, 625081.0833221747 680517.9581145934, 625080.1839151406 680522.9789592265, 625079.3568756661 680527.5957837077, 625078.871372633 680530.3059761532, 625078.2317202648 680533.8770073362, 625077.5827177647 680537.5001329893, 625077.041434098 680540.521548292, 625077.0208124437 680540.6375129187, 625073.730973594 680540.1770926312, 625073.5257411728 680540.073709828, 625071.2864038679 680538.9454512311, 625071.0426610925 680539.7572556819, 625071.0309444739 680539.7968059701, 625058.3605326456 680582.1063814665, 625042.1591440777 680576.0468996338, 625027.9685043712 680604.8500185898, 625028.0450691446 680604.8713687377, 625042.18167686 680576.17805293)))</code></pre>
 </div>
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-center">
@@ -446,7 +447,8 @@ Corrected deviations (Lambert08): MULTIPOLYGON (((625111.3182642603 680530.28210
           return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
       }
       // Inspect non-navigation links and adorn them if external
-     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      window.quartoDecorateExternalLinks = function (root) {
+     var links = (root || window.document).querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
       for (var i=0; i<links.length; i++) {
         const link = links[i];
         if (!isInternal(link.href)) {
@@ -455,8 +457,69 @@ Corrected deviations (Lambert08): MULTIPOLYGON (((625111.3182642603 680530.28210
           if (link.dataset.originalHref !== undefined) {
             link.href = link.dataset.originalHref;
           }
+          if (!link.classList.contains('no-external-icon')) {
+          }
         }
       }
+      };
+      window.quartoDecorateExternalLinks(window.document);
+    // Esc closes the popup (WCAG 1.4.13) and focus leaving both trigger and
+    // popup closes it (WCAG 2.4.11); tippy handles neither for interactive popups.
+    const hideOnEscAndFocusOut = {
+      name: 'hideOnEscAndFocusOut',
+      defaultValue: true,
+      fn(instance) {
+        const dismiss = () => {
+          // A show scheduled by the trigger delay would otherwise reopen it
+          instance.clearDelayTimeouts();
+          instance.hide();
+        };
+        const onKeyDown = (event) => {
+          if (event.key !== 'Escape') {
+            return;
+          }
+          // Keep Esc from also reaching page handlers (e.g. reveal.js overview),
+          // except an open reveal.js slide menu, which Esc should close too.
+          // The menu handles keys only when its keyboard option is on.
+          const menuHandlesEsc = window.Reveal?.getPlugin?.('menu')?.isOpen() &&
+            window.Reveal.getConfig().menu?.keyboard !== false;
+          if (!menuHandlesEsc) {
+            event.stopPropagation();
+          }
+          if (instance.popper.contains(window.document.activeElement)) {
+            // Disabled while refocusing so the focus trigger does not reopen it
+            instance.disable();
+            instance.reference.focus();
+            instance.enable();
+          }
+          dismiss();
+        };
+        const onFocusOut = (event) => {
+          const target = event.relatedTarget;
+          if (target && !instance.reference.contains(target) &&
+              !instance.popper.contains(target)) {
+            dismiss();
+          }
+        };
+        // On the trigger too: a click trigger (code-annotations: select) has no
+        // blur handling. Attached for the instance's lifetime so leaving the
+        // trigger also cancels a show still pending on the trigger delay.
+        instance.reference.addEventListener('focusout', onFocusOut);
+        return {
+          onShow() {
+            window.document.addEventListener('keydown', onKeyDown, true);
+            instance.popper.addEventListener('focusout', onFocusOut);
+          },
+          onHide() {
+            window.document.removeEventListener('keydown', onKeyDown, true);
+            instance.popper.removeEventListener('focusout', onFocusOut);
+          },
+          onDestroy() {
+            instance.reference.removeEventListener('focusout', onFocusOut);
+          },
+        };
+      },
+    };
     function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
       const config = {
         allowHTML: true,
@@ -470,6 +533,7 @@ Corrected deviations (Lambert08): MULTIPOLYGON (((625111.3182642603 680530.28210
         interactiveBorder: 10,
         theme: 'quarto',
         placement: 'bottom-start',
+        plugins: [hideOnEscAndFocusOut],
       };
       if (contentFn) {
         config.content = contentFn;
@@ -632,44 +696,54 @@ Corrected deviations (Lambert08): MULTIPOLYGON (((625111.3182642603 680530.28210
           const lineIds = lines.map((line) => {
             return targetCell + "-" + line;
           })
-          let top = null;
-          let height = null;
-          let parent = null;
+          // Each band is positioned against its own containing block, which is
+          // not the offsetParent of the lines, so place it from client rects.
+          const placeBand = (band, firstEl, lastEl, codeBlock) => {
+            const container = band.offsetParent;
+            if (container === null) {
+              return;
+            }
+            const containerRect = container.getBoundingClientRect();
+            // Reveal.js scales slides with a transform, so convert client
+            // pixels back to the CSS pixels of the container.
+            const scale = containerRect.height / container.offsetHeight || 1;
+            const firstRect = firstEl.getBoundingClientRect();
+            const lastRect = lastEl.getBoundingClientRect();
+            const top = (firstRect.top - containerRect.top) / scale - container.clientTop + container.scrollTop;
+            const height = (lastRect.bottom - firstRect.top) / scale;
+            band.style.top = top - 2 + "px";
+            band.style.height = height + 4 + "px";
+            if (codeBlock) {
+              // Without the copy button wrapper, the containing block is wider
+              // than the code block, so span the code block explicitly.
+              const blockRect = codeBlock.getBoundingClientRect();
+              band.style.left = (blockRect.left - containerRect.left) / scale - container.clientLeft + container.scrollLeft + "px";
+              band.style.width = blockRect.width / scale + "px";
+            }
+          };
           if (lineIds.length > 0) {
-              //compute the position of the single el (top and bottom and make a div)
-              const el = window.document.getElementById(lineIds[0]);
-              top = el.offsetTop;
-              height = el.offsetHeight;
-              parent = el.parentElement.parentElement;
-            if (lineIds.length > 1) {
-              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
-              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
-              height = bottom - top;
+            const el = window.document.getElementById(lineIds[0]);
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const parent = el.parentElement.parentElement;
+            // cook up a div (if necessary) and position it
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
             }
-            if (top !== null && height !== null && parent !== null) {
-              // cook up a div (if necessary) and position it 
-              let div = window.document.getElementById("code-annotation-line-highlight");
-              if (div === null) {
-                div = window.document.createElement("div");
-                div.setAttribute("id", "code-annotation-line-highlight");
-                div.style.position = 'absolute';
-                parent.appendChild(div);
-              }
-              div.style.top = top - 2 + "px";
-              div.style.height = height + 4 + "px";
-              div.style.left = 0;
-              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
-              if (gutterDiv === null) {
-                gutterDiv = window.document.createElement("div");
-                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
-                gutterDiv.style.position = 'absolute';
-                const codeCell = window.document.getElementById(targetCell);
-                const gutter = codeCell.querySelector('.code-annotation-gutter');
-                gutter.appendChild(gutterDiv);
-              }
-              gutterDiv.style.top = top - 2 + "px";
-              gutterDiv.style.height = height + 4 + "px";
+            placeBand(div, el, lastEl, parent.closest("div.sourceCode") || parent);
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
             }
+            placeBand(gutterDiv, el, lastEl);
             selectedAnnoteEl = annoteEl;
           }
         };
@@ -767,6 +841,9 @@ Corrected deviations (Lambert08): MULTIPOLYGON (((625111.3182642603 680530.28210
       }
     }
   });
+  </script>
+  <script type="application/javascript">
+  window.quartoScrollableRegionsLabels = {"code":"Scrollable code","output":"Scrollable output"};
   </script>
 </div> <!-- /content -->
 <footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/examples/example_lambert72_to_lambert08.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer><hr>

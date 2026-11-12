@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.10.19">
+<meta name="generator" content="quarto-1.11.9">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -76,14 +76,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <meta name="quarto:offset" content="../">
 <script src="../site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/scrollable-regions/scrollable-regions.js" type="module"></script>
 <script src="../site_libs/quarto-html/popper.min.js"></script>
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-6453f418aeef366c23116eb9cb0b6816.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-3218d7d29a29f08bc4fdf3802c3e3ca5.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-8864ca4cf71ad6a168109547df21b1a7.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-6eefc548810d3712badbd1796ad7f1a0.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -115,11 +116,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 </head>
 
-<body class="nav-fixed quarto-light">
+<body class="nav-fixed quarto-light"><a id="quarto-skip-link" class="visually-hidden-focusable" href="#quarto-document-content">Skip to main content</a>
 
 <div id="quarto-search-results"></div>
   <header id="quarto-header" class="headroom fixed-top">
-    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark" aria-label="Site">
       <div class="navbar-container container-fluid">
       <div class="navbar-brand-container mx-auto">
     <a href="../index.html" class="navbar-brand navbar-brand-logo">
@@ -130,8 +131,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <span class="navbar-title">BRDR - Aligning borders</span>
     </a>
   </div>
-            <div id="quarto-search" class="" title="Search"></div>
-          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
   <span class="navbar-toggler-icon"></span>
 </button>
           <div class="collapse navbar-collapse" id="navbarCollapse">
@@ -173,6 +173,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
           </div> <!-- /navcollapse -->
             <div class="quarto-navbar-tools">
 </div>
+            <div id="quarto-search" class="" title="Search"></div>
       </div> <!-- /container-fluid -->
     </nav>
 </header>
@@ -181,7 +182,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <!-- sidebar -->
 <!-- margin-sidebar -->
     <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
-        <nav id="TOC" role="doc-toc" class="toc-active">
+        <nav id="TOC" role="doc-toc" aria-labelledby="toc-title" class="toc-active">
     <h2 id="toc-title">On this page</h2>
    
   <ul>
@@ -195,7 +196,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="toc-actions"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/examples/example_geojsonloader.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
 <!-- main -->
-<main class="content" id="quarto-document-content">
+<main class="content" id="quarto-document-content" tabindex="-1">
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
@@ -258,7 +259,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li>Ensure the input <code>id_property</code> matches your feature properties.</li>
 <li>The example calls <code>save_results(...)</code> and visualization helpers, useful for quick QA.</li>
 </ul>
-<div id="a54c646d" class="cell" data-execution_count="1">
+<div id="24393425" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.aligner <span class="im">import</span> Aligner</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.be.grb.enums <span class="im">import</span> GRBType</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> brdr.be.grb.loader <span class="im">import</span> GRBActualLoader</span>
@@ -340,7 +341,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-stdout">
 <pre><code>-------- Observation for ID 1100 with relevant distance 5 --------------
-{'alignment_date': '2026-10-20',
+{'alignment_date': '2026-11-12',
  'area': 10805.47,
  'brdr_version': '0.17.4',
  'count': 0.0,
@@ -435,7 +436,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  'reference_od': {'area': 1578.74},
  'reference_source': {'source': 'GRB - ADP - administratief perceel',
                       'source_url': 'https://geo.api.vlaanderen.be/GRB/ogc/features/collections/ADP',
-                      'version_date': '2026-10-20'}}
+                      'version_date': '2026-11-12'}}
 {"crs": {"properties": {"name": "http://www.opengis.net/def/crs/EPSG/0/31370"}, "type": "name"}, "features": [{"geometry": {"coordinates": [[[169980.0292343618, 172088.19415713064], [169979.65890287483, 172095.67606116625], [169980.71026070885, 172099.72396502996], [169986.29631042157, 172121.23119405986], [169987.4058523029, 172122.03025670515], [169987.65475300906, 172122.20950839456], [169995.14071052682, 172127.60069652175], [169997.74034298863, 172129.47288289602], [170003.98062171382, 172133.96696618327], [170004.15925707493, 172134.12434558565], [170004.97544908008, 172134.81906559], [170005.8034170833, 172135.49957759262], [170006.64277708685, 172136.16594558748], [170007.4935930882, 172136.8178495963], [170008.35522508092, 172137.45509758347], [170009.22773708348, 172138.07749759246], [170010.11068108992, 172138.68498559], [170011.0039290913, 172139.27717759088], [170011.90722508501, 172139.85407358676], [170012.82018508774, 172140.4154815886], [170013.74268109785, 172140.96114559437], [170014.67420109, 172141.49093759016], [170015.6148090864, 172142.004729588], [170016.56405709594, 172142.50245759304], [170017.5216250881, 172142.98380158903], [170018.4872570878, 172143.44882558903], [170019.46069709235, 172143.89720959114], [170020.4416890919, 172144.32882559087], [170021.4299130734, 172144.74367358309], [170021.6653051061, 172144.83967359655], [170022.42504908974, 172145.14156158592], [170023.42684110455, 172145.52236159166], [170024.43503309166, 172145.8860095906], [170025.44930509146, 172146.23231359062], [170026.46933709984, 172146.56133759004], [170027.4948090938, 172146.87276159818], [170028.52540110462, 172147.16677760132], [170029.56092109877, 172147.44293758957], [170030.6011131, 172147.70143359993], [170031.645529107, 172147.94220160166], [170032.69384908822, 172148.16498558765], [170033.74588111092, 172148.36984960194], [170034.80117709126, 172148.5566655985], [170034.91029711012, 172148.57490560165], [170035.85948109467, 172148.7254335993], [170036.92060109432, 172148.87608959922], [170037.98415311018, 172149.0085695899], [170043.53710288822, 172149.6522164151], [170043.5938070469, 172149.65880842015], [170046.52783311007, 172149.9989055999], [170050.67631311, 172150.4798016001], [170051.93180111, 172150.62533759992], [170056.43637712, 172151.1475136], [170059.47413712, 172151.4996416001], [170062.12463312017, 172151.8069056001], [170062.1748091201, 172151.3738816001], [170065.25212112, 172124.82591358], [170068.4104571299, 172097.5786815601], [170067.53864913367, 172097.2808895613], [170066.67829712218, 172096.9512895607], [170065.83061711816, 172096.59020155904], [170064.9968891192, 172096.19807355947], [170064.1781371194, 172095.77548155969], [170063.37557712232, 172095.32306556142], [170062.59023311833, 172094.84133755887], [170061.82319311888, 172094.3310015592], [170061.07541712228, 172093.79269756176], [170060.3479291201, 172093.2273215601], [170059.64188112, 172092.63544956], [170058.95797712018, 172092.01797756008], [170058.29743312008, 172091.37573756], [170057.66095312114, 172090.70962556114], [170057.04943311677, 172090.02047354623], [170056.4637691227, 172089.3092415634], [170056.2387451206, 172089.0211775506], [170055.90466510973, 172088.57688954938], [170055.37301711808, 172087.8245695472], [170054.86927312036, 172087.05298555078], [170054.39439311947, 172086.26348154922], [170053.99188944747, 172085.5346485766], [170057.7727600913, 172088.0258282918], [170051.05991817676, 172073.28534717634], [170051.0628091101, 172073.03103353764], [170051.10722511008, 172072.1107135379], [170051.18543310973, 172071.1926975421], [170051.29749712, 172070.27813753957], [170051.44322511982, 172069.36844154086], [170051.62216911, 172068.4646975401], [170051.83445711038, 172067.56818553832], [170051.83790835793, 172067.5556587881], [170052.07970510956, 172066.68005754153], [170052.09000194847, 172066.6475681683], [170052.35740111006, 172065.80152953992], [170052.44783172462, 172065.54841341768], [170052.58748088815, 172065.15737016115], [170052.6672891206, 172064.93388153848], [170052.9821753819, 172064.14510236902], [170053.61926655256, 172064.56487661626], [170062.4060091221, 172052.7567154574], [170060.70159314186, 172051.63370022515], [170065.0030971201, 172045.10527352], [170074.63861712982, 172030.48152951992], [170053.26223312, 172012.6388415001], [170034.97646286763, 171997.37589252155], [170034.98072025416, 171997.3694309995], [170034.78478269023, 171997.21589900047], [170031.11330509998, 171994.1513534898], [170031.0317583311, 171994.27511867826], [170023.87243666558, 171988.6652450777], [170022.44365174187, 171987.54568330926], [170020.8851428776, 171986.3244729569], [170019.75709806502, 171985.44056406204], [169993.37692107, 172025.24440951008], [169985.2979574738, 172037.43437003827], [169980.8292730701, 172044.17695352007], [169972.97007306034, 172056.03532152966], [169971.95663306, 172056.90226552982], [169971.90495422742, 172057.2657538803], [169972.08492511816, 172057.3708785873], [169984.10126743652, 172064.38987183155], [169985.4243113562, 172065.16268905732], [169986.13201859733, 172065.576075445], [169986.17128001456, 172065.5990088482], [169986.0811130719, 172065.84972153459], [169985.73288906016, 172066.8633535399], [169985.40213705695, 172067.88280954934], [169985.0887290713, 172068.9077695353], [169984.79298507044, 172069.9377855387], [169984.5149050709, 172070.9729215366], [169984.36750704606, 172071.56149907454], [169983.05062978755, 172071.6015551467], [169980.50930458933, 172078.49517257905], [169980.35125528238, 172081.68828412617], [169982.71300656995, 172081.6164458964], [169982.6399610593, 172082.59468156038], [169982.5785210702, 172083.66469754477], [169982.53532106007, 172084.7356095499], [169982.51048906008, 172085.8069695473], [169982.53839307016, 172088.8111935634], [169982.54588105975, 172089.02181754058], [169982.59420107043, 172090.09240956005], [169982.6608890698, 172091.16210556], [169982.74594506956, 172092.2305215553], [169982.84638068825, 172093.26966549925], [169980.0292343618, 172088.19415713064]]], "type": "Polygon"}, "id": "1100", "properties": {"brdr_area": 10805.468087706435, "brdr_diff_area_index": 95.8, "brdr_diff_area_index_perc": 0.9, "brdr_diff_length_index": 21.2, "brdr_diff_length_index_perc": 4.7, "brdr_id": "1100", "brdr_nr_calculations": 1, "brdr_perimeter": 476.58359976307725, "brdr_relevant_distance": 5, "brdr_remark": "[]", "brdr_shape_index": 0.5978266380626183, "brdr_sym_diff_area_index": 425.8, "brdr_sym_diff_area_index_perc": 3.9}, "type": "Feature"}], "type": "FeatureCollection"}</code></pre>
 </div>
 </div>
@@ -523,7 +524,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
           return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
       }
       // Inspect non-navigation links and adorn them if external
-     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      window.quartoDecorateExternalLinks = function (root) {
+     var links = (root || window.document).querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
       for (var i=0; i<links.length; i++) {
         const link = links[i];
         if (!isInternal(link.href)) {
@@ -532,8 +534,69 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
           if (link.dataset.originalHref !== undefined) {
             link.href = link.dataset.originalHref;
           }
+          if (!link.classList.contains('no-external-icon')) {
+          }
         }
       }
+      };
+      window.quartoDecorateExternalLinks(window.document);
+    // Esc closes the popup (WCAG 1.4.13) and focus leaving both trigger and
+    // popup closes it (WCAG 2.4.11); tippy handles neither for interactive popups.
+    const hideOnEscAndFocusOut = {
+      name: 'hideOnEscAndFocusOut',
+      defaultValue: true,
+      fn(instance) {
+        const dismiss = () => {
+          // A show scheduled by the trigger delay would otherwise reopen it
+          instance.clearDelayTimeouts();
+          instance.hide();
+        };
+        const onKeyDown = (event) => {
+          if (event.key !== 'Escape') {
+            return;
+          }
+          // Keep Esc from also reaching page handlers (e.g. reveal.js overview),
+          // except an open reveal.js slide menu, which Esc should close too.
+          // The menu handles keys only when its keyboard option is on.
+          const menuHandlesEsc = window.Reveal?.getPlugin?.('menu')?.isOpen() &&
+            window.Reveal.getConfig().menu?.keyboard !== false;
+          if (!menuHandlesEsc) {
+            event.stopPropagation();
+          }
+          if (instance.popper.contains(window.document.activeElement)) {
+            // Disabled while refocusing so the focus trigger does not reopen it
+            instance.disable();
+            instance.reference.focus();
+            instance.enable();
+          }
+          dismiss();
+        };
+        const onFocusOut = (event) => {
+          const target = event.relatedTarget;
+          if (target && !instance.reference.contains(target) &&
+              !instance.popper.contains(target)) {
+            dismiss();
+          }
+        };
+        // On the trigger too: a click trigger (code-annotations: select) has no
+        // blur handling. Attached for the instance's lifetime so leaving the
+        // trigger also cancels a show still pending on the trigger delay.
+        instance.reference.addEventListener('focusout', onFocusOut);
+        return {
+          onShow() {
+            window.document.addEventListener('keydown', onKeyDown, true);
+            instance.popper.addEventListener('focusout', onFocusOut);
+          },
+          onHide() {
+            window.document.removeEventListener('keydown', onKeyDown, true);
+            instance.popper.removeEventListener('focusout', onFocusOut);
+          },
+          onDestroy() {
+            instance.reference.removeEventListener('focusout', onFocusOut);
+          },
+        };
+      },
+    };
     function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
       const config = {
         allowHTML: true,
@@ -547,6 +610,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
         interactiveBorder: 10,
         theme: 'quarto',
         placement: 'bottom-start',
+        plugins: [hideOnEscAndFocusOut],
       };
       if (contentFn) {
         config.content = contentFn;
@@ -709,44 +773,54 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
           const lineIds = lines.map((line) => {
             return targetCell + "-" + line;
           })
-          let top = null;
-          let height = null;
-          let parent = null;
+          // Each band is positioned against its own containing block, which is
+          // not the offsetParent of the lines, so place it from client rects.
+          const placeBand = (band, firstEl, lastEl, codeBlock) => {
+            const container = band.offsetParent;
+            if (container === null) {
+              return;
+            }
+            const containerRect = container.getBoundingClientRect();
+            // Reveal.js scales slides with a transform, so convert client
+            // pixels back to the CSS pixels of the container.
+            const scale = containerRect.height / container.offsetHeight || 1;
+            const firstRect = firstEl.getBoundingClientRect();
+            const lastRect = lastEl.getBoundingClientRect();
+            const top = (firstRect.top - containerRect.top) / scale - container.clientTop + container.scrollTop;
+            const height = (lastRect.bottom - firstRect.top) / scale;
+            band.style.top = top - 2 + "px";
+            band.style.height = height + 4 + "px";
+            if (codeBlock) {
+              // Without the copy button wrapper, the containing block is wider
+              // than the code block, so span the code block explicitly.
+              const blockRect = codeBlock.getBoundingClientRect();
+              band.style.left = (blockRect.left - containerRect.left) / scale - container.clientLeft + container.scrollLeft + "px";
+              band.style.width = blockRect.width / scale + "px";
+            }
+          };
           if (lineIds.length > 0) {
-              //compute the position of the single el (top and bottom and make a div)
-              const el = window.document.getElementById(lineIds[0]);
-              top = el.offsetTop;
-              height = el.offsetHeight;
-              parent = el.parentElement.parentElement;
-            if (lineIds.length > 1) {
-              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
-              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
-              height = bottom - top;
+            const el = window.document.getElementById(lineIds[0]);
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const parent = el.parentElement.parentElement;
+            // cook up a div (if necessary) and position it
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
             }
-            if (top !== null && height !== null && parent !== null) {
-              // cook up a div (if necessary) and position it 
-              let div = window.document.getElementById("code-annotation-line-highlight");
-              if (div === null) {
-                div = window.document.createElement("div");
-                div.setAttribute("id", "code-annotation-line-highlight");
-                div.style.position = 'absolute';
-                parent.appendChild(div);
-              }
-              div.style.top = top - 2 + "px";
-              div.style.height = height + 4 + "px";
-              div.style.left = 0;
-              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
-              if (gutterDiv === null) {
-                gutterDiv = window.document.createElement("div");
-                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
-                gutterDiv.style.position = 'absolute';
-                const codeCell = window.document.getElementById(targetCell);
-                const gutter = codeCell.querySelector('.code-annotation-gutter');
-                gutter.appendChild(gutterDiv);
-              }
-              gutterDiv.style.top = top - 2 + "px";
-              gutterDiv.style.height = height + 4 + "px";
+            placeBand(div, el, lastEl, parent.closest("div.sourceCode") || parent);
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
             }
+            placeBand(gutterDiv, el, lastEl);
             selectedAnnoteEl = annoteEl;
           }
         };
@@ -844,6 +918,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       }
     }
   });
+  </script>
+  <script type="application/javascript">
+  window.quartoScrollableRegionsLabels = {"code":"Scrollable code","output":"Scrollable output"};
   </script>
 </div> <!-- /content -->
 <footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/OnroerendErfgoed/brdr/blob/main/examples/example_geojsonloader.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/OnroerendErfgoed/brdr/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer><hr>
