@@ -74,6 +74,7 @@ def _parse_feature_collection_response(
         pass
 
     tmp_path = None
+    gml_read_error = None
     try:
         # Reading GML from BytesIO makes GeoPandas/pyogrio use a /vsimem path.
         # GDAL builds used in some package environments cannot identify that
@@ -84,11 +85,15 @@ def _parse_feature_collection_response(
             tmp_path = tmp.name
         gdf = gpd.read_file(tmp_path, driver="GML")
         return json.loads(gdf.to_json())
-    except Exception:
+    except Exception as exc:
+        gml_read_error = exc
         if base_url is not None:
-            return gml_response_to_geojson(
-                base_url, params or {}, timeout=request_timeout
-            )
+            try:
+                return gml_response_to_geojson(
+                    base_url, params or {}, timeout=request_timeout
+                )
+            except Exception as fallback_exc:
+                raise fallback_exc from gml_read_error
         raise
     finally:
         if tmp_path and os.path.exists(tmp_path):
