@@ -1,10 +1,10 @@
 from brdr.aligner import Aligner
+from brdr.enums import AlignerResultType
 from brdr.geometry_utils import geom_from_wkt
 from brdr.loader import DictLoader
 
 THEME_ID = "theme_id_1"
 REFERENCE_ID = "ref_id_1"
-RELEVANT_DISTANCE = 1
 
 aligner = Aligner(crs="EPSG:31370")
 
@@ -19,20 +19,28 @@ reference_geometries = {
 aligner.load_reference_data(DictLoader(reference_geometries))
 
 # Run alignment for a single relevant distance.
-aligner_result = aligner.process(relevant_distances=[RELEVANT_DISTANCE])
-process_results = aligner_result.get_results(aligner=aligner)
+aligner_result = aligner.predict()
+prediction_results = aligner_result.get_results(
+    aligner=aligner,
+    result_type=AlignerResultType.PREDICTIONS,
+)
 
 
-# Print result geometries in WKT.
-print("result: " + process_results[THEME_ID][RELEVANT_DISTANCE]["result"].wkt)
-print(
-    "added area: "
-    + process_results[THEME_ID][RELEVANT_DISTANCE]["result_diff_plus"].wkt
-)
-print(
-    "removed area: "
-    + process_results[THEME_ID][RELEVANT_DISTANCE]["result_diff_min"].wkt
-)
+# Print all predicted candidates and their differences in WKT.
+feature_predictions = prediction_results.get(THEME_ID, {})
+print(f"Number of PREDICTIONS: {len(feature_predictions)}")
+
+for prediction_number, (relevant_distance, result) in enumerate(
+    sorted(feature_predictions.items()), start=1
+):
+    prediction_score = result["properties"].get("brdr_prediction_score")
+    print(
+        f"\nPREDICTION {prediction_number} "
+        f"(relevant distance: {relevant_distance} m, score: {prediction_score})"
+    )
+    print(f"result: {result['result'].wkt}")
+    print(f"added area: {result['result_diff_plus'].wkt}")
+    print(f"removed area: {result['result_diff_min'].wkt}")
 
 # OPTIONAL - export results to GeoDataFrame
 

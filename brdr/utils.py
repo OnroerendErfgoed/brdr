@@ -3,11 +3,11 @@ import json
 import logging
 import math
 import os.path
+import tempfile
 import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, date
 from decimal import Decimal
-from io import BytesIO
 
 import geopandas as gpd
 import requests
@@ -73,8 +73,16 @@ def _parse_feature_collection_response(
     except Exception:
         pass
 
+    tmp_path = None
     try:
-        gdf = gpd.read_file(BytesIO(response.content))
+        # Reading GML from BytesIO makes GeoPandas/pyogrio use a /vsimem path.
+        # GDAL builds used in some package environments cannot identify that
+        # virtual file as GML, even though the same document is readable from
+        # a regular .gml file.
+        with tempfile.NamedTemporaryFile(suffix=".gml", delete=False) as tmp:
+            tmp.write(response.content)
+            tmp_path = tmp.name
+        gdf = gpd.read_file(tmp_path, driver="GML")
         return json.loads(gdf.to_json())
     except Exception:
         if base_url is not None:
@@ -82,6 +90,9 @@ def _parse_feature_collection_response(
                 base_url, params or {}, timeout=request_timeout
             )
         raise
+    finally:
+        if tmp_path and os.path.exists(tmp_path):
+            os.remove(tmp_path)
 
 
 def _request_with_outputformat_fallback(

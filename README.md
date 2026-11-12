@@ -100,41 +100,51 @@ pip install brdr
 
 ``` python
 from brdr.aligner import Aligner
+from brdr.enums import AlignerResultType
 from brdr.geometry_utils import geom_from_wkt
 from brdr.loader import DictLoader
 
-# CREATE AN ALIGNER
-aligner = Aligner(
-    crs="EPSG:31370",
-)
-# ADD A THEMATIC POLYGON TO THEMATIC DICTIONARY and LOAD into Aligner
-thematic_dict = {"theme_id_1": geom_from_wkt("POLYGON ((0 0, 0 9, 5 10, 10 0, 0 0))")}
-loader = DictLoader(thematic_dict)
-aligner.load_thematic_data(loader)
-# ADD A REFERENCE POLYGON TO REFERENCE DICTIONARY and LOAD into Aligner
-reference_dict = {"ref_id_1": geom_from_wkt("POLYGON ((0 1, 0 10,8 10,10 1,0 1))")}
-loader = DictLoader(reference_dict)
-aligner.load_reference_data(loader)
-# EXECUTE THE ALIGNMENT
-relevant_distance = 1
-aligner_result = aligner.process(
-    relevant_distances=[relevant_distance],
-)
-process_results = aligner_result.get_results(aligner=aligner)
-# PRINT RESULTS IN WKT
-print("result: " + process_results["theme_id_1"][relevant_distance]["result"].wkt)
-print(
-    "added area: "
-    + process_results["theme_id_1"][relevant_distance]["result_diff_plus"].wkt
-)
-print(
-    "removed area: "
-    + process_results["theme_id_1"][relevant_distance]["result_diff_min"].wkt
+THEME_ID = "theme_id_1"
+REFERENCE_ID = "ref_id_1"
+
+aligner = Aligner(crs="EPSG:31370")
+
+# Load thematic geometry.
+thematic_geometries = {THEME_ID: geom_from_wkt("POLYGON ((0 0, 0 9, 5 10, 10 0, 0 0))")}
+aligner.load_thematic_data(DictLoader(thematic_geometries))
+
+# Load reference geometry.
+reference_geometries = {
+    REFERENCE_ID: geom_from_wkt("POLYGON ((0 1, 0 10,8 10,10 1,0 1))")
+}
+aligner.load_reference_data(DictLoader(reference_geometries))
+
+# Run alignment for a single relevant distance.
+aligner_result = aligner.predict()
+prediction_results = aligner_result.get_results(
+    aligner=aligner,
+    result_type=AlignerResultType.PREDICTIONS,
 )
 
+
+# Print all predicted candidates and their differences in WKT.
+feature_predictions = prediction_results.get(THEME_ID, {})
+print(f"Number of PREDICTIONS: {len(feature_predictions)}")
+
+for prediction_number, (relevant_distance, result) in enumerate(
+    sorted(feature_predictions.items()), start=1
+):
+    prediction_score = result["properties"].get("brdr_prediction_score")
+    print(
+        f"\nPREDICTION {prediction_number} "
+        f"(relevant distance: {relevant_distance} m, score: {prediction_score})"
+    )
+    print(f"result: {result['result'].wkt}")
+    print(f"added area: {result['result_diff_plus'].wkt}")
+    print(f"removed area: {result['result_diff_min'].wkt}")
 ```
 
-The resulting figure shows:
+The resulting figure shows one of the predictions:
 
 * the reference polygon (yellow-black)
 * the original geometry (blue)
